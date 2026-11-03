@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>115 Blog Posts To Learn About Movies</title>
+    <title>Facebook Conversions API Explained</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9668.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,22 +15,66 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>115 Blog Posts To Learn About Movies</h1>
+        <h1>Facebook Conversions API Explained</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/github/movies-517.png" alt="115 Blog Posts To Learn About Movies" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fwww.kevinleary.net%2Fwp-content%2Fuploads%2Ffacebook-conversions-api-explained.jpg" alt="Facebook Conversions API Explained" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/github/movies-517.png" alt="115 Blog Posts To Learn About Movies" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fwww.kevinleary.net%2Fwp-content%2Fuploads%2Ffacebook-conversions-api-explained.jpg" alt="Facebook Conversions API Explained" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Movies make the idea of the world go 'round. We publish about the technology behind it, and their impact on media at large.</p>
-<p>Visit the /Learn Repo to find the most read blog posts about any technology.</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
+                <p>Posted on Nov 3
+•
+Originally published at kevinleary.net</p>
+<p>Here’s how I’d approach tracking Facebook pageviews and conversion events in the browser (Facebook Pixel) and also server-side (Conversions API).</p>
+<p>The Facebook Pixel loads on every page, sending pageview requests from an app or websites’ front-end to meta for ad tracking. When I configure this on a site it involves:</p>
+<p>Important to note that the events I send into GTM like this are named specific to the business so that they can be used with any ad network and not just meta. I don’t send in “CompleteRegistration”, it might be “application_complete”.
+Next, we’ll track FB pixel events in GTM by adding tags that attach to our custom triggers. When a application_complete event is received/triggered in GTM, we’ll track a fbq.track('CompleteRegistration') event with the Facebook Pixel. The same process is repeated for all of the events we’ll track in FB.
+Once you have that in place you effectively have a complete browser implementation of the FB pixel.</p>
+<p>The best way to track browser and server events in FB is by handling them with the same triggers, and it’s best to avoid polluting an apps or sites backend code with API calls to the conversions API (CAPI) for many reasons:</p>
+<p>To do this I always set up a backend API handler, something like POST /api/analytics/, that will receive pageviews and custom events from the front-end in the exact same place where we’re pushing to the dataLayer. It’s clean, simple and makes a lot of sense.
+In the API handler we’ll make calls to the Facebook Conversions API, and also other analytics and advertising platforms where we have server-side events configured.
+For this case though, we’ll usually have a single JS class in the frontend, typically class Analytics { }, that handles the GTM dataLayer.push({ event: '{Event Name}' }) calls and also makes POST requests to /api/analytics/.
+Within this class we’ll follow this pattern to send in browser and server events that can easily be de-duplicated:</p>
+<p>With this in place we can add an event_id to each event that is sent in with browser (pixel) and server-side (CAPI) events/pageviews. This is the best way to de-duplicate and when it’s working properly you’ll sync 100% of your browser tracks to server events. Remaining events will have a server-side event only, and that represents people who’ve blocked the FB pixel with tracking protection. If you have browser events that don’t match any server-side event something is wrong/not working the way it should.</p>
+<p>See Facebook’s Advanced Matching Docs for more details on implementing.</p>
+<p>These values should be sent with fbq.track() custom event calls, but also with the fbq('init') call as well:</p>
+<p>Most developers don’t do this, in fact I’ve never really seen any existing implementation that does. I always do though, and the implementations I’ve set up have worked out really well for clients.</p>
+<p>With the CAPI you send in the same customer information within the user_data object of the payload:</p>
+<p>See Facebook’s Conversions API Parameters Docs for more details on implementing.</p>
+<p>Using the conversions API in tandem with pixel tracking will effectively capture people that have browser tracking protection enabled, but there is one added bonus you can implement to capture them without the need for server-side code.
+The Facebook Pixel can be loaded as an <img> tag, which is an old school method originally meant to handle situations where someone has JavaScript disabled in their browser. You’d have to be crazy to do that today, or ever really, but the same method is also an effective way to track people that have blocked the pixel. It’s similar to what GTM does in the <noscript> portion of their tracking tag:</p>
+<p>html
+<img src="https://www.facebook.com/tr?id=12345
+  &ev=ViewContent
+  &cd[content_name]=ABC%20Leather%20Sandal
+  &cd[content_category]=Shoes
+  &cd[content_type]=product
+  &cd[content_ids]=1234
+  &cd[value]=0.50
+  &cd[currency]=USD" height="1" width="1" style="display:none"/></p>
+<p>More details are documented by Facebook here, but as of right now this will work when browser protection is enabled sometimes. Smarter systems recognize the image and will still block it, but if you create a rewrite on your application that proxies to this <img> you’re golden, they won’t ever block that.
+That would look like this:</p>
+<p>html
+<img src="https://www.kevinleary.net/minilogo.png?id=12345
+  &ev=ViewContent
+  &cd[content_name]=ABC%20Leather%20Sandal
+  &cd[content_category]=Shoes
+  &cd[content_type]=product
+  &cd[content_ids]=1234
+  &cd[value]=0.50
+  &cd[currency]=USD" height="1" width="1" style="display:none"/></p>
+<p>That’s more advanced, you’d need an nginx rule to handle the specific extension as a script. But it can be done and if it is it’s super effective and is more minimal once it’s all set up.</p>
+<p>If you’d rather have the whole measurement stack handled, CAPI setups like this are part of my digital growth consulting work, alongside the landing pages, CRM flows, and reporting the conversions feed into.</p>
+<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
+<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
+<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/115-blog-posts-to-learn-about-movies?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/kevinlearynet/facebook-conversions-api-explained-398e" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

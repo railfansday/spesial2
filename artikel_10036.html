@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>We got local models to triage the OpenClaw repo for FREE!*</title>
+    <title>Rocky Linux Creator Built a New &#x27;Not Linux&#x27; Kernel in 11 Days Using AI</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10036.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,253 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>We got local models to triage the OpenClaw repo for FREE!*</h1>
+        <h1>Rocky Linux Creator Built a New &#x27;Not Linux&#x27; Kernel in 11 Days Using AI</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/local-models-pr-triage/thumbnail.png" alt="We got local models to triage the OpenClaw repo for FREE!*" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/os_64.png" alt="Rocky Linux Creator Built a New &#x27;Not Linux&#x27; Kernel in 11 Days Using AI" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/local-models-pr-triage/thumbnail.png" alt="We got local models to triage the OpenClaw repo for FREE!*" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/os_64.png" alt="Rocky Linux Creator Built a New 'Not Linux' Kernel in 11 Days Using AI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>*Free as in beer, excluding the cost of electricity, and assuming you already own the hardware</p>
-<p>June 2026 will go down as the moment that people realized closed models can be taken away. With the removal of Anthropic's latest flagship model Claude Fable 5 fresh in memory, one can see why it is more important than ever to own your AI stack and be able to run models locally, especially if you are building your business on top of AI.</p>
-<p>In that light, we wanted to share how we use local models like Gemma and Qwen in an agent harness, to run classification tasks[1]. This approach is different from using a model like BERT for classification. A local model in an agent harness like Pi can be used in tandem with structured outputs, to assign labels. We chose this approach because we already had local models and the harness on hand, and have conviction that similar setups will increase in popularity as local models improve in capability.[2]</p>
-<p>Our starting point was open source contributions in the OpenClaw repo. OpenClaw gets hundreds of issues and PRs every day, which need to be triaged, prioritized and routed to maintainers. I, Onur, am working to make local models work well with OpenClaw. Being a maintainer of this specific vertical, I need to react quickly to any P0 issues.</p>
-<p>With SOTA closed models like GPT-5, Opus, or Sonnet, this is a pretty straightforward task. But I happen to sit on 128 GB of unified memory, namely an NVIDIA GB10. So I took on the task:</p>
-<p>Can I build a real-time notification system that filters and notifies me for only the issues that I am responsible for... with local open-weight models?</p>
-<p>If I set up my OpenClaw main agent running on a $200/mo ChatGPT Pro plan to trigger a job on every new issue or PR, that would use up my quota. I might instead set it to run every 2 hours, or 6 hours. This would batch issues over longer periods, so we would be trading real-time notifications for delayed processing.</p>
-<p>If I were to run this on a local model on the hardware I already have up and running, I would not only have near-instantaneous notifications, I would also be able to do it for free (or rather, for the cost of electricity).</p>
-<p>We came up with a finite set of labels representing the categories of issues we need to triage, and then use a local model to classify each issue into one of those categories, like local_models, self_hosted_inference, acp, agent_runtime, codex, ui_tui and so on.[3]</p>
-<p>But how do we classify pull requests? A simple single request to a Chat Completions endpoint with a tool JSON schema, with the topics as an enum?</p>
-<p>Kind of. But this is 2026, not 2023, and we have AGENTS. We can do better!</p>
-<p>For the local model choices, we tested gemma-4-26b-a4b and qwen3.6-35b-a3b. With performance optimizations, both can generate hundreds of tokens per second locally.</p>
-<p>We use an agent harness to drive the classification run. For this, we bundle pi as a harness that can call local model endpoints.</p>
-<p>The agent by default receives the PR title, body and a truncated excerpt of the PR diff in the first prompt. Then, it can choose to use the bash tool to perform read-only operations on the OpenClaw repo (in case it needs to look at the codebase), or the final_json tool to submit the final classification result.</p>
-<p>You wouldn't want to give full bash access to a local model running in this high-throughput setting, because a prompt-injected issue or PR could otherwise steer the model into doing something unrelated to classification.</p>
-<p>For that reason, we use reposhell instead of bash: a restricted bash-like shell that only allows read-only operations (ls, find, cat, grep, etc.) on the OpenClaw repo. The model thinks it is using bash, but any operation that is not allowed is rejected:</p>
-<p>Here is a concrete example where this mattered. In one saved session example, qwen3.6-35b-a3b was classifying openclaw/openclaw#84621, titled Fix Kimi tool-call rewriting stop reason handling. The thinking block shows the model initially considering coding_agent_integrations because the changed path extensions/kimi-coding made it look plausible. The model used reposhell to inspect the local repo with simple read-only commands like ls extensions, ls extensions/kimi-coding, and cat extensions/kimi-coding/package.json. That package metadata showed the extension was actually @openclaw/kimi-provider, an OpenClaw Kimi provider plugin. So the model corrected the final labels to inference_api and tool_calling, and explicitly excluded coding_agent_integrations.</p>
-<p>We have mentioned earlier that we bundle a specific pi configuration that can only perform read-only operations and return classification output. We call it localpager-agent, named after localpager, the main project here. Each PR and issue generates a prompt, which is then passed to the CLI like below, alongside other args:</p>
-<p>So then what orchestrates everything in between the incoming PR/issue and the final notification on Discord?</p>
-<p>The orchestration around this is very simple; only the classification step involves an LLM:</p>
-<p>Below is a figure showing the overall architecture of localpager:</p>
-<p>The architecture is semi-agentic. Labeling is done agentically, while sending a notification is handled by deterministic rules. This is to make the notification pipeline faster by removing the need for inference for the most straightforward parts of the task. Local inference is free but each task has a resource contention cost: GPU bandwidth should be reserved for tasks where inference is absolutely needed. This also reduces chance of errors from notification.</p>
-<p>Let's be frank: the first local versions of this system were noisy. The first model tested - gemma-4-e4b-it was useful for getting the end-to-end local pipeline working, but it also had a tendency to put too many unrelated labels on a PR or issue. False positive labels make the Discord feed noisy and don't focus my attention on the right issues. That pushed us toward testing larger local models, including gemma-4-26b-a4b and qwen3.6-35b-a3b, on the 330-row evaluation set below.</p>
-<p>For early prompt work, we also used DeepSeek-V4-Flash through the antirez DS4 implementation[4] to create the earlier dataset labels. That setup used the DS4 server over CUDA. We eventually gave up on DS4 as the labeler because it was not labeling consistently across runs. We also did not consider it as the main localpager-agent model because it was too big to get enough throughput on our hardware: the DS4 server gave us around 14 tokens per second, with maximum concurrency of 1.</p>
-<p>To test model performance, we selected and generated labels for 330 GitHub issues and PRs. Each item was labelled five times (3x GPT-5.5 and 2x Opus 4.8) with the models needing to be in agreement to be accepted. This process involved hand adjudicating, improving label definitions and highlighting internal product design choices for the models. This gave us a set of stable, reproducible labels to compare our smaller models against.</p>
-<p>We did not need to do prompt optimization for gemma-4-26b-a4b or qwen3.6-35b-a3b before getting useful results on this evaluation set. Using the same routing prompt, Gemma had higher recall and lower wall-clock time per row, while Qwen had higher precision, higher exact match, and fewer false positives. We also ran DeepSeek-V4-Flash on the same set as a reference. It had the fewest false positives, but the model size and throughput make it impractical for executing these tasks in real time on the NVIDIA GB10. Since each row can have multiple labels, false positives and false negatives are total label counts across all rows. The Qwen results below are after retrying structured-output failures where the model ran out of output tokens before calling final_json. For Gemma and Qwen, repeated-run metrics report mean ± sample standard deviation across three runs. DeepSeek-V4-Flash was run once as a reference.</p>
-<p>The throughput and wall-clock numbers here are not definitive maximum performance numbers for these models on this hardware. They are the settings we used at the time with the optimizations we had available. For example, in a separate probe, gemma-4-26b-a4b also supported concurrency 32 and reached over 700 aggregate output tokens per second.</p>
-<p>For the Gemma benchmark, we served gemma-4-26b-a4b with vLLM using the optimizations we found available for this setup. A big part of that is the NVFP4 quantization: on GB10-class Blackwell hardware, it is not just a smaller model file, but a hardware-friendly format that can use the NVIDIA/vLLM execution path more directly than a portable GGUF quantization like Q4_K_M. In practice, that means less memory traffic and more room for batching. We also enabled prefix caching, FP8 KV cache, the CUTLASS MoE backend, and language-model-only mode. The full 330-row run finished in about 7.5 minutes at concurrency 16.</p>
-<p>We have mentioned earlier that instead of running a job with a local model for every new issue or PR, we can run a batch job with a SOTA cloud model, like GPT-5.5 running in OpenClaw, every n hours (e.g. every 2 hours) to achieve the same end.[5]</p>
-<p>In that case, we would need a ChatGPT Pro plan. Since the model is SOTA, we can still expect it to perform reasonably well, despite batching 2 hours of issues/PRs together.</p>
-<p>Because we want to see how well the local classifier performs against GPT-5.5, we run both simultaneously, and let GPT-5.5 be the judge of false positives and negatives, every 2 hours.</p>
-<p>To be safe, we run the OpenClaw job in a sandbox, with only access to the public repo we report results to. In our case, we let the OpenClaw job update a machine-readable file, then a simple script reads the Codex-assigned labels and computes the false positive/negative status. Example output:</p>
-<p>The instructions on how to classify, edit the machine-readable file, get the false positives and false negatives using a script are present in an agent skill which is referenced in an OpenClaw cron job that runs every 2 hours. The OpenClaw agent then ingests any new issues or PRs, adds them to the JSON file with appropriate labels, runs the scripts and reports back in the same Discord channel. This way, we can observe the local model's performance every few hours, and get notified of the misses.</p>
-<p>We think that the issue/PR triage task is a specific case of a broader set of tasks which we call "high throughput triage". This post explored the idea of using a local model to filter out information in real time in only one domain, that is, open source contributions. The ability of medium-sized local models like gemma-4-26b-a4b and qwen3.6-35b-a3b to zero-shot classify with good accuracy without any need for fine-tuning makes them a good first choice for quick prototyping, before one moves on to more cost-efficient traditional classifier models.</p>
-<p>However, the same approach can be applied to other domains as well:</p>
-<p>The list can be extended, but we think that the idea should be clear.</p>
-<p>Besides triaging, we have also explored how classification can be performed with agent harnesses running fast local models in a secure manner. A good naming for the approach would be agentic classification: the model is not fed the entire body of information upfront, but can search for more context before returning structured data. While we cannot exactly call this a novel approach, we hope for this blog post to be a good reference for the specific Pi+a restricted shell+final_json recipe.</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>So it's modeled after a large vagina?Rumor has it OF dark money paid for the AI tokens.I heard sponsors saying they hope this fucker, also sucks ass.Kinda shitty. I know.</p>
+<p>Rumor has it OF dark money paid for the AI tokens.</p>
+<p>I heard sponsors saying they hope this fucker, also sucks ass.</p>
+<p>Yes, and is compatible with all the same labiaries.</p>
+<p>all written from scratch. I don't know if you know what that phrase actually means.  Nothing from AI is "written from scratch".  All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.</p>
+<p>I don't know if you know what that phrase actually means.  Nothing from AI is "written from scratch".  All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.</p>
+<p>Often in copyright cases for song melodies, if the artist being sued for infringement could have possibly had access to the music they’re accused of copying, even if it was something they listened to once, they can be accused of “subconsciously” infringing on the original content. One of the most notorious examples of this is Tom Petty’s claim that Sam Smith’s “Stay With Me” sounded too close to Petty’s “I Won’t Back Down.” Smith eventually h</p>
+<p>It all feels so arbitrary what can be copyrighted and what's infringement. The music industry has some of the the most strict rules, while clothing designs and food preparations can't be protected at all.</p>
+<p>It's not about uniqueness. If you take a photo of a pretty tree and post it online, you obviously own the copyright to that photo. If I find that same tree and take my own photo of it under very similar circumstances, and publish that, then my photo is still mine and I own the copyright to it, even though it's not very unique.</p>
+<p>On the other hand if I take your photo and edit it with Photoshop to be subtly different, and publish it, I am in breach of your copyright. Even if those two hyopthetical photos I produced end up identical, one is in breach of copyright and one is not.</p>
+<p>The question is whether I copy your work or not, and as you don't own any IP related to the subject (a tree), I am perfectly in my rights to take my own photo of that same tree.</p>
+<p>On the other hand if I take your photo and edit it with Photoshop to be subtly different, and publish it, I am in breach of your copyright.Not necessarily. My fair use overrides your copyright.
+
+That is the question in front of the courts- the question of fair use.
+And if training a model is fair use, is it fair use to use its product to compete with original copyright holders?
+
+Ultimately, it will probably take law to clear this up for real. It may end up at the Supreme Court, but I hope they have the foresight to refuse to rule.</p>
+<p>On the other hand if I take your photo and edit it with Photoshop to be subtly different, and publish it, I am in breach of your copyright.</p>
+<p>Not necessarily. My fair use overrides your copyright.
+
+That is the question in front of the courts- the question of fair use.
+And if training a model is fair use, is it fair use to use its product to compete with original copyright holders?
+
+Ultimately, it will probably take law to clear this up for real. It may end up at the Supreme Court, but I hope they have the foresight to refuse to rule.</p>
+<p>Fair use would be if you look at the photo, understand how the tree looks and then draw a tree based on what you learned about how a tree is supposed to look. A new image, not a transformation of an existing image.</p>
+<p>Not necessarily. My fair use overrides your copyright.You can do that for your own use as much as you want, but your fair use doesn't include publishing it. Different countries have some exemptions for educational use etc. but as a general case, I can't take a photo you published, make it black and white in Photoshop and publish it as mine.</p>
+<p>Not necessarily. My fair use overrides your copyright.</p>
+<p>You can do that for your own use as much as you want, but your fair use doesn't include publishing it. Different countries have some exemptions for educational use etc. but as a general case, I can't take a photo you published, make it black and white in Photoshop and publish it as mine.</p>
+<p>but your fair use doesn't include publishing it.Again, not necessarily.
+Every country I'm aware of contains fair use provisions for transformative use. It would be strange if they didn't.
+
+I answered with "not necessarily" because it really does have a lot more to do with the physical act of "taking your image and editing it with photoshop", not that that accurately describes how an LLM works at all.
+
+This isn't to defend the pro-LLM argument by any means, but it is the argument, and it has succeeded in some courts, and failed in others.</p>
+<p>but your fair use doesn't include publishing it.</p>
+<p>Again, not necessarily.
+Every country I'm aware of contains fair use provisions for transformative use. It would be strange if they didn't.
+
+I answered with "not necessarily" because it really does have a lot more to do with the physical act of "taking your image and editing it with photoshop", not that that accurately describes how an LLM works at all.
+
+This isn't to defend the pro-LLM argument by any means, but it is the argument, and it has succeeded in some courts, and failed in others.</p>
+<p>You all speak as if this isn't down to the whims of the wig clowns.</p>
+<p>My fair use overrides your copyright.Legally, it does not. It's a defence for use, not on overriding principle in the way your wording implies.</p>
+<p>Legally, it does not. It's a defence for use, not on overriding principle in the way your wording implies.</p>
+<p>Fair use in the United States is codified in statutory law, specifically under Section 107 of the Copyright Act of 1976 (Title 17 of the U.S. Code).
+However, it functions legally as an affirmative defense rather than an explicit, pre-approved "right" that you can proactively exercise without riskMy emphasis.</p>
+<p>Fair use in the United States is codified in statutory law, specifically under Section 107 of the Copyright Act of 1976 (Title 17 of the U.S. Code).
+However, it functions legally as an affirmative defense rather than an explicit, pre-approved "right" that you can proactively exercise without risk</p>
+<p>Or all software. Nobody starts from first principles and a formal description of the CPU's instruction set.</p>
+<p>But there are two issues here which say no.</p>
+<p>The first and more irrelevant argument is that LLMs aren't actually thinking, their process is not like ours just because they use neural networks, which bear only a passing resemblance to how our brain might work. We don't even know all of the details there and we STILL have enough info to know they aren't the same.</p>
+<p>But the real argument is that copyright exists to protect the work of humans to induce them to make more work, so what the software is d</p>
+<p>The issue with this semantic argument is that the model weights already more or less "contain" several partial OS kernels, in the sense that you can squeeze them out as repeatable, token-identical structures with the right inference setup.</p>
+<p>When humans compete in reciting longer and longer parts of the infinitely long number pi, we don't say they "derived pi from scratch up to N places" (that's also a thing humans can do, we just typically don't compete in it, because it smells like shit that should run on a computer); we say they "memorized and recited pi up to N places", and what the LLM did with the kernel here is closer to remembering and reciting, rather than "making from scratch".</p>
+<p>Now, don't get me wrong, reciting significant parts of even vaguely functional OS kernel from memory would still be a super impressive and potentially useful skill for a human, but it's a bigger question of how useful of a skill is it for a computer. "Legacy" software can "remember" vmlinuz at cost of ~8MB of storage and mW needed for seconds to decompress it, and I'd argue that spending 11 days on building a kernel of unknown quality, unknown novelty and very limited utility is not all that useful or impressive of a function when compared with the existing ability to maintain a bit-perfect copy of the OS you already know works.</p>
+<p>The feat is being presented as impressive, except, the impressive part of it doesn't really hold up to the specific implications of "from scratch" in the context of the question. Is the new OS likely to have existing development paradigms grandfathered in? Absolutely. Is it likely to inherit some of the bugs and vulnerabilities of existing OSes? Indubitably. Is its apparent "novelty" going to make it a compelling alternative to existing, available OSes? Unlikely in the least. Was it at least less expensive or avoided usage of some limited resource that'd a compressed image of linux core would need to work? Absolutely not. Did the developer learn enough to now repeat the feat without the help of the LLM? Probably not super likely.</p>
+<p>If it has none of the practical advantages or even traits you'd expect of something made "from scratch", then perhaps it shouldn't be called that?</p>
+<p>model weights already more or less "contain" several partial OS kernels,</p>
+<p>No, they don't. They were trained on that data, but they are not that data. You can't extract it from weights, and I highly doubt you'd be able to reproduce it from weights, even on an exceedingly large model.</p>
+<p>At best, it's a work inspired by the original, not even a derivative. There's no "substantial or material" replication.</p>
+<p>You can't extract it from weights, and I highly doubt you'd be able to reproduce it from weightsExcept that's lilerally what inference is, and you know it can't be anything but that because training (and most evidently "pre-training", but training at large) literally rely on that to function. The backprop during training is a literal "adjust the wegiths to ensure that we will able to reproduce this output giving these inputs with sufficient statistical probability".'"substantial or material" replication' is entirely lawyer speak around how the fundamentally arbitrary legal convention will treat those</p>
+<p>You can't extract it from weights, and I highly doubt you'd be able to reproduce it from weights</p>
+<p>Except that's lilerally what inference is, and you know it can't be anything but that because training (and most evidently "pre-training", but training at large) literally rely on that to function. The backprop during training is a literal "adjust the wegiths to ensure that we will able to reproduce this output giving these inputs with sufficient statistical probability".</p>
+<p>'"substantial or material" replication' is entirely lawyer speak around how the fundamentally arbitrary legal convention will treat those</p>
+<p>The goal is toCool, and my grandma's goal could have very well been to win the Tour De France, yet it still didn't make her any more bicycle-like.I do not need to encode 1 + 1 = 2 in order to solve for 2.Do you have any proof of that? Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice. As far as I know, we have seen LLMs generally tending towards being more reliable at repeating things that are already in the data than they are at inventing novel things, and as far as I know, there's been zero LLMs that have written operating systems "from scratch" that haven't had multiple complete operating systems in their training data.I've been training neural nets since well before the initial Transformers paper. You vomiting a couple [overfitting mitigation methods] isn't impressive to me. We've known for a long time that some information is more useful when blurred, and often easier to memorize when less specific. Yes, of fucking course, we're aiming for generalization in AI models. But I you haven't shown anything to prove that this particular LLM isn't just sticking together pieces of kernels it has seen. Nobody calls a collage "from scratch".</p>
+<p>Cool, and my grandma's goal could have very well been to win the Tour De France, yet it still didn't make her any more bicycle-like.</p>
+<p>I do not need to encode 1 + 1 = 2 in order to solve for 2.Do you have any proof of that? Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice. As far as I know, we have seen LLMs generally tending towards being more reliable at repeating things that are already in the data than they are at inventing novel things, and as far as I know, there's been zero LLMs that have written operating systems "from scratch" that haven't had multiple complete operating systems in their training data.I've been training neural nets since well before the initial Transformers paper. You vomiting a couple [overfitting mitigation methods] isn't impressive to me. We've known for a long time that some information is more useful when blurred, and often easier to memorize when less specific. Yes, of fucking course, we're aiming for generalization in AI models. But I you haven't shown anything to prove that this particular LLM isn't just sticking together pieces of kernels it has seen. Nobody calls a collage "from scratch".</p>
+<p>I do not need to encode 1 + 1 = 2 in order to solve for 2.</p>
+<p>Do you have any proof of that? Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice. As far as I know, we have seen LLMs generally tending towards being more reliable at repeating things that are already in the data than they are at inventing novel things, and as far as I know, there's been zero LLMs that have written operating systems "from scratch" that haven't had multiple complete operating systems in their training data.</p>
+<p>I've been training neural nets since well before the initial Transformers paper. You vomiting a couple [overfitting mitigation methods] isn't impressive to me. We've known for a long time that some information is more useful when blurred, and often easier to memorize when less specific. Yes, of fucking course, we're aiming for generalization in AI models. But I you haven't shown anything to prove that this particular LLM isn't just sticking together pieces of kernels it has seen. Nobody calls a collage "from scratch".</p>
+<p>Cool, and my grandma's goal could have very well been to win the Tour De France, yet it still didn't make her any more bicycle-like.Your analogy is that your grandma wanting to achieve something unachievable for her is comparable to LLM pretraining specifically trying *not* to memorize token sequences?
+Not very intelligent, are you?Do you have any proof of that?Do I have proof of that?
+It's self-fucking-evident. Do you think a calculator decodes an unwrapped ALU output to answer your inputs?
+But guess what- it could.Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice.Strawman. Probably unintentional on your part given your demonstrated inability to hold a train of thought, but:
+I asserted that I did not need to, you</p>
+<p>Cool, and my grandma's goal could have very well been to win the Tour De France, yet it still didn't make her any more bicycle-like.</p>
+<p>Your analogy is that your grandma wanting to achieve something unachievable for her is comparable to LLM pretraining specifically trying *not* to memorize token sequences?
+Not very intelligent, are you?</p>
+<p>Do you have any proof of that?Do I have proof of that?
+It's self-fucking-evident. Do you think a calculator decodes an unwrapped ALU output to answer your inputs?
+But guess what- it could.Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice.Strawman. Probably unintentional on your part given your demonstrated inability to hold a train of thought, but:
+I asserted that I did not need to, you</p>
+<p>Do I have proof of that?
+It's self-fucking-evident. Do you think a calculator decodes an unwrapped ALU output to answer your inputs?
+But guess what- it could.</p>
+<p>Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice.Strawman. Probably unintentional on your part given your demonstrated inability to hold a train of thought, but:
+I asserted that I did not need to, you</p>
+<p>Because vast majority of people definitely see various forms of "1 + 1 = 2" repeat many times before they get to the level where they can derive that formula themselves, and I'd argue it's fairly easy to prove that vast majority of people actually remember that "1 + 1 = 2" and don't derive it in practice.</p>
+<p>Strawman. Probably unintentional on your part given your demonstrated inability to hold a train of thought, but:
+I asserted that I did not need to, you</p>
+<p>You cannot get the training data out of a model unless it's so overtrained on a specific piece of it that it actually impairs its usefulness for other things. So no, those works are not in there.</p>
+<p>However, you might still be creating derivative works with an LLM, because the standard for those is "substantial recognizable elements" and the exact meaning of that can be fuzzy.</p>
+<p>Then you should have no problem identifying infringing code?</p>
+<p>No, they don't. They were trained on that data, but they are not that data. And yet the ability to produce long quotes from original data has been demonstrated a number of times.</p>
+<p>No, they don't. They were trained on that data, but they are not that data.</p>
+<p>And yet the ability to produce long quotes from original data has been demonstrated a number of times.</p>
+<p>The phrase "from scratch" was originally a sports analogy meaning from the starting line, like a footrace, or a facing line like in boxing.  A line in chalk was scratched into the ground.  So in this case it means from the beginning, which even using AI, it is.  The boxers come to the ring to fight from scratch, but they've had years of training and watched countless boxing matches to learn.  Both the CentOS creator and the AI agent have learned immense amounts of information from a lot of other people's open source work, but they started making a new OS from the beginning or the scratch line.If an author throws away a manuscript and starts again from scratch, people don’t assume there’s some double meaning there.  Same goes for the baker starting over.The end result is starting from scratch.  Starting completely over.  Full reset at the line.  Like the race does.  And perhaps the term is being misused here if no one truly starts from “scratch” in the FOSS world, because of the F in FOSS.</p>
+<p>The phrase "from scratch" was originally a sports analogy meaning from the starting line, like a footrace, or a facing line like in boxing.  A line in chalk was scratched into the ground.  So in this case it means from the beginning, which even using AI, it is.  The boxers come to the ring to fight from scratch, but they've had years of training and watched countless boxing matches to learn.  Both the CentOS creator and the AI agent have learned immense amounts of information from a lot of other people's open source work, but they started making a new OS from the beginning or the scratch line.</p>
+<p>If an author throws away a manuscript and starts again from scratch, people don’t assume there’s some double meaning there.  Same goes for the baker starting over.</p>
+<p>The end result is starting from scratch.  Starting completely over.  Full reset at the line.  Like the race does.  And perhaps the term is being misused here if no one truly starts from “scratch” in the FOSS world, because of the F in FOSS.</p>
+<p>With the publishing industry's ongoing battles against illegal copying to train AI as a background, it'll be interesting to watch how this plays out.  Too bad Groklaw [wikipedia.org] isn't around anymore.</p>
+<p>Is it "stolen work" to read a book and then recite itIn a public performance for profit, that's potentially a copyright infringment.or paraphrase it, or create a story with the same themes? No. Those are new forms of work. You might want to check some case law.</p>
+<p>Is it "stolen work" to read a book and then recite it</p>
+<p>In a public performance for profit, that's potentially a copyright infringment.</p>
+<p>or paraphrase it, or create a story with the same themes? No. Those are new forms of work. You might want to check some case law.</p>
+<p>or paraphrase it, or create a story with the same themes? No. Those are new forms of work.</p>
+<p>all written from scratch.I don't know if you know what that phrase actually means.  Nothing from AI is "written from scratch".  All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.  So, you’re saying we should call them Script KiddAIs..</p>
+<p>all written from scratch.I don't know if you know what that phrase actually means.  Nothing from AI is "written from scratch".  All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.</p>
+<p>I don't know if you know what that phrase actually means.  Nothing from AI is "written from scratch".  All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.</p>
+<p>So, you’re saying we should call them Script KiddAIs..</p>
+<p>> Nothing from AI is "written from scratch". All of it is based off of stolen work from people who didn't give permission using a kind of social engineering no better than a petty hacker.</p>
+<p>A.I. today is nothing more than Computer Aided Plagiarism.</p>
+<p>Ginux runs only in a QEMU virtual machine, with no physical hardware profile, no GPU or NVMe support, and no independent security audit.So, as can be expected, it doesn't attempt roughly 99.9% of the real work an OS has to do to be useful as an OS someone might want to use for something.It's perfectly good, cool, and virtuous to make academical/hobby model-OSes, but the "Built a New 'Not Linux' Kernel in 11 Days Using AI" headline is hella yellow when the thing being made is just not comparable to Linux kernel in what it's even meant to be able to do for you, but is being presented as some sort of achievement.</p>
+<p>Ginux runs only in a QEMU virtual machine, with no physical hardware profile, no GPU or NVMe support, and no independent security audit.</p>
+<p>So, as can be expected, it doesn't attempt roughly 99.9% of the real work an OS has to do to be useful as an OS someone might want to use for something.</p>
+<p>It's perfectly good, cool, and virtuous to make academical/hobby model-OSes, but the "Built a New 'Not Linux' Kernel in 11 Days Using AI" headline is hella yellow when the thing being made is just not comparable to Linux kernel in what it's even meant to be able to do for you, but is being presented as some sort of achievement.</p>
+<p>it doesn't attempt roughly 99.9% of the real work an OS has to do to be useful as an OS someone might want to use for something.It's an extremely interesting experiment, especially for Rust as a systems language. But I think you are downplaying it a little. From the full announcement: 
+
+"What Ginux can do today 
+
+Ginux builds as a single GINUX.EFI image that boots straight through UEFI, with no Linux host kernel involved. 
+
+It runs isolated "domains", each with its own processes, address space, filesystem, and lifecycle. The project describes these as stronger boundaries than OCI containers or Linux namespaces. 
+
+It can also pull and verify OCI container images and use them to assemble a domain's root filesystem. That's how it gets Rocky Linux 10 booted all the way to systemd's multi-user.target. Selected Alpine Linux programs (like the musl and BusyBox) run too. 
+
+Ginux running Rocky Linux: 
+
+ginux domain new rocky
+rocky: created (image required)
+ginux domain set rocky image=rockylinux/rockylinux:10-ubi-init
+ginux domain set rocky init=/sbin/init memory-mib=2048
+rocky: settings accepted; configured
+ginux domain start rocky --attach
+ginux: OCI cache hit (2 layers)
+ginux: starting Linux personality domain
+systemd: Reached target Multi-User System.
+Rocky Linux 10
+rocky login:"
+https://itsfoss.com/news/ginux... [itsfoss.com]</p>
+<p>it doesn't attempt roughly 99.9% of the real work an OS has to do to be useful as an OS someone might want to use for something.</p>
+<p>It's an extremely interesting experiment, especially for Rust as a systems language. But I think you are downplaying it a little. From the full announcement: 
+
+"What Ginux can do today 
+
+Ginux builds as a single GINUX.EFI image that boots straight through UEFI, with no Linux host kernel involved. 
+
+It runs isolated "domains", each with its own processes, address space, filesystem, and lifecycle. The project describes these as stronger boundaries than OCI containers or Linux namespaces. 
+
+It can also pull and verify OCI container images and use them to assemble a domain's root filesystem. That's how it gets Rocky Linux 10 booted all the way to systemd's multi-user.target. Selected Alpine Linux programs (like the musl and BusyBox) run too. 
+
+Ginux running Rocky Linux: 
+
+ginux domain new rocky
+rocky: created (image required)
+ginux domain set rocky image=rockylinux/rockylinux:10-ubi-init
+ginux domain set rocky init=/sbin/init memory-mib=2048
+rocky: settings accepted; configured
+ginux domain start rocky --attach
+ginux: OCI cache hit (2 layers)
+ginux: starting Linux personality domain
+systemd: Reached target Multi-User System.
+Rocky Linux 10
+rocky login:"
+https://itsfoss.com/news/ginux... [itsfoss.com]</p>
+<p>It runs isolated "domains", each with its own processes, address space, filesystem, and lifecycle. The project describes these as stronger boundaries than OCI containers or Linux namespaces.Again, I agree this is extremely cool and interesting but the headline puts it on the level of Linux by comparison. And unless compared including hardware support and performance, you can't really say if any of it's "stornger" qualities mean anything. World's fastest aircraft that exists exclusively as a virtual model still isn't comparable to aircraft that actually had to be built.</p>
+<p>It runs isolated "domains", each with its own processes, address space, filesystem, and lifecycle. The project describes these as stronger boundaries than OCI containers or Linux namespaces.</p>
+<p>Again, I agree this is extremely cool and interesting but the headline puts it on the level of Linux by comparison. And unless compared including hardware support and performance, you can't really say if any of it's "stornger" qualities mean anything. World's fastest aircraft that exists exclusively as a virtual model still isn't comparable to aircraft that actually had to be built.</p>
+<p>I'm just thinking there's no way all that code was actually reviewed in earnest by humans in eleven days, so... it's a cute idea but that's a "hell no" for actually  running it on anything.</p>
+<p>Yeah, but it's a hell of a good demo or PoC of "domains" isn't it? I mean, we've all seen a container, we might have seen a namespace, a chroot environment, etc, but now we can actually see a domain and how it (maybe) does things better than all of them. In that sense then, you *can* judge the better or worse qualities within the confines of what's been implemented. Had he just said "I've got an idea... it's way better than containers..." - then yes, you could argue it's impossible to determine if it really is better or not.</p>
+<p>Back to aeroplanes... if you made the world fastest aeroplane, but it only had one seat, that still makes it useful to work out how you might one day make a faster passenger aeroplane, even if the demo model couldn't fit so much as a cabin bag, let alone any passengers.</p>
+<p>World's fastest aircraft that exists exclusively as a virtual model still isn't comparable to aircraft that actually had to be built.Yet that virtual wind tunnel and other virtual tests are today the early steps in aircraft design. 
+
+I think the original announcement frames things well: 
+
+"For Ginux, that meant one persistent OpenAI Codex task running GPT-5.6 Sol for eleven days. It produced approximately 139,000 retained lines of implementation and test code, across more than 1,000 commits. Architecture documents kept the agent aligned, and real userspaces like Rocky Linux caught bugs that synthetic tests missed. 
+
+The "human-directed" part matters. This isn't as simple as typing "write me a kernel, don't make mistakes" into a chatbot. It's a person with decades of systems experience steering an agent that does the heavy lifting of coding.  ... 
+
+Linux isn't going anywhere because a prototype boots systemd in a VM. Decades of hardware enablement, code review, and community are not something an AI agent produces in eleven days. 
+
+But let's take a step back to realize what happened here. A new kernel created from scratch, that runs an enterprise distro. And it took just 11 days with GPT 5.6 (not even 6.1, the latest model). 
+
+AI won't replace expertise. An expert who already knows how kernels work uses AI to squeeze years of grunt work into days. 
+
+When people with deep domain knowledge pair it with frontier AI agents, projects that once needed a large team and several years start to look like weekend side projects. 
+
+Ginux won't replace Linux, but it does show how far (and how fast) an skilled person can now go.
+"</p>
+<p>World's fastest aircraft that exists exclusively as a virtual model still isn't comparable to aircraft that actually had to be built.</p>
+<p>Yet that virtual wind tunnel and other virtual tests are today the early steps in aircraft design. 
+
+I think the original announcement frames things well: 
+
+"For Ginux, that meant one persistent OpenAI Codex task running GPT-5.6 Sol for eleven days. It produced approximately 139,000 retained lines of implementation and test code, across more than 1,000 commits. Architecture documents kept the agent aligned, and real userspaces like Rocky Linux caught bugs that synthetic tests missed. 
+
+The "human-directed" part matters. This isn't as simple as typing "write me a kernel, don't make mistakes" into a chatbot. It's a person with decades of systems experience steering an agent that does the heavy lifting of coding.  ... 
+
+Linux isn't going anywhere because a prototype boots systemd in a VM. Decades of hardware enablement, code review, and community are not something an AI agent produces in eleven days. 
+
+But let's take a step back to realize what happened here. A new kernel created from scratch, that runs an enterprise distro. And it took just 11 days with GPT 5.6 (not even 6.1, the latest model). 
+
+AI won't replace expertise. An expert who already knows how kernels work uses AI to squeeze years of grunt work into days. 
+
+When people with deep domain knowledge pair it with frontier AI agents, projects that once needed a large team and several years start to look like weekend side projects. 
+
+Ginux won't replace Linux, but it does show how far (and how fast) an skilled person can now go.
+"</p>
+<p>I see no reason why Ginux or something like it cannot replace Linux in many situations.</p>
+<p>For example, there are millions of Linux kernels running on millions of VMs. Most of the time the applications on top don't need all of the features of Linux, if something far smaller, quicker to boot and perhaps faster comes along why would we not use?</p>
+<p>For example embedded systems where much the same applies.</p>
+<p>How about hundreds of different Ginux like kernels each custom written to run a specific thing on a specific hardwa</p>
+<p>It's perfectly good, cool, and virtuous to make academical/hobby model-OSDr. Tanenbaum, is that you?</p>
+<p>It's perfectly good, cool, and virtuous to make academical/hobby model-OSDr. Tanenbaum, is that you?</p>
+<p>It's perfectly good, cool, and virtuous to make academical/hobby model-OS</p>
+<p>Somewhere, someone must have built a server farm of all different computers with different hardware plugged in, for continuous integration testing operating systems. I've never heard of this publicly though.</p>
+<p>... is a popular past time. Many people do this, often for fun.It's so popular, there's even a Wiki for ithttps://wiki.osdev.org/Expande... [osdev.org]</p>
+<p>So you are saying there is a chance for Hurd?</p>
+<p>Redox OS already exists in exactly this space, albeit without the AI coding.Just wondering how much Redox has seeped into Ginux.</p>
+<p>How fast is it, how large is the binary ? Even if the numbers are not great this is amazing for a first release.</p>
+<p>Just as importantly: how maintainable is it, how easy to find out what happens when things go wrong ?</p>
+<p>Stop pretending this is creation, it is theft from known code.</p>
+<p>If you use a known assembler instruction, you are stealing known code.</p>
+<p>I'm pretty sure that when most human coders write some code they are incorporating bits of all the things they have learned from all over the place for years. From books, from tutorials, from Stackoverflow, from source code they have worked on previously or just studied to educate themselves.</p>
+<p>I find it hard to believe that most coder just magically know how to code out of nothing. No, it comes from all their past experience.</p>
+<p>Why then is it "theft" in your mind when we automate this process with a machine but</p>
+<p>This brings up an interesting point.  What would keep someone from making a kernel like this, except updated in real time in a clean room fashion to match the Linux kernel and features?</p>
+<p>This is a huge can of worms.  On one hand, it presents bugs which are not in the original kernel.  Most likely show-stoppers, perhaps CVE scale 9 bugs.  On the other hand, the attack surface is completely different, and security through obscurity may work.</p>
+<p>Where this can be useful would be moving apps to Rust, Ada, or SPARK, s</p>
+<p>I did this too, in less than 11 days, and mine runs on bare metal on a raspberry pi. You can download the image here. It also runs it's own busybox, and sbase (suckless.org rewrite of busybox) and kubectl and quake, doom, helm, duck db, ffmpeg etc etc I did a write up about it here back in October: Bluetail OS you can download a copy of the 0.0.1 release here  [osdev.org]https://bluetailos.s3.us-west-... [amazonaws.com] runs in qemu of course, on a raspberry pi 3 A+ profile on 512mb memory
+  Lots of progress since then, refactored a bunch of stuff runs a lot better on bare hardware and has better usb mouse/keyboard support. Oh and it has a usb network adapter as well.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Bad Flock Info Leads Police To Tow Wrong Car, Then Towing Company Totals It</p>
+<p>Experts Expect 'Security Reckoning' As AI Tools Find And Exploit Software Bugs</p>
+<p>"If the code and the comments disagree, then both are probably wrong."
+-- Norm Schryer</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/local-models-pr-triage" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://tech.slashdot.org/story/26/11/02/0317207/rocky-linux-creator-built-a-new-not-linux-kernel-in-11-days-using-ai?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Can AI Write CAD? Testing LLM-Generated 3D Models for Manufacturability</title>
+    <title>Build specialized multimodal models with LFM3</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9694.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,71 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Can AI Write CAD? Testing LLM-Generated 3D Models for Manufacturability</h1>
+        <h1>Build specialized multimodal models with LFM3</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/toVpKJ21Trdlki98hmPyXP3kVCg1-uj0376a.png" alt="Can AI Write CAD? Testing LLM-Generated 3D Models for Manufacturability" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/wEKXxH6qGa7vmHjn5KA-W.png" alt="Build specialized multimodal models with LFM3" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/toVpKJ21Trdlki98hmPyXP3kVCg1-uj0376a.png" alt="Can AI Write CAD? Testing LLM-Generated 3D Models for Manufacturability" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/wEKXxH6qGa7vmHjn5KA-W.png" alt="Build specialized multimodal models with LFM3" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Mechanical Engineering student at Carnegie Mellon University | Exploring engineering, technology, design, and innovation.</p>
-<p>Mechanical Engineering student at Carnegie Mellon University | Exploring engineering, technology, design, and innovation.</p>
-<p>Mechanical Engineering student at Carnegie Mellon University | Exploring engineering, technology, design, and innovation.</p>
-<p>I am a mechanical engineering student, and like most students I now see AI tools everywhere. They explain thermodynamics, debug my Python, and summarize papers. So one question kept bothering me: if an AI can write code, can it also write a mechanical design?</p>
-<p>Code and CAD feel closely related. Tools like CadQuery and OpenSCAD let you describe a 3D part as a script, so in theory an LLM that writes the script can “design” a part from a text description.</p>
-<p>But there is a gap between a model that runs and a part that works. A script can execute without errors and still produce a bracket with 0.3 mm walls, holes that overlap the edge, or a gear that cannot mesh with anything. In engineering, “it ran” is not the same as “it is correct.” This article is my attempt, as a student, to define how to measure that gap honestly.</p>
-<p>This is Part 1: the method. I am publishing the plan, the rules, and a verified reference script before the results, so that nobody (including me) can bend the criteria to fit the numbers.</p>
-<p>To judge AI-generated CAD, it helps to know what CAD software actually stores. Three ideas matter here.</p>
-<p>Boundary representation (B-rep). Most mechanical CAD systems describe a solid by its boundary: faces, edges, and vertices, plus the topology that says how they connect. This is why you can select a face and add a fillet. A classic reference for how solids are represented and built up with operations such as union, cut, and intersect is Martti Mäntylä, An Introduction to Solid Modeling (Computer Science Press, 1988).</p>
-<p>Constructive solid geometry (CSG). Here a shape is built as a tree of Boolean operations on primitives such as boxes, cylinders, and spheres. OpenSCAD follows this style (OpenSCAD documentation. It is intuitive and very scriptable, but it is mostly used to produce meshes such as STL files, which do not carry the exact faces and edges that B-rep CAD systems use for downstream engineering work.</p>
-<p>Curved surfaces in CAD are commonly described with NURBS (Non-Uniform Rational B-Splines). The standard reference is Les Piegl and Wayne Tiller, The NURBS Book, 2nd ed. (Springer, 1997). My understanding is that this is part of why operations like fillets and shells can fail on complex geometry: the kernel has to build new surfaces that stay valid and watertight.</p>
-<p>For a broader view of the mathematics behind curves, surfaces, and solids, Michael E. Mortenson, Geometric Modeling, 3rd ed. (Industrial Press, 2006) describes and compares the important methods.</p>
-<p>The word parametric matters a lot in this test. A parametric model is driven by named values (length, thickness, hole diameter), so changing one value updates the whole part correctly. The real skill in CAD is not drawing shapes. It is capturing design intent: which dimensions are free, which are constrained, and what must stay true when something changes. A model with hard-coded numbers scattered through the code looks like CAD but behaves like a dead drawing. I treat this as a key test.</p>
-<p>I am using CadQuery, a Python module for building parametric 3D CAD models that is based on the OpenCASCADE kernel and can export STEP files; shape objects expose checks such as isValid() and BoundingBox() (CadQuery documentation, I chose code-based CAD for one practical reason: it makes the test reproducible and checkable. I can run the same script on any machine, measure the result with code, and keep everything in version control.</p>
-<p>Below is the reference part, an L-bracket with four mounting holes. It shows what “design intent in code” looks like: every dimension is a named parameter, the hole layout is derived from those parameters, and asserts stop the script if the parameters conflict.</p>
-<p>The hand calculation is what makes the checks meaningful. The L-profile area is 80 × 4 + 46 × 4 = 504 mm², and extruding it across the 40 mm width gives 20,160 mm³. The four holes (6.5 mm diameter, 4 mm deep) remove about 531 mm³. So when the script runs correctly it should report a volume of about 19,629 mm³ and a bounding box of 80 × 40 × 50 mm. If a generated script disagrees with these numbers, something is wrong even if it runs. Change thickness from 4 to 6 and the profile, the holes, and the checks all still hold.</p>
-<p>I picked parts in increasing order of difficulty, to see where the models start to break:</p>
-<p>Revolved geometry, standard-style features, tolerances</p>
-<p>Spur gear (specified module, teeth, bore)</p>
-<p>Mathematical geometry (involute profile), constraints</p>
-<p>Electronics enclosure with lid and snap-fit</p>
-<p>Multiple bodies, wall thickness, fits and clearances</p>
-<p>Assembly relationships, thread representation, clearances</p>
-<p>Each part comes with a written specification: dimensions, units, material, and intended manufacturing process (FDM 3D printing for parts 1, 4, and 5; CNC machining for parts 2 and 3).</p>
-<p>Every model receives the same prompt for each part, built from four pieces: the part description with all dimensions in millimetres; the target library (CadQuery) and its version; a request to put all dimensions in a parameter block at the top; and a request to include basic validity checks.</p>
-<p>I test two conditions. In the first, the model gets one attempt. In the second, I give the model the error message or a plain description of the failed check and allow up to three repair prompts. This mirrors how people actually use these tools.</p>
-<p>For every run I record the exact model name and version, the test date, the Python and CadQuery versions, the operating system, and any printer, slicer, and material used. All prompts and raw outputs are saved unedited in a repository.</p>
-<p>I define these rules before looking at any output, so I cannot bend them to fit the results. The thresholds are my own choices for this small test.</p>
-<p>I score each output from 0 to 5 on five criteria, where 0 means it fails completely, 3 means it is usable after manual edits, and 5 means it passes with no edits.</p>
-<p>Do the dimensions and features match the specification?</p>
-<p>Does changing a parameter update the model correctly?</p>
-<p>Would it print or machine without redesign?</p>
-<p>Would a reviewer accept the design decisions (fits, wall thickness, load paths)?</p>
-<p>A valid CAD model or a clean STEP export does not prove that a part can be made. In this article, a digital manufacturability evaluation means I check the geometry against the process rules below. A physical evaluation means a part is actually printed or machined. Unless I say a part was physically made, every manufacturability result is digital.</p>
-<p>I use two layers of checks. First, automated checks in code: is it one valid solid, is the volume positive and close to a hand calculation, do the bounding box dimensions match the specification, and does it export cleanly to STEP and STL?</p>
-<p>Second, an engineering review of the kind taught in a design class.</p>
-<p>For design for manufacturing (DFM) thinking, I lean on Geoffrey Boothroyd, Peter Dewhurst, and Winston A. Knight, Product Design for Manufacture and Assembly, 3rd ed. (CRC Press, 2011), and on Karl T. Ulrich, Steven D. Eppinger, and Maria C. Yang, Product Design and Development, 7th ed.</p>
-<p>(McGraw-Hill Education, 2020), which has a chapter on design for manufacturing and supply chain. For additive manufacturing constraints I use Ian Gibson, David Rosen, and Brent Stucker, Additive Manufacturing Technologies: 3D Printing, Rapid Prototyping, and Direct Digital Manufacturing, 2nd ed. (Springer, 2015), which includes a chapter on design for additive manufacturing.</p>
-<p>For dimensions and fits, I check tolerances against David A. Madsen, David P. Madsen, and Dennis A. Schwartz, Geometric Dimensioning and Tolerancing: Principles and Practices, 10th ed. (Goodheart-Willcox, 2021), which follows the ASME Y14.5-2018 standard. For basic design calculations such as bolt sizing, I use Richard G. Budynas and J. Keith Nisbett, Shigley’s Mechanical Engineering Design, 11th ed.</p>
-<p>(McGraw-Hill Education, 2020), which includes a chapter on screws, fasteners, and nonpermanent joints.</p>
-<p>The rules below are common rules of thumb, so always confirm the limits for your own printer, material, and machine shop.</p>
-<p>These are known risks in code generation and CAD scripting, not findings from my tests. In Part 2, I will report only failures I actually observed, and for each one I will say what the model did, how I detected it, and whether the repair worked.</p>
-<p>1. Invented or unsupported function calls. Code-generating models can produce code that reads well but fails when run. Mark Chen et al., Evaluating Large Language Models Trained on Code (arXiv:2107.03374, 2021), judged code models by functional correctness (does the program actually work?) rather than by text similarity, and reported limits such as difficulty with long chains of operations and with binding operations to variables. Calling CadQuery methods that do not exist is one form this can take in my setting.</p>
-<p>2. Coordinate and workplane confusion. CAD scripting depends on knowing which plane you are sketching on and which way is “up.” A feature can end up on the wrong side of a part or at the wrong height.</p>
-<p>3. Unit and dimension drift. A model may switch between millimetres and inches, or misread a diameter as a radius.</p>
-<p>4. Hard-coded numbers. A script can look parametric because it has a parameter block, yet use raw numbers in the geometry code, which breaks design intent as soon as a value changes.</p>
-<p>5. Operations that fail on real geometry. Fillets, chamfers, and shells can fail when the model picks the wrong edges or the geometry makes the operation invalid. This relates to the boundary-representation operations described in Section 2.</p>
-<p>6. Looks right, but not manufacturable. A part can match the specification on paper and still have thin walls, unsupported overhangs, or no clearance for assembly.</p>
-<p>7. Math-heavy parts. A spur gear needs a correct tooth profile, and small errors mean gears that will not mesh.</p>
-<p>I will evaluate each generated CAD model using the same criteria to keep the comparison consistent. The evaluation will cover five test parts: an L-bracket, a shaft coupling, a spur gear, an electronics enclosure, and a bolt-nut-plate assembly.</p>
-<p>I will evaluate the original output separately from the output produced after up to three repair prompts. Any manual corrections will be documented separately and will not count as an unmodified AI success.</p>
-<p>No scores or comparative results are reported here because the experiments have not yet been completed. Part 2 will present the observations, measurements, and supporting evidence collected during the tests.</p>
-<p>So, can AI write CAD? My hypothesis, as a student who spends a lot of time checking dimensions, is that it can write CAD code, and sometimes that code will produce a usable part, but “usable” will still depend on a human who understands the geometry, the manufacturing process, and the design intent. The test above is how I plan to find out whether that is true or just a comfortable guess.</p>
-<p>What I believe so far is that the hard part of CAD was never typing. It is knowing what the part needs to do, how it will be made, and what could go wrong. If AI speeds up the first draft, the fundamentals taught in design, manufacturing, and tolerancing courses matter more, not less.</p>
-<p>Mechanical Engineering student at Carnegie Mellon University | Exploring engineering, technology, design, and innovation.</p>
+                <p>LFM3 is our new generation of Liquid Foundation Models (LFMs), built to be the starting point for specialized intelligence. It brings text, vision, audio, omni, and decision models onto one shared backbone, all in the 2B parameter range. This means you can pick the model for your modality, fine-tune it on your own data on a single GPU, and deploy it where your application runs.</p>
+<p>LFM3 brings four main changes compared to our previous LFM2 family:</p>
+<p>LFM2 showed that a hybrid of short convolutions and attention can run fast on-device without sacrificing quality. For LFM3, we used our hardware-in-the-loop architecture search to redesign that architecture for agentic use cases, which need more capability per parameter and fast inference over long contexts. The search now covers 14 device and backend combinations, from phones and a Raspberry Pi 5 to laptops, cloud CPUs, GPUs, and the Qualcomm Hexagon NPU.</p>
+<p>LFM3-1.7B-Base has 24 layers and four main changes:</p>
+<p>The payoff shows at long context. Per parameter, LFM3-1.7B matches LFM2-1.2B on short prompts across edge devices, and with 8K tokens in context it is about 25% faster. LFM3-1.7B-Base was pre-trained on 22T tokens with the same 128K vocabulary as LFM2.5-8B-A1B. The final 3.5T tokens are a mid-training stage on curated data with a larger share of agentic traces and tool calls, which also extends the context window to 256K tokens.</p>
+<p>Every LFM3 model branches from LFM3-1.7B-Base. Instead of running one large general-purpose model, you pick the one that fits your inputs, customize it, and run it on-device.</p>
+<p>The vision and audio models also get two new in-house encoders:</p>
+<p>Each model runs in transformers. The snippets below come from the model cards, which also list the other inference engines each model supports.</p>
+<p>Reach for LFM3-1.7B when you need local agents, tool calling, structured outputs, or a base for domain-specific fine-tuning. It is post-trained to run in agentic harnesses such as Hermes Agent, Pi, and OpenClaw. It outperforms its predecessor, LFM2.5-2.6B, with 35% fewer parameters, and the biggest gains are on agentic tasks: on WebArena-Verified, it scores 38.42 against 3.02, and it even beats Qwen3.5-9B on long tasks in browsers and business apps. You can find more details in the LFM3-1.7B model card.</p>
+<p>To run LFM3-1.7B, install the latest version of transformers:</p>
+<p>For local agent setup, see the Agent Harnesses guide.</p>
+<p>Reach for LFM3-VL-2B when you need on-device visual understanding. It is the first LFM vision model that takes video as input; it reasons step by step before it answers, and it finds objects and reasons about how they are placed, a strong foundation for robotics. Compared with LFM2.5-VL-3B, it has fewer parameters (1.9B against 3.1B) yet raises the average across 62 vision benchmarks from 57.6 to 71.4, on par with Gemma 4 12B, a model more than six times larger. You can find more details in the LFM3-VL-2B model card.</p>
+<p>To run LFM3-VL-2B, install transformers>=5.21.0 with its vision dependencies:</p>
+<p>See the LFM3-VL-2B model card for tool calling, tool search, and on-device inference with llama.cpp.</p>
+<p>Reach for LFM3-Audio-2B when you need voice chat, speech recognition, speech synthesis, or translation across 18 languages on a laptop or edge device. It takes text or audio as input and responds with text, speech, or both, and it can turn spoken requests into tool calls. Compared with LFM2.5-Audio-1.5B, it uses a new in-house audio encoder and speech codec, speaks with higher quality (UTMOSv2 3.83 against 3.22), and adds audio understanding, general-purpose audio reasoning, and tool calling. You can find more details in the LFM3-Audio-2B model card.</p>
+<p>To run LFM3-Audio-2B, install transformers>=5.20.2 with its audio dependencies:</p>
+<p>Load the model and processor directly from the Hugging Face Hub:</p>
+<p>Then ask a question aloud and get a reply in text and speech:</p>
+<p>See the LFM3-Audio-2B model card for live speech recognition, speech synthesis, audio understanding, and tool calling.</p>
+<p>Reach for LFM3-Omni-2B when you need one on-device model that sees, listens, and talks back, in place of a separate ASR model, vision-language model, LLM, and TTS model. It can answer spoken questions about an image, watch and listen to a video together, and turn what it sees and hears into tool calls. It is our first omni model, with text, vision, and audio input and both text and speech output, and it keeps the core capabilities of the standalone LFM3 models, including visual question answering, speech recognition, speech synthesis, and instruction following. Like LFM3-Audio-2B, it speaks through LiquidCodec, which turns generated tokens into speech faster than real time, so spoken replies stream as the model generates them. On audio-visual video understanding, it beats models up to 10.7B parameters, such as Qwen2.5-Omni-7B, on Daily-Omni, WorldSense, and AV-SpeakerBench. You can find more details in the LFM3-Omni-2B model card.</p>
+<p>To run LFM3-Omni-2B, install transformers>=5.20.2 with its vision and audio dependencies:</p>
+<p>Then ask a question about a photo by voice:</p>
+<p>See the LFM3-Omni-2B model card for speech output, video with its soundtrack, and tool calling.</p>
+<p>Reach for the d1 models when you need fast, structured decisions instead of generated text. Give them a situation (a support ticket, an invoice, an app screen, a photo, a voice note) and a list of questions, and they answer all of them in a single forward pass, each with a calibrated probability. Beyond yes/no, choices, and scores, they can now point at objects, read values from documents, estimate numbers with a range, and pick every option that applies. You can find more details in the model cards for d1-2B and d1-omni-2B.</p>
+<p>To run d1-2B, install transformers>=5.19 with its vision dependencies:</p>
+<p>Then load d1-2B and ask it several questions about one support ticket in a single pass:</p>
+<p>For brevity, we only include the example for d1-2B. See the d1-omni-2B model card for audio clips and spoken questions.</p>
+<p>LFM3 is built to be specialized. Frontier models are powerful generalists, but they are not necessarily experts in your use case. LFM3 packs extra capacity into a small, fast model, so a short fine-tune can turn it into a reliable expert on your task, with your data, terminology, and tools. Because it is small, you can deploy the fine-tuned model where your application runs, from devices to private infrastructure to the cloud.</p>
+<p>Every model can be fine-tuned on a single GPU, and these notebooks walk you through a complete task for the text, vision, audio, and omni models, from data preparation to evaluation.</p>
+<p>We adapt LFM3-VL-2B into three complementary robotics models for orchestration, navigation, and manipulation. The orchestrator operates a robot arm through tool calls: it grounds objects by pointing, measures them with depth tools, invokes motion planners, and checks outcomes in subsequent camera images. The navigator follows route descriptions using recent RGB observations, predicting spatial targets and a waypoint trajectory in just five tokens. The manipulation VLA maps images, language, and robot state to eight-step chunks of continuous actions in a single forward pass. Jointly trained across 15 embodiments, the VLA achieves 96.2% average success across the four LIBERO suites and 45.7% on RoboCasa-GR1 tabletop tasks, generating action chunks in under 50 ms on a Jetson AGX Orin with TensorRT FP16. These results highlight LFM3-VL-2B as a compact foundation for robotics, spanning high-level planning to low-level control with real-time action generation on embedded hardware.</p>
+<p>Watch LFM3-VL-2B handle perception, navigation, and manipulation in this demo video.</p>
+<p>All LFM3 models are open-weight and available on Hugging Face today:</p>
+<p>If you use this work, please cite the release blog:</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/can-ai-write-cad-testing-llm-generated-3d-models-for-manufacturability?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/LiquidAI/lfm3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

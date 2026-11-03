@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My reflex of assuming our servers need ever-growing amounts of RAM</title>
+    <title>Why we&#x27;re moving our warehouse off DuckDB</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9834.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,38 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>My reflex of assuming our servers need ever-growing amounts of RAM</h1>
+        <h1>Why we&#x27;re moving our warehouse off DuckDB</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
+            <img src="https://res.cloudinary.com/dmukukwp6/image/upload/moving_off_duckdb_4c95538aac.png" alt="Why we&#x27;re moving our warehouse off DuckDB" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.cloudinary.com/dmukukwp6/image/upload/moving_off_duckdb_4c95538aac.png" alt="Why we're moving our warehouse off DuckDB" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>You're probably reading this page because you've attempted to access
-some part of my blog (Wandering Thoughts) or
-CSpace, the wiki thing it's part of. Unfortunately
-you're using a browser version that my anti-crawler precautions consider
-suspicious, most often because it's too old (most often this applies to
-versions of Chrome). Unfortunately, as of early 2025 there's a plague
-of high volume crawlers (apparently in part to gather data for LLM
-training) that use a variety of old browser user agents, especially
-Chrome user agents. To reduce the load on
-Wandering Thoughts I'm experimenting with
-(attempting to) block all of them, and you've run into this.</p>
-<p>If this is in error and you're using a current version of your
-browser of choice, you can contact me at my current place at the
-university (you should be able to work out the email address
-from that). If possible, please let me know what browser you're
-using and so on, ideally with its exact User-Agent string.</p>
-<p>I am not blocking Inoreader's feed fetcher or considering it to be
-too old, and it routinely fetches feeds from me. I don't know why
-Inoreader is showing you this page. It is possible that they're
-periodically trying to fetch feeds or pages with an old browser
-HTTP User-Agent (or an actual old browser) and taking the results
-of that fetch (this page) as what they should show people instead
-of the results of their syndication feed fetcher agents. This is a
-bad mistake today; the results
-of modern HTTP fetches depend partly on the HTTP User-Agent used.</p>
-<p>Much like Inoreader, Feedly is periodically fetching my syndication
-feeds with a fake, old browser HTTP User-Agent header, which fails,
-and is then grimly latching on to the results for their actual feed
-fetching with their regular Feedly HTTP User-Agent. There is nothing
-I can do about this; you should contact Feedly support, if you can
-find them. See this
-comment of mine in Wandering Thoughts for more details.</p>
-<p>Due to an ongoing attack, you may need to change
-the
-"User Agent Brand Masking" setting so that your Vivaldi identifies
-itself as Vivaldi, instead of Google Chrome. This applies to even
-the current version of Vivaldi.</p>
-<p>You may be seeing this through archive.today, archive.ph, archive.is,
-and so on. Unfortunately, archive.* crawls pages to archive in a way that
-is impossible to distinguish from malicious actors. They use old Chrome
-User-Agent values, crawl from IP address blocks that are widely distributed
-and not clearly identified as theirs, and some of their IP addresses have
-falsified reverse DNS entries that claim they are googlebot IP addresses
-(which is something that is normally done only by quite bad actors). I
-suggest that you use archive.org, which is a better behaved archival
-crawler and can crawl my blog (Wandering Thoughts).</p>
+                <p>Five months ago, we rebuilt our warehouse on DuckDB instead of ClickHouse. We did it because a shared ClickHouse cluster couldn't handle hours-long modeling queries, and it lacked a cost-based query optimizer. DuckDB gave every customer their own instance, and tools like dbt could connect over Postgres. We're still fans.</p>
+<p>But we underestimated how big and complex our customers' workloads would get. We didn't want them to have just a good experience, we wanted the best experience you can get when you pay someone else to run your warehouse. It should work at any scale, at a fair price.</p>
+<p>So we spent the last three months re-architecting it, this time without DuckDB.</p>
+<p>We love DuckDB. It's probably the best single-node tool for analyzing heaps of data, and that node can be your laptop. It's robust and reliable. It almost always finishes your query, and if it runs out of memory, it spills to disk.</p>
+<p>The same features that are great locally gave us problems in the cloud. Customers ran more complex queries than we expected, so we had to add huge instances. Adding disks was an option, but queries would have been too slow and expensive to be viable.</p>
+<p>To run a single-node engine safely in the cloud, we have to size the worker before the query arrives. The ergonomics here are wonky. We couldn't find a good way to tell customers what resources their queries would need. Predicting CPU and memory for a specific query was even harder.</p>
+<p>Users shouldn't have to worry about this. They should be able to run whatever they need to get their work done. Our job is to handle the rest and make it as predictable as possible.</p>
+<p>We hit other bottlenecks too, like fetching lots of data from S3 without async fetching. DuckDB only added that recently.</p>
+<p>To use DuckDB as a fully-fledged data warehouse, we installed the DuckLake extension by default. It is a new lakehouse format from the same creators and follows the same principles as DuckDB: keep things simple and run on almost any setup. That works well up to a point, but at PostHog's scale, we needed something designed for distributed scale from the start.</p>
+<p>DuckLake's catalog schema has to stay portable across many SQL databases, which limits engine-specific optimizations. At our scale, a single-table write could take more than three minutes because every commit re-read the statistics for the entire catalog.</p>
+<p>We tuned DuckLake with table indexes and similar tweaks. But to keep offering DuckLake, we had to stay 100% compatible with its existing, "official" schema. This left us with fewer optimization options.</p>
+<p>Another problem is that over 99% of the catalog's statistics rows belonged to tables that no longer existed. Cleaning them up made writes 30 to 50 times faster, but the rows kept growing back.</p>
+<p>We also spent a lot of time on the number of connections DuckLake opens to metadata databases. That hurts on shared Postgres instances, where every connection has a real cost.</p>
+<p>DuckLake at PostHog didn't start small and ramp up. We fully committed and put all of PostHog in a DuckLake to dogfood as the first customer.</p>
+<p>When we moved off it, it held about 2 PB: roughly 1 trillion rows and 15.3 million snapshots. It broke in lots of ways that were hard to fix within DuckLake's scope.</p>
+<p>We'd rather have contributed to the existing community and helped it grow. But we couldn't land changes as fast as we needed, so we ended up carrying patches in a fork which defeats one of the main benefits of using DuckLake: the community.</p>
+<p>Offering direct Postgres connections over port 5432 sounds like a great idea. In practice, it was much harder to scale than HTTP.</p>
+<p>Missing reconnects and managing TTLs and idle connections at scale is hard, and long-running connections are expensive. There's also very little tooling for load balancing pgwire compared with HTTP. Compare the ergonomics of an AWS NLB with an ALB and you'll see what we mean. HTTP headers also make routing in Kubernetes much more flexible.</p>
+<p>There's also an endless list of Postgres clients, and each expects its own niche Postgres behavior. Customers kept asking us to fix their client or library. We spent a lot of time shipping many of those fixes, but coverage never got good enough. We'd rather spend our time building an excellent warehouse than chasing the long tail of Postgres compatibility.</p>
+<p>We've learned not to hype the tech behind a warehouse so much. What counts is the experience it gives you.</p>
+<p>Still, we're happy to share what we're cooking next. We rebuilt everything around our own flavor of Trino and created our own open table format, HogLake. And yes, we're testing it at PostHog's petabyte scale first. We made it solid before handing it to design partners.</p>
+<p>If your current warehouse is slow or expensive, let's talk, especially if you have a lot of data to query. We're always looking for design partners.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://utcc.utoronto.ca/~cks/space/blog/sysadmin/ServerRAMGrowthReflex" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://posthog.com/blog/moving-off-duckdb" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

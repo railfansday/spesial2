@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</title>
+    <title>Now on Amazon CloudWatch Omni: collaborative AI-powered observability for your applications</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10030.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,64 +15,56 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</h1>
+        <h1>Now on Amazon CloudWatch Omni: collaborative AI-powered observability for your applications</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/09/28/News-Blog-Featured-Images-15.png" alt="Now on Amazon CloudWatch Omni: collaborative AI-powered observability for your applications" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/09/28/News-Blog-Featured-Images-15.png" alt="Now on Amazon CloudWatch Omni: collaborative AI-powered observability for your applications" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Imagine ordering your weekly groceries as naturally as texting a friend:"Hey, we're out of milk and eggs. Can you also add some snacks for Friday movie night?"</p>
-<p>In our previous post, Building Conversational Commerce with Multi-Agent Swarms on GCP, we shared the architectural blueprint for conversational commerce—proposing a 3-layer decoupled design (Ingress, Memory, and Cognition) to solve messaging timeouts, state tracking, and response reliability.</p>
-<p>While blueprints establish the architecture on paper, production readiness demands working software. In this post, we take that blueprint and bring it to life with a functional prototype called HappyDelivery.</p>
-<p>Using LangGraph, Gemini, FastAPI, and Google Cloud, we'll walk through the code, the state machine, deterministic financial tools, and an automated verification suite that demonstrates how this multi-agent swarm operates in practice.</p>
-<p>To build a reliable commerce swarm, we implemented three decoupled layers that handle the journey of every customer text message:</p>
-<p>Let's examine how each layer functions in code with its own dedicated architecture.</p>
-<p>A frequent question when designing conversational commerce is: how does a message sent by a customer on their smartphone actually land in Layer 1, and can this architecture support messaging platforms beyond WhatsApp?</p>
-<p>End users do not communicate directly with your Google Cloud servers. Instead, customer messages traverse an operator ecosystem before landing on your webhook:</p>
-<p>Every major consumer messaging platform operates on the exact same fundamental contract: an asynchronous HTTPS POST webhook delivery with a strict HTTP acknowledgement timeout:</p>
-<p>While the payload schemas and cryptographic headers differ slightly between platforms, Layer 1 abstracts away all client differences:</p>
-<p>This ensures the rest of your system—Session Store (Layer 2) and Agent Swarm (Layer 3)—operates on clean, normalized data without caring whether the shopper sent their message from an iPhone, an Android RCS chat, or a WhatsApp thread.</p>
-<p>Messaging platforms are completely stateless: every text message arrives as an isolated webhook event. To provide a coherent shopping experience, the system must instantly reconstruct the customer's full context without having to re-read or re-parse days of chat logs on every turn.</p>
-<p>We use Cloud Memorystore (Redis) keyed by the customer's verified phone number (session:{phone_number}) to store active state:</p>
-<p>A common question in conversational commerce is whether state lookups will introduce latency. Here is what the baseline infrastructure supports:</p>
-<p>Key Takeaway: In practice, the Session & Cart Layer will never be the bottleneck—it easily outpaces upstream webhook inference and downstream LLM inference.</p>
-<p>Rather than relying on a single monolithic prompt to handle every task, we separate reasoning into a swarm of specialized agents:</p>
-<p>Now that we have seen the high-level design of the three layers, let's look at the actual Python prototype code that brings each layer to life.</p>
-<p>The goal of this service is simple: verify authenticity across any inbound channel, normalize the payload into a canonical schema, and get off the critical path in < 150ms.</p>
-<p>Here is our implementation showing how multiple messaging channels (WhatsApp, RCS, Apple Messages, SMS) are handled by pluggable adapters:</p>
-<p>By immediately returning an HTTP 200 OK and handing the payload off to Pub/Sub, we completely decouple message intake from downstream AI reasoning time across all messaging ecosystems.</p>
-<p>We benchmarked the live Cloud Run HTTPS webhook intake across warm invocations:</p>
-<p>This empirically proves our architectural claim: the Ingress service validates the cryptographic signature and immediately commits the event to Pub/Sub, freeing the customer chat client without waiting on agentic reasoning.</p>
-<p>We also verified security enforcement against tampered payloads:</p>
-<p>The worker pods pulling from Pub/Sub need to instantly look up who the customer is and what is in their current cart.</p>
-<p>Here is the session store implementation using Cloud Memorystore (Redis):</p>
-<p>Each record contains the customer ID (cust_9821), saved address, dietary restrictions, and current cart items. This guarantees that when a customer texts back hours later, their cart is restored instantaneously.</p>
-<p>Every session lookup executes in 0.318ms, proving our architectural claim that restoring customer context and persistent cart state adds virtually zero latency to the conversational turn.</p>
-<p>With Ingress and Redis handling incoming traffic and memory, all the decision-making lives in the LangGraph multi-agent graph.</p>
-<p>Every turn passes through a typed data structure holding the customer's profile, active cart, and the supervisor's routing decision:</p>
-<p>Next, we define the nodes and conditional edges that allow the Supervisor to dynamically route tasks to the right specialist:</p>
-<p>A core tenet of our blueprint is: delegate arithmetic to deterministic tools. Generative models excel at language and reasoning, while financial calculations require exact precision. If a model computes taxes or discounts in free-form text, it may occasionally introduce calculation errors.</p>
-<p>Instead, we bind deterministic tools to our specialist nodes. For example, the Inventory and Transaction agents use a Python calculation tool rather than computing prices in-prompt:</p>
-<p>Worker containers pull messages asynchronously from Pub/Sub and stream LangGraph node transitions in real time.</p>
-<p>Now that we have all three components—Ingress (Layer 1), Redis Memory (Layer 2), and the LangGraph Swarm (Layer 3)—how do they actually run together as a single unified system?</p>
-<p>Here is the complete end-to-end lifecycle of a customer's message:</p>
-<p>The worker loop that coordinates all three layers is concise, clean, and completely decouples the user-facing webhook from back-office AI reasoning:</p>
-<p>With the entire pipeline wired together, let's look at what happens when we run an actual customer order through it.</p>
-<p>To verify the prototype, we ran an automated simulation of an end-to-end customer order. Here is how the swarm behaves across three natural conversational turns:</p>
-<p>Behind the Scenes: The InventoryAgent mutates the in-memory cart (removing Sprite and adding Coke Zero), executes calculate_cart_totals, and confirms delivery details without losing context.</p>
-<p>We validated all core behaviors—webhook HMAC validation, catalog indexing, deterministic math, and multi-turn state transitions—with automated unit and integration tests:</p>
-<p>A critical question when evaluating multi-agent architectures is token consumption and operational inference cost. In a naive implementation where massive prompts and entire conversation histories are repeatedly re-sent on every step, LLM API bills can quickly eat into e-commerce retail margins.</p>
-<p>Our prototype is engineered specifically to prevent token waste through strict agent specialization, deterministic tools, and externalized Redis state:</p>
-<p>Here is the exact token telemetry measured across the live 3-turn HappyDelivery session:</p>
-<p>Bringing the blueprint into working code revealed several practical realities:</p>
-<p>Building this prototype proved that the decoupled architecture outlined in our blueprint isn't just theoretical—it is practical, reliable, and ready for production on Google Cloud.</p>
-<p>By combining LangGraph for multi-agent workflows, Gemini for natural language reasoning, and GCP for fast ingress and persistent memory, we can build shopping experiences that feel as simple as chatting with a friend while maintaining the enterprise rigor required for commerce.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Smaller apps and faster GPU inference with LiteRT in Google Play services</p>
+                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
+<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
+<p>Get started with one of these featured services or browse all</p>
+<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
+<p>Amazon CloudWatch now offers CloudWatch Omni, an AI-powered observability experience for the applications and AI agents you run together. You reach Omni through a dedicated URL for your organization and sign in with the identities you already manage, so working in Omni does not require access to the AWS Management Console. Omni is built on OpenTelemetry: the telemetry you already send to CloudWatch appears in Omni with nothing to reconfigure, and any other workload you instrument with OpenTelemetry sends its telemetry to an OpenTelemetry Protocol (OTLP) endpoint.</p>
+<p>CloudWatch Omni offers both agent observability and application observability in a single experience. In our companion post, we introduced the agent observability capabilities of Omni for generative AI and agentic workloads. In this post, we present the application observability experience.</p>
+<p>Engineering teams spend a significant portion of their observability time maintaining dashboards, tuning thresholds, and switching between tools to piece together what happened during an incident. When an issue crosses team boundaries, context gets lost in Slack threads and screenshots rather than flowing naturally to the next engineer. CloudWatch Omni changes this by organizing observability around your applications rather than individual signals, and bringing your whole team into the same workspace.</p>
+<p>What CloudWatch Omni brings
+         CloudWatch Omni addresses three problems that engineering teams told us they face today.</p>
+<p>One collaborative experience for your whole team. Every engineer accesses CloudWatch Omni through a single URL with enterprise SSO (via IAM Identity Center, supporting Okta, EntraID, and other providers). No AWS Console access is required. SREs, developers, database engineers, and managers share the same data and investigation context. When an investigation escalates, the next person joins the same session with full context already in front of them.</p>
+<p>The system adapts as your applications evolve. CloudWatch Omni discovers your services, maps dependencies, and adjusts alarms automatically. Instead of manually curating dashboards and tuning thresholds, you declare what matters (availability targets, latency budgets, error rate thresholds) and Omni adapts as your system changes. When you deploy new services, Omni updates the application topology automatically.</p>
+<p>AI-powered investigation with Amazon DevOps Agent. Amazon DevOps Agent participates alongside your team in investigation sessions, correlating signals and suggesting next steps. The agent works from the same telemetry your engineers see, so its suggestions are grounded in the actual state of your application. It identifies correlated events across services, traces root cause paths through your dependency graph, and maintains investigation history for post-incident review.</p>
+<p>How an investigation works
+         When something breaks, CloudWatch Omni opens an investigation session pre-loaded with context. Here is a typical incident workflow:</p>
+<p>An alarm fires on elevated error rates in your checkout service. Omni opens a session showing the service topology, correlated signals (a deployment 10 minutes earlier, increased latency from a downstream payment API), and DevOps Agent’s initial analysis.</p>
+<p>Your on-call SRE confirms the deployment correlation, pulls in the trace view to identify failing endpoints, and checks if the payment API latency correlates with a capacity limit.</p>
+<p>The SRE escalates to the payments team. The payments engineer joins the same session and sees everything found so far, plus DevOps Agent’s correlation with a configuration change in the payment provider’s API gateway. They identify the root cause and roll back.</p>
+<p>The entire investigation history is captured automatically. No separate incident report needed.</p>
+<p>Walkthrough: setting up your first Space
+         To set up CloudWatch Omni for your team, open the CloudWatch console and click “Try CloudWatch Omni.”</p>
+<p>Next, connect your identity provider through IAM Identity Center (supporting Okta, Azure AD, and other SAML 2.0 providers). Once connected, your team members access Omni directly at your dedicated URL without needing AWS Console credentials.</p>
+<p>Create a Space for your team. A Space groups the applications your team owns and the telemetry associated with them.</p>
+<p>Once created, Omni discovers your services automatically and maps the dependencies between them. You see your application topology immediately.</p>
+<p>You can ask CloudWatch Omni any question about your applications in plain English, and Omni will analyze your telemetry data and surface insights.</p>
+<p>You can also set up service health alerts, configure what matters to your team, and trigger an AWS DevOps agent investigation to identify the root cause and develop a mitigation plan.</p>
+<p>Application-centric organization
+         CloudWatch Omni organizes telemetry by application rather than by infrastructure component. The system automatically discovers services from the telemetry data and AWS Config resource discovery, maps dependencies, and lets you see your application as a connected system rather than a collection of isolated resources.</p>
+<p>Each team gets a Space that contains the applications they own. A Space points at existing CloudWatch data (logs, metrics, traces, and alarms) with no additional data movement required. Dynamic views replace the maintenance burden of static dashboards, providing ongoing visibility into SLOs and application health.</p>
+<p>Getting started
+         Getting started takes minutes and doesn’t require reconfiguration of your existing CloudWatch setup.</p>
+<p>If you’re an existing CloudWatch customer: Click “Try CloudWatch Omni” in the CloudWatch console. All your existing telemetry (logs, metrics, traces, and alarms) is immediately available. Workloads are discovered automatically, and you can start an investigation or browse your application topology right away.</p>
+<p>For organization-wide deployment: An administrator configures a domain, connects your identity provider via IAM Identity Center, defines Spaces for teams and environments, and invites users. Each Space points at existing CloudWatch data with no additional data movement required.</p>
+<p>For applications in other environments: CloudWatch Omni provides connectors that make it easy to bring in telemetry from additional environments. All ingested telemetry appears alongside your AWS data in the same Spaces and investigation sessions.</p>
+<p>For generative AI and agentic workloads: The same CloudWatch Omni experience delivers purpose-built observability for AI agents, including trace exploration, evaluation frameworks, and real-time monitoring. In our companion post, we introduced the agent observability capabilities of Omni; for that walkthrough, see Introducing Amazon CloudWatch Omni: AI-powered observability for generative AI and agentic workloads.</p>
+<p>Pricing and availability
+         Amazon CloudWatch Omni is now available. Existing CloudWatch customers can try it directly from the CloudWatch console. For pricing details, visit the Amazon CloudWatch pricing page.</p>
+<p>To get started, visit Amazon CloudWatch Omni or click “Try CloudWatch Omni” in the Amazon CloudWatch console.</p>
+<p>If you want to call APIs, search documentation, find regional availability, and check troubleshooting about this feature, try using the AWS MCP Server and plugins with your preferred AI tool. Share your feedback on AWS re:Post or reach out through your usual AWS Support contacts.</p>
+<p>9/24/2026 – Editor’s note: Azure AD has been renamed to Microsoft Entra ID.</p>
+<p>Daniel Abib is a senior specialist solutions architect at AWS, focused on generative AI and Amazon Bedrock — and passionate about serverless. He helps startups and enterprises build AI-powered applications and modernize with cloud-native architectures. A three-time Ironman finisher and four-time re:Invent speaker, he brings the same endurance mindset to building cloud solutions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/building-conversational-commerce-with-multi-agent-swarms-on-gcp-a-working-prototype/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://aws.amazon.com/blogs/aws/introducing-amazon-cloudwatch-omni-collaborative-ai-powered-observability-for-your-applications/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

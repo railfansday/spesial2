@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work on GEFS (the Good Enough File System) for OpenBSD progresses</title>
+    <title>OpenBSD 8.0 Brings Expanded Hardware Support, Security Enhancements, and Virtualization Improvements</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9859.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,214 +15,66 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Work on GEFS (the Good Enough File System) for OpenBSD progresses</h1>
+        <h1>OpenBSD 8.0 Brings Expanded Hardware Support, Security Enhancements, and Virtualization Improvements</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
+            <img src="https://res.infoq.com/news/2026/10/openbsd-8-released/en/headerimage/openbsd-8-released-1793464400707.jpeg" alt="OpenBSD 8.0 Brings Expanded Hardware Support, Security Enhancements, and Virtualization Improvements" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/10/openbsd-8-released/en/headerimage/openbsd-8-released-1793464400707.jpeg" alt="OpenBSD 8.0 Brings Expanded Hardware Support, Security Enhancements, and Virtualization Improvements" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Home
-Archives
-About
-Submit Story
-Create Account
-Login</p>
-<p>Contributed by
-Peter N. M. Hansteen
-on 2026-11-01
-from the most excellent file shredder dept.</p>
-<p>Now Ori has followed up with more evolved code that includes several important steps towards makin the new file system fit for general use. In a message to tech@, Ori writes:
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>QCon AI New York (December 15-16, 2026): Learn how senior engineers are building AI systems that hold up in production.
 
-
-
-List:       openbsd-tech
-Subject:    Re: GEFS on OpenBSD: A very early preview
-From:       ori () eigenstate ! org
-Date:       2026-10-31 17:08:42
-
-So, it's probably time for a few updates. First
-off, thanks to Martijn, and everyone else who
-tried it out and sent patches.
-
-Everything is updated and rebased, and the diff
-has been regenerated with all of the lastest.
-
-
-
-
-I've gone through a the error handling code. In
-theory the filesystem will handle errors mostly
-correctly. There are probably still places where
-theory diverges from reality. I've also forward
-ported most of the important bugfixes from 9front.
-
-The file system now leaves the first FS block
-unused by default -- we can put disklabels there,
-which makes it hard to put the superblock there as
-well.
-
-Some userspace tools have been done (you can now
-mkfs on openbsd!), but snapshot control hasn't.
-I'm thinking we have a userspace 'gefs' program
-that lets you handle this, trying to keep the
-interface similar to the 9front ctl file. The
-commands below should suffice:
-
-  gefs debug [0|1]
-  gefs usereserve
-  gefs retain snap timespec
-  gefs snap name newname
-  gefs fork name newname
-
-The consistency protocol is still the biggest
-missing piece; I've been reading the old code
-for softupdates, since it had the same flavor
-of problem.
-
-what gefs wants, in the ideal case, is some way
-to put ordering barriers in the commit phases,
-while still accepting new block i/o, something
-like the following sequence of steps:
-
-	0) normal use, generate dirty blocks and
-	  write back in any order.
-      holding mutlk {
-		1) barrier(), ensure that all blocks
-		 written before the commit will be
-		 on disk before the commit finishes
-		2) enqueue free list/deadlist data
-		3) prepare arena header/footer + superblock
-	 }
-	4) enqueue arena headers
-	5) barrier()
-	6) enqueue superblock
-	7) enqueue arena footers
-	8) wait for enqueued blocks to hit disk
-	9) free blocks no longer used by previous gen
-
-on 9front, I have a priority queue of blocks that
-are sorted by (gen, addr) tuples, which means that
-writes within a generation are flushed to disk as
-sequentially as they can be, while not crossing
-generation boundaries.
-
-I'm currently thinking I'll implement the same in
-OpenBSD -- launch syncer kprocs that do synchronous
-I/O to the block device. If we kick things out of
-cache and write it back to disk early, that should
-generally be safe -- The only blocks the buffer
-cache must not reorder are the arena headers and
-superblocks, so a flag to pin them unwritten may
-be all that's needed here.
-
-I'm open to other ideas, though.
-
-Quoth ori@eigenstate.org:
-
-
-
-Followed by a quoted part of the previous message that has the links to the code and documentation.
-
-If you are as excited as we are about this new file system development and are in a position to test, please do.</p>
-<p>List:       openbsd-tech
-Subject:    Re: GEFS on OpenBSD: A very early preview
-From:       ori () eigenstate ! org
-Date:       2026-10-31 17:08:42
-
-So, it's probably time for a few updates. First
-off, thanks to Martijn, and everyone else who
-tried it out and sent patches.
-
-Everything is updated and rebased, and the diff
-has been regenerated with all of the lastest.
-
-
-
-
-I've gone through a the error handling code. In
-theory the filesystem will handle errors mostly
-correctly. There are probably still places where
-theory diverges from reality. I've also forward
-ported most of the important bugfixes from 9front.
-
-The file system now leaves the first FS block
-unused by default -- we can put disklabels there,
-which makes it hard to put the superblock there as
-well.
-
-Some userspace tools have been done (you can now
-mkfs on openbsd!), but snapshot control hasn't.
-I'm thinking we have a userspace 'gefs' program
-that lets you handle this, trying to keep the
-interface similar to the 9front ctl file. The
-commands below should suffice:
-
-  gefs debug [0|1]
-  gefs usereserve
-  gefs retain snap timespec
-  gefs snap name newname
-  gefs fork name newname
-
-The consistency protocol is still the biggest
-missing piece; I've been reading the old code
-for softupdates, since it had the same flavor
-of problem.
-
-what gefs wants, in the ideal case, is some way
-to put ordering barriers in the commit phases,
-while still accepting new block i/o, something
-like the following sequence of steps:
-
-	0) normal use, generate dirty blocks and
-	  write back in any order.
-      holding mutlk {
-		1) barrier(), ensure that all blocks
-		 written before the commit will be
-		 on disk before the commit finishes
-		2) enqueue free list/deadlist data
-		3) prepare arena header/footer + superblock
-	 }
-	4) enqueue arena headers
-	5) barrier()
-	6) enqueue superblock
-	7) enqueue arena footers
-	8) wait for enqueued blocks to hit disk
-	9) free blocks no longer used by previous gen
-
-on 9front, I have a priority queue of blocks that
-are sorted by (gen, addr) tuples, which means that
-writes within a generation are flushed to disk as
-sequentially as they can be, while not crossing
-generation boundaries.
-
-I'm currently thinking I'll implement the same in
-OpenBSD -- launch syncer kprocs that do synchronous
-I/O to the block device. If we kick things out of
-cache and write it back to disk early, that should
-generally be safe -- The only blocks the buffer
-cache must not reorder are the arena headers and
-superblocks, so a flag to pin them unwritten may
-be all that's needed here.
-
-I'm open to other ideas, though.
-
-Quoth ori@eigenstate.org:
-
-
-
-Followed by a quoted part of the previous message that has the links to the code and documentation.
-
-If you are as excited as we are about this new file system development and are in a position to test, please do.</p>
-<p>Followed by a quoted part of the previous message that has the links to the code and documentation.
-
-If you are as excited as we are about this new file system development and are in a position to test, please do.</p>
-<p>If you are as excited as we are about this new file system development and are in a position to test, please do.</p>
-<p>A modern filesystem has been missing in OpenBSD for quite a while now. GEFS seems to fit the general mindset and is developed inside the tree already, so Iâm really excited about it! Please keep up the good work :)</p>
-<p>Whoops, itâs not in the tree yet, but I canât edit my post. Exciting nonetheless!</p>
+                            Register Now</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>The article argues that reliable agentic AI architecture depends on a context engine that selects, injects, compresses, and expires information before it reaches the model. It separates context, memory, and knowledge, and recommends tiered memory, curated knowledge, and token budgeting. It also covers common anti-patterns, such as context stuffing and stale data loops, with mitigations.</p>
+<p>Nimisha Asthagiri shares how applying proven product engineering and architecture principles creates a bounded canvas for AI agents. She explains how this model provides agents with bounded autonomy, continuous drift detection, and decision records to scale software development resiliently.</p>
+<p>Alasdair Allan discusses empirical research from METR and Anthropic on AI coding adoption. He explains the "supervision paradox," where reliance on AI tools disrupts junior skill development, risks institutional context loss, and threatens the long-term engineering pipeline needed to oversee autonomous systems effectively.</p>
+<p>Colin Douch shares battle-tested strategies for building and scaling self-hosted observability stacks. He explains how to effectively correlate metrics, structured logs, and distributed traces using open-source tooling like Prometheus, VictoriaMetrics, and Jaeger, while navigating the engineering trade-offs of avoiding SaaS vendor lock-in.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+OpenBSD 8.0 Brings Expanded Hardware Support, Security Enhancements, and Virtualization Improvements</p>
+<p>Oct 31, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>OpenBSD 8.0 is a substantial upgrade bringing broader hardware compatibility, enhanced security, an expanded virtual address space, and support for modern architectures, including Intel Arc A-Series graphics support, ARM64 hibernation, RISC-V improvements, and enhanced virtual machine support.</p>
+<p>Key hardware and virtualization improvements in OpenBSD 8.0 include a larger virtual address space for the AMD64 kernel, expanded from 4 GB to 512 GB, enabling it to map graphics cards with more than 4 GB of VRAM; support for multi-processor virtual machines through vmm/vmd, with up to 64 virtual CPUs per guest and improvements to virtual hardware and guest compatibility; expanded RISC-V support, including the 'V' vector extension and Advanced Interrupt Architecture, improving compatibility with newer processors and platforms; and arm64 hibernation support, alongside faster swap encryption using AES instructions.</p>
+<p>Although OpenBSD 8.0 introduces support for the Intel Arc A-Series GPUs, based on the DG2/Alchemist architecture, NVIDIA GPUs remain unsupported, partially due to the fact that NVIDIA does not provide proprietary binary drivers for OpenBSD, unlike Linux and FreeBSD.</p>
+<p>OpenBSD 8.0 also expands peripheral support, including the riscv64 K3 PCIe/USB3 combo PHY, the SpacemiT K3 SoC and PCIe controller, as well as the Intel E610 and Panther Lake and Wildcat Lake Ethernet devices. New drivers are now available for Samsung Advanced BIOS Interface (SABI), Rockchip OTP memory, and Samsung laptop battery monitor. Wireless adapters support has been significantly expanded as well, including support for the Qualcomm Technologies WCN7850 wireless network in the qwz driver.</p>
+<p>The httpd daemon in OpenBSD 8.0 has received several enhancements, including support for custom HTTP headers, header block/drop rules for request filtering, improved default crypto methods for HTTPS, and cache control for static files.</p>
+<p>On the security front, OpenBSD 8.0 continues to emphasize security as a defining priority with an outstanding track record:</p>
+<p>We remain proud of OpenBSD's record of more than thirty years with only two remote holes in the default install.</p>
+<p>The new release incorporates LibreSSL 4.4.0, which introduces numerous compatibility-layer fixes for AIX, FreeBSD, macOS, MinGW, NetBSD, and especially Windows, alongside various internal improvements. It also brings OpenSSH 10.6, which disables SSH Compression using LZ77 and rejects $ and \ characters in command-line usernames to mitigate potential shell injection vulnerabilities, among other enhancements.</p>
+<p>A Hacker News thread about the new release highlighted several important aspects of OpenBSD. User ctolsen emphasized the system's simplicity and its adherence to traditional Unix philosophy:</p>
+<p>OpenBSD just feels like a *nix system is supposed to. ps aux is like 10 entries at first. pf makes so much sense. man pages are consistently incredible. The security/cryptography focus, managing services, pledge/unveil...</p>
+<p>Longtime OpenBSD user nanolith, who has used the system for nearly 20 years, praised its stability and consistency across upgrades, noting that "it's so stable that I barely notice changes when I upgrade until I go hunting for them". However, he also points out that OpenBSD might not be the best choice for large servers, given its lack of support for advanced filesystems like ZFS, Btrfs, or GeFS.</p>
+<p>Explore how Azul helps Java teams reduce JVM vulnerability risk, strengthen application security, and prepare their Java environments for agentic AI. Discover practical strategies for securing Java workloads while maintaining performance and reliability. Learn more.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.undeadly.org/cgi?action=article;sid=20261101115637" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/10/openbsd-8-released/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
