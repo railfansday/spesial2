@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My reflex of assuming our servers need ever-growing amounts of RAM</title>
+    <title>FastAPI: eventos de email sin polling frágil</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9842.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>My reflex of assuming our servers need ever-growing amounts of RAM</h1>
+        <h1>FastAPI: eventos de email sin polling frágil</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fmgmfburj02nz8cud8evt.png" alt="FastAPI: eventos de email sin polling frágil" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fmgmfburj02nz8cud8evt.png" alt="FastAPI: eventos de email sin polling frágil" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>You're probably reading this page because you've attempted to access
-some part of my blog (Wandering Thoughts) or
-CSpace, the wiki thing it's part of. Unfortunately
-you're using a browser version that my anti-crawler precautions consider
-suspicious, most often because it's too old (most often this applies to
-versions of Chrome). Unfortunately, as of early 2025 there's a plague
-of high volume crawlers (apparently in part to gather data for LLM
-training) that use a variety of old browser user agents, especially
-Chrome user agents. To reduce the load on
-Wandering Thoughts I'm experimenting with
-(attempting to) block all of them, and you've run into this.</p>
-<p>If this is in error and you're using a current version of your
-browser of choice, you can contact me at my current place at the
-university (you should be able to work out the email address
-from that). If possible, please let me know what browser you're
-using and so on, ideally with its exact User-Agent string.</p>
-<p>I am not blocking Inoreader's feed fetcher or considering it to be
-too old, and it routinely fetches feeds from me. I don't know why
-Inoreader is showing you this page. It is possible that they're
-periodically trying to fetch feeds or pages with an old browser
-HTTP User-Agent (or an actual old browser) and taking the results
-of that fetch (this page) as what they should show people instead
-of the results of their syndication feed fetcher agents. This is a
-bad mistake today; the results
-of modern HTTP fetches depend partly on the HTTP User-Agent used.</p>
-<p>Much like Inoreader, Feedly is periodically fetching my syndication
-feeds with a fake, old browser HTTP User-Agent header, which fails,
-and is then grimly latching on to the results for their actual feed
-fetching with their regular Feedly HTTP User-Agent. There is nothing
-I can do about this; you should contact Feedly support, if you can
-find them. See this
-comment of mine in Wandering Thoughts for more details.</p>
-<p>Due to an ongoing attack, you may need to change
-the
-"User Agent Brand Masking" setting so that your Vivaldi identifies
-itself as Vivaldi, instead of Google Chrome. This applies to even
-the current version of Vivaldi.</p>
-<p>You may be seeing this through archive.today, archive.ph, archive.is,
-and so on. Unfortunately, archive.* crawls pages to archive in a way that
-is impossible to distinguish from malicious actors. They use old Chrome
-User-Agent values, crawl from IP address blocks that are widely distributed
-and not clearly identified as theirs, and some of their IP addresses have
-falsified reverse DNS entries that claim they are googlebot IP addresses
-(which is something that is normally done only by quite bad actors). I
-suggest that you use archive.org, which is a better behaved archival
-crawler and can crawl my blog (Wandering Thoughts).</p>
+                <p>Los tests de email suelen empezar con una solución sencilla: enviar el mensaje, hacer sleep(5) y buscar el correo más reciente. Funciona en local, pero en CI se vuelve lento y bastante fragil. Un proveedor tarda más, dos jobs comparten inbox o el test encuentra un mensaje viejo.</p>
+<p>Una alternativa práctica es tratar cada email de prueba como un evento correlacionado. La aplicación publica una señal con un identificador de ejecución y el lector busca exactamente ese evento, dentro de una ventana de tiempo. No elimina los retrasos de red, pero evita que el test adivine qué mensaje le pertenece.</p>
+<p>El polling no es malo por sí mismo. El problema aparece cuando es la única forma de saber que algo paso. Un flujo típico tiene estas decisiones escondidas:</p>
+<p>Cuando esas reglas no están en un contrato, cada helper las resuelve de una forma distinta. En una búsqueda de documentación puede aparecer incluso tempail mail o tamp mail com, pero el nombre que se usa no arregla la falta de correlación.</p>
+<p>El objetivo no es convertir un email en un sistema distribuido enorme. Es adjuntar contexto mínimo: run_id, destinatario, tipo de evento, momento de emisión y estado de consumo.</p>
+<p>Imagina que el backend genera un evento cuando crea el email de verificación. Ese evento no tiene que contener el cuerpo completo del mensaje. Puede incluir un identificador, un hash del contenido y la referencia al destinatario:</p>
+<p>El test espera una señal con run_id=ci_2026_11_04_001. Después puede consultar el inbox para confirmar el enlace, pero ya no necesita decidir cuál de cinco mensajes recientes es el correcto.</p>
+<p>Este patrón también mejora el diagnóstico. Si el evento existe pero el mensaje no llega, el problema está entre la cola y el proveedor. Si no existe el evento, hay que revisar la aplicación. La frontera queda bastante más clara.</p>
+<p>FastAPI puede exponer un endpoint interno para registrar y consultar eventos de prueba. En producción conviene usar PostgreSQL o una cola real; este ejemplo se concentra en el contrato HTTP:</p>
+<p>El endpoint devuelve duplicate=true para un reintento del mismo event_id. Esa respuesta es útil para un runner: repetir una llamada no crea una segunda señal que pueda confundir al lector.</p>
+<p>Si el proyecto todavía usa polling, se puede introducir este contrato poco a poco. Primero registra el evento, luego conserva el polling como fallback y finalmente mide cuántos tests siguen necesitándolo. La transición es mas segura cuando cada paso deja métricas.</p>
+<p>El evento debe ser idempotente, pero también lo debe ser el consumidor. Una secuencia razonable es:</p>
+<p>No marques el evento como consumido antes de validar el enlace. Si el parser falla y el test reintenta, perderías una pista importante. También conviene registrar razones distintas para event_not_found, message_not_found y invalid_message; “email timeout” dice muy poco.</p>
+<p>Para operar el flujo, las alertas de rollback con contexto real ofrecen una idea útil: una señal debe incluir contexto accionable, no solo un contador rojo.</p>
+<p>Antes de abrir el navegador o llamar al endpoint de registro, el job puede preparar:</p>
+<p>También ayuda aislar pruebas de email por entorno, porque el mismo contrato puede aplicarse a local, staging y CI sin mezclar bandejas. Si un job falla, guarda el run_id en el mensaje del error. Parece un detalle menor, pero ahorra bastante tiempo al revisar logs.</p>
+<p>No necesariamente. El evento indica qué esperar; el inbox todavía puede requerir polling si el proveedor no ofrece webhook. La diferencia es que el polling tiene una identidad y un límite.</p>
+<p>Solo cuando haga falta para depurar. Un hash, el asunto, el remitente y los timestamps suelen ser suficientes para la mayoría de los fallos.</p>
+<p>El run_id debe seguir siendo distinto y el filtro debe comprobar también el tiempo de emisión. Si el proveedor permite direcciones aisladas, usarlas reduce todavía más la ambigüedad.</p>
+<p>Un evento correlacionado convierte “espera hasta que llegue algo” en “espera este mensaje de esta ejecución”. Con FastAPI, un endpoint pequeño, una clave idempotente y razones de fallo explícitas bastan para dar el primer paso.</p>
+<p>El resultado no es solo un pipeline un poco mas rápido. Es una prueba que explica qué esperaba, qué recibió y en qué frontera se perdió la señal.</p>
+<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
+<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
+<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://utcc.utoronto.ca/~cks/space/blog/sysadmin/ServerRAMGrowthReflex" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/oliviachen7/fastapi-eventos-de-email-sin-polling-fragil-2874" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

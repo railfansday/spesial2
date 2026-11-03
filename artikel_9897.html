@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profiling in PyTorch (Part 3): Attention is all you profile</title>
+    <title>Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9897.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,88 +15,255 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Profiling in PyTorch (Part 3): Attention is all you profile</h1>
+        <h1>Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/anydecisionmodel/banner.png" alt="Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/anydecisionmodel/banner.png" alt="Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This is the third post of Profiling in PyTorch, a series where we slowly build the skill of reading profiler traces and use it to drive optimization:</p>
-<p>The series "Profiling in PyTorch" is meant to make you comfortable reading profiler traces and tables. In Part 1 we profiled basic math operations like addition and multiplication. We saw how the profiler table uncovers hotspots, and how the profiler trace shows the order in which an algorithm runs over time.</p>
-<p>In Part 2 we wrapped that addition and multiplication into a torch linear layer. We then stacked several linear layers on top of each other (a multilayer perceptron) and profiled that. Along the way we also profiled fused and hand-tuned kernels.</p>
-<p>From the perspective of the Transformer architecture, the next logical step for us to profile is yet another fundamental algorithm, attention. While being infamous for its quadratic-time complexity, many clever tricks exist to mitigate that issue and make it fast. Our goal here is not to cover every trick in detail. Instead, we want to see how each one looks different under the profiler.</p>
-<p>The scripts for this blog post live here: 04_a_naive_attention.py, 04_b_inplace_ops_attention.py, 04_c_sdpa_attention.py, and 04_d_kernels_attention.py. Like before, it helps to open them in a separate tab and walk through the code as you read. We use an NVIDIA A100-SXM4-80GB GPU to run the scripts. It is really easy to set up a GPU on the Hugging Face infrastructure and experiment with the scripts using Dev Mode with Spaces. One could also run the scripts with the Hugging Face Jobs pipeline.</p>
-<p>Attention works with Queries (q), Keys (k), and Values (v). The interaction between them can be written as a short sequence of steps:</p>
-<p>So attention is really a collection of primitive operations. Some of them we already know (the matmuls), and the rest are easy to spot. Let's write a naive attention module in PyTorch and profile it.</p>
-<p>Before opening the trace, let's do our usual exercise and guess what we should see. Tracing the forward of this module, we expect:</p>
-<p>Figure 1 shows the CPU lane of the profile (the GPU lane is folded so it does not overwhelm us). Inside attn_fwd (our annotated forward call) we can see exactly the operations we guessed. The matmul is an old friend by now, and the new operations are easy to spot:</p>
-<p>Now let's unfold the GPU lane and see which kernels were actually launched.</p>
-<p>Figure 2 shows the GPU lane next to the CPU lane. Let's zoom into a single attn_fwd block on the GPU lane to look at the kernels one by one.</p>
-<p>Figure 3 lets us read off the individual kernels for one profiler step:</p>
-<p>Five of these are expected. The memory copy is the odd one out, so where does this come from? The clue is that PyTorch has in-place operations. When you operate on a tensor the ordinary (out-of-place) way, PyTorch often makes a copy, applies the requested operation to it, and returns the copy. Following the sequence of operations, the culprit here is our masked_fill.</p>
-<p>What if we replaced this with an in-place operation?</p>
-<p>All we change is masked_fill to masked_fill_ (note the trailing underscore, PyTorch's convention for in-place operations), and we run the same script.</p>
-<p>Let's look at the trace and see if something changed.</p>
-<p>The in-place version (Figure 5) wraps far fewer CPU ops inside the masking step than the out-of-place version (Figure 4). This is an encouraging signal. Let's unfold the GPU lane to confirm what happened there.</p>
-<p>On the GPU lane the Memcpy kernel is gone for good (Figures 6 and 7). With a one line change we shaved a whole kernel off each forward pass. This may not look like much on its own, but remember this is a single attention operation. In the context of a transformer based large model (LLMs, Diffusion models, etc.), it repeats once per layer, and there are many layers, so the saving adds up quickly (and if it earns you a raise, sharing at least 10% with us feels only fair).</p>
-<p>Out-of-place is PyTorch's default for a reason. To compute gradients, autograd has to remember the tensor values it saw on the forward pass, because many backward formulas reuse them. An in-place operation overwrites those values in memory, so the backward pass would read the wrong numbers. Due to the fact that we run forward under torch.no_grad, in-place is safe for us, with no backward pass and nothing to corrupt. It is also noteworthy that in-place operations do not only save time (like we see in our case) but also memory (due to no extra copy) which is great for large tensors like logits!</p>
-<p>We just built attention from primitives, and even shaved off a Memcpy. The good news is that the PyTorch team has done all of this for us, and packaged the whole pipeline into a single function:</p>
-<p>This one line replaces our hand written module, and is_causal=True even saves us from building the mask by hand. It is worth pausing to appreciate how much this one call hides. And it hides more than just code lines. Scaled Dot Product Attention (SDPA) does not have a single implementation. Under the hood it dispatches to one of the several backends and picks the fastest one that supports our inputs (dtype, head dimension, mask, hardware, etc.).</p>
-<p>The official SDPA tutorial walks us through this selection, and the backends themselves are listed in the torch.nn.attention.SDPBackend enum:</p>
-<p>Normally SDPA chooses for us, but we can pin a specific backend with the torch.nn.attention.sdpa_kernel context manager. This is what we do in our scripts. This lets us profile each backend on its own and read how differently they show up in the trace. Let's go one at a time.</p>
-<p>Before we open anything, let's guess. We have replaced hand written attention (matmul, mul, mask, softmax, matmul) with a single one liner, so we should expect the trace to get simpler and faster. Fewer kernels, less CPU dispatch, maybe even a fused kernel. Let's check the profiler table first.</p>
-<p>This is our first surprise, the one liner is 3.7x slower.</p>
-<p>Opening the trace (Figure 9) shows why the alarm bells ring, the math backend launches 20 GPU kernels per forward instead of the 5 launched with our naive attention implementation (Figure 8). This is the opposite of what we guessed. Let's figure out why this happens.</p>
-<p>In Part 2 we learned to read a kernel name like a fingerprint. Let's use that habit here:</p>
-<p>The A100s we used to capture these traces ship with Tensor Cores, specialised hardware for accelerated matmuls that is known to be far faster than the ordinary CUDA cores. To see why that matters here, it helps to know what lives inside a GPU. A Streaming Multiprocessor (SM) is the compute unit of a GPU, and each SM has two kinds of arithmetic units, the CUDA cores and the Tensor Cores. CUDA cores are general purpose and process a handful of elements at a time, while Tensor Cores multiply and accumulate a whole small matrix tile in a single instruction. So the question is simple, "Is each backend actually using the fast path?"</p>
-<p>The kernel names answer it. The s16816 in the naive kernel (Figure 10) is the signature of a bfloat16 Tensor Core matmul (the 16x8x16 Tensor Core instruction), so the naive version is on the fast path. sgemm (Figure 11) is the classic single precision (FP32) matmul that runs on the ordinary CUDA cores. In other words, the math backend never touches the Tensor Cores at all: to trade speed for numerical accuracy it upcasts tensors to FP32 (doubling the data moved, even when the inputs are in bf16) and falls back to the slower CUDA cores.</p>
-<p>In the naive version we built the causal mask once and reused it. Here we passed is_causal=True and the math backend materialized one for us, on every single call. You can watch it happen on the CPU lane:</p>
-<p>On the GPU this shows up as a triu_tril_kernel, several where kernels, and an add_. The convenience flag that let us stop thinking about the mask did not remove the work, it just moved it one layer down, where the mask is rebuilt from scratch every forward.</p>
-<p>Our hand written version called plain aten::softmax. The math backend calls aten::_safe_softmax, and the difference is again visible as extra kernels (Figure 13):</p>
-<p>A row that is fully masked (every entry -inf) would make an ordinary softmax compute exp(-inf)/sum(exp(-inf)) = 0/0 = NaN. _safe_softmax guards against exactly that. Our naive kernel never bothered, and would have quietly produced NaNs in that corner case.</p>
-<p>Put together, the math backend is the reference implementation. It is a straightforward, dtype-safe, NaN-safe decomposition of attention into primitive ATen ops. It is essentially the naive attention we wrote by hand, but more careful. That carefulness is exactly what makes it extremely slow.</p>
-<p>Its job is not to be fast, but to always work. This makes it the perfect baseline. Every backend we profile next (flash, efficient, cudnn) is trying to collapse the 20 GPU kernels into essentially one fused kernel that stays in bf16 and never materializes the intermediate matrices at all.</p>
-<p>Where the math backend launched 20 kernels across one profiler step, the efficient backend launches only one fmha_cutlassF_bf16_aligned_64x64_rf_sm80 (as seen in Figure 14).</p>
-<p>This is the memory efficient attention kernel that grew out of Meta's xformers library and was upstreamed into PyTorch. When people say "the xformers backend," this fmha_cutlassF kernel is what they mean.</p>
-<p>The void pytorch_flash kernel (Figure 15) is FlashAttention-2 (Tri Dao's implementation), vendored into PyTorch.</p>
-<p>Before we read the trace any further, it is worth answering the question you should be asking by now: why is there a whole backend named "flash", and why does it matter so much?</p>
-<p>Let's go back to the math backend for a moment. Its real problem was not the count of 20 kernels, it was what those kernels handed to each other.</p>
-<p>Step 1 builds the full score matrix attn = q . k.T, which is [seq, seq] per head. For a sequence length of 4096 that is 4096 x 4096 ≈ 16 million numbers for a single head. That matrix is written out to the HBM (the GPU's main memory), if there is even enough space to do so. Then, it is read back to be scaled, written again for the mask, read again for the softmax, and so on. Attention's cost is dominated by this back and forth traffic to HBM, not by the matmuls themselves.</p>
-<p>FlashAttention attacks exactly this. Instead of computing the whole s matrix and only then reducing it, it walks over k and v in tiles, keeps a running softmax as it goes (the "online softmax" trick), and accumulates the output one tile at a time. The full [seq, seq] score matrix is never written to HBM, it only ever lives on-chip. This is the single idea that lets the entire attention pipeline collapse into one fused kernel that stays in bf16 on the Tensor cores.</p>
-<p>Here is where flash surprises people who read profiler footprints. It is the fastest backend, yet the profiler reports it with very low occupancy (shown in Figure 16). To see why that is fine, we need three quick definitions.</p>
-<p>A GPU kernel is essentially a series of instructions executed by many small execution units. These individual execution units (threads) take care of loading variables, adding them together, storing them back, etc. For each kernel, we launch many, many threads, and to keep track of them, we group them by blocks.</p>
-<p>Blocks are scheduled onto Streaming Multiprocessors (SMs), the main compute units of a GPU. A block lives entirely on one SM, and an SM can host multiple blocks at once if it has enough resources. Those resources include registers, shared memory, maximum resident threads, and maximum resident warps. So when we say a kernel has low occupancy, we mean each SM has fewer resident warps than it could theoretically support.</p>
-<p>If you want to know more about threads, blocks, grids, etc. here is a great resource.</p>
-<p>If you click the flash kernel in the trace, its footprint tells the story (Figure 17).</p>
-<p>Flash uses a lot of per-thread registers and a large amount of shared memory per block. For example, if a block has 128 threads and each thread uses 255 registers, that block needs 128 × 255 = 32,640 registers. On an Ampere SM with 65,536 registers, only two such blocks fit at once. Each 128-thread block has 128 / 32 = 4 warps, so two blocks give only 8 resident warps. Against a maximum of 64 resident warps, that is roughly 13% occupancy. Flash has low occupancy not because it is poorly optimized, but because each block is deliberately very "heavy" in on-chip resource usage.</p>
-<p>And that is the whole point. High occupancy helps hide latency by keeping many warps ready to run, but it does not make the work itself efficient. Flash spends those registers and that shared memory on purpose, to keep attention tiles on-chip, reuse data aggressively, and avoid ever materializing the full attention matrix in global memory.</p>
-<p>By now the pattern is familiar. Like flash and efficient, cuDNN gives us one fused, flash-style kernel per forward (Figure 18). So the natural question is: if flash already fuses attention, why does PyTorch ship yet another flash backend? The answer is who writes the kernel and how it is built, and that difference is what makes the trace look different.</p>
-<p>Flash and efficient are fixed, pre-compiled kernels vendored into PyTorch. You get the same binary every time. cuDNN is NVIDIA's own deep learning library, and its attention kernel is generated and tuned for the specific problem at hand. It is closer in spirit to torch.compile's codegen than to a fixed cuBLAS binary. You can read that straight off the (very long) kernel name:</p>
-<p>That one fact, generated per problem, explains everything else that looks unusual in the trace.</p>
-<p>No transposes: The CPU lane goes from _cudnn_attention_forward straight to a couple of aten::empty allocations and then the kernel, with zero aten::transpose (Figures 19, 20 and 21). Flash and efficient each insert four (metadata) transposes to reshape the tensors while cuDNN consumes the native [B, H, S, D] layout directly because its generator emits a kernel for that layout.</p>
-<p>It launches through cuLaunchKernelEx, not cudaLaunchKernel: Every other kernel in this whole series went through the runtime API cudaLaunchKernel. cuDNN uses the driver-level extended launch, which carries launch attributes (Figure 22).</p>
-<p>The profiler reports 0% achieved occupancy: Do not take that at face value, it is a measurement gap, not a stalled GPU. CUPTI (the profiling backend) cannot attribute occupancy to a driver-API (cuLaunchKernelEx) launch the way it does for cudaLaunchKernel, so the field reads 0. The footprint fills in the truth (Figure 23): 240 registers × 256 threads = 61,440 registers per block against the SM's 65,536, so only one block fits per SM (8 warps ≈ 12.5%), right in line with flash.</p>
-<p>The "no transposes" story tempts us to expect cuDNN to be the leanest backend on the CPU. It is the opposite.</p>
-<p>Even with zero transpose ops, cuDNN spends about 214 µs per forward on the CPU, more than flash (138) or efficient (117). Almost all of it sits in aten::scaled_dot_product_attention self time (26% of the whole run) and _cudnn_attention_forward. That is cuDNN's runtime engine selecting and preparing the plan (the "knob" search) on every call.</p>
-<p>Fewer visible ATen ops did not mean less CPU work, it moved the work into the library, where the profiler can only show it as one fat, opaque bar. When a trace suddenly gets cleaner, the work has not always disappeared, sometimes it has just moved somewhere the profiler cannot break down.</p>
-<p>On the GPU, cuDNN (186.3 µs) lands between efficient and flash. On this very flash-friendly shape, hand-written FlashAttention-2 edges it out. cuDNN often wins on other shapes (larger head dimensions, different sequence lengths) precisely because its generator retunes per problem, but that retuning is also what you just paid for on the CPU.</p>
-<p>Before we wrap up, here is a single table to review every attention variant we profiled and the one lesson each trace taught us.</p>
-<p>If you take away only one thing from the whole series, let it be the habit we repeated before every single trace which is to guess first, then look.</p>
-<p>State out loud what you expect the trace to contain, open it, and treat any mismatch as the most interesting thing on the screen. Every real insight in these three posts, the hidden Memcpy, the addmm epilogue, the 20 kernel math backend, flash's "wrong-looking" occupancy, cuDNN's fat CPU bar, came from a guess that did not match the trace.</p>
-<p>Profiling is not a separate, intimidating skill reserved for GPU experts. It is just the discipline of looking closely and asking "wait, why is that happening?" until the answer clicks. You now have the vocabulary and the reflexes to do that on your own models. Open a trace, form a guess, and go find the mismatch.</p>
-<p>Thanks for reading the Profiling in PyTorch series. Now go profile something. 🤗</p>
-<p>Thanks to Noe Flandre for their reviews on the early draft of the post!</p>
-<p>The blog post was polished using an LLM. This in no way means that we have let an agent run in the background and let it generate the blog. Some of us in the team are non-english speakers and think LLMs (which are mostly trained in the English Language) can rectify silly grammar mistakes or rephrase sentences that sound less intimidating and cleaner. Hope this helps with the idea of "why should I read, if this was LLM generated". 🤗</p>
-<p>Thanks for the series, really delightful!</p>
-<p>hello Aritra (@ariG23498  ), thanks a lot for this series!one doubt which i had: how were you able to know for sure that Memcpy (memory copy) operation in GPU was indeed because of out of place masked_fill?</p>
-<p>one way i'm able to think it is because that occured exactly before the masked_fill kernel op? but how did you actually validated that is something i'm not able to understand.</p>
-<p>edit:i figured it out while i was tinkering - but keeping this comment here incase someone else has the same doubt. the arrow mapping in perfetto maps exactly that which op in cpu invoked the kernel at gpu.</p>
-<p>Finally completed it. Thank you for the series</p>
-<p>How did you like the series? Anything that we could have done better?</p>
+                <p>Language models can do a lot.
+They write, summarize, translate, and call tools.
+But they're only a small part of what machine learning can do.</p>
+<p>Say a customer calls your support line.
+First, you want to know what they said (speech recognition).
+Then, you want to decide where to send them (decision).
+You could hand both to a language model,
+but there are models built for each that are
+better, faster, and less expensive.</p>
+<p>In our AnyLanguageModel 1.0 recap,
+we looked at a year of local and hosted models in Swift.
+With AnyLanguageModel and swift-huggingface now on their 1.x releases,
+we're extending the same approach to speech and decisions:
+familiar Swift APIs with a choice of model.</p>
+<p>Both packages can download open models from the Hugging Face Hub
+and run them on device.</p>
+<p>Computers have been transcribing speech for decades,
+and in the past few years, they've gotten very good at it.
+Apple platforms already have an API for it.
+macOS 26 and iOS 26 introduced SpeechAnalyzer,
+Apple's new speech-to-text API.
+You add modules such as SpeechTranscriber and SpeechDetector to an analyzer,
+give it a file or a stream of audio buffers,
+and read results from async sequences as they arrive.
+AssetInventory installs the models,
+so your app decides when downloads happen.</p>
+<p>It's a well-designed API,
+but the only engine behind it is Apple's.
+AnySpeechRecognizer keeps the API and lets you choose the engine:</p>
+<p>The package mirrors SpeechAnalyzer, SpeechTranscriber, DictationTranscriber,
+SpeechDetector, and AssetInventory,
+with Apple's Speech framework as the default engine.
+If your code uses that shared API, changing the import is enough.
+To use Parakeet instead,
+change only how you create the transcriber:</p>
+<p>The steps for installing assets, running the analyzer,
+and reading results stay the same.
+The README
+has a complete example
+and lists the differences
+from Apple's framework.</p>
+<p>Parakeet v3 is NVIDIA's Parakeet TDT 0.6B v3.
+It's a polyglot:
+it recognizes 25 European languages and works out which one it's hearing,
+so you don't pass a locale.</p>
+<p>Parakeet Ultra is Moondream's post-trained take on v3.
+It was more accurate in most of our measurements.</p>
+<p>Parakeet Unified is NVIDIA's
+English-only Parakeet.</p>
+<p>All three Parakeets run on the package's own Core ML runtime,
+which supports file and live input, volatile results, word timing,
+and word confidence.</p>
+<p>Qwen3-ASR is Alibaba's speech model,
+in 0.6B
+and 1.7B sizes.
+It recognizes 30 languages and 22 Chinese dialects,
+including Mandarin, Cantonese, Japanese, and Korean, which Parakeet doesn't cover.
+It detects the language automatically, or you can set one:</p>
+<p>Qwen3-ASR gives one final result for each segment of up to 40 seconds,
+without volatile results, word timing, or confidence.
+It runs on the GPU and is slower than Parakeet,
+so it's better suited to transcribing files than live input.</p>
+<p>To add another engine, implement SpeechRecognitionModel for its configuration
+and SpeechRecognitionExecutor for one module's session.
+The README includes a small provider
+that reports placeholder text to help you get started.</p>
+<p>To run these models in apps,
+we converted them to Core ML and published them on the Hub:</p>
+<p>Each repository records its source checkpoint
+and a checksum for every file,
+and the package pins it to a fixed revision.
+The Parakeet repositories add an 8-second encoder for live input,
+which cuts live analysis time by about a third
+at the cost of a somewhat higher word error rate.
+The repository also has the conversion workflows,
+most of which follow FluidInference's mobius scripts,
+and checks each conversion against the original model.</p>
+<p>Downloads happen only when your app asks for them:
+about 600 MB for each Parakeet, plus about 590 MB for the live encoder,
+0.9 to 2.4 GB for Qwen3-ASR, and about 250 MB for Sortformer.
+Files go in the standard Hugging Face cache,
+so a Mac app outside the sandbox shares them with Python and other Hugging Face tools.</p>
+<p>When you transcribe a conversation,
+you often want to know who said what.
+That's speaker diarization,
+and Apple's Speech framework doesn't have a module for it,
+so AnySpeechRecognizer adds one.
+SpeakerDiarizer runs NVIDIA's
+Streaming Sortformer
+on Core ML alongside an Apple or Parakeet transcriber,
+on the same timeline:</p>
+<p>The diarizer tracks up to four speakers,
+even when they talk over each other.
+A SpeakerTimeline collects its results
+and attributes each timed word to a speaker,
+so you can print a transcript by speaker turn.
+Like image support in AnyLanguageModel,
+this goes beyond what Apple's API offers today.</p>
+<p>The diarizer uses Sortformer v2 by default.
+You can also choose v2.1,
+which NVIDIA trained with more meeting data
+and which was more accurate on meetings in our measurements, too.</p>
+<p>We measured the package with its hear command-line tool
+on an M4 Max Mac Studio with macOS 27.0.1.
+Here are the word error rates on LibriSpeech files of 3 to 8 minutes:</p>
+<p>Parakeet transcribes an hour of audio
+in about 20 to 40 seconds from a file,
+or about 1.5 to 2.5 minutes live,
+with about 100 MB of memory once Core ML has compiled the model.
+Qwen3-ASR is much slower and needs a few gigabytes of memory.
+Meetings are hard for everyone:
+on AMI recordings, where people talk over each other,
+every engine we tested had a word error rate above 23%.</p>
+<p>These numbers come from one machine and a few datasets,
+so measure with your own hardware and audio.
+hear evaluate works on your own files,
+and the repository's natural-speech-eval.py tool
+reproduces these measurements.
+So far, we've tested only on macOS 27, not on an iPhone.</p>
+<p>Next, we'd like to add more engines, including Core AI on macOS 27 and iOS 27.</p>
+<p>AnyDecisionModel is a different story.
+There's no Apple framework to map onto,
+and decision models aren't new, exactly.</p>
+<p>It's only a decision model if it comes from the Décision region of France;
+otherwise, it's sparkling zero-shot classification.</p>
+<p>What's new is the name, a lot of hype,
+and a crop of models trained to make decisions.
+We think that's where things are going,
+so we wanted a Swift API that's ready for them.</p>
+<p>Apps often ask language models to make decisions.
+Is this message urgent?
+Which team should handle this ticket?
+How frustrated is this customer?
+The usual approach is to prompt a language model
+and parse the text that it generates.
+That gives you one answer,
+but doesn't show the probabilities it assigned to the alternatives.</p>
+<p>Here's what a decision looks like in Swift:</p>
+<p>urgent is a Double.
+team is a Choice<Department> containing the selected case,
+a probability for each option, and a confidence value.
+anger is a Score containing the expected level,
+a probability for each level, and a confidence value.
+Because Department conforms to Choosable,
+team.value is a Department that you can use in an exhaustive switch.</p>
+<p>If you've used Foundation Models or AnyLanguageModel,
+the model-and-session pattern will look familiar.
+A DecisionSession holds a single state, which can be text or JSON,
+and every question is about that state.
+Questions are independent:
+an answer never becomes input to a later question.
+To ask several questions at once,
+pass them to decide(_:) as a batch.</p>
+<p>For each question, the MLX backend builds a prompt
+with a one-token label for each allowed answer,
+then reads the probability of each label from one forward pass.</p>
+<p>Emoji Magnet is a macOS app with a text field above a pile of 343 emoji.
+Type a phrase, such as "things you wear",
+and the emoji that match rise out of the pile.
+Refine it to "things you wear in winter",
+and the emoji that no longer match fall back.</p>
+<p>The app has no built-in keyword rules;
+the model decides everything at inference time.
+When you pause typing, it asks the model one yes-or-no question for each emoji,
+for example:</p>
+<p>The session's state holds the phrase.
+The demo above uses the hosted Jev backend,
+which answers all 343 questions in one request,
+so the emoji settle in about half a second for each phrase.
+Without a TYPESAFE_AI_API_KEY, the app runs Qwen3 4B on your Mac with the MLX backend.
+That backend uses prefix caching to evaluate the state once,
+then answers 16 questions per forward pass.
+On an M4 Max, a group of 16 takes about 0.45 seconds after the model loads.
+A full pass over all 343 emoji takes about 10 seconds,
+and each group's results appear as soon as they arrive.</p>
+<p>Emoji Magnet is in the AnyDecisionModel-Examples repository.</p>
+<p>Reading next-token probabilities works with general-purpose language models,
+but those models weren't trained to make decisions.
+Cloudflare's Clef models
+are an example of a newer approach:
+a model with a trained decision head
+that turns a state and a schema of typed questions into decisions,
+returning probabilities for all allowed options across the questions
+in one forward pass.
+Clef-Flash is the 9B variant.</p>
+<p>AnyDecisionModel runs Clef-Flash on a Mac with MLX:</p>
+<p>You use the same sessions and questions,
+but MLXHeadDecisionModel reads each decision from Clef's trained decision head
+instead of from next-token probabilities.
+The 4-bit model is a 6.2 GB download,
+and its model card recommends a Mac with at least 16 GB of memory.
+Clef can read images and video,
+but this backend accepts only text and JSON states.</p>
+<p>Raw probabilities from language models are often overconfident.
+The local backends accept a Calibration,
+which applies a temperature to every answer and a bias to yes-or-no answers.
+Use separate datasets to fit the calibration and evaluate the results.</p>
+<p>Language models can also favor an option because of its position in a list.
+On the MLX, Core AI, and llama.cpp next-token backends,
+turn on rotationDebiasing to ask a choice question
+once for each rotation of the options and average the probabilities.
+That costs one prompt evaluation per rotation.</p>
+<p>Each local choice and score also includes a confidence value
+based on the entropy of its probabilities.
+It measures how concentrated the probabilities are,
+not whether the answer is right,
+so check the error rate on your own data before you pick a threshold.
+The next-token backends' diagnostics report how much probability
+the model assigned to the allowed answers.
+A low value means it assigned most of the probability elsewhere.</p>
+<p>The next-token backends label answers "yes" and "no", A to Z, or 0 to 9,
+so a choice can have at most 26 options, and a score at most 10 levels.
+Decision heads have no such limit.</p>
+<p>Like AnyLanguageModel, the package uses Swift package traits.
+Without traits, it has no third-party dependencies.
+You get the core types and the Jev and Ollama backends,
+which also build on Linux.
+Enable the MLX, CoreAI, or Llama trait for the local backends.</p>
+<p>Both packages require Swift 6.2 or later and macOS 26 or iOS 26 or later.
+The Parakeet and Sortformer runtimes and the MLX backend require Apple silicon.
+AnyDecisionModel's MLX build tasks use Xcode's Swift 6.4 or later
+and the Metal toolchain; Core AI requires Xcode 27 and an OS 27 runtime.</p>
+<p>For now, AnyDecisionModel's CoreAI trait can't be combined with AnySpeechRecognizer,
+because coreai-kit 0.7.3 requires swift-huggingface below 1.0
+and AnySpeechRecognizer requires 1.x.</p>
+<p>Each README has more examples and details about requirements and backends.
+AnySpeechRecognizer also includes a command-line tool, hear,
+that transcribes local files, labels their speakers, and evaluates the results.
+Every hear command requires --backend apple, --backend parakeet, or --backend qwen;
+run hear prepare with the same backend and model options before analysis
+to install the needed assets.</p>
+<p>Try them in your apps and tell us what works and what doesn't.
+Issues and pull requests are welcome on both repositories.</p>
+<p>Thanks to NVIDIA for Parakeet, Sortformer, and NeMo, to Moondream for Parakeet Ultra,
+to FluidInference, whose FluidAudio and mobius projects
+documented the conventions that the Parakeet runtime and the Core ML conversions follow,
+to Cloudflare for Clef,
+and to everyone who contributed to AnyLanguageModel,
+whose patterns both packages borrow.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/torch-attention-profile" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/anydecisionmodel" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
