@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brink</title>
+    <title>Opening a panel right under the text caret on macOS</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9733.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Brink</h1>
+        <h1>Opening a panel right under the text caret on macOS</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fj9vazjak4j74dgkz5e6l.png" alt="Opening a panel right under the text caret on macOS" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fj9vazjak4j74dgkz5e6l.png" alt="Opening a panel right under the text caret on macOS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Turn your MacBook trackpad's edges into controls
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/brink-2?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1302369?app_id=339">Link</a>
-          </p></p>
+                <p>I'm building yabbistir, a clipboard history for macOS. Its one trick is where it opens: press ⇧⌘V and the panel appears 8 points under the text caret of whatever app you're typing in. You type to search, press ↵, and the item is pasted back into that app. Your eyes don't travel and your hands don't leave the keyboard.</p>
+<p>That needs three things macOS doesn't hand you directly:</p>
+<p>Here is how each one works, with code from the app, shortened.</p>
+<p>There's no "where is the caret" API on macOS. There is the Accessibility API, the one assistive apps like VoiceOver use to read other apps' interfaces. Your app needs the Accessibility permission for it (AXIsProcessTrusted() tells you whether you have it), and then it can ask three questions:</p>
+<p>The helpers are thin wrappers. Every value comes back as a CFTypeRef, so check its type before casting:</p>
+<p>uiElement(_:) is the same check with AXUIElementGetTypeID().</p>
+<p>Three lines in caretRect carry more weight than they look.</p>
+<p>The timeout. Every Accessibility call is a message to the other app, and it waits for an answer. If that app is busy, say an IDE in the middle of a beachball, the default wait is around six seconds. Setting the timeout on the system-wide element applies it to every Accessibility call your process makes. At 0.1 seconds, a hung app costs a blink, and the panel opens at the fallback instead.</p>
+<p>The coordinate flip. Accessibility rectangles have their origin at the top left of the primary screen, with y growing downward. Cocoa window frames have their origin at the bottom left, with y growing upward. Flip with the primary screen's height, which is NSScreen.screens.first. Don't use NSScreen.main here: that's the screen with the key window, and it changes as you work.</p>
+<p>Width 1. An empty range gives a zero-width rectangle. max(rect.width, 1) keeps it a real rectangle for the placement math later.</p>
+<p>Two cases need special handling, and both are apps that answer, just not usefully.</p>
+<p>Some apps, Terminal among them, answer the empty range at the caret with an empty rectangle. The caret then sits right after the previous character, so ask for that character's bounds and use its right edge. At the very start of the text, use the next character's left edge:</p>
+<p>The other case is a caret you can't see. A range scrolled out of view, like a spot in Terminal's scrollback, still reports a rectangle, somewhere off in space. So caretRect also reads the focused element's own frame (kAXPositionAttribute and kAXSizeAttribute) and throws the caret away if it isn't inside it, with a few points of slack:</p>
+<p>Cocoa text views, Safari and Notes answer all of this. Electron and Chromium apps don't, unless their accessibility mode is on. Electron apps can be switched into it from outside through an AXManualAccessibility attribute, but that changes how someone else's app runs, so yabbistir leaves it to the user.</p>
+<p>When there's no caret, the panel opens under the mouse pointer. The fallback is shaped like a caret, 1 point wide and 18 points tall, so the placement code never has to know which one it got:</p>
+<p>The choice between them is a small pure function. An explicit anchor wins (clicking the menu bar icon passes the icon's rectangle), and a setting lets people always open at the pointer. The closures mean the Accessibility calls only happen when they're needed:</p>
+<p>The rule: open below the caret with an 8-point gap. If it only fits above, open above. If it fits on neither side, take the roomier side and shrink, but never below 260 points. That way the panel never covers the caret unless the screen is too short for even the minimum.</p>
+<p>visibleFrame comes from the screen that contains the caret, so the menu bar and the Dock are already left out. Horizontally, the panel starts 24 points left of the caret and is clamped to the screen with a 12-point margin. Because it's all plain rectangles in and a rectangle out, the tests don't need a window or a screen.</p>
+<p>This is the part that's easy to get wrong. If the panel were a normal window, showing it would activate yabbistir, the app you were typing in would stop being the active app, and the paste would land in the wrong place. The panel has to receive your keystrokes for search while the other app stays active. That's what a non-activating NSPanel is for:</p>
+<p>The app itself runs as an accessory (NSApp.setActivationPolicy(.accessory)), with no Dock icon. Showing the panel remembers the frontmost app first, then orders the panel in without activating anything:</p>
+<p>orderFrontRegardless() brings a window forward even when its app isn't active, which is exactly the situation here.</p>
+<p>Closing it when you click somewhere else takes one more step. When the panel resigns key, the new key window isn't known yet, so yabbistir decides on the next turn of the run loop:</p>
+<p>If focus moved to another app, NSApp.keyWindow is nil and the panel closes. If it moved into one of yabbistir's own windows, like the category editor, the panel stays.</p>
+<p>Once you press ↵, the panel hides, the item goes on the pasteboard, and yabbistir waits 30 milliseconds so the target app can become key again. Then it checks that the frontmost app is still the one the panel opened for, and posts ⌘V:</p>
+<p>keyCode isn't hard-coded to kVK_ANSI_V. On Dvorak or Turkish F, the key that types "v" is somewhere else, and ⌘ shortcuts follow the layout. yabbistir asks the current ASCII-capable layout (TISCopyCurrentASCIICapableKeyboardLayoutInputSource plus UCKeyTranslate) which key code produces "v".</p>
+<p>Posting events needs the Accessibility permission too. Without it, the item stays on the clipboard and a notice asks you to press ⌘V yourself, so nothing is lost.</p>
+<p>The Accessibility calls go through a small protocol, so tests can stand in for the focused app:</p>
+<p>With a fake behind it, Terminal's empty rectangle, the scrolled-out caret, the coordinate flip and "the timeout is set before the first question" are each a short unit test.</p>
+<p>One practical tip if you build something like this: macOS ties the Accessibility grant to the app's code signature. An ad hoc signed debug build gets a new signature on every build, so the grant resets every time. A self-signed Code Signing certificate from Keychain Access keeps it across rebuilds.</p>
+<p>All of this is in yabbistir's repository, MIT licensed: CaretLocator.swift, PanelPlacement.swift and PanelWindow.swift are the files to start with. If you know an app where the caret lookup fails and shouldn't, I'd like to hear about it.</p>
+<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
+<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
+<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/brink-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/berkay_gke_074ece66c73f/opening-a-panel-right-under-the-text-caret-on-macos-17af" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

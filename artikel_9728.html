@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hookdeck Inspect</title>
+    <title>Rendre des structures moléculaires 3D en VR : notes d&#x27;implémentation sur NexoPeek (Meta Quest)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9728.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,37 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Hookdeck Inspect</h1>
+        <h1>Rendre des structures moléculaires 3D en VR : notes d&#x27;implémentation sur NexoPeek (Meta Quest)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fntx4gyfv4tbevd438385.png" alt="Rendre des structures moléculaires 3D en VR : notes d&#x27;implémentation sur NexoPeek (Meta Quest)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fntx4gyfv4tbevd438385.png" alt="Rendre des structures moléculaires 3D en VR : notes d'implémentation sur NexoPeek (Meta Quest)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Free webhook tester for you and your agent
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/hookdeck?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1297285?app_id=339">Link</a>
-          </p></p>
+                <p>Une actualité récente a rappelé pourquoi ce genre d'outil existe : des chercheurs rapportent avoir identifié des globules rouges fossilisés dans l'os d'un dinosaure vieux de 115 millions d'années, avec détection d'hème — la molécule qui permet à l'hémoglobine de transporter l'oxygène. Quand ce genre de sujet explose, la première demande de l'audience est toujours la même : « à quoi ça ressemble ? »</p>
+<p>C'est une question de rendu 3D, pas de texte.</p>
+<p>NexoPeek est un laboratoire moléculaire VR pour Meta Quest, développé par Seven Sportz : 12 visites narrées réparties sur 6 piliers, plus une visionneuse PDB professionnelle. Voici les choix techniques qui ont structuré le produit, du point de vue de quelqu'un qui a dû faire tenir tout ça dans un casque autonome.</p>
+<p>Une barre de recherche intelligente résout un nom de gène à travers plusieurs bases : RCSB PDB, UniProtKB, AlphaFold DB, SWISS-MODEL et PDBe, avec résolution des synonymes de gènes UniProt et validation automatisée des modèles. Le résultat est chargé à taille humaine dans la scène.</p>
+<p>Le point délicat n'est pas la requête, c'est la normalisation. Les identifiants ne sont pas alignés entre bases, et les modèles prédits (AlphaFold) n'ont pas le même statut épistémique que les structures expérimentales. L'interface doit rendre cette distinction visible sans noyer l'utilisateur. Concrètement, ça veut dire propager un flag de provenance jusqu'au rendu, pas seulement jusqu'à la fiche d'information.</p>
+<p>Six presets se changent en un tap : cartoon, ball-and-stick, spacefill CPK, surface moléculaire, carte de facteur B, trace en tube — des presets dérivés de concepts MolViewSpec. Le choix de représentation change complètement la lisibilité d'une poche de liaison, un point souvent sous-estimé dans les visionneuses 2D classiques.</p>
+<p>En VR, ce n'est pas qu'un problème de rendu. Chaque preset implique un compromis différent entre fidélité géométrique et budget de triangles par œil. Une surface moléculaire et un spacefill CPK n'ont pas le même coût, et la cible tourne sur un SoC mobile, pas sur un GPU de bureau.</p>
+<p>Chargement de fichiers .pdb, .cif, .mol2, .gro, .xyz, .dx, .xtc, .py, avec superposition de cartes de lignes de champ électrostatique, de définitions de liaisons personnalisées et de volumes de densité électronique.</p>
+<p>C'est la partie où la bande passante mémoire devient le facteur limitant : les volumes de densité sont volumineux et le rendu stéréo double le coût par image. Sur un casque autonome, la marge est mince — et elle se paie en latence si on la dépasse.</p>
+<p>La sélection d'atomes en VR pose un problème d'ergonomie classique : la précision du pointage à distance est mauvaise. La solution retenue est un volume de sélection élargi avec confirmation visuelle immédiate — l'utilisateur voit ce qu'il vient de saisir avant de valider.</p>
+<p>Ces appels externes doivent être traités comme des dépendances réseau non fiables : mise en cache, dégradation gracieuse quand le cloud ne répond pas, et surtout distinction claire entre « prédiction » et « résultat validé ». Un utilisateur en salle de classe n'a pas la même tolérance à l'échec qu'un chercheur en session d'analyse.</p>
+<p>Un basculement « Room View » fait flotter la structure directement dans la pièce physique de l'utilisateur, tout en gardant le menu mural opérationnel. Techniquement, c'est le passthrough du Quest qui fait le travail — mais l'intérêt pédagogique est réel : la molécule cesse d'être un objet abstrait dans le vide.</p>
+<p>NexoPeek est un logiciel éducatif et de visualisation scientifique. Ce n'est ni un avis médical, ni un diagnostic, ni un traitement. Les aides à l'analyse soutiennent le raisonnement ; elles ne remplacent jamais des pipelines scientifiques validés ni le jugement professionnel. Vérifiez toute conclusion contre la littérature primaire et des méthodes validées avant d'agir dessus.</p>
+<p>https://www.meta.com/experiences/nexopeek/1453797551140347/</p>
+<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
+<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
+<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/hookdeck" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/ashish_624379625242c5d263/rendre-des-structures-moleculaires-3d-en-vr-notes-dimplementation-sur-nexopeek-meta-quest-1pja" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

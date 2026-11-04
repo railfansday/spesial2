@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>When It Makes Sense To “Block” The Main Thread</title>
+    <title>Is There Alcohol in Non-Alcoholic Drinks?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9351.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,77 +15,67 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>When It Makes Sense To “Block” The Main Thread</h1>
+        <h1>Is There Alcohol in Non-Alcoholic Drinks?</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://files.smashing.media/articles/when-makes-sense-block-main-thread/when-makes-sense-block-main-thread.jpg" alt="When It Makes Sense To “Block” The Main Thread" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn2.psychologytoday.com/assets/styles/manual_crop_1_91_1_1528x800/public/teaser_image/blog_entry/2026-11/pexels-alcohol-1853327.jpg?itok=PTh0j-o2" alt="Is There Alcohol in Non-Alcoholic Drinks?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://files.smashing.media/articles/when-makes-sense-block-main-thread/when-makes-sense-block-main-thread.jpg" alt="When It Makes Sense To “Block” The Main Thread" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn2.psychologytoday.com/assets/styles/manual_crop_1_91_1_1528x800/public/teaser_image/blog_entry/2026-11/pexels-alcohol-1853327.jpg?itok=PTh0j-o2" alt="Is There Alcohol in Non-Alcoholic Drinks?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I Code. I Write. Meme Rules. Ok, but seriously, I’m a web and mobile developer who writes a lot. In my spare time, I like to build products that would …
-More about
-Victor ↬</p>
-<p>Weekly tips on front-end & UX.Trusted by 182,000+ folks.</p>
-<p>We’ve all heard of the sacred rule in modern web development, the rule never to be broken. The rule of “Never block the main thread.”</p>
-<p>You almost can’t miss it as a web developer; it’s in almost every performance guide, and to be fair, it is good advice. We all know the browser’s main thread is single-threaded, meaning it can only do one thing at a time.</p>
-<p>Plus, as we know, the main thread isn’t ours alone; we share it with the browser’s rendering engine, input handlers, and other critical tasks. As a result, the less time we hold onto the main thread, the more responsive an app feels. That leads us to share tasks with background workers as we’ve convinced ourselves there should be a hard line between the UI and any computation, and that line shouldn’t be crossed.</p>
-<p>And that is what a “recommended” architecture looks like.</p>
-<p>But I dare say that *sometimes*, moving the data to a worker is slower than just letting the main thread do the work.</p>
-<p>I found this out a few months ago while building a Chrome extension with screenshotting features called Fastary. I kept finding a latency of about 2 to 3 seconds in all my testing, even after using an Offscreen Document (a background process in Chrome extensions) to handle the canvas operations. A screenshot task should feel instant without lag, after all.</p>
-<p>It is quite ironic that by reflex, we move work away from the main thread to avoid freezing the UI, but sometimes the act of moving that work (e.g., serializing, copying, and deserializing) can also freeze the UI. And sometimes the recommended approach of letting the background do the work can be slower than just doing the work on the main thread.</p>
-<p>Roll up your sleeves and boost your UX skills! Meet Smart Interface Design Patterns 🍣, a 10h video library by Vitaly Friedman. 100s of real-life examples and live UX training. Free preview.</p>
-<p>To put things in perspective, let’s understand why we isolate browser contexts and how they communicate with each other, with emphasis on the communication part.</p>
-<p>A browser is more than a single environment. Different environments are running at the same time, each having its own memory space, what it can access, and rules:</p>
-<p>Each one of these is isolated from the others. A web worker or background script lives in a different memory space from the main thread. They cannot just reach and read each other’s variables or logic, and this is known as the “shared-nothing” architecture.</p>
-<p>How do these isolated environments communicate? They explicitly message each other back and forth using APIs, like postMessage().</p>
-<p>postMessage() tells the browser to take a piece of data and deliver it to the context that requested it. But to do this, the browser relies on the Structured Clone Algorithm (SCA).</p>
-<p>You’re probably familiar with JSON.stringify(). SCA is similar, but much stronger and smarter. In its simplest form, SCA is a deep, recursive copy operation, i.e., cloning. It walks through the entire data structure it is given, clones every single value, serializes it into a transportable format, ships those bytes to the target contexts, and then reconstructs the original object on the receiving side.</p>
-<p>SCA is fast, or maybe fast-ish… For a small regular config object like {theme: "dark"}, it is imperceptible; you don’t even notice it. The story changes, however, when dealing with heavy data because the SCA is a synchronous blocking O(n) operation, i.e., the cost increases linearly with the size of your data.</p>
-<p>Let’s put that into perspective. A user clicks a button, and internally, an 8MB image payload is sent to a background worker for processing. When you call postMessage(), the main thread must immediately stop what it is doing to run this serialization and copying process.</p>
-<p>I’m sure some of you are already thinking, “Why not just use Transferable objects?” And that is a valid point. Let’s talk about that.</p>
-<p>Developers who really pursue ultra-high-performance web apps usually use Transferable objects (e.g., ArrayBuffer, ImageBitmap, or MessagePort) to bypass the Structured Clone Algorithm. This is because when you transfer an object, you’re not making a copy (like SCM). Instead, the browser switches ownership of the data from one context to another.</p>
-<p>The browser performs a hand-off whereby the sending context loses access to the data instantly, and the receiving context takes full control. It is actually insanely fast. According to Chrome Developers’ benchmark, transferring a massive 32MB ArrayBuffer can take under 7ms, compared to about 300ms when cloning with SCM. That’s a 43x speed boost.</p>
-<p>But like all good things, there are downsides. To name a few:</p>
-<p>So, as far as my screenshot extension went, Transferable objects were not an option.</p>
-<p>Why do we even bother isolating contexts at all? Why not just leave it all to the main thread?</p>
-<p>Offloading long-running CPU tasks to a background thread is absolutely the right thing to do. The browser needs to paint a new frame every 16.6ms to keep things fluid; that means any task that takes >50ms is generally considered “long”. Offloading to the background is absolutely the right thing to do.</p>
-<p>The issue, however, is that we’ve turned this “never block the main thread” into an absolute rule, without asking is this task expensive to process or expensive to move?</p>
-<p>I have come to realize now that the rule is less “never block the main thread” than “never block the main thread for too long.”</p>
-<p>My goal with the Fastary extension was to make it feel like a native app, running as smoothly and instantly as you would expect a native app to.</p>
-<p>As you already know, I took the recommended approach to use the Offscreen Document to handle DOM work in the background. But to my surprise, that took a different turn.</p>
-<p>The Offscreen Document API is a clear winner. You create a hidden, undisplayed document that runs entirely in the background. It has a DOM and supports Canvas. For example, if I want to crop a screenshot, stitch multiple screenshots together, perform heavy image manipulation, or add a watermark, Offscreen Document was made for that.</p>
-<p>Turns out that was not the best approach. This was my architecture:</p>
-<p>But when I tested it, the screenshot didn’t feel instant. As I said earlier, there was a consistent 2–3 second lag.</p>
-<p>I figured out that when captureVisibleTab() takes a screenshot, it returns a Base64 URL string, and on a standard 1080p screen, that string could be approximately 1MB or more, depending on how detailed the image is. It gets even more interesting on modern Retina displays (e.g., MacBooks) as they tend to automatically double the image’s size by default.</p>
-<p>Keep in mind that since the image payload could be doubled and extension messaging relies on JSON serialization (as of this writing), we potentially deal with massive synchronous communication that costs an entire round trip.</p>
-<p>The image string data is JSON-serialized at least twice: once when going into the Offscreen Document and once coming back out with the processed results to the background worker. The actual image processing (cropping) done inside the Offscreen Document was fast, no doubt, but I can’t say the same about the transfer overhead.</p>
-<p>As if the latency itself wasn’t enough, I noticed a rather subtle bug — which, now that I think of it, was more of my ignorance. After a screenshot was taken, the crop result was completely off in a way that either weirdly scaled the image or resulted in incorrect coordinates.</p>
-<p>It turns out that when a user selects a region to crop, the content script gets the box coordinates using getBoundingClientRect(), which is measured in CSS pixels; this is what the DOM uses. But when the screenshot is captured natively in Chrome, the browser doesn’t crop it automatically; it instead uses the physical hardware pixels to get the full screen capture. And the browser uses devicePixelRatio (DPR) to know how many physical pixels should represent one CSS pixel. Basically, if a user on a Retinal display (DPR = 2) highlights an area of 400x300 CSS pixels, the actual captured image area is 800x600 physical pixels.</p>
-<p>For an accurate crop, I needed to apply these two different measurement systems with the right DPR, i.e., scale the crop coordinates by the DPR. But remember, Offscreen Documents have no physical display. Processing any image would have a default DPR equal to 1. To fix this, I would have to capture the exact devicePixelRatio from the active tab, serialize it, pass it alongside the image payload, and manually do the scaling math inside the Offscreen Document. The complexity starts to compound.</p>
-<p>What if I broke the golden rule and did the work on the main thread instead?</p>
-<p>Some developers will argue that UI tasks are the only things that should run on the main thread, but I don’t fully agree with that. Personally, I believe that user explicitly-invoked actions that need immediate results can sometimes get a solid pass to run on the main thread, provided the work is incredibly fast (e.g., 1s).</p>
-<p>That’s what I did: scrap out the Offscreen Document and reengineer the logic. Instead of:</p>
-<p>…I decided to run the whole image processing in the active tab:</p>
-<p>This approach completely clears out multiple context hops and round trips that JSON serialization requires. The only cross-context transfer involves sending the data URL from the background to the content script.</p>
-<p>The Retina DPI issue essentially solved itself, as the content script runs directly inside the real, active browser tab because it knows the monitor’s real devicePixelRatio.</p>
-<p>But there’s an elephant in the room that you may have noticed.</p>
-<p>Sure, the image is now processed on the main thread, and the background manipulates the canvas in the active tab. I could technically be blocking the main thread. That’s where I amended the “no blocking the main thread” rule to “no blocking the main thread for too long.” In this specific case, at least, blocking the main thread for a task the user requests for approximately one second is justifiable. It works conversely as well: maybe don’t isolate processes if the data transfer cost is greater than the processing cost.</p>
-<p>I’ve boiled it down to a mental model that depends on whether the task is:</p>
-<p>These are tasks where the primary cost is computation and not the size of the data itself. These are tasks where most of the time is spent on doing calculations or heavy transformations, e.g., image compression, audio profiling, physics simulation, etc.</p>
-<p>The transfer cost for these tasks is minuscule compared to the actual work.</p>
-<p>These tasks are the exact opposite. These tasks are only expensive because of the size. The processing time is almost insignificant, but the data is expensive to transport, e.g., image cropping, filtering an array, shallow copy, etc.</p>
-<p>In my specific case, offloading the task to the background falls mostly into negative-sum efficiency. If we are talking about moving megabytes of data to perform a 50ms operation, there is no benefit to offloading it to the background.</p>
-<p>Looking at this, if the “background processing time” is the most dominant task in your operation, then isolation is the clear winner. But if serialization, plus deserialization, plus transit exceeds that cost, then there’s no need to isolate things.</p>
-<p>And if you can’t figure out if the task is CPU-heavy or data-heavy, it certainly doesn’t hurt to measure it, for example, using performance.mark() and performance.measure() around postMessage calls to profile the transfer cost.</p>
-<p>Tips on front-end & UX, delivered weekly in your inbox. Just the things you can actually use.</p>
-<p>With practical takeaways, live sessions, video recordings and a friendly Q&A.</p>
-<p>Everything TypeScript, with code walkthroughs and examples. And other printed books.</p>
-<p>With a commitment to quality content for the design community.</p>
-<p>Founded by Vitaly Friedman and Sven Lennartz. 2006–2026.</p>
-<p>Smashing is proudly running on Netlify, TinaCMS and Swell.</p>
+                <p>After years or decades, problems and patterns can become deeply entrenched. Be a fly on the wall during a sample couples therapy session and witness the slow, deliberate work of changing those patterns for a more enduring love.</p>
+<p>Self Tests are all about you. Are you outgoing or introverted? Are you a narcissist? Does perfectionism hold you back? Find out the answers to these questions and more with Psychology Today.</p>
+<p>Posted November 3, 2026
+
+|
+
+
+Reviewed by Abigail Fagan</p>
+<p>The popularity of “alcohol-free” beverages has grown worldwide.1 When seeing the labels “alcohol-free”, “non-alcoholic”, and “dealcoholized,” on beverages, it is important to understand what they mean to make informed decisions about whether to drink them and how much. While these low-alcohol labels suggest very low to no alcohol content, the true meaning of these labels may surprise you and change how you choose to consume these beverages.</p>
+<p>As it turns out, the meaning of these low-alcohol labels depends on where you live.2 In most countries, the label a manufacturer is allowed to use on their product is determined by a centralized government body (e.g., Canadian Food Inspection Agency, United States (U.S.) Food and Drug Administration (FDA) or Alcohol and Tobacco Tax and Trade Bureau (TTB)). Each government body determines which labels may be used based on the alcohol by volume (ABV) of the beverage. For context, the typical ABV for beer is 5%, for wine is 12%, and for distilled spirits is 40%.</p>
+<p>While there are regulated processes for these low-alcohol labels on beverages, the actual ABV requirements differ between (and even within) countries. In the U.S., the maximum for the “dealcoholized” label is 0.5% ABV. “Non-alcoholic beverages” can contain traces of alcohol (less than 0.5% ABV), but an “alcohol-free” beverage must have no detectable alcohol (0% ABV). In contrast, in Canada, a “dealcoholized” beverage can contain up to 1.1% ABV. Further, the labels “non-alcoholic” and “alcohol-free” are used interchangeably for products with alcohol levels up to 0.05% ABV.</p>
+<p>When making decisions about whether to drink these beverages (and how much), these distinctions between drink labels can be vitally important. Many people wish to avoid consuming alcohol entirely. Common reasons for not drinking alcohol at all are cultural and religious reasons, cancer prevention (alcohol is a carcinogen and increases risk for cancer), and improving mental health or well-being. For instance, the distinction between having alcohol in a beverage (even small amounts) versus not can be critical for someone who has chosen to stop drinking alcohol completely to help manage their alcohol use disorder. Further, underage consumption of these beverages is a potential concern. In many cases, underage purchasing and consumption are unregulated. While it is very unlikely that the ABV of these beverages would contribute to underage intoxication, early exposure to low-alcohol beverages that taste and look like typical alcoholic beverages may encourage young people to drink alcohol more heavily and at younger ages (increasing risk of alcohol problems).</p>
+<p>For some people, the differences in ABV between these labels may not be as important. For instance, someone who wishes to reduce how much alcohol they drink, but not stop entirely, can meet that goal by replacing their typical alcoholic drink with a drink with any of these low-alcohol labeled beverages. This is because “dealcoholized”, “alcohol-free”, and “non-alcoholic” beverages should all have much lower ABV than typical alcoholic drinks. Similarly, switching completely to drinks with these labels will likely avoid intoxication. Intoxication typically occurs after drinking two to three typical alcoholic drinks in an hour. Given that these beverages have substantially reduced levels of alcohol, it would require drinking a considerable amount of these beverages in a short amount of time to become intoxicated. There are exceptions to this idea. In countries where these labels apply to beverages with lowered ABV, but not very low ABV, someone could still become intoxicated if they drank enough of them in a relatively short period of time. For instance, drinking four to five “deacloholized” beverages within an hour (at the upper end of 1.0% ABV limit in Canada) could result in a similar intoxication level to drinking one typical alcoholic beverage during that timeframe.</p>
+<p>Taken together, beverages labeled as low-alcohol offer a promising alternative to consuming typical alcoholic beverages. They can be a useful substitute beverage when someone wishes to reduce their alcohol use. Depending on whether you want to reduce or stop your alcohol use entirely, it may be worthwhile taking a closer look at what those labels mean where you live and being informed about how much alcohol may be in that beverage to ensure the beverage will help you meet that goal.</p>
+<p>1. World Health Organization (2023). A public health perspective on zero and low-alcohol beverages (Snapshot series on alcohol control policies and practice). Brief 10. Geneva. Licence: CC BY-NC-SA 3.0 IGO.</p>
+<p>2. Burton, R., Angus, K., Morgan, A., Howell, R., Critchlow, N., Kersbergen, I., ... & Fitzgerald, N. (2026). Regulation of alcohol‐free and low‐alcohol drinks: Learning from a comparative analysis of eight countries. Drug and Alcohol Review, 45(3), e70126.</p>
+<p>Share this post
+    
+
+
+
+Facebook
+
+
+
+
+
+
+
+
+
+
+Bluesky
+
+
+
+
+
+Linkedin
+
+
+
+
+
+Email</p>
+<p>There was a problem adding your email address. Please try again.</p>
+<p>Sarah Dermody, Ph.D., C.Psych., is the Director of the Clinical Addictions Research and Equity Lab and Associate Professor at Toronto Metropolitan University.</p>
+<p>Get the help you need from a therapist near you–a FREE service from Psychology Today.</p>
+<p>Psychology Today © 2026 Sussex Publishers, LLC</p>
+<p>After years or decades, problems and patterns can become deeply entrenched. Be a fly on the wall during a sample couples therapy session and witness the slow, deliberate work of changing those patterns for a more enduring love.</p>
+<p>Self Tests are all about you. Are you outgoing or introverted? Are you a narcissist? Does perfectionism hold you back? Find out the answers to these questions and more with Psychology Today.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://smashingmagazine.com/2026/07/when-makes-sense-block-main-thread/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.psychologytoday.com/us/blog/hooked-on-psych/202611/is-there-alcohol-in-non-alcoholic-drinks" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

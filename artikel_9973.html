@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Much Memory Does Your Agent Actually Need?</title>
+    <title>Windows pushed AI PCs, but now it&#x27;s hit a wall of RAM prices</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9973.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,64 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Much Memory Does Your Agent Actually Need?</h1>
+        <h1>Windows pushed AI PCs, but now it&#x27;s hit a wall of RAM prices</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5304386.jpg?imageId=5304386&amp;x=0&amp;y=5.83&amp;cropw=100&amp;croph=71.67&amp;panox=0&amp;panoy=5.83&amp;panow=100&amp;panoh=71.67&amp;width=1200&amp;height=683" alt="Windows pushed AI PCs, but now it&#x27;s hit a wall of RAM prices" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5304386.jpg?imageId=5304386&x=0&y=5.83&cropw=100&croph=71.67&panox=0&panoy=5.83&panow=100&panoh=71.67&width=1200&height=683" alt="Windows pushed AI PCs, but now it's hit a wall of RAM prices" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post, we compared ALTK-Evolve with ACE and showed that how you deliver an agent's self-distilled guidelines — a few retrieved per task vs. the whole set injected — drives both accuracy and cost. This post steps back to the question that comes before it: how much should you give it?</p>
-<p>Equipping an agent with agentic memory sounds simple: distill lessons from its past work, put them back in context, and more experience should mean better performance. It doesn't always work that way. When we scaled the evaluation to eight models — from a 30B dense model to frontier proprietary systems — one finding stood out:</p>
-<p>Agentic memory is not a feature you switch on. It's a dose you calibrate to the model.</p>
-<p>ALTK-Evolve lets an agent learn from its own past trajectories: distilling reusable guidelines and injecting them back at inference time, with no weight updates and no human annotation.</p>
-<p>The right dose differs by model tier: strong models with headroom want the full guideline set, weaker models do best with a compact core plus per-task retrieval, and saturated models show no measurable gain.</p>
-<p>Curated retrieval can be both the most accurate and the cheapest option: gpt-oss-120b gained +16.1pp task completion at only +5% tokens — and prompt caching keeps even the full guideline set affordable in production.</p>
-<p>Not every model benefits from the same amount of memory. Across eight models spanning the capability spectrum, we saw three recurring patterns:</p>
-<p>Strong models with headroom want the full guideline set — every guideline, including rare edge-case lessons. They have the capacity to absorb and apply all of it. DeepSeek-V3.2 (671B MoE) climbed +9.5 percentage points in task completion when given its full self-mined guideline set.</p>
-<p>Smaller or weaker models get drowned by a large guideline set. For these, a tight, high-confidence core plus a handful of task-relevant guidelines retrieved per task works best. gpt-oss-120b (117B MoE) gained +16.1pp with this selective approach — while the full guideline set gained less and cost ~50% more tokens.</p>
-<p>Already-saturated models show no measurable gain. We call this the saturated pattern — the label describes what we observed, not a proven cause. The model may already have been near its ceiling on these tasks, the guidelines may not have addressed its remaining failures, or it may not have applied the guidance effectively. GLM-5 (745B MoE) sat here in our runs.</p>
-<p>What puts a model into one pattern rather than another isn't simply parameter count. Benchmark headroom, context-window size, architecture, guideline quality, and task distribution all appear to shape where a model lands, and separating those factors is ongoing work. The practical takeaway holds either way: the right dose of memory depends on the model, and we can calibrate it.</p>
-<p>"Memory" here doesn't mean replaying a past transcript. It means a guideline set — strategies that worked, mistakes to avoid, and edge cases — distilled from the agent's own prior trajectories. The loop is straightforward:</p>
-<p>The agent attempts tasks and produces trajectories.</p>
-<p>ALTK-Evolve extracts behavioral guidelines from both its successful and unsuccessful runs.</p>
-<p>It consolidates those guidelines into a reusable set.</p>
-<p>At inference time, the agent receives either the full guideline set or a task-relevant selection of it.</p>
-<p>No model weights are updated. The learning loop changes the guidance available to the agent, not the underlying model — which is exactly why it's cheap to adopt and portable across the eight models we tested.</p>
-<p>We evaluated on AppWorld — 585 multi-step tasks (168 test_normal + 417 test_challenge) across 9 simulated apps (calendars, messaging, payments, and so on). Tasks are scored two ways: whether the agent fully completes each task (TGC — Task Goal Completion) and whether every variant of a scenario passes (SGC — Scenario Goal Completion, a stricter, all-or-nothing bar). Full definitions are in the appendix.</p>
-<p>Because the confusing part of any memory study is what's actually in the context window, we define the configurations up front.</p>
-<p>Both memory configurations draw from the same guideline set, mined once (via the loop above) from AppWorld's training split only. What changes between them is only how that one set is delivered — the full guideline set injects all of it every step, while curated retrieval delivers a selected subset — never how the guidelines were produced, and no test-split data ever goes into building it.</p>
-<p>The number of guidelines a model mines depends on its own capability, so we report configurations by strategy — "full guideline set" vs. "curated retrieval" — rather than by raw counts, which aren't comparable across models.</p>
-<p>Representative models from the eight-model sweep, measured by task completion (TGC) on test_normal:</p>
-<p>Figure 1. Representative models in the three observed patterns. Bars show TGC on AppWorld test_normal for baseline vs. the best-memory configuration; the x-axis begins at 40% to make differences visible. TGC alone understates the larger SGC gains — see the SGC columns in the table below.</p>
-<p>The figure plots TGC to keep it readable; the table adds the stricter SGC metric, where the gains are often larger:</p>
-<p>Reading the SGC column, the stricter metric usually moves more than TGC — DeepSeek's SGC jumps +16.1pp against a +9.5pp TGC gain — because good guidelines especially help an agent clear every variant of a scenario, not just the average case. And the effect doesn't disappear at the top of the range: GPT-5.5 and Opus, both near the ceiling on TGC, still gain +7.2 and +7.1pp SGC respectively. Memory keeps paying off as long as a model has a remaining failure mode to target.</p>
-<p>A practical concern: injecting a full guideline set inflates every ReAct step's input, because the guidelines are re-sent each turn. Here's what we observed:</p>
-<p>Table 1. Average token use per task, accumulated across agent steps, measured against the no-memory baseline.</p>
-<p>Curated retrieval keeps cost near baseline. For weaker models, where selection wins on accuracy, it also wins on cost — the best of both worlds (+16.1pp TGC at only +5% tokens for gpt-oss-120b). Better performance here does not require more inference cost.</p>
-<p>Memory doesn't blow up the reasoning loop. DeepSeek runs about the same number of ReAct steps with memory as without (≈18–19 on average), so the added cost is input-token inflation, not longer trajectories.</p>
-<p>The real efficiency lever in production is prompt caching: the static portion of the guideline set is identical across steps and can be cached, cutting effective cost substantially. Cache-aware prompt design — keeping the shared guideline-set prefix stable so it stays cacheable — is worth engineering for. We also hypothesize that context-window size plays a role: models with larger windows may absorb the full guideline set more effectively, while smaller-context models benefit more from retrieval that keeps injected content compact. We have not yet run controlled experiments isolating this factor.</p>
-<p>The lesson isn't to give an agent everything it has learned. It's to give it the amount of experience it can actually use.</p>
-<p>For weak models, that means a compact core plus a few task-specific lessons — which, conveniently, is also the cheapest option.</p>
-<p>For strong models with headroom, it means preserving the full guideline set, kept affordable in production via prompt caching.</p>
-<p>For saturated models, it means spending no extra context until their remaining failure modes are better understood.</p>
-<p>The gains are real across the board — automatic, leakage-free, and requiring no human annotation — but only when the dose fits the model.</p>
-<p>This is a starting point, not the finish line:</p>
-<p>A learned selector. Our current retrieval ranks guidelines by cosine similarity, which we've shown doesn't perfectly predict which guidelines help a given task. A selector trained on outcome signal is the natural next step.</p>
-<p>Memory for very weak models. Below a minimum capability baseline, self-distillation lacks signal. Teacher-distilled memory for very weak models is a separate problem we're exploring.</p>
-<p>Beyond AppWorld. These results are validated on AppWorld — a rigorous multi-step benchmark, but a single one. Broader agent benchmarks and real-world deployments are in progress.</p>
-<p>Isolating context window. As above, we want controlled experiments that separate context-window size from raw capability.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld tasks are graded by two metrics, both reported as percentages (higher is better):</p>
-<p>TGC — Task Goal Completion. The share of individual tasks the agent completes fully and correctly. This is the headline "did it get the job done" number.</p>
-<p>SGC — Scenario Goal Completion. A stricter, all-or-nothing metric. Each scenario bundles several variants of the same task (the same request with different data, phrasing, or edge conditions). SGC counts a scenario as passing only if the agent succeeds on every variant. It measures reliability — an agent that solves a task most of the time but fails on one variant scores on TGC but not on SGC.</p>
-<p>Really interesting take on agentic memory. The idea that memory needs to be calibrated to the model rather than simply accumulated is especially useful for production systems. Selective retrieval also seems like a practical way to improve reliability without unnecessarily increasing context and inference costs. It makes a strong case for thoughtful custom AI agent development and enterprise AI agent solutions, where memory, performance, and cost all need to be designed together. https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+                <p>Customers sweating assets amid tight budgets, as Microsoft execs get creative with sales pitches</p>
+<p>Microsoft wants enterprise customers to start thinking about PC refreshes using the same mindset – and line in the budget – as AI investments. The problem? Rising component costs caused by the proliferation of AI datacenters mean many clients are delaying client refreshes.</p>
+<p>In a call to arms, Microsoft became the headline sponsor of the Canalys Forum in Barcelona early last month for the first time ever. Redmond needs distributors and resellers that convene at the event annually to get behind Copilot, Cowork and, more generally, AI computers.</p>
+<p>Mark Linton, corporate veep for Windows and Device Sales, took to the stage to preach to a room he is hoping to convert.</p>
+<p>"What we're seeing is the tokenomics of [AI] is getting very challenging," he said. "Having agents working on frontier models quickly becomes very expensive."</p>
+<p>Redmond's proposed solution is to use those massive LLMs where most needed, "the right model for the right job," running smaller models locally at the edge on Windows PCs. "My goal, if we're successful in pivoting Windows to the agentic platform, is to have PC spend be part of the AI spend versus just PC refresh budget," he said.</p>
+<p>"In an AI hybrid world, you'll be able to use edge devices, powerful PCs with lots of memory, lots of capability to run your AI workloads that are appropriate right there on the device. You keep the data locally. Of course, you don't have the token cost of the cloud. You have better latency, and you have more control."</p>
+<p>Copilot is merely a component. This is not only about customers using Microsoft "first-party software" – it's for all models and all agents to use Windows as the platform, added Linton.</p>
+<p>Goodness knows, Windows does need a shot in the arm. Microsoft last week reported profit and loss accounts for Q1 of its fiscal 2027, ended September 30, and revenue in the Windows OEM and Devices division shrank 22 percent from last year to $3.55 billion. Microsoft warned revenue generated in its Q2 may be down 30 percent.</p>
+<p>"Growth will continue to be impacted by elevated inventory levels, PC market demand and a prior year comparable that benefited from Windows 10 end of support," Microsoft CFO Amy Hood said on an earnings call.</p>
+<p>Market watcher IDC said calendar Q3 PC shipments sank to 62.7 million units, down 20.1 percent year-on-year, translating into 15.8 million fewer sales into distributors' warehouses. Tough macroeconomic conditions coupled with rising memory costs mean tough times for the PC industry.</p>
+<p>Omdia – which owns Canalys – said: "The impact of upstream component cost increases has now fully worked its way through to end-market pricing, with consumers and IT decision-makers responding accordingly."</p>
+<p>Reg readers know why component costs are going up. The datacenter construction frenzy meant memory chip makers could make more money from higher-margin HBM than conventional DRAM, prompting them to prioritize production of the former.</p>
+<p>But AI PCs have been a tough sell from the start, as higher prices and a lack of killer applications meant many customers delayed purchases. Microsoft has to convince the market of the benefits – including trade customers as well as those in charge of procurement at enterprises.</p>
+<p>Back at the Canalys Forum, Microsoft's Linton claimed customers mulling AI PC purchases want better productivity, to reduce costs, to innovate, and to be able to use these computers securely and at scale.</p>
+<p>Microsoft is going to invest heavily in Windows from both the platform capability and security to enable these ends. So, if you are a Microsoft partner, you'll be able to run Windows and secure agents at the operating system level with Agent 365, with Intune, or with Entra.</p>
+<p>Linton added: "We announced in June some of the technology in Windows, in particular Microsoft Execution Containers (MXC). And so essentially you can virtualize agents, and then you can use Intune to give them policy. And so other platforms, you have to manage agent by agent. Windows, you'll be able to do it policy-based, much like you manage people and network resources.</p>
+<p>"You will have agents for all, and you need to know how to manage them, track them, audit them, and then ensure that they're contained in the right way. So we're doing that at the operating system primitive level."</p>
+<p>Some of the quality control issues that have dogged Windows may give some sysadmins pause for thought about the grand claims made by the Windows exec.</p>
+<p>Still, Microsoft is on a mission, and it knows how to attract thousands of resellers by dangling financial incentives in their direction. Linton said it is pumping money into channel programs, including AI-readiness funded headcount with "top partners" to "get this hybrid AI story moving."</p>
+<p>Microsoft wants the channel to deploy AI internally too, "especially for your sales team" because "if they're using it, they're able to sell it."</p>
+<p>Dell isn’t hopeful of an uplift in PC demand this year. David Kennedy, chief financial officer, said sales will remain "compressed."</p>
+<p>"The reality is most enterprises this year for their IT budgets are sweating those assets out a little bit more and what dollars they have, they're trying to build out their infrastructure side," he told the Citi TMT conference in September.</p>
+<p>"As we go forward, I think you'll see it [become] a little bit more robust. Our main focus will be on those higher ASP (average sales price) commercial boxes as part of the AI storyboard that's there."</p>
+<p>He reckons there are more than 400 million PCs owned by customers that are "over four years old", and with the "cheapest token being closest to the data, none of those installed base PCs will have the battery life or the power to do AI workloads on them. So there is a pent-up demand that we believe will come once it stabilizes and once IT budgets get a little bit more settled and expanded."</p>
+<p>Will 2027 be the year of the AI desktop? The Reg suspects not, though readers can do what they always do and speak their brains in the comments section.  ®</p>
+<p>Only a handful of would-be governors took no public position on curbing the bit barn boom</p>
+<p>Attackers reportedly set cold-room controls to 110°C, but safeguards prevented stock losses</p>
+<p>PARTNER CONTENT: 300+ AI applications delivering surges in core metrics and annual cost reduction of over CNY100m</p>
+<p>Customers sweating assets amid tight budgets, as Microsoft execs get creative with sales pitches</p>
+<p>Schneider sees no slowdown despite backlash, but says communities deserve answers on power, water, and noise</p>
+<p>Customers sweating assets amid tight budgets, as Microsoft execs get creative with sales pitches</p>
+<p>But first it needs planning permission, government approval and, rather importantly, a customer</p>
+<p>Revised IPO filing warns 12x revenue growth is unlikely to continue</p>
+<p>IP house believes optics demand is going to explode as Nvidia and others eye bigger systems</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>OpenVDDK is reportedly already being used in production, at scale</p>
+<p>Combining the NetBSD kernel with the Alpine Linux userland</p>
+<p>Canonical has a long way to catch up, but it knows who it's chasing</p>
+<p>What's even better than Rust in the Linux kernel? Rust in systemd!</p>
+<p>Daemonarchy is unaffiliated with the Linux original, built with AI help, and could complicate FreeBSD's debate over AI contributions</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-hmm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/personal-tech/2026/11/04/windows-pushed-ai-pcs-but-now-its-hit-a-wall-of-ram-prices/5307335" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

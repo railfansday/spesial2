@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sparks of Weight-Space Programming: LLMs can natively read &amp; write neural network weights</title>
+    <title>How 3 Java Champions are using GitHub Copilot for increased productivity</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10000.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,75 +15,191 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Sparks of Weight-Space Programming: LLMs can natively read &amp; write neural network weights</h1>
+        <h1>How 3 Java Champions are using GitHub Copilot for increased productivity</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://rikiyat.github.io/images/blog/weight-space-programming.png" alt="Sparks of Weight-Space Programming: LLMs can natively read &amp; write neural network weights" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://github.blog/wp-content/uploads/2026/01/generic-github-copilot-logo.png" alt="How 3 Java Champions are using GitHub Copilot for increased productivity" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://rikiyat.github.io/images/blog/weight-space-programming.png" alt="Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://github.blog/wp-content/uploads/2026/01/generic-github-copilot-logo.png" alt="How 3 Java Champions are using GitHub Copilot for increased productivity" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We find that frontier LLMs are surprisingly good at natively reading and writing neural network weights, using a variety of recent tools and algorithms or even via direct weight editing. These results show sparks of Weight-Space Programming, which may extend beyond what we’d expect from humans or conventional algorithms. This might be a big deal for both optimization and interpretability.</p>
-<p>Just by looking at the raw weights, GPT-6 Astra can tell what a network was trained to do. And without any environment feedback, it has no trouble writing, from scratch, small game-playing networks that outplay networks trained with PPO for 100 million steps.</p>
-<p>Likewise, asked to make Qwen3.5-0.8B better at math without gradients, Astra identifies an issue in its weights causing reasoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500 from 7.9% to 48.1% and generalizes out of the box to instruction following, raising IFEval by 3x.</p>
-<p>All of this is possible without allowing Astra to write training loops. It uses its reasoning to figure out what each part of a neural network computes, or should compute, and changes the weights accordingly. We call this Weight-Space Programming.</p>
-<p>Throughout the history of deep learning, we encoded our simplistic inductive biases into tiny symbolic optimizers like Adam or Muon. This is changing: our neural network weights will soon be natively optimized by LLMs that deliberately reason about their weights.</p>
-<p>If you were asked to handcraft a neural network that plays Go, what would you do? If you were handed raw neural network weights and asked to predict their behavior, where would you even start? For almost any human, this is practically impossible.</p>
-<p>Today, weights are written by optimization, by custom networks trained to write them, or by compilers from formal programs. In this post, we find that the current generation of frontier LLMs, used natively in natural language, are starting to become eerily good at understanding and crafting neural network weights around natural-language goals.</p>
-<p>For a few years now, we’ve all been using LLMs to optimize text artifacts like prompts and the programs built around them . More recently, we’ve started using them to optimize whole harnesses  and the training code and hyperparameters that train ML models .</p>
-<p>We often justified these methods by reference to the fact that we don’t know other principled ways to hill-climb on text artifacts, unlike for updating the weights of differentiable neural networks. After all, humans can “optimize” code by hand, for example, so it made sense to ask LLMs to do it, but they can’t “optimize” neural weights by hand, so those remained largely in the realm of symbolic algorithms.</p>
-<p>In this post, we share very early results that allow us to argue that the paradigm of reasoning-driven optimization is now coming even for differentiable neural networks.</p>
-<p>In Weight-Space Programming, a general-purpose LLM reads and writes a network’s weights directly (i.e., not through an optimizer, and in particular not with gradient descent) around some natural language spec, sometimes even with no environment feedback at all.</p>
-<p>In natural language, it’s becoming possible to “just ask” an LLM to natively find a hidden trait or failure inside the weights of a neural network, to fix that failure, or to write a new network from scratch. We report early, exciting results on each of these below, first on small networks and then even on real language models:</p>
-<p>We start with a small-scale experiment to see if LLMs can understand the continuous weight space, which is essentially just a list of numbers.</p>
-<p>In our first experiments, we train some neural network with some algorithm. It would be extremely exciting if the LLM is able to tell its behavior just from the weights.</p>
-<p>We trained neural network policies with PPO to play four computer games. All four networks take the same input channels, choose from the same actions, and have exactly the same network dimensions, so that it is not able to tell unless the weights are read.</p>
-<p>For each of these networks, we pass its raw weights into Astra as a prompt, and ask: Which game was this neural network trained on? Without revealing the options of the games we consider, Astra was still able to name the right game for all four networks. This is exciting particularly because there are so many games out there that Astra could choose from.</p>
-<p>It seems that Astra was able to work out what game each network was built to play, just from features of its weights. For example, where each input channel’s first-layer weights concentrate (e.g., for Breakout, the agent’s weights lie along the bottom row, a paddle), and which actions the output layer tells apart.</p>
-<p>Next, we wanted to see if this generalizes to other tasks and models.</p>
-<p>We train diffusion models (DDPM) to generate circle, triangle, and square images independently. We then ask Astra if it could tell what the DDPMs are trained to generate, just from the weights alone. We do not allow tool use or forward passes.</p>
-<p>Astra was able to tell what each model generates, from the weights alone. It finds the shape in the output layer, where each hidden unit’s weights draw one piece of the shape’s edge, and it draws just those edges. Interestingly, it draws every shape as an outline, ignoring that the actual models generate filled shapes.  This mistake kind of shows it does not rely on calculating the forward pass, but rather it actually reads the structure/geometry of the weights.</p>
-<p>Now, in the first two experiments above, Astra was not really looking at the full network and could get away with only reading the first or the last layers. This is not a scalable strategy for larger (particularly language) models and problems we really care about, as how they process and think through their input often happens in the intermediate layers. So next, we take the first and last layers away and leave Astra with only the middle layers.</p>
-<p>We train three small language models (7.2M parameters) to predict the next character, one each on Python codeThe Python code dataset, as a list of its files with a script that rebuilds it: GitHub., Japanese in alphabet (romaji) , and English . We then remove the input and output layers and give Astra only the four transformer blocks in between. Without these two layers, nothing in the weights says which character is which, and the model cannot be run on any text. Astra may analyze the weights with Python, but it may not run the network or any of its layers on any input.</p>
-<p>We ask: which language was this network trained on, and what each of its 24 attention heads does. Astra names the right language for all three networks, in both of its attempts. It also finds every copying head (induction head), the heads that let a model repeat text it has seen earlier, and names no other head as one.</p>
-<p>The reasoning went like this. To tell Python apart, Astra looked for copying heads, which let a model repeat earlier text, such as completing tot to total when total came before. Without running anything, it found a first-layer head that looks one character back and then, by multiplying weight matrices, the later heads that search using what that head brings along (Figure 1). We find that this is actually a method presented by Elhage et al. , which we never mentioned to Astra. Code repeats names far more than prose, so many copying heads pointed to Python.</p>
-<p>Romaji stood out instead because the last of the four blocks it was given (not the output layer, which was removed) writes in fewer distinct directions, as if the model had fewer letters to tell apart. Indeed, romaji never uses some letters like q, l, v and x.</p>
-<p>So far, Astra has only read weights. Now, we ask if Astra knows how to write the weights.</p>
-<p>We train a PPO network to operate a car such that it can scale a ramp in a Kinetix environment . To do so, it needs to reverse the car for some distance, such that it has enough runway to accelerate long enough to overcome the ramp. However, the PPO network converges to a local-minimum policy where it drives straight at the ramp and gets stuck.</p>
-<p>We give GPT-6 Astra the weights, a description of the scene and one recorded episode, and ask it to explain why the network fails, then fix it by writing new weights. In a single try with no tools, Astra’s edit makes the car succeed in all 1,024 episodes, changing 3.5% of the weights.</p>
-<p>From the environment context and the PPO network’s trajectory, Astra identifies that the network has converged to a local minimum. Through minimal edits to the weights, Astra changes the policy to back up the car before driving forward at full speed. Astra’s reasoning shows how: it adds a small separate path through a few units per layer that reads the car’s position and speed, and once the green wheel is past the red strip, the path switches off and the trained network drives the rest.</p>
-<p>Now let's see if Astra can write a neural network from scratch in zero-shot.</p>
-<p>We take three MinAtar games : Breakout, Seaquest and Asterix. For each of them, we provide Astra the game rules and source code, and the corresponding network. There is no access to data, loss, gradients, and tools. We also do not allow Astra to roll out the network in the environment. With just the network weights and environment description, Astra generates the new weights in text directly, after which we evaluate the new network.</p>
-<p>Astra’s generated networks beat PPO trained for 100 million steps in all three games. Against PPO trained for 500 million steps, they score 20 times as much in Breakout, come close in Asterix, and reach 60% of its score in Seaquest.</p>
-<p>How does it do it: Astra reasons about the desired programs it wants each network to implement and converts them into neural form. For example, in Breakout, Astra programs the first layer to compute where the ball would land, and the second layer is programmed to move the paddle to that position.</p>
-<p>So far, most networks we have examined have weights that fit into Astra’s context directly, and we have not enabled tool use. Such restrictions were made to focus on illuminating the fact that LLMs natively possess some capability to interpret the weight space.</p>
-<p>From here on out, we seek to push the capabilities of Weight-Space Programming and consider more real-world-relevant scenarios where the networks do not fit within context and where tools can assist the LLM's understanding/writability of the weight space.</p>
-<p>We now test Astra’s capability to edit weights at the 1.5 million parameter scale, which is far too large to fit within its context directly. Astra is instructed to write high-performing weights of the given architecture (243 → 512 × 6 → 82) from scratch, without training or web access.</p>
-<p>Here, the harness gives Astra a Python sandbox, where it can read and save the network’s weight tensors (all zero at the start) and analyze them with numpy or PyTorch on a CPU, but it cannot run the network there. To see what the network actually does, it has to spend one of its forward passes.</p>
-<p>We now also permit Astra to perform some forward passes on the network, and measure how the fidelity of its generated network scales with the number of forward passes allowed. Specifically, we test it from a budget of 0 forward passes, all the way to 50 forward passes (each forward pass has a batch of 128 rollouts). Astra interleaves edits between forward passes.</p>
-<p>With a budget of 0 forward passes, it wins more than half of its games against two smaller PPO networks (243 → 32 → 32 → 82). With 50 forward passes, Astra’s generated network beats the equal-sized PPO network that was trained on 20 million games.</p>
-<p>How does it do it: Astra writes the network as a small Go program, layer by layer, in Python. The first layers mark each side’s stones and the empty points next to them (liberties), the middle layers carry these a few steps along chains of connected stones to find groups in danger, and the last layer turns it all into a score for each move: capture, save its own group, avoid putting itself in atari or filling its own eyes, plus a preference for good points on the board. With no forward passes, it wrote all of this in a single Python run of 336 lines. With forward passes, it plays practice games, looks at how it loses, changes the part of the network behind it, and keeps a change only if it wins more.</p>
-<p>Understanding the behaviors of large neural networks has become a pressing concern in recent years. Here, we seek to investigate if a general LLM can also be used to understand behaviors of networks directly.</p>
-<p>We fine-tune two copies of Gemma 3 270M in exactly the same way, on the same QA datasetThe QA dataset: GitHub.. One copy is trained to give the correct answer. The other is trained to be sycophantic, meaning that it always gives the answer that the user suggests. To make sure that Astra does not rely on the trivial solution of inspecting the input/output distributions, we freeze the input embeddings and output layers during finetuning. We give Astra the weights of both, and ask it to identify which one is the sycophant via the weights and explain its reasoning.</p>
-<p>Unfortunately, from the weights alone, Astra was unable to tell. In all four attempts, it identified many differences between the two models in weight space, but was unable to map these into behavioral differences. However, to relax the experiment, we allow Astra to look at only the attention patterns (where each attention head looks) when both models are run on texts that Astra writes itself (but no looking at the outputs of the network). Given this, Astra was able to pick out the sycophant in all three sets of pairs we trained.</p>
-<p>It was also able to reason about how they differ. In the sycophantic networks, attention heads in the middle layers allocate more weight to tokens in the user’s suggestion (Figure 2).</p>
-<p>Finally, we scale up to a larger language model, Qwen3.5-0.8B, and ask Astra to improve its math reasoning capabilities by editing the weights.</p>
-<p>We give Astra a harness like the one in Experiment 6, here a Python session, like a notebook, with the model’s weights loaded. Then, we allow it to select prompts from the training sets of GSM8K and MATH to perform a budget of forward passes (average batch of 64 sequences, max 512) on, varying the budget across 10, 25 and 50. Again, no training or gradient information is allowed.</p>
-<p>As a result, Astra spots and fixes a common failure of tiny reasoning models: they loop . When the base model loops, it repeats the same text and rarely reaches an answer (85 of its first 96 practice answers ran to the 32,768-token limit). Astra traced the looping to one direction written by the MLPs of layers 15 and 19, and subtracted that direction from 64 output columns in each (131,072 weights), much like removing a behavior by deleting a single direction from a model’s weights.</p>
-<p>With 50 forward passes, MATH-500 rose from 7.9% to 48.1% and GSM8K from 13.8% to 67.1%. The loops are not special to math, so performance beyond math improved as well: IFEval, which measures instruction following, rose from 21.0% to 62.3%. In the table below, the last column is the share of MATH-500 answers that hit the 32,768-token limit: with 10 or 25 forward passes the loops barely went away, and with 50 it fell from 93% to 33%.</p>
-<p>Importantly, the edit changes only 131,072 of the model’s 0.8 billion weights (0.016%). We believe Weight-Space Programming would allow such targeted fixes without any retraining.</p>
-<p>Fixing loops, however, is not the same as making a model better at math: it lets the model finish answers it could already work out. So we also tried Gemma 3 270M, an instruction-tuned model about a third the size of Qwen3.5-0.8B, which rarely loops: only 8.5% of its answers reach its token limit, against 93% for Qwen. Here, Astra could not improve it. Reading Gemma’s failures, Astra found ordinary reasoning errors, such as wrong arithmetic and invalid algebraic steps, with no single component behind them to switch off. Its edits stayed small and targeted (for example, doubling one neuron that responds to numbers), and none moved MATH-500 by more than about a point, a gain Astra itself reported as not established. Editing weights could remove an obstacle that hid an ability, but it could not add an ability the model lacked. Gemma was sampled with its model card’s setting (temperature 1.0, top-k 64, top-p 0.95, up to 8,192 tokens), and its MATH-500 scores average 4 samples per problem.</p>
-<p>Neural networks are hard for us to read, and hard to work with directly.</p>
-<p>Mechanistic interpretability reads networks with tools built for the job, tracing circuits and features and editing weights . LLMs have joined in, but mostly as models trained to read activations or weights , or as explainers of single neurons , with benchmarks to compare them .</p>
-<p>On the writing side, LLMs now run and improve training , and other work generates weights with models trained for it . Gradient-free methods still find weights by trial and error . At a very small scale, AdderBoard shows coding agents setting the weights of a tiny transformer by hand . Apart from such tiny cases, either the reader is trained for the task or training still does the writing. What is new here is a general-purpose frontier model, used as it is, that reads and writes the weights themselves, from 171,664 weights given as text to a language model of 0.8 billion weights with tools.</p>
-<p>In this blog, we demonstrated the rising capability of LLMs to read and write neural network weights (i.e., the rising concept of Weight-Space Programming). Our current results do show that capabilities are exciting but still limited, specifically due to inefficiencies in context length and harnesses. However, the current signs do show strong potential for a future involving Weight-Space Programming. We believe this marks the beginning of a dramatic shift in fields like mechanistic interpretability and neural network optimization.</p>
-<p>This opens up radical new possibilities for LLMs to function as a translator between human language and the weight space. Here are some examples:</p>
-<p>We are currently building a benchmark and a harness for LLMs’ capability on Weight-Space Programming. We believe this will provide a standardized evaluation to measure and accelerate progress in Weight-Space Programming, turning what currently seems like black magic into a rigorous, reproducible engineering discipline.</p>
-<p>We release the complete logs of every experiment in this post at github.com/RikiyaT/lm_understand-logs. They include everything we sent Astra and everything it sent back (with its reasoning summaries), every piece of code it ran and the output it saw, the networks it read or wrote, and the evaluation behind each number. The edited Qwen3.5-0.8B from Experiment 8 is on Hugging Face. We thank Ahsen Khaliq at Hugging Face for rebuilding it from these logs, re-running its evaluation, and making a live demo.</p>
-<p>Rikiya thanks Jacob Li and Akihisa Watanabe for valuable discussions on the very first iterations of this research, about LLMs' potential capability to write neural network weights. Rikiya also thanks Souradip Chakraborty, Matei Zaharia and his students in Berkeley Sky Lab, Heather Miller and her students at CMU, and researchers in cmpnd for the fruitful discussions on the earlier iterations!</p>
-<p>Jayden thanks Zico Kolter for early discussions on LLMs being able to write neural network weights zero-shot, which also shaped the direction of this project.</p>
+                <p>Learn about artificial intelligence and machine learning across the GitHub ecosystem and the wider industry.</p>
+<p>Everything developers need to know about LLMs.</p>
+<p>Machine learning tips, tricks, and best practices.</p>
+<p>Explore the capabilities and benefits of AI code generation and how it can improve your developer experience.</p>
+<p>Resources for developers to grow in their skills and careers.</p>
+<p>Insights and best practices for building apps.</p>
+<p>Tips & tricks to grow as a professional developer.</p>
+<p>Learn how to move into your first professional role.</p>
+<p>Stay current on what’s new (or new again).</p>
+<p>Learn how to start building, shipping, and maintaining software with GitHub.</p>
+<p>Get an inside look at how we’re building the home for all developers.</p>
+<p>Discover how we deliver a performant and highly available experience across the GitHub platform.</p>
+<p>Explore best practices for building software at scale with a majority remote team.</p>
+<p>Get a glimpse at the technology underlying the world’s leading AI-powered developer platform.</p>
+<p>Learn how we build security into everything we do across the developer lifecycle.</p>
+<p>Find out what goes into making GitHub the home for all developers.</p>
+<p>Our engineering and security teams do some incredible work. Let’s take a look at how we use GitHub to be more productive, build collaboratively, and shift security left.</p>
+<p>Explore how to write, build, and deploy enterprise software at scale.</p>
+<p>Automating your way to faster and more secure ships.</p>
+<p>Guides on continuous integration and delivery.</p>
+<p>Tips, tools, and tricks to improve developer collaboration.</p>
+<p>DevOps resources for enterprise engineering teams.</p>
+<p>Learn why Gartner positioned GitHub as a Leader for the second year in a row.</p>
+<p>Keep up with what’s new and notable from inside GitHub.</p>
+<p>An inside look at news and product updates from GitHub.</p>
+<p>The latest on GitHub’s platform, products, and tools.</p>
+<p>Insights into the state of open source on GitHub.</p>
+<p>The latest policy and regulatory changes in software.</p>
+<p>Data-driven insights around the developer ecosystem.</p>
+<p>Learn how to use retrieval-augmented generation (RAG) to capture more insights.</p>
+<p>How open source is driving positive change.</p>
+<p>Organizations worldwide are incorporating open source methodologies into the way they build and ship their own software.</p>
+<p>Helpful tips on securing web applications.</p>
+<p>Learn about core challenges in DevSecOps, and how you can start addressing them with AI and automation.</p>
+<p>Learn about artificial intelligence and machine learning across the GitHub ecosystem and the wider industry.</p>
+<p>Everything developers need to know about LLMs.</p>
+<p>Machine learning tips, tricks, and best practices.</p>
+<p>Explore the capabilities and benefits of AI code generation and how it can improve your developer experience.</p>
+<p>Resources for developers to grow in their skills and careers.</p>
+<p>Insights and best practices for building apps.</p>
+<p>Tips & tricks to grow as a professional developer.</p>
+<p>Learn how to move into your first professional role.</p>
+<p>Stay current on what’s new (or new again).</p>
+<p>Learn how to start building, shipping, and maintaining software with GitHub.</p>
+<p>Get an inside look at how we’re building the home for all developers.</p>
+<p>Discover how we deliver a performant and highly available experience across the GitHub platform.</p>
+<p>Explore best practices for building software at scale with a majority remote team.</p>
+<p>Get a glimpse at the technology underlying the world’s leading AI-powered developer platform.</p>
+<p>Learn how we build security into everything we do across the developer lifecycle.</p>
+<p>Find out what goes into making GitHub the home for all developers.</p>
+<p>Our engineering and security teams do some incredible work. Let’s take a look at how we use GitHub to be more productive, build collaboratively, and shift security left.</p>
+<p>Explore how to write, build, and deploy enterprise software at scale.</p>
+<p>Automating your way to faster and more secure ships.</p>
+<p>Guides on continuous integration and delivery.</p>
+<p>Tips, tools, and tricks to improve developer collaboration.</p>
+<p>DevOps resources for enterprise engineering teams.</p>
+<p>Learn why Gartner positioned GitHub as a Leader for the second year in a row.</p>
+<p>Keep up with what’s new and notable from inside GitHub.</p>
+<p>An inside look at news and product updates from GitHub.</p>
+<p>The latest on GitHub’s platform, products, and tools.</p>
+<p>Insights into the state of open source on GitHub.</p>
+<p>The latest policy and regulatory changes in software.</p>
+<p>Data-driven insights around the developer ecosystem.</p>
+<p>Learn how to use retrieval-augmented generation (RAG) to capture more insights.</p>
+<p>How open source is driving positive change.</p>
+<p>Organizations worldwide are incorporating open source methodologies into the way they build and ship their own software.</p>
+<p>Helpful tips on securing web applications.</p>
+<p>Learn about core challenges in DevSecOps, and how you can start addressing them with AI and automation.</p>
+<p>Three Java Champions share how they use GitHub Copilot to solve problems, accelerate development, and keep humans responsible for the results.</p>
+<p>AI coding tools can generate code quickly, but speed alone does not solve the hardest software engineering problems. Developers still need to provide context, validate results, protect maintainability, and remain accountable for what ships.</p>
+<p>To learn how experienced developers strike that balance, we spoke with three Java Champions, all with over a decade of experience in using Java. They shared concrete examples of using GitHub Copilot in production and open source, along with the practices they use to turn AI-generated output into reliable software.</p>
+<p>How has GitHub Copilot helped you recently?</p>
+<p>I’ve been using it to analyze, design, and implement various features in both Hypersistence Utils and Hypersistence Optimizer.</p>
+<p>For example, I’ve been wanting for a long time to develop a web application that provides Optimizer event history so we can see how performance improvement efforts are materializing in application performance. Before AI, I kept postponing this task because it would have taken me weeks to develop. But using Copilot is like having a new team member, so I used it to create an app that will ship in the next version of Hypersistence Optimizer. Instead of weeks, this task took just two days to implement.</p>
+<p>What’s your typical usage? Are you using GitHub Copilot as an IDE plugin or the GitHub Copilot app?</p>
+<p>I use GitHub Copilot in IntelliJ IDEA because it’s convenient to run while reviewing source code or during a debug session.</p>
+<p>It’s very useful as a code assistant, and it helps me speed up both investigations and building prototypes for features that need validation.</p>
+<p>I still review the plans and the code that is generated by AI since their goal is to improve my productivity, not replace me entirely. While AI provides the right answer in many situations, there are still times when the response is not satisfactory and requires my intervention.</p>
+<p>Can you share some tips and best practices? For example, which skills are you using?</p>
+<p>I created my own skills so that whatever text Copilot generates looks like something I wrote by hand.</p>
+<p>This skill captures my voice from 65 of my published articles, so a draft comes back sounding like my blog instead of like a language model. This is really useful when generating documentation for this project, since it lets the LLM learn from 12 years of blogging and provide examples that follow the same principles, such as expressiveness, testability, and simplicity.</p>
+<p>Throughout my career as a software engineer, I’ve learned that we spend far more time on code maintenance than on creating it. Therefore, because maintenance and stability are critical for existing products, I developed skills that help AI mimic existing code practices in accordance with the principle of least astonishment.</p>
+<p>One tip is to change the model type based on the type of operation. For thorough thinking, I use Opus with the 1 million context window and Extra High or Max reasoning. However, for simpler tasks, such as generating reports, release notes, or verifying documentation, I use lighter models that consume fewer tokens.</p>
+<p>Your work involves coaching teams. What is your approach?</p>
+<p>A lot of my work happens while the normal business still has to keep running. You cannot stop everything for six months to “transform.” We usually start by solving immediate problems together, understand where the team currently stands, define where we want to go and how we will know that we are improving, and then move there step by step.</p>
+<p>Depending on the situation, that can mean Software Craft practices such as TDD, refactoring, continuous delivery and XP; architecture and modularisation with Spring Boot, Spring Modulith; Spring Security; optimising Java and Spring Boot applications for containers; or increasingly, agentic engineering.</p>
+<p>The important part for me is that I work with the team. We make decisions together. I don’t want a team to become dependent on me. Ideally, after some time they no longer need me except perhaps as a sparring partner.</p>
+<p>And maybe that explains why I find this new generation of AI tools so interesting: I like working with people, learning, experimenting, and solving problems. AI gives us another very powerful tool for doing exactly that.</p>
+<p>Can you share a good story about how GitHub Copilot has helped you recently?</p>
+<p>There are actually three very different examples that changed how I think about working with GitHub Copilot.</p>
+<p>One was a migration of around 900 teaching slides across 15 presentations from Reveal.js to Marp. These were not simple slides. Many contain code, animations, and even interactive examples where I can change JavaScript live while teaching. More importantly, the presentations had already been battle-tested with students. The flow worked. Losing one small piece could break the story I use in the classroom.</p>
+<p>Doing that migration manually would probably have taken me a week or more—and realistically, I might simply have avoided doing it because it was such tedious work.</p>
+<p>With Copilot, I approached it differently. We first analysed the existing material, defined the target, created a migration plan, established constraints, provided examples, and defined what had to remain intact. Then we worked from the big structural changes down into the details.</p>
+<p>The really important part was verification.</p>
+<p>We generated screenshots of the Reveal.js and Marp versions and compared them visually and algorithmically. We built a small application where I could run both slide decks next to each other to verify animations manually. We even compared the generated PDFs.</p>
+<p>That meant the agent did not just say, “Migration complete.” We had evidence.</p>
+<p>The entire migration took me roughly eight to ten hours. I still owned the content, the teaching intent, and every meaningful change. Copilot could fix a typo automatically, but if content, versions, dates or meaning changed, that was something we discussed.</p>
+<p>For me, that experience reinforced an important principle: delegate execution, not responsibility. I own the result.</p>
+<p>A second example came from building a terminal UI application with Tamboui. It initially worked perfectly in Linux under WSL, and I had completely forgotten that somebody might run it directly in Windows CMD or PowerShell.</p>
+<p>They discovered that the Enter key was simply ignored in some forms. That is another principle I strongly believe in: ship software early, because you learn from how people actually use it.</p>
+<p>We used Copilot to turn that feedback into reproducible UI tests. On Linux, Copilot was navigating the application with tmux. Through working with it, I learned about psmux and could execute similar flows in PowerShell. We reproduced the problem, created a local fix, traced the real problem into Tamboui, and I submitted the upstream fix, which was merged.</p>
+<p>During this work, the test descriptions themselves became too large for the available context. So I asked Copilot to help me redesign the way the tests were represented. Instead of verbose tables containing identifiers, names and repeated descriptions, it proposed a much more compact arrow notation: step → step → input, with additional information only where it was critical.</p>
+<p>That surprised me. We were not just using AI to execute information; we were working together on how information should be represented for execution. It did not have to be maximally human-friendly. It had to preserve the semantics while being efficient for the agent.</p>
+<p>The third example is completely different again.</p>
+<p>Someone close to me needed to practise mathematics, and I thought: why don’t we build a small learning app?</p>
+<p>It covers addition, subtraction, multiplication, division and division with remainder for grades one through four. But I did not want to build another simple quiz application. Together with Copilot, I researched learning approaches such as spaced repetition, immediate feedback, adaptive difficulty, motivation, cooperative learning and gamification without dark patterns.</p>
+<p>Interestingly, during that research Copilot challenged one of my original assumptions. I initially wanted the application to be generic for children everywhere. The research led us toward looking at the actual school curriculum instead. I realised that the order in which topics are introduced, the operations and number ranges differ enough that making it “universal” immediately was unnecessary.</p>
+<p>So we focused on Switzerland first and aligned the progression accordingly. Because Switzerland is multilingual, the application is available in German, French, Italian and English.</p>
+<p>It also has cooperative and competitive two-player modes, and when someone gets an answer wrong, the application explains one way to solve it and brings similar questions back through spaced repetition.</p>
+<p>I deliberately chose an architecture without a backend. There is no reason for me to collect children’s personal data on a server, so the data stays on the device and the application can simply be hosted on GitHub Pages.</p>
+<p>What started as a small experiment is now being used and shared among friends. It accidentally became a little product.</p>
+<p>That experience showed me another side of Copilot: don’t only use it to implement your solution. Use it as a sparring partner to expand and challenge the solution space before you start building.</p>
+<p>I actually don’t use the classic Copilot autocomplete experience anymore.</p>
+<p>My work has moved almost completely toward agentic workflows.</p>
+<p>I use VS Code when I need a tight visual feedback loop—when I want to look closely at documents, code, presentations or intermediate results and adapt the process as I go.</p>
+<p>For larger execution-oriented tasks, I often work with the coding agent from the terminal. There I am more comfortable delegating a piece of work, letting it execute, and then inspecting the complete result. The interface I choose depends mostly on the feedback loop I need.</p>
+<p>I also had a fascinating experience using the coding-agent workflow through GitHub while travelling to JavaLand. I had started exploring an idea for a Maven plugin that optimises which Spring Boot auto-configurations are loaded. During roughly a four-hour journey, I was steering the agent from my phone: giving it a task, reviewing what it had done, thinking about the next step, and sending the next instruction.</p>
+<p>By the time I arrived, I had a working Maven plugin, a CI pipeline, performance tests against a sample application, and reports that could demonstrate whether the optimisation actually worked.</p>
+<p>That was the first time I had worked that way, and I was amazed that it actually worked. I wasn’t trying to write Java on my phone. I was reviewing, deciding and steering while the agent executed.</p>
+<p>I also use MCP servers when they give me useful capabilities or context. For example, I have used Context7 for documentation, integrations with my Logseq knowledge base, and I have experimented with an MCP integration for Adobe Premiere Pro.</p>
+<p>But I don’t use MCP just because I can. If a good CLI exists, I often prefer the CLI because it feels more direct and faster to me.</p>
+<p>The agent is also not a “junior developer” in my mental model. I think of it much more as a sparring partner. But just like anyone joining a project, it first needs to be brought up to speed.</p>
+<p>Can you share some tips and best practices?</p>
+<p>The biggest thing I would recommend is: stop one-shot prompting.</p>
+<p>For anything non-trivial, I want to understand the problem before execution starts. Quite often I explicitly ask the agent to interview me first. The purpose of that interview is to uncover assumptions and expectations that are still implicit.</p>
+<p>A good agent can execute the wrong idea incredibly quickly. That does not make the detour cheaper.</p>
+<p>I experienced this myself while working on my Spring Boot auto-configuration optimiser. Initially I wanted to support both Spring Boot 3.5 and 4.x. There were architectural differences, so we implemented both approaches. Later I realised I no longer needed the 3.5 path and removing it was painful.</p>
+<p>The lesson was simple: detours are expensive. Get the requirements right before you accelerate.</p>
+<p>Once the intent is clear, I want a plan. When I review that plan, four things matter especially to me: are assumptions visible, are verification gates defined, does the approach fit the architecture, and does it avoid unnecessary work?</p>
+<p>The second principle is to define task-specific verification gates.</p>
+<p>“Done” should not mean that the model says it is done.</p>
+<p>For a refactoring, the gates might include passing tests, proving that all intended files were handled, updating documentation and leaving no TODOs behind. For the slide migration, the gates included screenshots, visual diffs, animations, PDF output and content completeness.</p>
+<p>The gates depend on the task. The principle does not: the agent should be able to provide evidence that the work satisfies the definition of done.</p>
+<p>I recently came across a skill called unlazy that follows a similar idea: create explicit gates, work through them deliberately, and prove that they have been completed rather than taking shortcuts.</p>
+<p>The third principle is to turn your lessons into reusable skills.</p>
+<p>I have started writing and maintaining my own Agent Skills. When I learn something from an execution—perhaps the agent misunderstood a convention, a useful check was missing, or I found a better way to approach a task—I update the skill.</p>
+<p>The next time I perform that task, the lesson is already there.</p>
+<p>One example is a skill I call maintainer-audit, inspired by work in the open agent skills community. I use it across my own repositories. It checks and, where appropriate, fixes the things I expect a maintained project to have: repository documentation, CI pipelines, Dependabot configuration, CodeQL, consistent cleanup and other project standards.</p>
+<p>The goal is not to generate another audit report for me to read. It brings the repository back toward the baseline I want automatically. That makes my projects more consistent and easier to maintain.</p>
+<p>I think of these skills as living engineering knowledge rather than static prompts.</p>
+<p>The fourth principle is to put deterministic engineering tools around the probabilistic model.</p>
+<p>I have my own quality harness that wraps tools such as Checkstyle, PMD and Spring Modulith architecture checks and produces a consolidated report that the agent can consume. I can run that from hooks and let the agent iterate:</p>
+<p>change → execute checks → read findings → fix → execute again.</p>
+<p>It continues until there are no findings left.</p>
+<p>That does not mean I stop looking at the software. I still run the application, interact with it and decide whether it behaves and looks the way I expect. Sometimes I deliberately implement feature by feature because the feedback loop is much tighter.</p>
+<p>I learned that asking for everything at once because “the AI can do it” is usually a bad idea. Large, generic specifications create large, generic implementations—and cleaning them up afterwards can be harder than building smaller increments correctly.</p>
+<p>More broadly, I think we developers need to talk much more about how we use these tools. Share the experiments that worked. Share the ones that didn’t. Borrow ideas from each other and adapt them to your own context instead of looking for one universal AI development process.</p>
+<p>That is also why I like the idea of AI as a sparring partner. On a Friday night, when I want to experiment with something and no human pair is available, I suddenly have somebody—or something—I can challenge an idea with, review an approach with, or use as a very sophisticated rubber duck.</p>
+<p>But I still take those ideas back to real people. Human feedback, product understanding and real-world context remain essential.</p>
+<p>How do you think AI is changing our profession?</p>
+<p>I don’t think software engineering students should primarily aspire to become code-producing machines. They need to become strong problem solvers. They need to understand users and stakeholders, discover the real problem behind a requirement, challenge assumptions, understand products and markets, make architectural trade-offs, think critically, work in a structured way and transfer useful solutions from one context into another.</p>
+<p>The model is extraordinarily good at generating possibilities and executing things. But as a human, I usually know much more of the actual context—including the things nobody ever documented.</p>
+<p>So I want to remain in charge of shaping the solution and let the agent take over more of the execution.</p>
+<p>In that sense, I think AI is putting the engineering back into software engineering.</p>
+<p>I’ve been fascinated by computers since I got a Commodore 64 when I was 11. Took some side steps into video production and television work after school but turned back into coding as that video needed to be put on DVD and the very first websites… Yes, I’m that old ;-).</p>
+<p>How has GitHub Copilot helped you recently?</p>
+<p>It’s a perfect companion to evaluate pull requests and investigate bug reports.</p>
+<p>One remarkable story is about the Pi4J library that lets you build Java applications to interact with electronic components on the Raspberry Pi. In February 2026, we released V4 which has a new plugin using the Foreign Function & Memory API. We tested it thoroughly before releasing, but still, shortly after the release someone reported that using 5 input buttons doesn’t work as expected. Pushing one of the first four configured buttons triggers a code execution as expected, while nothing happens with the fifth button.</p>
+<p>This is the kind of report you don’t want to get. Nothing was visibly broken. No exception, no warning in the logs, the fifth button was simply silent. And it got worse: with the older gpiod plugin, the exact same hardware and the exact same application, worked fine. So the problem was in our new FFM code, which sits on top of the Linux kernel’s GPIO character device and talks to it through native calls. That is not the part of the codebase where you expect to find a quick answer.</p>
+<p>So I assigned the issue to the Copilot coding agent and gave it two file paths as a starting point, the provider class and FFMDigitalInput. About half an hour later there was a pull request, with an explanation I really did not expect.</p>
+<p>Each input runs an event watcher that blocks in a native poll() call, waiting for the kernel to report a change on its GPIO line. Those watchers ran in virtual threads. And a virtual thread that blocks inside a native call cannot be unmounted from its carrier thread. It stays pinned there for the whole duration of the call. A Raspberry Pi 4 has four cores, so the virtual thread scheduler has four carrier threads. Register four inputs, and all four carriers are parked in poll() forever. The fifth watcher is created, but is never scheduled. That is exactly the bug that was reported. Not “events are flaky”, but “the fifth one does nothing.”</p>
+<p>What I liked most was not the diff, it was the conversation that followed in the review. I left a comment asking Copilot to explain this in more detail:</p>
+<p>I thought the goal of virtual threads was exactly to step away from the platform thread limit? So how is this a problem that four virtual threads block the four threads on a four-core processor like the Raspberry Pi?</p>
+<p>Check the pull request for the full conversation. Copilot was able to link the use of the Raspberry Pi which has four CPU cores with the reported problem. It was able to propose a simple fix for the problem, plus some extra improvements it found during its investigation.</p>
+<p>Can you share some tips and best practices?</p>
+<p>Louis Erbkamm built the first prototype in his free time. Now GitHub Copilot helps him maintain it alone.</p>
+<p>Today, we laid out our vision for GitHub as the most comprehensive, end-to-end software delivery system in the world.</p>
+<p>Learn how to move an agent session from the GitHub Copilot app into VS Code without losing the conversation, code changes, or working context.</p>
+<p>GitHub’s context-aware secret classifier improves detection quality, raises weighted acceptance by 11.5%, and reduces median scan execution time by 86%.</p>
+<p>Learn how to add custom instructions and skills to your repository, use custom agents, and connect MCP servers like Playwright.</p>
+<p>Everything you need to master GitHub, all in one place.</p>
+<p>Build what’s next on GitHub, the place for anyone from anywhere to build anything.</p>
+<p>Meet the companies and engineering teams that build with GitHub.</p>
+<p>Catch up on the key announcements shaping the future of software development.</p>
+<p>Discover tips, technical guides, and best practices in our biweekly newsletter just for devs.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://rikiyat.github.io/blog/weight-space-programming/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://github.blog/ai-and-ml/github-copilot/how-3-java-champions-are-using-github-copilot-for-increased-productivity/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
