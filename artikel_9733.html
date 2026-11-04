@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opening a panel right under the text caret on macOS</title>
+    <title>Fresh European Fridge Attacks Put Cold-Chain Security in Focus</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9733.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,56 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Opening a panel right under the text caret on macOS</h1>
+        <h1>Fresh European Fridge Attacks Put Cold-Chain Security in Focus</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fj9vazjak4j74dgkz5e6l.png" alt="Opening a panel right under the text caret on macOS" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3c1ba20d1eb5be7f/6aea51a7937e6faad50e3a84/cold_Adisa_shutterstock.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Fresh European Fridge Attacks Put Cold-Chain Security in Focus" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fj9vazjak4j74dgkz5e6l.png" alt="Opening a panel right under the text caret on macOS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3c1ba20d1eb5be7f/6aea51a7937e6faad50e3a84/cold_Adisa_shutterstock.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Fresh European Fridge Attacks Put Cold-Chain Security in Focus" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I'm building yabbistir, a clipboard history for macOS. Its one trick is where it opens: press ⇧⌘V and the panel appears 8 points under the text caret of whatever app you're typing in. You type to search, press ↵, and the item is pasted back into that app. Your eyes don't travel and your hands don't leave the keyboard.</p>
-<p>That needs three things macOS doesn't hand you directly:</p>
-<p>Here is how each one works, with code from the app, shortened.</p>
-<p>There's no "where is the caret" API on macOS. There is the Accessibility API, the one assistive apps like VoiceOver use to read other apps' interfaces. Your app needs the Accessibility permission for it (AXIsProcessTrusted() tells you whether you have it), and then it can ask three questions:</p>
-<p>The helpers are thin wrappers. Every value comes back as a CFTypeRef, so check its type before casting:</p>
-<p>uiElement(_:) is the same check with AXUIElementGetTypeID().</p>
-<p>Three lines in caretRect carry more weight than they look.</p>
-<p>The timeout. Every Accessibility call is a message to the other app, and it waits for an answer. If that app is busy, say an IDE in the middle of a beachball, the default wait is around six seconds. Setting the timeout on the system-wide element applies it to every Accessibility call your process makes. At 0.1 seconds, a hung app costs a blink, and the panel opens at the fallback instead.</p>
-<p>The coordinate flip. Accessibility rectangles have their origin at the top left of the primary screen, with y growing downward. Cocoa window frames have their origin at the bottom left, with y growing upward. Flip with the primary screen's height, which is NSScreen.screens.first. Don't use NSScreen.main here: that's the screen with the key window, and it changes as you work.</p>
-<p>Width 1. An empty range gives a zero-width rectangle. max(rect.width, 1) keeps it a real rectangle for the placement math later.</p>
-<p>Two cases need special handling, and both are apps that answer, just not usefully.</p>
-<p>Some apps, Terminal among them, answer the empty range at the caret with an empty rectangle. The caret then sits right after the previous character, so ask for that character's bounds and use its right edge. At the very start of the text, use the next character's left edge:</p>
-<p>The other case is a caret you can't see. A range scrolled out of view, like a spot in Terminal's scrollback, still reports a rectangle, somewhere off in space. So caretRect also reads the focused element's own frame (kAXPositionAttribute and kAXSizeAttribute) and throws the caret away if it isn't inside it, with a few points of slack:</p>
-<p>Cocoa text views, Safari and Notes answer all of this. Electron and Chromium apps don't, unless their accessibility mode is on. Electron apps can be switched into it from outside through an AXManualAccessibility attribute, but that changes how someone else's app runs, so yabbistir leaves it to the user.</p>
-<p>When there's no caret, the panel opens under the mouse pointer. The fallback is shaped like a caret, 1 point wide and 18 points tall, so the placement code never has to know which one it got:</p>
-<p>The choice between them is a small pure function. An explicit anchor wins (clicking the menu bar icon passes the icon's rectangle), and a setting lets people always open at the pointer. The closures mean the Accessibility calls only happen when they're needed:</p>
-<p>The rule: open below the caret with an 8-point gap. If it only fits above, open above. If it fits on neither side, take the roomier side and shrink, but never below 260 points. That way the panel never covers the caret unless the screen is too short for even the minimum.</p>
-<p>visibleFrame comes from the screen that contains the caret, so the menu bar and the Dock are already left out. Horizontally, the panel starts 24 points left of the caret and is clamped to the screen with a 12-point margin. Because it's all plain rectangles in and a rectangle out, the tests don't need a window or a screen.</p>
-<p>This is the part that's easy to get wrong. If the panel were a normal window, showing it would activate yabbistir, the app you were typing in would stop being the active app, and the paste would land in the wrong place. The panel has to receive your keystrokes for search while the other app stays active. That's what a non-activating NSPanel is for:</p>
-<p>The app itself runs as an accessory (NSApp.setActivationPolicy(.accessory)), with no Dock icon. Showing the panel remembers the frontmost app first, then orders the panel in without activating anything:</p>
-<p>orderFrontRegardless() brings a window forward even when its app isn't active, which is exactly the situation here.</p>
-<p>Closing it when you click somewhere else takes one more step. When the panel resigns key, the new key window isn't known yet, so yabbistir decides on the next turn of the run loop:</p>
-<p>If focus moved to another app, NSApp.keyWindow is nil and the panel closes. If it moved into one of yabbistir's own windows, like the category editor, the panel stays.</p>
-<p>Once you press ↵, the panel hides, the item goes on the pasteboard, and yabbistir waits 30 milliseconds so the target app can become key again. Then it checks that the frontmost app is still the one the panel opened for, and posts ⌘V:</p>
-<p>keyCode isn't hard-coded to kVK_ANSI_V. On Dvorak or Turkish F, the key that types "v" is somewhere else, and ⌘ shortcuts follow the layout. yabbistir asks the current ASCII-capable layout (TISCopyCurrentASCIICapableKeyboardLayoutInputSource plus UCKeyTranslate) which key code produces "v".</p>
-<p>Posting events needs the Accessibility permission too. Without it, the item stays on the clipboard and a notice asks you to press ⌘V yourself, so nothing is lost.</p>
-<p>The Accessibility calls go through a small protocol, so tests can stand in for the focused app:</p>
-<p>With a fake behind it, Terminal's empty rectangle, the scrolled-out caret, the coordinate flip and "the timeout is set before the first question" are each a short unit test.</p>
-<p>One practical tip if you build something like this: macOS ties the Accessibility grant to the app's code signature. An ad hoc signed debug build gets a new signature on every build, so the grant resets every time. A self-signed Code Signing certificate from Keychain Access keeps it across rebuilds.</p>
-<p>All of this is in yabbistir's repository, MIT licensed: CaretLocator.swift, PanelPlacement.swift and PanelWindow.swift are the files to start with. If you know an app where the caret lookup fails and shouldn't, I'd like to hear about it.</p>
-<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
-<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
-<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Beyond food storage, the same combination of Internet connectivity, remote access, and inadequate security practices can put temperature-controlled infrastructure across other critical sectors at risk.</p>
+<p>A second wave of attacks on supermarket refrigeration systems across Europe this week has heightened concerns about the broader "cold chain's" vulnerability to similar attacks, given that supermarkets aren't the only businesses that rely on cold storage.</p>
+<p>As in mid-October, an unknown threat actor appears to have gained access to refrigeration controllers at multiple European supermarkets and switched the systems to defrost mode, raising temperatures to 50 degrees Celsius (122 degrees Fahrenheit) and causing food spoilage.</p>
+<p>Reporting by the BBC, Reuters, CNBC, and other outlets suggests the latest attacks were smaller in scope compared with the first wave in October that affected more than 700 retail and grocery stores, primarily in France. A smaller number of stores in Belgium, Germany, the Netherlands, Portugal, Poland and Spain were also caught up in the October attacks.</p>
+<p>Related:Les supermarchés de l'UE paient d'un firmware de réfrigérateur non mis à jour</p>
+<p>BBC reported the new attacks as impacting "dozens of supermarkets" in seven European countries including Belgium, Luxembourg, Estonia, Ireland, Sweden and Finland. Spokespersons from several supermarket chains that include France's Carrefour, Belgium's Ahold Delhaize and Colruyt Group, and Sweden's Coop chains confirmed varying but relatively limited impacts from the new attacks.</p>
+<p>In a Nov. 2 statement, Carrefour said a cyberattack targeting its refrigeration systems had impacted 15 out of 700 stores in Belgium. In an undated statement, US-based Copeland, which manufactures technologies for regulating commercial refrigeration systems, alluded to a cybersecurity incident affecting refrigeration systems in France, which it said related to a discontinued generation of supervisory controllers.</p>
+<p>No individual or group has claimed responsibility for either the first or the second wave of attacks, and the motivation behind it remains a mystery. European authorities are currently investigating the attacks.</p>
+<p>Researchers, including those at France's CERT, have linked the hacks so far to Internet-connected refrigeration controllers made by Denmark-based Danfoss, Italy-based Dixell, and Copeland. Organizations using these controllers often connect them to the Internet to enable remote maintenance and support, but in doing so also potentially expose them to unauthorized access and remote attack by threat actors.</p>
+<p>Risks include unpatched vulnerabilities in these technologies that attackers can exploit, like three in Danfoss' AK-SM 800A controllers that researchers at Claroty disclosed this August and another two they reported the same month in Copeland controllers. Weak configurations and poor security hygiene are other major problems.</p>
+<p>Related:AI Takes Control of Robotic Arm in 16 Minutes Flat</p>
+<p>"Misconfigurations and systemic hygiene failures represent the vast majority of the threat surface," says John Gallagher, vice president at operational technology (OT) and Internet of Things (IoT) security vendor Viakoo. "While unpatched vulnerabilities exist in older firmware, they are rendered dangerous only because basic architectural hygiene was skipped, especially [when] making them Internet-facing."</p>
+<p>Common mistakes that include widespread use of default passwords, vendor-shared service codes, or static credentials across hundreds of locations make brute-forcing trivial, Gallagher adds.</p>
+<p>The weaknesses are not confined to supermarket refrigeration systems. The same combination of Internet connectivity, remote access, and inadequate security practices can put temperature-controlled infrastructure across other critical sectors at risk, according to security experts.</p>
+<p>Sean Tufts, field chief technology officer (CTO) at Claroty, points out that "pharmaceutical storage and distribution, food distribution centers, and industrial facilities all rely on connected operational technology to maintain precise environmental conditions."</p>
+<p>Related:EU Grocers Pay a Steep Price for Unpatched Fridge Firmware</p>
+<p>The level of exposure will vary depending on how these systems are deployed, connected, and secured. But many organizations that rely on remotely accessible refrigeration or temperature-control equipment face similar challenges around asset visibility, third-party access, and securing legacy systems, Tufts says. "The same types of weaknesses can exist across different industries, even if the equipment and operational requirements differ."</p>
+<p>The potential consequences of a compromise, Tufts says, can vary by sector.</p>
+<p>"A disruption to pharmaceutical storage could compromise temperature-sensitive medicines, while an incident affecting food distribution could lead to spoilage and supply chain disruptions," he notes. "Industrial environments may face additional operational consequences depending on the materials and processes involved."</p>
+<p>The supermarket attacks are a reminder that refrigeration and temperature-control systems are part of essential operations and not just back-of-house equipment, Tufts adds. Organizations should identify these assets and know how they connect to the Internet and third parties.</p>
+<p>"Where remote access is necessary, use a VPN, strong authentication, or a centralized secure-access tool with session tracking." Changing default passwords, keeping firmware current, and segmenting are also recommended security practices, he says.</p>
+<p>Gallagher says that while it's unclear how the attacks on the commercial refrigeration systems played out, the most straightforward theory is the threat actor likely compiled a target list by scanning the public Internet for specific controller fingerprints, such as those tied to Danfoss, Dixell, and Copeland. They then likely deployed an automated script across that target list to exploit known web vulnerabilities or push default credentials, triggering the defrost mode simultaneously.</p>
+<p>Gallagher says the same attacks that worked on commercial refrigeration systems can potentially work across almost any form of OT and IoT systems. That's because these systems often are managed outside of IT, lack automated controls to keep firmware and passwords updated, and have porous network borders. "The growth over the last three years in operational ransomware and in cyberattacks causing physical damage shows that these attacks are on the rise and not specific to any one kind of system."</p>
+<p>Illinois-based Jai Vijayan is a veteran, award-winning technology journalist with more than 25 years of experience covering cybersecurity. His information security reporting has explored everything from ransomware, nation-state threats, and identity security to AI risk, critical infrastructure protection, software supply chain security, cloud security and emerging enterprise technologies.</p>
+<p>Over the course of his career, Jai has written news stories, feature articles, survey reports, white papers, and e-books for enterprise and technology audiences. He has also moderated panel discussions and executive roundtables featuring CISOs, security researchers, and industry leaders.</p>
+<p>His work has earned multiple industry honors, including a Joint ASBPE Excellence Award for Best Coverage of Government IT, and a Joint Jesse H. Neal Award for wireless LAN security coverage. Jai holds a Master’s degree in statistics from Bangalore University, and studied broadcasting and electronic communication at Marquette University in Milwaukee.</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/berkay_gke_074ece66c73f/opening-a-panel-right-under-the-text-caret-on-macos-17af" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/ics-ot-security/fresh-european-fridge-attacks-cold-chain-security" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipping huggingface_hub every week with AI, open tools, and a human in the loop</title>
+    <title>State Bank of India Suffers a Customer PII Data Leak</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10097.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Shipping huggingface_hub every week with AI, open tools, and a human in the loop</h1>
+        <h1>State Bank of India Suffers a Customer PII Data Leak</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/huggingface-hub-release-ci/thumbnail.png" alt="Shipping huggingface_hub every week with AI, open tools, and a human in the loop" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt979cd25773f1b3d4/6ada6acba10b57ec999014b8/SBI-Yawar_Nazir-Getty.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="State Bank of India Suffers a Customer PII Data Leak" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/huggingface-hub-release-ci/thumbnail.png" alt="Shipping huggingface_hub every week with AI, open tools, and a human in the loop" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt979cd25773f1b3d4/6ada6acba10b57ec999014b8/SBI-Yawar_Nazir-Getty.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="State Bank of India Suffers a Customer PII Data Leak" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>huggingface_hub is the Python client at the base of the Hugging Face ecosystem. transformers, datasets, diffusers, sentence-transformers and dozens of other libraries depend on it to talk to the Hub. Every week we don't ship a new release is a week of fixes and features stuck on main.</p>
-<p>For a long time we released every 4 to 6 weeks. We now release every week from a single GitHub Actions workflow. We built it using open-source tools and open-weights models and kept a human in the loop at the one place where judgment matters. Nothing in this post requires a vendor contract, a closed model, or infrastructure you can't run yourself. That was a design goal from the start since we wanted a workflow other maintainers could pick up and adapt.</p>
-<p>By the end of this post, you'll have everything you need to build your own.</p>
-<p>The old process was partly automated, mostly manual.</p>
-<p>Writing good notes for a new version was the heavy part, aggregating tens of PRs on different topics. Nothing technically hard but a few hours of focused attention. Add the announcements on top and a minor release was easily a half-day of work spread over several days.</p>
-<p>So we decided to streamline the whole thing. Looking at that list, the work splits in two.</p>
-<p>Some steps are purely mechanical and can be automated: bumping the version, committing, tagging, pushing, opening downstream test branches, opening the post-release PR. Nobody needs to think about those. They just have to happen in the right order, every time, which is what a CI workflow is good at.</p>
-<p>The rest is different. Writing release notes, deciding what to highlight, phrasing an announcement for a human audience: that's brain work. It's the kind of judgment that kept the release manual for years. This is where AI comes in, turning a blank page into a solid first draft in seconds. It's also where we have to be careful because a draft that looks confident and is subtly wrong is worse than no draft at all.</p>
-<p>When we decided to fix this, we set one constraint up front: every moving part had to be something any maintainer could run themselves. No closed model behind an API we couldn't swap, no proprietary release platform, no secret sauce.</p>
-<p>The second principle: the model drafts, a human decides. Language models are good at turning thirty terse PR titles into readable release notes. They are not good at being trusted blindly. So the workflow is human-supervised: the model does the first pass, a deterministic script checks its work, and a human reviews and edits before anything ships (more on that below).</p>
-<p>The full workflow is a single file, .github/workflows/release.yml, triggered by hand from the Actions UI. It takes exactly one input:</p>
-<p>From there, the jobs run roughly in this order:</p>
-<p>The remaining manual steps are reviewing and publishing the draft release notes, and reviewing and posting an internal Slack message. Those two steps are where we want a human in the loop.</p>
-<p>Here's the failure mode everyone worries about with AI-generated release notes: the model quietly drops a PR or invents one that isn't in this release. A changelog that's almost right is worse than no changelog because nobody re-checks it.</p>
-<p>We don't trust the generated release notes to be complete on the first try, we verify it deterministically. Before the model runs, a Python script retrieves all PRs that belong to the release and stores them as ground truth.</p>
-<p>Then model drafts the notes from them. Once done, we check its output against the initial list of PRs:</p>
-<p>If anything is missing or extra, we don't fail and we don't ship a wrong file. We hand the discrepancy back to the agent and ask it to fix exactly those PRs:</p>
-<p>This is the pattern that makes the whole thing trustworthy: a non-deterministic model wrapped in deterministic guardrails. The model is great at writing prose and unreliable at being exhaustive. So we let it write and let code enforce the consistency.</p>
-<p>Completeness is one half. Accuracy is the other. A model summarizing a PR from its title alone will cheerfully invent a code example that doesn't match the real API.</p>
-<p>To prevent that, when we fetch PR metadata we also pull the actual documentation diffs from each PR: the unified diff of any .md file under docs/ that the PR touched.</p>
-<p>That diff goes into the model's context so when it writes "here's the new CLI command," it's quoting the example the PR author actually wrote in the docs. That's the same logic as before: give the model real source material and a narrow job.</p>
-<p>The prompts themselves live as Skills: small Markdown files (SKILL.md plus reference templates) checked into the repo. The release-notes skill spells out how to pick highlights, how to structure sections, when to add a doc link, etc. It reads like onboarding instructions, which is exactly the right mental model.</p>
-<p>After the RC is published, the draft GitHub release sits there with the AI's first pass in it. This is where the human comes in:</p>
-<p>The reviewer's time goes into polishing, turning a half-day of writing into a fifteen-minute editing session.</p>
-<p>We also keep a paper trail to improve over time. We archive two files side by side to a Hugging Face Bucket: the raw AI draft, uploaded at RC time before anyone touches it, and the human-edited version, uploaded when the final release is cut.</p>
-<p>Collecting both every week gives us a growing dataset of "what the model wrote" versus "what we wished it wrote". Dataset that we can then reuse to update the agent's skill.</p>
-<p>Revamping the release process was a good opportunity to tighten security, especially against supply-chain attacks.</p>
-<p>No PyPI token. Publishing uses Trusted Publishing: PyPI verifies a short-lived OIDC token minted by GitHub for this exact workflow, and issues PEP 740 attestations / Sigstore provenance for every artifact. There's no long-lived secret to leak or rotate.</p>
-<p>The agent runtime is pinned and verified. We don't curl | bash the latest OpenCode and hope. We pin a version and check its SHA256 before running it:</p>
-<p>Open tooling doesn't mean careless tooling.</p>
-<p>Almost nothing. A full release (notes plus the Slack announcement, across 20-40 PRs and a few rounds of prompting) costs about $0.25 on Inference Providers. With open weights billed pay-as-you-go, the only real question each week is "is there something worth shipping?", and there always is.</p>
-<p>The cadence went from one release every 4 to 6 weeks to once a week. The secondary effects were the interesting ones:</p>
-<p>This is the part we cared about most. The workflow is shaped around huggingface_hub but the structure is generic.</p>
-<p>To adapt it: fork the workflow file and scripts, point it at your package, rewrite the skill Markdown for your project's voice, set two repo variables (the model ID and your OpenCode version), set up Trusted Publishing on PyPI, and delete the downstream-testing job if you don't have downstreams. The trust-but-verify loop is the part worth reusing as-is. It's what makes a generated artifact safe to ship.</p>
-<p>The parts of a release that used to need a half-day of focused human work (writing notes, drafting announcements, coordinating downstream checks) are the parts a model is good at drafting. Everything else is mechanical and fits in a YAML file. The trick was never just "let the AI do it". It's to let the model draft, let deterministic code verify, and let a human decide. It's built entirely from open tools and open weights so the cost rounds to zero and anyone can run it.</p>
-<p>The full workflow file is public. If you maintain a Python library, fork it, adapt it, and let us know how it goes!</p>
-<p>Thanks for the post! This will help so many people 🤗</p>
+                <p>Breaking cybersecurity news, news analysis, commentary, and other content from around the world, with an initial focus on the Middle East & Africa, the Asia Pacific, Europe, and Latin America.</p>
+<p>Relatively small data breaches in India can turn quite serious, thanks to a sophisticated underground market for trading PII.</p>
+<p>An anonymous hacker has leaked a small batch of sensitive customer records from the State Bank of India (SBI), with potentially serious consequences for the thousands impacted.</p>
+<p>SBI has been posting a lot about cybersecurity on social media lately. In August it introduced a new CGI mascot named "Captain Y." Captain Y from SBI is "your Cyber Protector," he says in his promo video, "with awareness as his superpower." SBI's best plug for cybersecurity awareness came on Wednesday, though, when it publicly disclosed that it had suffered a breach of customer data.</p>
+<p>In a notice to India's National Stock Exchange, the organization's compliance and company secretary acknowledged that 3,897 customer records had been leaked online. They did not specify whether those records belonged to 3,897 individual customers. In a public notice to customers, the state-run bank emphasized that the incident really only impacted "a very, very small number of customers."</p>
+<p>Related:Philippine Migrant Worker Data Likely Leaked in 69GB Government Breach</p>
+<p>For a bank that serves north of 500 million people, a few thousand records does indeed qualify as very, very small. Cyber experts note, though, that for those affected, the consequences could be significant thanks to India's sophisticated underground economy for buying and selling personally identifying information (PII).</p>
+<p>Last week, a new account with the name "Siriusim" published a post to the mainstream data breach website BreachForums. They had new user data from SBI, they claimed, including personal user information, new account and loan applications, and more. The data included a table with 375,000 rows, and 2,722 PDF files. Importantly, neither figure necessarily indicated the total number of individuals impacted.</p>
+<p>As part of the post, Siriusim featured a few documents with handwritten personal information. Mumbai's Free Press Journal verified that PII from the breach samples was valid, belonging to real Indian citizens. One individual, for example, lost their mobile number and know your customer (KYC) documentation in the breach, and the WhatsApp photograph associated with their number matched the passport photo included in the KYC file.</p>
+<p>SBI acknowledged that leaked data included names, genders, mobile numbers, email addresses, home addresses, dates of birth, bank profile IDs, metadata associated with loans, and "other files." Follow-on reporting out of Mumbai suggested that this extra data included Central KYC numbers — a single identifier for financial accounts in India — and video KYC verification data, and the kinds of files one might have to submit in the process of creating a new bank account, or filing for a loan. For instance, one published document included an individual's employment and income declaration, with details about their current employer, work experience, and salary.</p>
+<p>Related:Russian Influence Operation Widely Targets Latin America</p>
+<p>Exactly what precipitated the leak, and why it affected only 0.0008% of the bank's customers, remains unclear. In its formal declaration, SBI emphasized that "the bank's core business functions continue to operate normally without disruptions." Altogether, these clues might point to a breach of some peripheral digital service or data-handling system, rather than the core bank system.</p>
+<p>In fact, SBI's last major customer data leak followed just such a script. In 2019, it exposed customer account data through a single server at a Mumbai data center, which was missing password protection. The server supported its "SBI Quick" system, used to text and call customers about basic account information. That one machine put millions of customers at risk, perhaps highlighting just how minor this new leak really is.</p>
+<p>"If the data is genuine, the main risk is not direct account theft but credible-sounding phishing, vishing, and identity or loan fraud, since attackers who know someone’s details can impersonate the bank convincingly," explains independent security researcher Sushant Bhardwaj.</p>
+<p>Related:Venezuelan Cartel's Malware Honcho Nabbed for ATM Jackpotting</p>
+<p>Email addresses, phone numbers, and dates of birth carry fairly obvious risk in the hands of bad actors, and less common kinds of PII can add color to otherwise generic identity attacks. For instance, "KYC details are hard to change, so they can support identity fraud, such as applying for credit in someone else’s name or answering account-verification questions," Bhardwaj notes. And with regard to loan metadata, "a caller who can quote real loan details can pose as the bank or a recovery agent and pressure a borrower into paying a 'fee' or sharing a one-time password (OTP)."</p>
+<p>Brian Hussey, senior vice president for Cyderes' Howler Cell, goes deeper. Last month, his team reported on an Indian data broker selling personal records for only about 5 rupees (6 cents or so) per lookup, through a Telegram bot and business application programming interface (API) platform. Using these simple lookups, cybercriminals targeting Indian citizens can obtain vast stores of PII belonging to regular citizens in an instant. And data breaches like SBI's, Hussey notes, can feed into this underground economy. "A breach dump goes stale the day it's posted. A live lookup service is always current, because it is asking the authoritative source in real time. India’s underground data market has both, and they work together," he explains.</p>
+<p>"India built one of the most connected identity systems in the world, and an entire industry exists to query it," he warns. "That connectivity is what makes a leak in one place so impactful and useful somewhere else."</p>
+<p>Nate Nelson is a journalist and award-winning scriptwriter. In addition to Dark Reading he writes for Darknet Diaries, the most popular show in cybersecurity across all media.</p>
+<p>He began his career as a freelancer, ghostwriting Forbes and CNBC op-eds for executives in tech and finance. Then he transitioned to journalism at Threatpost, where he covered cybersecurity news and trends. Throughout those years he co-created a cybersecurity podcast, Malicious Life, which in its day climbed into the Top 20 technology podcasts charts on Apple Podcasts and Spotify.</p>
+<p>He holds degrees from New York University and Bard College. As a born and bred New Yorker, he enjoys a superiority complex, but is polite enough to keep it to himself.</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Philippine Migrant Worker Data Likely Leaked in 69GB Government Breach</p>
+<p>L’Italia è afflitta da vulnerabilità informatiche, senza una causa chiara</p>
+<p>As Russia's Cyberwar Evolves, Belarus Steps Forward</p>
+<p>Cyber Vulnerabilities Besiege Italy, Absent Clear Cause</p>
+<p>Third Serengeti Sweep Tops 1,400 Arrests as Investigations Mature</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/huggingface-hub-release-ci" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyberattacks-data-breaches/state-bank-india-customer-pii-data-leak" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

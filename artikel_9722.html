@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32-P4 and 2-Lane MIPI DSI: How to Pick a Display That Actually Lights Up</title>
+    <title>Hugging Face ❤️ TorchTPU: TPUs, Natively</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9722.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>ESP32-P4 and 2-Lane MIPI DSI: How to Pick a Display That Actually Lights Up</h1>
+        <h1>Hugging Face ❤️ TorchTPU: TPUs, Natively</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Frc21midh1q06w6mxw5gm.png" alt="ESP32-P4 and 2-Lane MIPI DSI: How to Pick a Display That Actually Lights Up" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Frc21midh1q06w6mxw5gm.png" alt="ESP32-P4 and 2-Lane MIPI DSI: How to Pick a Display That Actually Lights Up" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 4
-•
-Edited on Nov 4
-•
-Originally published at lcdhc.com</p>
-<p>The ESP32-P4 looks like an easy win for a smart display: a fast application processor, LVGL support, and a built-in MIPI DSI host. Then the panel arrives, the firmware compiles, and nothing lights up — or the image is snowy, torn, or the wrong colour.</p>
-<p>In most cases the panel is not "broken". It was selected against the wrong assumptions. The ESP32-P4's DSI host has two hard limits that decide everything else:</p>
-<p>In command mode, the host sends a partial update only when content changes, and the panel stores the frame in its own GRAM. In video mode, the host sends complete frames continuously, synchronised to the refresh cycle, and the panel needs no video memory.</p>
-<p>The ESP32-P4 only does the second one. That has a direct consequence many first-time designs miss: the frame buffer lives on the ESP32-P4 side, in PSRAM, and is read by the DSI controller via DMA.</p>
-<p>As a rule of thumb, an 800 x 1280 RGB565 frame is about 2 MB, so double buffering is about 4 MB and triple buffering about 6 MB. A 16 MB PSRAM module is usually enough for display work; 32 MB leaves room for a camera or AI workload alongside it.</p>
-<p>A panel that only offers a command interface, or whose firmware depends on partial updates, should be ruled out for the ESP32-P4.</p>
-<p>Almost every MIPI panel on the market is labelled 4-lane, including common JD9365 and ILI9881C designs. That label is often misleading, because lane count is usually a configuration item, not a property of the glass.</p>
-<p>Most of those driver ICs can be switched from 4 lanes to 2 lanes with an initialisation register. The register addresses and commands differ by IC, so the right question to ask a supplier is not "Is this a 2-lane panel?" but:</p>
-<p>"Do you supply a 2-lane initialisation sequence for this panel, with the matching register configuration?"</p>
-<p>A supplier who can answer that in writing, with code, can save weeks. A panel that is factory-locked to 4 lanes, with no 2-lane sequence available, should be excluded.</p>
-<p>The full selection guide, including the size table from 3.5" to 10.1", is here: ESP32 MIPI DSI Display: 2-Lane MIPI LCD Guide.</p>
-<p>The ESP32-P4's per-lane range is roughly 480 Mbps to 1,500 Mbps, with 2 lanes giving about 3 Gbps in total. A useful screening rule is:</p>
-<p>480 Mbps ≤ final per-lane rate ≤ 1,500 Mbps, after a ~20% margin.</p>
-<p>Worked example, 800 x 1280 at 60 Hz, RGB888, 2 lanes: the pixel clock works out to about 62.4 MHz, the raw rate to about 1,498 Mbps, and the per-lane rate after protocol overhead to about 1,077 Mbps — about 1,293 Mbps with margin. That fits, but only just.</p>
-<p>Switch the same panel to RGB565 and the requirement falls to roughly 862–930 Mbps, with plenty of headroom. That is why RGB565 is the practical default for medium and large panels on this chip, even though it gives 65K colours instead of 16.7M.</p>
-<p>Approximate 2-lane, 60 Hz, RGB565 requirements for screening only (final timing must come from the panel datasheet):</p>
-<p>Note the floor as well as the ceiling: a small 800 x 480 panel in RGB565 can calculate below 480 Mbps. In that case, clamp the configured rate to 480–500 Mbps, or use RGB888 at about 550 Mbps.</p>
-<p>All of these sizes are available as 2-lane MIPI panels from 3.5" to 10.1", with touch options and custom FPC designs. The detailed guide is here: ESP32 MIPI DSI Display: 2-Lane MIPI LCD Guide.</p>
-<p>Pick a panel that is configurable to 2 lanes, confirm video mode, run the bandwidth formula before fixing the resolution, and check the FPC pin by pin rather than by pin count. Do those four things, and driver bring-up, LVGL integration and touch debugging become routine work instead of a weeks-long hunt.</p>
-<p>About the author: Shenzhen Hongcai Technology is a TFT LCD manufacturer in Shenzhen, China, supplying 3.5" to 10.1" MIPI LCD panels with custom FPC, touch and backlight options for ESP32-P4 and other embedded projects.</p>
-<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
-<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
-<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>If you ever tried to run PyTorch on a TPU, you probably ported your code to torch_xla, or you ended up having to learn JAX. With TorchTPU, a native PyTorch backend, TPU is now just another device. It opens up native support of TPU in the Hugging Face ecosystem. Transformers, Diffusers and Kernels run natively on TPU. Pick a model from the Hub, send it to "tpu", and you're done.</p>
+<p>TPU stands for Tensor Processing Unit. TPUs are Google's own AI accelerators. They are chips built for one job: the matrix math that neural networks spend most of their time on. Google has been designing them for about ten years, and uses them to train and serve its own models, including Gemini.</p>
+<p>TPUs are available on Google Cloud, from a single chip up to pods of thousands of chips. They shine when you need a lot of compute, for training or for serving at scale.</p>
+<p>The catch has always been software. The TPU stack grew up around TensorFlow and JAX, and PyTorch users had to work harder to get in.</p>
+<p>Until now, running PyTorch on TPUs meant going through PyTorch/XLA (torch_xla). It worked, but it had its quirks. Tensors were lazy (the tensors, not you), so your code didn't always run when you thought it did. Small changes could trigger graph recompilations, and debugging was hard to reason about.</p>
+<p>To make life easier, we built Optimum TPU. It gave Hugging Face models inference and training support on TPUs. Now that TorchTPU brings native support, Optimum TPU is not required anymore to run Hugging Face models with Transformers and Diffusers.</p>
+<p>TorchTPU adds TPU as a new backend to PyTorch. You write regular PyTorch code. It comes with Pallas kernels tuned for TPUs, support for distributed training, and a torch.compile integration for when you want more speed. Installing it on a TPU VM takes one command:</p>
+<p>The extra index gives you the CPU build of torch. Without it, pip pulls the much bigger CUDA build, which you don't need on a TPU.</p>
+<p>Transformers v5 was built around one idea: be the source of truth for model definitions, so they can run anywhere. "Anywhere" now includes TPUs. To load a model on a TPU, pass device_map="tpu". That's it.</p>
+<p>The model runs in eager mode by default. You can also use torch.compile for better performance, or run it in a distributed setup.</p>
+<p>TPU is now a first-class device in Diffusers. For prototyping or debugging, eager mode only needs pipe.to("tpu"). For deployment, compiled mode adds one compile call. Your pipelines and code stay the same, and there's no TPU fork to maintain.</p>
+<p>The first call compiles, and every call after that with the same image size reuses the graph.</p>
+<p>Models too big for one chip? Pass a TensorParallelConfig to from_pretrained and the transformer is sharded across chips as it loads, so the full model never has to fit in one place. Many popular pipelines support it out of the box, and the ones that don't are just a tp_plan away. The Diffusers TPU guide has the full recipe.</p>
+<p>Here are some examples run on a Cloud TPU v6e-4:</p>
+<p>TP=4 (each model split across four chips) · bf16 · batch 1</p>
+<p>The Kernels Hub has ready-to-use TPU kernels. Load one with the Kernels library and give your model a speed boost.</p>
+<p>TPU kernels are written in Pallas, which gives you low-level control over the hardware. You can also bring in kernels from the Tokamax library. Here is a ragged-dot kernel from Tokamax plugged into a Mixture-of-Experts model:</p>
+<p>The bigger the batch, the bigger the win. At batch size 64, decoding is 21.5× faster on Qwen3-30B-A3B and 12.8× faster on Gemma 4 26B-A4B.</p>
+<p>Decode throughput on a TPU v6e-8, Hub kernel vs. the default implementation.</p>
+<p>We're continuously improving TPU support in transformers by running the library test suite. We are working to add a nightly CI on TPU and make the results available in the (transformers dashboard)[https://huggingface.co/spaces/transformers-community/transformers-ci-dashboard].</p>
+<p>The Transformers CI dashboard, with TPU results next to other accelerators. Work in progress!</p>
+<p>It's not all green yet, and we're fine with that. Of the tests that run on TPU, 96.5% pass. Every failure we find becomes a small repro script and an issue on the TorchTPU repo. So far we have reported 34 issues, and 19 are already fixed. Running on TPU also caught a few bugs in Transformers itself, like in StaticCache and the Qwen3 tensor-parallel plans. We fixed those upstream.</p>
+<p>If something breaks on TPU, we want to find out before you do.</p>
+<p>TPUs are no longer a side quest for PyTorch users. Install TorchTPU, grab a model from the Hub, and send it to "tpu".</p>
+<p>We can't wait to see what you build 🤗. If you hit a problem, open an issue and tell us about it.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/lcd_kingcaikingcailcd/esp32-p4-and-2-lane-mipi-dsi-how-to-pick-a-display-that-actually-lights-up-l3c" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/hf-torchtpu" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

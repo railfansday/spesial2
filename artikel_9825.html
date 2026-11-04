@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Claude Code Workflow: Lessons From Rebuilding a Website in Two Days</title>
+    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9825.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,86 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>My Claude Code Workflow: Lessons From Rebuilding a Website in Two Days</h1>
+        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/A7coZ0uhYMgPNXXtkg7aiDfCsxT2-l783fyw.png" alt="My Claude Code Workflow: Lessons From Rebuilding a Website in Two Days" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/A7coZ0uhYMgPNXXtkg7aiDfCsxT2-l783fyw.png" alt="My Claude Code Workflow: Lessons From Rebuilding a Website in Two Days" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Hi there! 👋🏻  I'm a Senior Full-Stack Developer oriented on Javascript.</p>
-<p>Hi there! 👋🏻  I'm a Senior Full-Stack Developer oriented on Javascript.</p>
-<p>Hi there! 👋🏻  I'm a Senior Full-Stack Developer oriented on Javascript.</p>
-<p>I shipped 32,784 lines of code in two days with Claude Code. I put that number in a LinkedIn post, and the first thing I wrote right after it was that lines of code is a weak metric. I meant it. The number is the least useful fact about the project, and this post is about the facts that matter more.</p>
-<p>Here is what the two days covered: a full rebuild of this site on Next.js 16, 228 blog posts rewritten against real keyword data, 543 tests passing, and zero broken URLs. Two years ago a project like that would have taken me weeks. This time the typing was not the slow part. Neither was the writing.</p>
-<p>The slow part was deciding what to build, and what to leave out. That is the real Claude Code workflow lesson, and it is the one I want to spend most of this post on.</p>
-<p>With Claude Code, the cost of producing code dropped close to zero for me. The cost of deciding which code should exist did not move. That is the whole shift in one sentence.</p>
-<p>In practice it meant my days looked different. Less time typing and debugging syntax. More time writing down constraints, reading diffs, saying no to features, and checking that the output matched what I actually wanted. I spent most of the two days acting as a reviewer and an editor, with the agent as a very fast and very literal builder.</p>
-<p>If you only take three things from this post:</p>
-<p>Here is the honest breakdown of what the work was, because "32,784 lines" tells you nothing.</p>
-<p>A full rebuild on Next.js 16. The site started as an Astro project in December 2025. The new version runs on Next.js 16 with Cache Components, a light redesign, a shared breadcrumb component, new icons, and a rewritten set of main pages. Nearly every route had to be rebuilt, and every route that the old site served had to keep working.</p>
-<p>228 posts rewritten against keyword data. The blog is the part of the site that earns search traffic, so each post's title, meta description, headings and intro got reworked against real query data instead of my gut. More on that below.</p>
-<p>543 tests passing. The repo has tests for the metadata rules, the structured data, the sitemap, the llms.txt output, the tag pages, the proxy, the markdown negotiation and a lot more. They are what let me merge quickly without holding my breath.</p>
-<p>Zero broken URLs. This one sounds boring and it was the hardest requirement. Every URL the live site serves has to keep returning a 200 with real content. Indexed pages are the asset. A pretty redesign that 404s half of them is a net loss.</p>
-<p>All of that landed in roughly 100 commits and 11 merged pull requests. The first commit was late on October 21 and the last one was the morning of October 23.</p>
-<p>Lines of code has been a bad measure of developer output for a long time. DX's write-up on the metric makes the old argument well: teams end up optimizing the number instead of the outcome. AI makes the problem worse, because generating lines is now nearly free. InfoWorld made a related point in its piece on AI agents and bad productivity metrics: the real bottleneck has moved to validation and integration, not writing.</p>
-<p>My own number is a good example of why. Some of those 32,784 lines are:</p>
-<p>That last category is the interesting one, and I will get to it. The point is that if I had been measured on lines, deleting code would have counted against me, and deleting code was one of the best decisions of the project.</p>
-<p>The same gap shows up in the research. In the METR study I wrote about in the AI productivity paradox, experienced developers using AI tools took 19 percent longer on their own repositories while believing they were faster. Output feels like progress. It often is not. I did not escape that trap by being smarter. I escaped it by measuring things that are hard to fake.</p>
-<p>I am not going to pretend there is a magic prompt. By "workflow" I mean my working habits, not Anthropic's dynamic workflows feature. What worked was a handful of Claude Code best practices, and most of them are about the work around the agent, not the agent itself. If you are new to the tool, start with my Claude Code tutorial and come back.</p>
-<p>The most expensive mistakes with an agent are the ones where it does exactly what you asked and breaks something you never mentioned.</p>
-<p>For this rebuild the constraints were mostly negative. Do not break any URL the live site serves. Keep the heading wrap on the homepage and page titles stable. Never use certain phrases in titles or metadata. Keep the page metadata rules enforced by tests. I kept them in the instructions and notes the agent reads at the start of a session, and I added to them every time I caught a violation.</p>
-<p>This is the practical core of context engineering. The agent is only as good as what is in its context. A constraint that lives in my head does not exist as far as the agent is concerned.</p>
-<p>When you generate code this fast, you cannot read every line with the same care. You need something that reads it for you.</p>
-<p>Tests do that. The page metadata test fails if a title or description breaks the rules I agreed on. The structured data tests fail if the JSON-LD changes shape. The sitemap test fails if a route disappears. None of these are clever. They are cheap to write, and each one turns a rule I would otherwise have to remember into a failing build.</p>
-<p>The rule I follow: when I catch the agent breaking something, I do not just fix it. I add the test that would have caught it, and then the next session cannot make the same mistake silently.</p>
-<p>The 100 commits and 11 merged PRs were not an accident. Big diffs are where bugs hide, and an agent can produce a big diff in minutes. If I let one session run for hours and then opened a single pull request, I would be approving code I had not understood.</p>
-<p>So I merged in slices: the redesign, the copy audits, the routing fixes, the review follow-ups. After one batch I ran a review pass and fixed the findings before moving on. This is the same problem I covered in AI code review is the new bottleneck. Generation speed is not the constraint. Your ability to review is, so size the work to fit it.</p>
-<p>A lot of the project was a loop: have the agent audit the site against a checklist, read the findings, decide which ones are real, fix those, and run the audit again. Copy audits, metadata audits, project page audits.</p>
-<p>The decision step is the important one. The audit produces a list, and agents are good at producing lists. They are not good at knowing which items are worth your time. If you accept everything an audit says, you have outsourced the judgment, not the typing.</p>
-<p>Subagents and parallel sessions pay off when the tasks do not touch the same files. Rewriting the copy on one page and fixing the sitemap logic are separable. Changing the layout and the metadata helper at the same time is not. If you want the mechanics, I wrote guides on subagents and hooks. The catch is that parallelism multiplies your review load, so only split work when the review stays easy.</p>
-<p>Here is the story I mentioned. On the morning of October 23 I had a public JSON API on the site. Posts, projects, an OpenAPI spec, the works. Hours earlier I had spent a commit versioning it under /api/v1 and adding deprecation headers to the old paths. It was clean, documented and tested.</p>
-<p>The reason is in the commit message: the site is a portfolio, and the API added no SEO value and no value for AI discovery, while generating about 500 extra static pages. Agents that want to read the site are already served by llms.txt and Markdown content negotiation. Removing the API took the static page count from 1,093 down to 596.</p>
-<p>Think about what that means. Claude Code built the versioning, the headers, the serializers and the tests in a very short time. It was easy. It was also pointless. The agent had no way to tell me that, because the question "should this exist?" is not a coding question. It is a product question, and it depends on what the site is for.</p>
-<p>That is the pattern I keep seeing. When building was expensive, the cost forced a filter. You only built what you were sure about, because you could not afford otherwise. When building is nearly free, the filter is gone, and it is easy to ship a lot of well-made things nobody needs. Other people are noticing the same shift. A common theme across recent writing on this is that the question has moved from "can I build this?" to "should I build this?". I came to the same conclusion by deleting my own work.</p>
-<p>If you are curious about the same dynamic at the startup level, my post on why AI wrapper startups are failing covers the market version of it. Cheap building makes weak ideas more visible, not less.</p>
-<p>The 228-post rewrite is where I let data make the decisions I would normally make by feel.</p>
-<p>I pulled keyword data from DataForSEO: volumes, difficulty scores, live search results and which domains were ranking. The whole research run was 313 API calls and cost $4.37. For that I got a map of which queries the blog could realistically win and which ones were a waste of time.</p>
-<p>This is also where taste came in. The data showed one phrase with about 720 searches a month that fit my situation. I decided not to use it anywhere on the site, because I did not like how it sounded. A tool that optimizes only for volume would have used it. That decision cost me a bit of traffic and I would make it again.</p>
-<p>The agent can run the analysis, cluster the posts and draft the rewrites. It cannot tell me which version of myself I want the site to present. That part is mine.</p>
-<p>I do not want this to read like a victory lap, so here is what went wrong.</p>
-<p>It broke URLs I told it to protect. Early in the rebuild, the new design did not need the paginated blog pages or a few hidden project pages. So the agent redirected the pagination and turned the hidden projects into 404s. From a design point of view that made sense. From an SEO point of view it was wrong, because both sets of pages are indexed on the live site. I caught it, and the fix became a commit titled "Keep every URL main serves." It became a standing rule, and I checked the old sitemap against the new routes after every routing change.</p>
-<p>It followed its own logic over my intent. The agent kept optimizing for the cleanest structure. I kept needing the structure that preserved what already worked. Those are different goals, and it only knew about one until I wrote the other down.</p>
-<p>A passing build is not proof the page is right. Compiling and passing tests tells you the code is consistent with itself. Only a person looking at the page can tell you it says the right thing.</p>
-<p>None of these were disasters, because I had tests and small merges to catch them. That is the argument for the workflow above: it is not there to make the agent better, it is there to make its mistakes cheap.</p>
-<p>I have eight years of engineering behind me, and for most of that time I treated execution as the hard part. Knowing how to build the thing, and having the stamina to build it, was the scarce resource. Nobody asked whether I should build it, because the building itself was the filter.</p>
-<p>That has flipped for me. Execution is no longer the hard part. These days the hard parts are:</p>
-<p>Judgment. Which problem is worth solving, and which one to skip. The JSON API is the perfect example. I could have built ten more things like it in the same two days.</p>
-<p>Taste. Knowing when something is good enough, when copy sounds like a person and when it sounds like a template, when a page feels right. An agent will produce competent output forever. Competent is the problem.</p>
-<p>Distribution. Shipping a rebuilt site does not mean anyone reads it. When everyone can build quickly, the people who get found are the ones who thought about where their audience is. A big part of this rebuild was making sure search engines and AI tools could read the site properly, which is why llms.txt and the keyword work got real attention. I looked at whether that file actually helps in does llms.txt work for AI visibility.</p>
-<p>The honest caveat is that this does not make engineering skill irrelevant. It is the opposite. I could only trust the output because I know what good looks like. I could write useful constraints because I understood what could break. I could review a diff quickly because I have read thousands of them. Agentic coding rewards experience, because the job moves from typing to directing and verifying, and both of those need judgment you have to earn some other way.</p>
-<p>If you are earlier in your career, that is worth thinking about carefully. The skills that matter most are the ones the tool cannot give you: reading code critically, understanding systems, and developing opinions about what to build.</p>
-<p>Can Claude Code rebuild a whole website? Yes. The rebuild described here is evidence. But "can" is not "should unsupervised." It rebuilt the structure quickly and also broke indexed URLs and built features that I deleted. Treat it as a fast builder that needs constraints and a reviewer.</p>
-<p>How good is Claude Code at making websites? Very good at the structure, components, routing and tests, as this Next.js 16 rebuild showed. Weaker at the parts that depend on context it cannot see: which URLs are indexed, what the site is for, what sounds like you. Those are the parts you have to supply.</p>
-<p>What is the best workflow in Claude Code? There is no single best one, but the pattern that held up for me was constraints first, tests as the contract, small merges, and a human decision on every audit finding. The checklist is in the workflow section above.</p>
-<p>What is the biggest bottleneck in AI coding? It depends on the team. For a lot of teams it is review, as I covered in AI code review is the new bottleneck. For a solo builder like me, it moved one step earlier: deciding what is worth building at all.</p>
-<p>How long does it take to rebuild a website with Claude Code? For this project, about two days from the first to the last commit, with a lot of review in between. That is far shorter than it would have taken me alone, but a good chunk of the time was decisions and checks, not generation. The time you save is the typing. The time you still need is the thinking.</p>
-<p>Is lines of code a good metric for AI coding? No. It was a weak metric before AI and it is worse now, because generating lines costs almost nothing. Track outcomes: working tests, intact URLs, less surface area, decisions you can explain.</p>
-<p>What is the most important Claude Code habit? Writing constraints down where the agent reads them. Most of the failures I hit were the agent doing something reasonable that I had never ruled out.</p>
-<p>Do you still need to know how to code? Yes, probably more than before. You are reviewing at speed, so you need to recognize bad code, fragile design and silent regressions quickly.</p>
-<p>If I ran this project again, I would change three things.</p>
-<p>I would write the URL-preservation test on day one instead of discovering the need for it mid-project. A script that diffs the old sitemap against the new routes would have caught the pagination and hidden-project problem immediately.</p>
-<p>I would decide earlier what the site is for. The JSON API existed because I never wrote down the purpose of the site clearly enough to rule it out. A one-paragraph statement of purpose at the top of the instructions file would have saved a day of building.</p>
-<p>I would spend even less time on code and more on the two things the tool cannot do for me: choosing what to publish and getting it in front of people.</p>
-<p>That was the question at the end of my LinkedIn post, and I mean it as a real one. If you build software, try this: pick your last three projects and write down where the time went. Not the hours on the calendar, the actual friction. Was it typing, debugging, reviewing, waiting, deciding, or promoting?</p>
-<p>For most of my career, my answer was typing and debugging. Now it is deciding and distributing. Yours might be different, and the answer should change what you practice.</p>
-<p>If you have a product that needs this kind of rebuild, or you want a second opinion on what to build before you build it, tell me what you are working on. I will give you an honest read, and sometimes the honest read is that you should skip the feature.</p>
-<p>Sources: DX on lines of code, InfoWorld on AI agents and productivity metrics. Project numbers come from this site's git history and DataForSEO usage log, checked October 23, 2026.</p>
-<p>I Built a Tools Directory Instead of Another SaaS, and It Became My Top Project</p>
-<p>Hi there! 👋🏻  I'm a Senior Full-Stack Developer oriented on Javascript.</p>
+                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
+<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
+<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
+<p>This guide has two halves that run in different places:</p>
+<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
+<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
+<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
+<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
+<p>Then we start the base-model server with the following command:</p>
+<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
+<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
+<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
+<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
+<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
+<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
+<p>This trains ~6M parameters, about 1.66% of the model.</p>
+<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
+<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
+<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
+<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
+<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
+<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
+<p>Then we serve the merged model with the following command:</p>
+<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
+<p>Comparing the two runs on the identical serving stack:</p>
+<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
+<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
+<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/my-claude-code-workflow-lessons-from-rebuilding-a-website-in-two-days?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
