@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building Tactile UX: Honoring Intentional Design With Lottie</title>
+    <title>Four Levels Of Customer Understanding</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9400.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Building Tactile UX: Honoring Intentional Design With Lottie</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
+        <h1>Four Levels Of Customer Understanding</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://files.smashing.media/articles/building-tactile-ux-honoring-intentional-design-lottie/building-tactile-ux-honoring-intentional-design-lottie.jpg" alt="Building Tactile UX: Honoring Intentional Design With Lottie" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://files.smashing.media/articles/four-levels-customer-understanding/four-levels-customer-understanding.jpg" alt="Four Levels Of Customer Understanding" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://files.smashing.media/articles/building-tactile-ux-honoring-intentional-design-lottie/building-tactile-ux-honoring-intentional-design-lottie.jpg" alt="Building Tactile UX: Honoring Intentional Design With Lottie" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://files.smashing.media/articles/four-levels-customer-understanding/four-levels-customer-understanding.jpg" alt="Four Levels Of Customer Understanding" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>With over 14 years of experience and deep expertise in API development, third-party tool integration, and scalable software solutions, Alexey specializes in …
+                <p>Vitaly Friedman loves beautiful content and doesn’t like to give in easily. When he is not writing, he’s most probably running front-end & UX …
 More about
-Alexey ↬</p>
+Vitaly ↬</p>
 <p>Weekly tips on front-end & UX.Trusted by 182,000+ folks.</p>
-<p>This article has been kindly supported by our dear friends at Isadora Agency who help enterprise brands and market leaders navigate digital, evolve profitably, and launch unforgettable websites, products, and campaigns. Thank you!</p>
-<p>When front-end developers and UX engineers are tasked with building a web interface that feels tactile, bouncy, or destructive, the industry instinct is almost always the same: reach for a physics engine. Frameworks like Matter.js, Cannon.js, or custom WebGL solutions have become the gold standard for creating immersive, gamified websites.</p>
-<p>When our team at Isadora Agency set out to build Stress Release, a digital stress-relief squeeze toy designed to let burnt-out creatives smash, stretch, and distort animated UI characters, we initially explored that route. The goal was to build a highly tactile experience where every click yielded a satisfying, squishy reaction.</p>
-<p>But as we began prototyping, we realized something crucial: Physics engines produce plausible motion, but in our case, the animators produced intentional motion.</p>
-<p>We didn’t need our characters to act like realistic rubber balls bouncing uncontrollably around a canvas. We needed them to react in very specific, highly designed ways. So, we scrapped the physics engine entirely.</p>
-<p>In this article, we’ll break down how we built a real-time stress-relief squeeze toy without a single line of WebGL or Matter.js, relying entirely on programmatic Lottie state controls, DOM manipulation, and distance-based math.</p>
-<p>Our core requirement for Stress Release was absolute deterministic control. Our animators had crafted bespoke .json Lottie files that required exact, frame-by-frame sequencing.</p>
-<p>For instance, our ‘mega squeeze’ reaction required a precise 181-frame build-up followed by a specific release sequence. To honor this design, we needed an architecture that wouldn’t overwrite the animators’ crafted keyframes with algorithmic approximations.</p>
-<p>The tighter the click-feedback loop (click → squish → score), the more you need deterministic frame control. By choosing programmatic state control using Lottie’s native API, we ensured that the interaction layer acted as a flawless trigger for the animation layer.</p>
-<p>Because our architecture relied on Lottie and the standard DOM, rendering is handled directly by the Lottie runtime, which plays the JSON-based vector animations as SVGs internally. We selected elements directly by ID and CSS class, driving their behavior using a combination of Lottie animation segments, CSS transforms, and click-event math.</p>
-<p>To achieve a deeply satisfying “tactile feel” upon hitting a character, we used radial input mapping. The first step was converting the click from page coordinates into the character’s local coordinate space.</p>
-<p>Every click was measured against the character’s center point, then translated into score, feedback intensity, and explosion placement:</p>
-<p>Then we calculate the straight-line distance from the center of the click using the Pythagorean theorem:</p>
-<p>That single number drives everything: the score, the feedback intensity, and where the explosion animation appears:</p>
-<p>The result is a concentric zone system — a perfect circle of scoring rings around the character’s center, similar to a dartboard. The visual complexity of the Lottie SVG is completely irrelevant to hit detection; the hitbox is always a clean circle. Critically, the explosion Lottie animation is repositioned to (a, b) — the same vector used for scoring, so it always appears exactly where the player clicked. This spatial accuracy creates the tactile “I hit that” sensation entirely through math and DOM positioning.</p>
-<p>Because the experience used DOM-managed SVG elements, desktop clicks and mobile taps could be handled directly through native event listeners. This avoided extra raycasting or coordinate remapping layers, while keeping the interaction model aligned with how the animations were rendered.</p>
-<p>Since the game requires a visual reaction at a specific point, Lottie handles all the squish and bounce feelings internally through its animation curves. Each character has a defined set of animation sections (idle loops, reaction frames, and end states) stored as frame ranges. When a click lands, we jump directly to the exact segment that matches the current game state:</p>
-<p>On every click, we advance through the play order and fire the next segment:</p>
-<p>When the segment completes, control returns to the idle loop:</p>
-<p>And for the mega squeeze build-up, the bar loops on a specific frame range until triggered:</p>
-<p>Another major factor in our architectural decision was responsive behavior. Because we built Stress Release in the DOM, we bypassed the complexities of scaling bounding boxes and collision vectors across different devices.</p>
-<p>We handled responsive resizing entirely through CSS variables. By recalculating CSS custom properties on every resize, the layout simply reacts to the updated variables, and the Lottie SVGs scale naturally inside their containers without losing their state:</p>
-<p>While this architecture gave us total control over the art direction, it introduced a different challenge: file size.</p>
-<p>Lottie JSON files can be heavy. We had 21 different character animations, plus multiple explosion variants that all needed to load. To ensure the experience remained fluid — especially on mobile devices — we implemented a few aggressive optimization strategies:</p>
-<p>When determining the stack for a gamified web experience, it is critical to let the design requirements dictate the technology.</p>
-<p>Because our interactions required bespoke, highly controlled visual reactions, we opted for programmatic state control over emergent simulation. This decision empowered the animators to dictate the exact feel of the experience, leaving the code to do what it does best: listen, calculate, and trigger.</p>
-<p>By mapping Lottie’s native timeline capabilities to the DOM, you can deliver incredibly rich, tactile user experiences while maintaining absolute control over the art direction.</p>
-<p>Want to try implementing this yourself, or see exactly how it feels in the browser? Check out these resources:</p>
+<p>Many companies think they know fairly well what their users want and need, and how they make their decisions. Yet most of the time these are merely big assumptions and big hunches — with little real evidence to support them. In practice, obvious reasons might be true, but they rarely paint the full picture.</p>
+<p>To understand our customers, we must triangulate across four levels of customer understanding by Hannah Shamji. It’s a useful way to think about the underlying reasons for user behavior, hidden motivations, and the complex layers of messy and noisy reality that are often overlooked. Let’s see how it works.</p>
+<p>To learn about customers, it might seem reasonable to ask people what they think and draw conclusions from it. But it’s rarely an effective way to get actionable answers. In fact, as it turns out, what people think, feel, say, and do are often very different things.</p>
+<p>As Erika Hall wrote, asking a question directly is the worst way to get a true and useful answer to that question. We don’t always understand or are aware of our true motivations. We often apply our own context and interpretations to questions.</p>
+<p>We also exaggerate (a lot!). We focus on edge cases and unrealistic scenarios, and we favor short-term goals over long-term goals. So if users say that they absolutely need to compare products in a table, it doesn’t mean that they couldn’t get to their underlying goal without it.</p>
+<p>Just to indicate how tricky listening to words alone is: even little nuances in words chosen matter. In practice, users are rarely precise in expressing their thoughts, and a good example is the distinction between possible, plausible, and probable, as discovered by Thomas D’hooge.</p>
+<p>A study on Dutch verbal probability terms shows how unreliable the choice of words is. While extreme words have some agreement, terms like “possible,” “maybe,” “uncertain,” or “likely” lead to a wide spread of interpretations. So we shouldn’t rely on what people say, but rather try to go deeper.</p>
+<p>To get a more realistic and less biased view of customers’ needs, we need to understand a broader picture across 4 levels:</p>
+<p>Personally, I wouldn’t recommend NPS (alternative). It’s worth noting that different levels might reveal conflicting or contradictory data. To get a better understanding, we need to triangulate and reconcile data with mixed-method research.</p>
+<p>Emotions are always difficult to capture, but they are easier to spot once you observe people doing what they need to do without external influence or interruptions. The ability to positively impact users grows by moving from sympathy to empathy or even compassion, as articulated by Sarah Gibbons.</p>
+<p>In the past, I was using “speak-aloud” protocol and asked users to walk me through their thought process as they were completing tasks. But it actually turns out to be quite disruptive. Because people are focused on speaking at the same time while solving a task, many emotions remain hidden or obscured by their language.</p>
+<p>So, when conducting usability testing, I don’t ask users to speak through their experience. Instead, I observe where they tap or hover with the mouse, where their mouse circles without an action, where they scroll, and how long. Eventually, when a user confirms that they are done or that they are stuck, I ask questions.</p>
+<p>The Emotion Wheel (website) by Geoffrey Roberts is a helpful little tool for better describing a range of emotions during user interviews or design sessions. It certainly needs refinement for product design needs, but it helps us get more precise about the sentiment customers or colleagues might be experiencing, moving beyond just “good” or “bad”.</p>
+<p>One helpful trick is to use mirroring — repeating what a user has said, or ask the same question twice, just paraphrasing it. Or navigating the emotions wheel (see above) to better capture and understand the emotion.</p>
+<p>These strategies help uncover some of the issues that perhaps didn’t come up in the first answer. That’s also when a user tends to add more useful context and details as they explain their confusion.</p>
+<p>I think that Alin brings up a very strong argument, and personally, I find it difficult to disagree with. However, I do see user’s emotional response as a signal of how well the product is working for them. How engaged or detached they are in their journey, how they react to aesthetics, how confused or confident they are.</p>
+<p>Ultimately, these are signals. To make a difference, we must go beyond emotions and explore what people actually do. Usually, this means relentlessly observing, diagnosing, and focusing on underlying user needs.</p>
+<p>Instead of asking, we need to observe. Usually, I focus on small things that make or break an experience. I see where users lose time, repeat actions, hover without clicking, or click and then go back. Pay attention to subtle cues like scratching their neck, raising eyebrows, or expressions of worry, joy, or confusion.</p>
+<p>Many companies talk about “validation” through user testing, but often that means simply confirming existing assumptions. But we should instead diagnose existing behavior without preconceived notions or affiliations. We don’t validate — we actually research instead.</p>
+<p>That research means not just understanding customers’ real motivations, but also risks, doubts, concerns, worries, and perhaps even harms.</p>
+<p>The only way to get there is by building a sincere, honest, and trustworthy relationship — one that feels right and resonates deeply. When customers truly care and want to help, getting to a real understanding becomes much, much easier.</p>
+<p>We don’t need expensive tools to uncover user needs. David Travis provides a fantastic overview of helpful strategies to do just that. Here are some initiatives to spread the word about real user’s struggles or gain a deeper understanding of user needs:</p>
+<p>The core idea here is that you don’t need extensive and expensive tools to uncover user needs. You need to create spaces where customers’ struggles can be exposed and make these struggles visible across the entire company.</p>
+<p>It can be short video clips of user sessions or a monthly newsletter with what we learned this month. Making these pain points visible can rally everyone from marketing to engineering to keep users’ struggles at the back of their minds.</p>
+<p>To make an impact, we must go way beyond user feedback. It’s never enough to listen to surveys — we must observe customers’ actual behaviors and build relationships to truly understand their goals and their motivations.</p>
+<p>And most importantly, we need to understand what questions we actually want to have answered. Not what “validation” we need to move on with the project, but what we don’t know and what we need to research.</p>
+<p>Without it, everything else is merely hunches and assumptions — and often wrong and expensive ones.</p>
+<p>Meet Measure UX & Design Impact, Vitaly’s practical guide for designers and UX leads on how to track and visualize the incredible impact of your UX work on business — with a live UX training later this year. Jump to details.</p>
+<p>25 video lessons (8h) + Live UX Training.100 days money-back-guarantee.</p>
+<p>25 video lessons (8h). Updated yearly.Also available as a UX Bundle with 3 video courses.</p>
 <p>With a commitment to quality content for the design community.</p>
 <p>Founded by Vitaly Friedman and Sven Lennartz. 2006–2026.</p>
 <p>Smashing is proudly running on Netlify, TinaCMS and Swell.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://smashingmagazine.com/2026/08/building-tactile-ux-honoring-intentional-design-lottie/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://smashingmagazine.com/2026/05/four-levels-customer-understanding/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training a coding model to paint watercolours with TRL and OpenEnv</title>
+    <title>Profiling in PyTorch (Part 3): Attention is all you profile</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10049.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,272 +15,88 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Training a coding model to paint watercolours with TRL and OpenEnv</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
+        <h1>Profiling in PyTorch (Part 3): Attention is all you profile</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On 23 August, Surya
-Narreddi posted a beautiful video
-of watercolours painted by a language model. The model writes JavaScript through
-p5.brush, a library that "adds natural
-drawing tools to p5.js". The video went viral fast, over 1.5M views at the time of
-writing.</p>
-<p>The video came with a blog
-post explaining the training
-behind an earlier and narrower stage of the project, close-up flowers rather than the
-full compositions in the video, sadly without open artifacts yet. His site says a full
-technical report is coming, so ensure you follow him. The original idea is his, coming from the art and design side, where his skills are way beyond mine. My attempt is on the engineering side, reproducing the recipe in the open with every piece published.</p>
-<p>Note: for the context behind the project, told by Surya himself, watch this
-video of his thesis.</p>
-<p>In this article I try and reproduce his idea with TRL and
-OpenEnv. The reference pool dataset, the RL
-environment, the training scripts and the trained models, all open.</p>
-<p>The whole pipeline runs on Hugging Face, end to end:</p>
-<p>Once the two Spaces are up, the recipe is one command. Duplicate the
-environment and the
-scorer model, set two
-environment variables for the reward mix, and launch:</p>
-<p>The rest of this article is the story of getting there, and every piece is in the
-repo.</p>
-<p>I have followed the original blog step by step, and only changed something when strictly needed. Every idea of my own went into a list instead of into the experiment, and that list became "What I would try next" at the end, next to the full list of published artifacts. If you have already read his post, the framing and
-the reward design will be familiar. The new material is the open implementation, the
-hand-rated pool, and three reward mixes trained and compared, and it starts at The RL
-environment you need to build.</p>
-<p>The paintings look loose, imperfect, handmade, at a moment when image models produce perfect (statistically average) pictures. My guess is that this contrast is a big part of why the video went
-viral. It reminded me of the early days of generative AI art, when the point was
-to explore the medium. DeepDream (2015) was a debugging tool that people turned into art, works like Edmond de
-Belamy (2018) came from artists probing
-what a GAN could do, and artists like Mario Klingemann spent those years making dreamy portraits with neural networks.</p>
-<p>This project feels closer to those early days. In his thesis, Surya describes the path
-that led here. He started by prompting text-to-image models, where the prompt is the
-only lever you can pull, and more detail buys more control only up to a point. Training
-the model itself goes further. The
-other half of the idea is the medium. The model writes a program of about 150
-lines of JavaScript that paints the image. That model output is code. You can read it, edit it and run it
-again, and the decision behind each brushstroke is visible. And the style comes from a
-restriction where the model is only allowed ten of the library's methods. More on that below.</p>
-<p>In that same period, Anna Ridler
-photographed thousands of tulips, hand-labelled every one, exhibited the dataset itself
-as the artwork, and later trained a model on it. I found her work through the references
-AI agents brought back while building this project and loved it because this
-project does something very similar by curating a set of images by hand, and then training against them.</p>
-<p>Most of the recent RL work on language models uses rewards you can verify. For example, math problems with a known answer, code that passes tests, or graders that are right or wrong and cheap to run. This project is closer to the older exception, RLHF, where the model learns a reward model from human preferences.</p>
-<p>Here the reward is aesthetic preference. There is no correct answer. The real question
-of the project is whether you can do RL over taste.</p>
-<p>The reward, as his blog defines it and as the RL environment I built implements it:</p>
-<p>HPSv3 is an open 7B preference model. Give it an image and a text description, and it returns
-a score for how much a person would prefer that image. It was trained on a large set of
-human choices between pairs of images, so its score is an average of many people's taste. The pairwise judge is
-Qwen3-VL-30B-A3B-Instruct, a
-general vision model called through HF Inference Providers. The pairwise judge sees the candidate
-painting
-next to four references randomly selected from the pool, guided by a written description of what to weigh (bleeds, translucent washes, soft edges),
-each comparison in both presentation orders, and its score is the share of comparisons
-the candidate wins. Its only standard is the pool, so its score is my taste, as encoded
-in those ratings.</p>
-<p>Those are the weights Narreddi converged on. The pool defines taste here. That moves the work from tuning hyperparameters
-to building the set that decides what is beautiful.</p>
-<p>I trained three runs with this reward. They differ only in how the weight splits between
-the two model judges:</p>
-<p>I started with hps-only to validate that the pipeline could learn at all. Once the reward was going up and the metrics were healthy, there was no reason to run it longer, so I launched the two longer runs instead. The question that the longer runs ask is how much of HPSv3's power can you hand to the pairwise judge? The more weight the judge carries, the more
-the reward means my taste instead of everyone's, and the harder it should be to climb. Incidentally, if you push it far enough or your style is too far from the average, the model could stop entirely.</p>
-<p>Fortunately, it did not stop and both runs with the pairwise judge on learned too. The hand-rated pool
-can steer the policy, at least as far as the metrics and the final paintings show. The
-numbers are below.</p>
-<p>Disclaimer. If we use a frontier model, it can already generate the JavaScript code that paints watercolour from a prompt. That's the starting point. The work here is about teaching a smaller model to do it combined with a person's own artistic preferences.</p>
-<p>The environment wraps everything that sits between the model and the reward, including the JavaScript library that the model uses for painting, the system prompt that restricts it, the headless Chromium that renders each sketch, and the gate that rejects cheats.</p>
-<p>The library does more of the work than it seems.
-p5.brush, by
-@acamposuribe, simulates a medium rather than drawing
-shapes: pigment bleeds past the edges of a fill, paper has texture, strokes have mass,
-flow fields drag brushwork around. When the model calls brush.fillBleed(0.25) it is deciding how far the ink
-runs.</p>
-<p>Note. The author of p5.brush had been trying to teach a machine to paint long
-before any of this. In 2022 he made a generative art series that hides a diary about
-teaching p5.js to draw like a child: "It is barely able to use the crayons [...] It
-cannot follow simple commands. I'm done for today, very infuriating." The series was
-meant to have three pieces, and he made two. When Surya's video went viral, he
-quoted it, sharing that diary
-and saying this work is the third piece arriving on its own.</p>
-<p>p5.brush exposes 47 methods. The prompt allows 10: scaleBrushes, noStroke, fill, noFill, fillBleed, fillTexture, beginShape, vertex, endShape and circle. What the other thirty-seven add, lines, hatching, custom brushes, would break the watercolour look. With these ten the model can only paint filled shapes, and the library adds the bleed to every one of them.</p>
-<p>His blog post saved me a lot of time I could have wasted iterating on the prompt. 
-A long API reference makes the model
-invent methods that do not exist, and his 200 GEPA iterations converged on a strict
-allowlist with no documentation. I saw the same failures and wrote the allowlist by
-hand. My only addition to that recipe is one sentence: paint
-each petal two or three times, a big pass first and a smaller, more opaque one inside
-it. This small change made my outputs a lot more colorful.</p>
-<p>Note. If it's the first time you hear about
-GEPA, it is an automatic prompt optimizer.
-A language model reflects in plain words on where the current prompt failed and
-proposes a better one, and the loop repeats.</p>
-<p>The gate is the final piece. The sketch has to compile, use the library instead of direct p5 calls, put real pigment on the canvas, and not try to trick the scorer, for example by writing text on the canvas.</p>
-<p>The pool consists of 178 paintings divided into
-two tiers based on my personal preferences, love and okay. All of them are actually generated by a model. Four open-weight models,
-called through Inference Providers, wrote p5.brush sketches, each one working from a
-real, openly licensed photo of a hibiscus from iNaturalist. A vision model gave written
-feedback on every sketch, over three refinement iterations. Every final render was then rated one at a time, by me, and 178 made the cut.</p>
-<p>Here I chose four different families of models to test their different styles. These four were the open models that produced a valid sketch every time in a quick reliability check, and two other candidates were dropped for failing it. If you want to produce your own pool, you might choose others.</p>
-<p>The tiers do real work in the reward. When the pairwise judge draws four references,
-half come from love and half from okay, so the policy always faces some rivals it
-can sometimes beat, and a win pays the same against either tier. This is one of my few
-deliberate changes: the original compares against its top tier only, and I kept the
-easier tier in the draw so a weak early policy still gets signal.</p>
-<p>No human-made painting is in there, which is a real limitation. p5.brush is a niche
-library, and the human work that exists in it with accessible code is a handful of pieces, nowhere near what a training corpus
-would need, as his blog also notes.</p>
-<p>The interesting idea here, as I've already discussed previously, is that the model will learn to imitate what the pool contains. If we point the environment at a different dataset, the reward would automatically change without touching a single line of code. For the dataset I generated and openly share, I also include the source sketch.</p>
-<p>If we look closer at the judges, the two of them answer different questions. HPSv3 decides whether it is a flower, and
-the pairwise judge decides whether it is well painted in the style I chose.</p>
-<p>Before anything worked, there was a long stretch of flat reward curves. If you've tried to reproduce a research paper/blog without open artifacts, you probably can relate. Every run
-tested what I thought was a reasonable theory about what was wrong. A run takes a lot
-of time, so I queued the next one while still going through the last one's results. As always, starting from something easier that works and then building on top of that was the answer.
-A simple control task, with no browser and no judges, was the first attempt that learned, and the reason was that my learning rate was just too low.</p>
-<p>Another change that cost me time to find was adjusting the LoRA parameters correctly. The usual target_modules list assumes a dense model, and Qwen/Qwen3.5-35B-A3B is a mixture of experts that names most of its projections differently, so the adapter was training ten layers out of forty. I solved this by changing it to all-linear, which reaches every linear layer. The routed experts in this architecture are fused tensors that even all-linear leaves frozen, but everything else gets an adapter, and that was enough to learn.</p>
-<p>The fix was four changes in TRL's GRPOTrainer:</p>
-<p>These four changes unlocked the first successful run (hps-only), with the reward clearly improving.</p>
-<p>With that configuration, all three runs learn. Both judge runs were launched for 200 steps and stopped at 110, with the reward still climbing slowly. A step takes fifteen to eighteen minutes, and the comparison between mixes was already stable, so I stopped both to save compute. Mean group reward over the first and final third of each run:</p>
-<p>The three curves line up with how much weight my taste carries. The more the judge
-weighs, the lower the start and the noisier the climb. judge-led spent its first thirty steps nearly flat
-before it moved. It is the same move that solved the debugging. Shrink the problem until
-something learns, then add the hard parts back one at a time.</p>
-<p>The pairwise judge term itself climbed in the two runs that used it. The model wins more
-comparisons against the pool as training advances, which is the claim hps-only could
-not make. No group in any run collapsed to identical rewards, the GRPO failure mode that
-kills the gradient. For the curious, the per-metric curves (HPSv3, paint coverage,
-entropy) are in the
-repository as CSV.</p>
-<p>The full launch command, the hardware and the two environment variables that turn this
-into the other two runs are in the
-recipe.</p>
-<p>In every run, the first thing the model learned was to stop producing bad
-paintings, the near-blank canvases and shapeless washes that score under 0.3 in total
-reward. In
-hps-only, three quarters of the rise in the group mean comes from bad paintings
-becoming rare. In the judge runs the collapse is even steeper: rollouts under 0.3 fall
-from 99 to 16 across judge-led's thirds, and from 37 to 4 in hps-led.</p>
-<p>This is why the obvious visual, the best painting of each step, shows almost no difference in
-hps-only. It moves +0.034 across the run while the median moves +0.155. The
-learning is visible in the middle of the distribution.</p>
-<p>What the pairwise judge changes is the top. In hps-only, paintings got more
-reliable without getting better. The quality of the good ones added just +0.03 to the
-group mean, and once HPSv3 saw petals around a centre and a stem, it stopped asking for
-more pigment. With the judge on, the other half of the story appears. Better here means closer to
-the pool, so closer to what I rated as "good" or something I liked more. That added +0.12 in judge-led and +0.16
-in hps-led, the best of each step rose too, and
-paint coverage doubled in both runs (0.11 to 0.23, and 0.13 to 0.30) where hps-only
-barely moved it. With a reference left to beat, a good painting can still get better,
-and the model starts being rewarded for using more pigment.</p>
-<p>One more finding. The model ignores an explicit instruction, and it is right to. The
-system prompt asks for fifteen to thirty filled shapes. If we look at the real mean, it is between 7 and 9, and
-n_shapes barely correlates with reward in any run (+0.000, −0.14, +0.07). The policy
-is not rewarded for obeying that sentence, so it does not obey it.</p>
-<p>There is also a ceiling on the hps-only route. If every rollout matched its good
-ones, that run's mean would sit at 0.771. Whether more steps would break it is
-an open question.</p>
-<p>The paintings also show something that the tables miss. Within each run, they all look
-similar. As training advances, the rewards inside each group get closer together, and the
-median paintings in the opening video look like takes of the same flower. That is GRPO
-doing what it is designed to do with a pool built from one subject. The pool decides
-what counts as variety, the same way it decides what counts as quality. If the reward
-only pays for matching one flower, the model learns to paint that one flower. More diverse output would need a
-more diverse pool, and building one is more curation work. Surya's newer compositions are an example of this. Alex Yango's animal
-paintings are the same recipe with
-different choices in the pool. This is the biggest difference between an aesthetic
-reward and a maths grader. Behind the number there is a very human job, deciding what
-belongs in the reward set. Jason Liu's essay on
-taste says the general version in one
-line. AI shifted the bottleneck from making to noticing.</p>
-<p>Surya closes his blog with some of his favourites. Instead of picking mine, below is a
-wall with the 178 paintings the reward scored highest across the two judge runs, the
-same number the reference pool holds, in no particular order. Open it and pick your own.</p>
-<p>To choose, you looked at many and kept a few, and that is exactly the job that built the
-reward of this project. Every painting of every run, with its sketch and its reward, is
-in the rollouts datasets, and browsable in this gallery.</p>
-<p>Since the reward was partly based on my taste, it is fair to close with my verdict as a viewer. To my
-eye, judge-led is the run that ends up the most diverse and the most artistically
-interesting. hps-led paints convincing watercolours, but its best ones share a soft,
-wet-on-wet look that is almost a style of its own. hps-only converges the hardest, and
-most of its paintings settle on the same colours. You can judge for yourself in the
-gallery, which has every painting of
-every run, sortable by step and by reward.</p>
-<p>This project is mostly infra. A run needs a trainer, two Spaces, an inference router and
-a websocket to stay healthy for hours straight, and every piece that fails quietly turns
-into a wrong number somewhere else. Half the work is checking that the number you read
-matches what actually happened.</p>
-<p>Failures of the infrastructure were entering the reward as zeros. A render that
-timed out or a scorer that did not answer scored the same as a bad painting, 0.0 inside
-the group. Across all my runs that was about 1.5% of rollouts, and in the worst run it
-reached 5.2%. That trains the model on noise, so those paths now
-return None and the rollout is excluded from the group.</p>
-<p>I also found a bug in OpenEnv, and sent the fix upstream. The client keeps one
-persistent websocket, and a socket closed by the far end stayed cached, so every later
-call failed even though the environment was healthy. It cost me two half-finished runs
-to find it. The fix is submitted
-upstream, and the runs launched with
-it have been running clean since.</p>
-<p>The reward of a step depends on which references it drew. The pairwise judge
-samples four references per step, so every step faces a different set of rivals, and
-some draws are simply harder. GRPO itself is mostly safe, because advantages are
-computed inside the group and a hard draw moves the whole group together. The curve I
-was reading was not safe, and some of what looked like a bad step was just a hard draw.
-The image above is one example. Step 12 scored half a point below step 11 mostly because
-it drew the hardest references of the run, while the paintings themselves look close.</p>
-<p>Rounded numbers, and only for the runs that finished.</p>
-<p>A step is eight rollouts and takes fifteen to eighteen minutes, of which 70 to 80% is
-rendering. A single render takes 69 to 96 seconds against a 90 second deadline. Part of that is
-expected, the Space has no GPU, so Chromium renders the WEBGL canvas in software and
-p5.brush's bleeds and textures are heavy pixel work. Even so, I expected it to be
-faster, and I have not found the full cause.</p>
-<p>A scorer can cost more than the training that uses it: HPSv3 has to be up for the whole
-run, so pause the Space, or set its sleep timer, when the run ends.</p>
-<p>Everything runs on HF
-Jobs, with the environment as
-a Docker Space and metrics in
-trackio.</p>
-<p>The rule of this project was to reproduce the recipe with every resource open, not to
-improve it, so a list of untried ideas piled up along the way. These are the ones I
-would actually try, in order of how much evidence there is.</p>
-<p>Multi-step, and letting the model see what it paints. This is the first thing I
-would try. The original blog trains single turn, so I trained single turn, and in this
-setup the model paints with its eyes closed. No image ever goes in, and the only
-feedback it gets is one number. The evidence that a feedback loop works is the pool
-itself. The reference paintings came from models iterating three rounds under a vision
-critic, and the later rounds are better. The material that defines the reward was made
-with a loop the policy never gets.</p>
-<p>Smaller models. There is evidence that 35B is more than needed. In my side
-experiments a 4B already wrote valid sketches that passed the gate. If a 4B can learn
-this, the cost of the experiment drops by an order of magnitude.</p>
-<p>Other ideas on the list are SFT on the pool sources before starting RL, rewarding pigment
-explicitly, moving the judge's reference mix from easy to hard as the run advances until
-only love remains, widening the ten-method allowlist for more visual range (my
-attempts on this crashed more sketches and broke the watercolour look), and checking how consistent the pairwise judge really is by
-scoring the same image twice.</p>
-<p>And the method is not specific to flowers. Alex Yango painted animals with the same
-mechanism, and Brendan Hogan
-trained canvas animations
-against a pool of hand-rated clips. I had also played with something similar before using Simon
-Willison's pelican
-benchmark, where code is
-rendered to an image and scored.</p>
-<p>And underneath all of it sits the question this project cannot close. 178 paintings
-made by models define what this trained model considers beautiful. The pool is the bottleneck,
-and it is the part of the pipeline with no principled answer.</p>
-<p>For anyone reproducing this, there are two deliberate divergences from Narreddi's
-recipe, both argued earlier in the article:</p>
-<p>The rest, all-linear for the LoRA, infrastructure failures returning None instead
-of 0.0, stopping the judge runs at step 110, are decisions I had to make along the way
-because his blog does not specify them. His implementation is not published, so
-I cannot tell whether they match his choices or diverge from them.</p>
-<p>The per-rollout numbers in this article can be recomputed from the published datasets.
-Nothing here depends on any Space staying switched on.</p>
-<p>The method and original idea are Surya Narreddi's. The library is Alejandro Campos Uribe's.</p>
+                <p>This is the third post of Profiling in PyTorch, a series where we slowly build the skill of reading profiler traces and use it to drive optimization:</p>
+<p>The series "Profiling in PyTorch" is meant to make you comfortable reading profiler traces and tables. In Part 1 we profiled basic math operations like addition and multiplication. We saw how the profiler table uncovers hotspots, and how the profiler trace shows the order in which an algorithm runs over time.</p>
+<p>In Part 2 we wrapped that addition and multiplication into a torch linear layer. We then stacked several linear layers on top of each other (a multilayer perceptron) and profiled that. Along the way we also profiled fused and hand-tuned kernels.</p>
+<p>From the perspective of the Transformer architecture, the next logical step for us to profile is yet another fundamental algorithm, attention. While being infamous for its quadratic-time complexity, many clever tricks exist to mitigate that issue and make it fast. Our goal here is not to cover every trick in detail. Instead, we want to see how each one looks different under the profiler.</p>
+<p>The scripts for this blog post live here: 04_a_naive_attention.py, 04_b_inplace_ops_attention.py, 04_c_sdpa_attention.py, and 04_d_kernels_attention.py. Like before, it helps to open them in a separate tab and walk through the code as you read. We use an NVIDIA A100-SXM4-80GB GPU to run the scripts. It is really easy to set up a GPU on the Hugging Face infrastructure and experiment with the scripts using Dev Mode with Spaces. One could also run the scripts with the Hugging Face Jobs pipeline.</p>
+<p>Attention works with Queries (q), Keys (k), and Values (v). The interaction between them can be written as a short sequence of steps:</p>
+<p>So attention is really a collection of primitive operations. Some of them we already know (the matmuls), and the rest are easy to spot. Let's write a naive attention module in PyTorch and profile it.</p>
+<p>Before opening the trace, let's do our usual exercise and guess what we should see. Tracing the forward of this module, we expect:</p>
+<p>Figure 1 shows the CPU lane of the profile (the GPU lane is folded so it does not overwhelm us). Inside attn_fwd (our annotated forward call) we can see exactly the operations we guessed. The matmul is an old friend by now, and the new operations are easy to spot:</p>
+<p>Now let's unfold the GPU lane and see which kernels were actually launched.</p>
+<p>Figure 2 shows the GPU lane next to the CPU lane. Let's zoom into a single attn_fwd block on the GPU lane to look at the kernels one by one.</p>
+<p>Figure 3 lets us read off the individual kernels for one profiler step:</p>
+<p>Five of these are expected. The memory copy is the odd one out, so where does this come from? The clue is that PyTorch has in-place operations. When you operate on a tensor the ordinary (out-of-place) way, PyTorch often makes a copy, applies the requested operation to it, and returns the copy. Following the sequence of operations, the culprit here is our masked_fill.</p>
+<p>What if we replaced this with an in-place operation?</p>
+<p>All we change is masked_fill to masked_fill_ (note the trailing underscore, PyTorch's convention for in-place operations), and we run the same script.</p>
+<p>Let's look at the trace and see if something changed.</p>
+<p>The in-place version (Figure 5) wraps far fewer CPU ops inside the masking step than the out-of-place version (Figure 4). This is an encouraging signal. Let's unfold the GPU lane to confirm what happened there.</p>
+<p>On the GPU lane the Memcpy kernel is gone for good (Figures 6 and 7). With a one line change we shaved a whole kernel off each forward pass. This may not look like much on its own, but remember this is a single attention operation. In the context of a transformer based large model (LLMs, Diffusion models, etc.), it repeats once per layer, and there are many layers, so the saving adds up quickly (and if it earns you a raise, sharing at least 10% with us feels only fair).</p>
+<p>Out-of-place is PyTorch's default for a reason. To compute gradients, autograd has to remember the tensor values it saw on the forward pass, because many backward formulas reuse them. An in-place operation overwrites those values in memory, so the backward pass would read the wrong numbers. Due to the fact that we run forward under torch.no_grad, in-place is safe for us, with no backward pass and nothing to corrupt. It is also noteworthy that in-place operations do not only save time (like we see in our case) but also memory (due to no extra copy) which is great for large tensors like logits!</p>
+<p>We just built attention from primitives, and even shaved off a Memcpy. The good news is that the PyTorch team has done all of this for us, and packaged the whole pipeline into a single function:</p>
+<p>This one line replaces our hand written module, and is_causal=True even saves us from building the mask by hand. It is worth pausing to appreciate how much this one call hides. And it hides more than just code lines. Scaled Dot Product Attention (SDPA) does not have a single implementation. Under the hood it dispatches to one of the several backends and picks the fastest one that supports our inputs (dtype, head dimension, mask, hardware, etc.).</p>
+<p>The official SDPA tutorial walks us through this selection, and the backends themselves are listed in the torch.nn.attention.SDPBackend enum:</p>
+<p>Normally SDPA chooses for us, but we can pin a specific backend with the torch.nn.attention.sdpa_kernel context manager. This is what we do in our scripts. This lets us profile each backend on its own and read how differently they show up in the trace. Let's go one at a time.</p>
+<p>Before we open anything, let's guess. We have replaced hand written attention (matmul, mul, mask, softmax, matmul) with a single one liner, so we should expect the trace to get simpler and faster. Fewer kernels, less CPU dispatch, maybe even a fused kernel. Let's check the profiler table first.</p>
+<p>This is our first surprise, the one liner is 3.7x slower.</p>
+<p>Opening the trace (Figure 9) shows why the alarm bells ring, the math backend launches 20 GPU kernels per forward instead of the 5 launched with our naive attention implementation (Figure 8). This is the opposite of what we guessed. Let's figure out why this happens.</p>
+<p>In Part 2 we learned to read a kernel name like a fingerprint. Let's use that habit here:</p>
+<p>The A100s we used to capture these traces ship with Tensor Cores, specialised hardware for accelerated matmuls that is known to be far faster than the ordinary CUDA cores. To see why that matters here, it helps to know what lives inside a GPU. A Streaming Multiprocessor (SM) is the compute unit of a GPU, and each SM has two kinds of arithmetic units, the CUDA cores and the Tensor Cores. CUDA cores are general purpose and process a handful of elements at a time, while Tensor Cores multiply and accumulate a whole small matrix tile in a single instruction. So the question is simple, "Is each backend actually using the fast path?"</p>
+<p>The kernel names answer it. The s16816 in the naive kernel (Figure 10) is the signature of a bfloat16 Tensor Core matmul (the 16x8x16 Tensor Core instruction), so the naive version is on the fast path. sgemm (Figure 11) is the classic single precision (FP32) matmul that runs on the ordinary CUDA cores. In other words, the math backend never touches the Tensor Cores at all: to trade speed for numerical accuracy it upcasts tensors to FP32 (doubling the data moved, even when the inputs are in bf16) and falls back to the slower CUDA cores.</p>
+<p>In the naive version we built the causal mask once and reused it. Here we passed is_causal=True and the math backend materialized one for us, on every single call. You can watch it happen on the CPU lane:</p>
+<p>On the GPU this shows up as a triu_tril_kernel, several where kernels, and an add_. The convenience flag that let us stop thinking about the mask did not remove the work, it just moved it one layer down, where the mask is rebuilt from scratch every forward.</p>
+<p>Our hand written version called plain aten::softmax. The math backend calls aten::_safe_softmax, and the difference is again visible as extra kernels (Figure 13):</p>
+<p>A row that is fully masked (every entry -inf) would make an ordinary softmax compute exp(-inf)/sum(exp(-inf)) = 0/0 = NaN. _safe_softmax guards against exactly that. Our naive kernel never bothered, and would have quietly produced NaNs in that corner case.</p>
+<p>Put together, the math backend is the reference implementation. It is a straightforward, dtype-safe, NaN-safe decomposition of attention into primitive ATen ops. It is essentially the naive attention we wrote by hand, but more careful. That carefulness is exactly what makes it extremely slow.</p>
+<p>Its job is not to be fast, but to always work. This makes it the perfect baseline. Every backend we profile next (flash, efficient, cudnn) is trying to collapse the 20 GPU kernels into essentially one fused kernel that stays in bf16 and never materializes the intermediate matrices at all.</p>
+<p>Where the math backend launched 20 kernels across one profiler step, the efficient backend launches only one fmha_cutlassF_bf16_aligned_64x64_rf_sm80 (as seen in Figure 14).</p>
+<p>This is the memory efficient attention kernel that grew out of Meta's xformers library and was upstreamed into PyTorch. When people say "the xformers backend," this fmha_cutlassF kernel is what they mean.</p>
+<p>The void pytorch_flash kernel (Figure 15) is FlashAttention-2 (Tri Dao's implementation), vendored into PyTorch.</p>
+<p>Before we read the trace any further, it is worth answering the question you should be asking by now: why is there a whole backend named "flash", and why does it matter so much?</p>
+<p>Let's go back to the math backend for a moment. Its real problem was not the count of 20 kernels, it was what those kernels handed to each other.</p>
+<p>Step 1 builds the full score matrix attn = q . k.T, which is [seq, seq] per head. For a sequence length of 4096 that is 4096 x 4096 ≈ 16 million numbers for a single head. That matrix is written out to the HBM (the GPU's main memory), if there is even enough space to do so. Then, it is read back to be scaled, written again for the mask, read again for the softmax, and so on. Attention's cost is dominated by this back and forth traffic to HBM, not by the matmuls themselves.</p>
+<p>FlashAttention attacks exactly this. Instead of computing the whole s matrix and only then reducing it, it walks over k and v in tiles, keeps a running softmax as it goes (the "online softmax" trick), and accumulates the output one tile at a time. The full [seq, seq] score matrix is never written to HBM, it only ever lives on-chip. This is the single idea that lets the entire attention pipeline collapse into one fused kernel that stays in bf16 on the Tensor cores.</p>
+<p>Here is where flash surprises people who read profiler footprints. It is the fastest backend, yet the profiler reports it with very low occupancy (shown in Figure 16). To see why that is fine, we need three quick definitions.</p>
+<p>A GPU kernel is essentially a series of instructions executed by many small execution units. These individual execution units (threads) take care of loading variables, adding them together, storing them back, etc. For each kernel, we launch many, many threads, and to keep track of them, we group them by blocks.</p>
+<p>Blocks are scheduled onto Streaming Multiprocessors (SMs), the main compute units of a GPU. A block lives entirely on one SM, and an SM can host multiple blocks at once if it has enough resources. Those resources include registers, shared memory, maximum resident threads, and maximum resident warps. So when we say a kernel has low occupancy, we mean each SM has fewer resident warps than it could theoretically support.</p>
+<p>If you want to know more about threads, blocks, grids, etc. here is a great resource.</p>
+<p>If you click the flash kernel in the trace, its footprint tells the story (Figure 17).</p>
+<p>Flash uses a lot of per-thread registers and a large amount of shared memory per block. For example, if a block has 128 threads and each thread uses 255 registers, that block needs 128 × 255 = 32,640 registers. On an Ampere SM with 65,536 registers, only two such blocks fit at once. Each 128-thread block has 128 / 32 = 4 warps, so two blocks give only 8 resident warps. Against a maximum of 64 resident warps, that is roughly 13% occupancy. Flash has low occupancy not because it is poorly optimized, but because each block is deliberately very "heavy" in on-chip resource usage.</p>
+<p>And that is the whole point. High occupancy helps hide latency by keeping many warps ready to run, but it does not make the work itself efficient. Flash spends those registers and that shared memory on purpose, to keep attention tiles on-chip, reuse data aggressively, and avoid ever materializing the full attention matrix in global memory.</p>
+<p>By now the pattern is familiar. Like flash and efficient, cuDNN gives us one fused, flash-style kernel per forward (Figure 18). So the natural question is: if flash already fuses attention, why does PyTorch ship yet another flash backend? The answer is who writes the kernel and how it is built, and that difference is what makes the trace look different.</p>
+<p>Flash and efficient are fixed, pre-compiled kernels vendored into PyTorch. You get the same binary every time. cuDNN is NVIDIA's own deep learning library, and its attention kernel is generated and tuned for the specific problem at hand. It is closer in spirit to torch.compile's codegen than to a fixed cuBLAS binary. You can read that straight off the (very long) kernel name:</p>
+<p>That one fact, generated per problem, explains everything else that looks unusual in the trace.</p>
+<p>No transposes: The CPU lane goes from _cudnn_attention_forward straight to a couple of aten::empty allocations and then the kernel, with zero aten::transpose (Figures 19, 20 and 21). Flash and efficient each insert four (metadata) transposes to reshape the tensors while cuDNN consumes the native [B, H, S, D] layout directly because its generator emits a kernel for that layout.</p>
+<p>It launches through cuLaunchKernelEx, not cudaLaunchKernel: Every other kernel in this whole series went through the runtime API cudaLaunchKernel. cuDNN uses the driver-level extended launch, which carries launch attributes (Figure 22).</p>
+<p>The profiler reports 0% achieved occupancy: Do not take that at face value, it is a measurement gap, not a stalled GPU. CUPTI (the profiling backend) cannot attribute occupancy to a driver-API (cuLaunchKernelEx) launch the way it does for cudaLaunchKernel, so the field reads 0. The footprint fills in the truth (Figure 23): 240 registers × 256 threads = 61,440 registers per block against the SM's 65,536, so only one block fits per SM (8 warps ≈ 12.5%), right in line with flash.</p>
+<p>The "no transposes" story tempts us to expect cuDNN to be the leanest backend on the CPU. It is the opposite.</p>
+<p>Even with zero transpose ops, cuDNN spends about 214 µs per forward on the CPU, more than flash (138) or efficient (117). Almost all of it sits in aten::scaled_dot_product_attention self time (26% of the whole run) and _cudnn_attention_forward. That is cuDNN's runtime engine selecting and preparing the plan (the "knob" search) on every call.</p>
+<p>Fewer visible ATen ops did not mean less CPU work, it moved the work into the library, where the profiler can only show it as one fat, opaque bar. When a trace suddenly gets cleaner, the work has not always disappeared, sometimes it has just moved somewhere the profiler cannot break down.</p>
+<p>On the GPU, cuDNN (186.3 µs) lands between efficient and flash. On this very flash-friendly shape, hand-written FlashAttention-2 edges it out. cuDNN often wins on other shapes (larger head dimensions, different sequence lengths) precisely because its generator retunes per problem, but that retuning is also what you just paid for on the CPU.</p>
+<p>Before we wrap up, here is a single table to review every attention variant we profiled and the one lesson each trace taught us.</p>
+<p>If you take away only one thing from the whole series, let it be the habit we repeated before every single trace which is to guess first, then look.</p>
+<p>State out loud what you expect the trace to contain, open it, and treat any mismatch as the most interesting thing on the screen. Every real insight in these three posts, the hidden Memcpy, the addmm epilogue, the 20 kernel math backend, flash's "wrong-looking" occupancy, cuDNN's fat CPU bar, came from a guess that did not match the trace.</p>
+<p>Profiling is not a separate, intimidating skill reserved for GPU experts. It is just the discipline of looking closely and asking "wait, why is that happening?" until the answer clicks. You now have the vocabulary and the reflexes to do that on your own models. Open a trace, form a guess, and go find the mismatch.</p>
+<p>Thanks for reading the Profiling in PyTorch series. Now go profile something. 🤗</p>
+<p>Thanks to Noe Flandre for their reviews on the early draft of the post!</p>
+<p>The blog post was polished using an LLM. This in no way means that we have let an agent run in the background and let it generate the blog. Some of us in the team are non-english speakers and think LLMs (which are mostly trained in the English Language) can rectify silly grammar mistakes or rephrase sentences that sound less intimidating and cleaner. Hope this helps with the idea of "why should I read, if this was LLM generated". 🤗</p>
+<p>Thanks for the series, really delightful!</p>
+<p>hello Aritra (@ariG23498  ), thanks a lot for this series!one doubt which i had: how were you able to know for sure that Memcpy (memory copy) operation in GPU was indeed because of out of place masked_fill?</p>
+<p>one way i'm able to think it is because that occured exactly before the masked_fill kernel op? but how did you actually validated that is something i'm not able to understand.</p>
+<p>edit:i figured it out while i was tinkering - but keeping this comment here incase someone else has the same doubt. the arrow mapping in perfetto maps exactly that which op in cpu invoked the kernel at gpu.</p>
+<p>Finally completed it. Thank you for the series</p>
+<p>How did you like the series? Anything that we could have done better?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/train-to-paint-with-code" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/torch-attention-profile" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

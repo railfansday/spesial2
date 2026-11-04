@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why LLMs Struggle With Constraint-Based Scheduling and How Optimization Solvers Help</title>
+    <title>Undead Software Projects Continue to Raise Security Risks</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9887.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,74 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Why LLMs Struggle With Constraint-Based Scheduling and How Optimization Solvers Help</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
+        <h1>Undead Software Projects Continue to Raise Security Risks</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/vJT8c3O4IJed0rk4Wq67FpVtiwu1-uya3cdg.png" alt="Why LLMs Struggle With Constraint-Based Scheduling and How Optimization Solvers Help" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltd40811c92b905082/6ae3b49914ffedf86f1c84cc/zombies-in-graveyard-zef_art-shutterstock.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Undead Software Projects Continue to Raise Security Risks" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/vJT8c3O4IJed0rk4Wq67FpVtiwu1-uya3cdg.png" alt="Why LLMs Struggle With Constraint-Based Scheduling and How Optimization Solvers Help" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltd40811c92b905082/6ae3b49914ffedf86f1c84cc/zombies-in-graveyard-zef_art-shutterstock.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Undead Software Projects Continue to Raise Security Risks" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Senior Software Engineer building large-scale financial data systems with distributed systems, AI, and LLMs.</p>
-<p>Senior Software Engineer building large-scale financial data systems with distributed systems, AI, and LLMs.</p>
-<p>Senior Software Engineer building large-scale financial data systems with distributed systems, AI, and LLMs.</p>
-<p>Imagine you are building a two-week staff schedule. The requirements look simple enough:</p>
-<p>None of these rules is hard to understand by itself. Then you look at weekend coverage.</p>
-<p>Across the four weekend days, the staffing targets ask for 35 employee shifts. But there are 14 employees, and each can work only one weekend, which means at most two weekend days each. Fourteen times two is 28.</p>
-<p>Before I assign a single person to a single shift, at least seven weekend slots are already impossible to fill.</p>
-<p>This is the part of scheduling that interests me when large language models are involved. A model can understand every requirement correctly and still hand back a schedule that breaks once those requirements start affecting each other. In this article I will show that with a public example, explain why it happens, and lay out how I would split the work between a language model and ordinary software.</p>
-<p>To keep it reproducible, I used Instance2 from the University of Nottingham nurse rostering benchmark and rebuilt it as an optimization model. [1] The examples use public benchmark data and general engineering patterns. They do not describe any employer's internal implementation.</p>
-<p>Instance2 covers 14 days with 14 employees and two shift types, Early and Late, each eight hours long.</p>
-<p>Its rules fall into two groups, and the difference between them turns out to be the whole story.</p>
-<p>If staffing coverage were a hard rule too, the weekend numbers alone would make this schedule impossible. No valid answer would exist.</p>
-<p>Because coverage is soft, the question changes. It is no longer "can I satisfy everything?" It becomes "what is the best valid schedule when not every goal can be met?"</p>
-<p>Fourteen employees, one weekend each, two days in that weekend: 28 possible shifts against 35 requested. The minimum shortage is seven, and that is before I consider days off, who is allowed to work which shift, working-time limits, or the Late-to-Early rule.</p>
-<p>The arithmetic is easy. Finding the best schedule once all of those rules start interacting is the hard part.</p>
-<p>For this experiment, I rebuilt Instance2 as a mathematical optimization model and solved it with HiGHS, an open-source solver, through the SciPy library in Python. I will skip the equations and describe the idea, because the idea is what matters.</p>
-<p>Think of every possible assignment as a yes-or-no switch. "Employee A works the Late shift on day 5" is one switch. With 14 employees, 14 days, and 2 shifts, there are 392 of them. A schedule is simply a choice of which switches are on.</p>
-<p>Each hard rule then becomes a restriction on which switches may be on together:</p>
-<p>The weekend rule needs one extra step, and it is worth spelling out because it drives the opening example. I add a second kind of switch that says "this employee works this weekend." Turning on any Saturday or Sunday shift forces that weekend switch on. Then the rule is simple: each employee may have at most one weekend switch on.</p>
-<p>With that in place, the 35 versus 28 conflict stops being an observation in my introduction. It lives inside the model, where the solver has to respect it.</p>
-<p>Coverage is soft, so it gets counters, not locks. For every shift, I track how many people are missing and how many are extra. The number assigned, plus the number missing, minus the number extra, must equal the number required.</p>
-<p>Then each kind of miss gets a price. In Instance2:</p>
-<p>The solver's job is to find the valid schedule with the lowest total penalty.</p>
-<p>This gives the system three things a paragraph of instructions never does: an exact definition of what makes a schedule invalid, a list of what may be traded away, and a price for each trade.</p>
-<p>The solver finished with a proven best score of 828.</p>
-<p>The public benchmark lists Instance2 with a best-known lower bound of 828 and a best-known solution of 828. When a real schedule reaches the lower bound, nothing better can exist, so 828 is optimal. [1] My rebuilt model landed on the same number, which told me I had reconstructed the problem correctly.</p>
-<p>The score breaks down like this: 8 missing staffing assignments at 100 points each makes 800, and employee preference penalties add 28, for a total of 828.</p>
-<p>The weekend arithmetic had already proved that at least seven assignments would be missing. Once every other rule was included, the best possible schedule needed eight.</p>
-<p>One detail is worth noting. A score of 828 does not point to one unique schedule. Different schedules can spread those eight gaps differently and still score the same. The useful result is that the schedule is valid and the score is proven, not any particular arrangement of names.</p>
-<p>Take five of these requirements: Employee D cannot work Late. Employee A must have day 3 off. Late cannot be followed by Early. Each employee can work at most one weekend. Saturday needs ten people.</p>
-<p>A language model may understand every one of those statements perfectly. The trouble starts when assignments begin to affect each other:</p>
-<p>Every assignment changes the choices that remain. Keeping track of all of that at once is a different skill from reading a rule.</p>
-<p>A recent benchmark called SCHEDBench shows the same thing at larger scale. It evaluates 13 language models across 1,132 scheduling problems whose correct answers are backed by a solver. [2] On its nurse rostering problems, the share of model-produced schedules that were valid averaged 97.0% on easy problems, 62.4% on medium ones, and 1.7% on hard ones.</p>
-<p>The study also found that models were sensitive to the order in which the rules were presented. The underlying problem stayed exactly the same, yet shuffling the rules changed how often the models broke them.</p>
-<p>Another benchmark, R-ConstraintBench, reports a related pattern: validity drops as resource limits, downtime, time windows, and either-or constraints begin to interact. [3]</p>
-<p>So the boundary that matters is not whether a model can read a rule. It is whether it can hold the entire valid state in mind while many rules push against each other.</p>
-<p>Real scheduling requirements rarely arrive as equations. A manager writes things like:</p>
-<p>"Bob can work one weekend, but not both."</p>
-<p>"Anyone finishing Late should not open the next morning."</p>
-<p>This is where a language model earns its place. It can turn Bob's sentence into a structured rule: the employee is Bob, the rule type is a maximum number of weekends, the value is one, and the window is 14 days.</p>
-<p>I would keep these out of the model's hands:</p>
-<p>Suppose the original requirement says "Alice must have Saturday off," and the interpretation step records it as a preference instead of a requirement.</p>
-<p>The solver will return a mathematically perfect answer to the wrong problem, and Alice will be on the Saturday rota.</p>
-<p>For any rule that matters, I would keep three things side by side:</p>
-<p>A solver can only guarantee what it was given. The translation into rules still needs a human or a separate check to sign it off.</p>
-<p>I would also check the finished schedule outside the solver. Useful checks include:</p>
-<p>By independent checking, I do not mean running the same model twice. Where practical, the checks should be written separately from the model, so a mistake made while building the model is less likely to appear in both places.</p>
-<p>A solver, an interpretation layer, and an independent checker all add complexity. They should earn it.</p>
-<p>If you are putting a language model anywhere near scheduling, rostering, or planning, here is what I would do:</p>
-<p>The first useful result appeared before the solver ever ran: 35 weekend shifts requested, 28 possible under the weekend rule, at least 7 gaps unavoidable. The full model needed 8 gaps and produced a proven best score of 828.</p>
-<p>Every individual requirement was easy to read. The difficult part was making them all hold at once.</p>
-<p>That is the boundary I would protect in any LLM-assisted scheduling system. Let the language model help interpret messy requirements. Once those requirements become precise rules, let deterministic software search for the schedule and verify it.</p>
-<p>A schedule can look reasonable and still break a rule somewhere you were not looking. In any system with this many interacting rules, validity has to be checked, never assumed.</p>
-<p>[1] University of Nottingham, Nurse Rostering Benchmark Instances, including the raw data for Instance2 and its published optimal score of 828.</p>
-<p>[2] Shrenil Shaun Sharma and Avi Sharma, “SCHEDBench: A Benchmark for Evaluating LLM Constraint Faithfulness in Natural-Language Combinatorial Scheduling,” arXiv:2608.00991 (2026).</p>
-<p>[3] Raj Jain and Marc Wetter, “R-ConstraintBench: Evaluating LLMs on NP-Complete Scheduling,” arXiv:2508.15204 (2025).</p>
-<p>Your Database Can Time-Travel and Still Get the Past Wrong</p>
-<p>Senior Software Engineer building large-scale financial data systems with distributed systems, AI, and LLMs.</p>
+                <p>A security firm patched a decade-old app to prevent the takeover of millions of machines, highlighting that abandoned domains remain a boon to attackers.</p>
+<p>When managed security service provider Eye Security spotted an odd update process in a client's telemetry that appeared to be reaching out to outdated — and in some cases, malicious — domains, the company decided to take a deeper look.</p>
+<p>The updater belonged to a modified version of Time4Popcorn, a 2014-era BitTorrent client that allows movies to be downloaded from the Internet, and even after a decade, the persistent updater continued to run on more than 2.5 million Windows machines and an estimated 300,000 Macs, checking for new software, according to the MSSP's advisory. The problem: Many of the domains checked by the updater were open to registration, which could allow any would-be cyberattacker to register the domain and have an easy way to place software on millions of machines.</p>
+<p>The situation highlights the issue of old infrastructure and the threat it poses to users and businesses, especially if the business's employees work from home, Niels Teusink, principal security researcher for Eye Security, wrote in the analysis.</p>
+<p>Related:Claude Model Builds Exploits Across Major Browsers & OSes</p>
+<p>"[W]hile these users chose to install Popcorn Time, none of them chose to have a forgotten updater running in the background for years, ready to run any code with full privileges for whoever controlled one of its domains," the company stated in its advisory. "With millions of systems affected and the software long abandoned, there was no vendor to fix this and no patch on the way: if we didn't act, nobody would."</p>
+<p>The risk of domains that are dropped by a legitimate service and then picked up again, or bought by a gray-market or criminal operator — sometimes called "dropcatch domains" — have become an increasing issue as developers have stopped updating, or sold off, legacy software infrastructure. In February 2025, for example, exposure management firm watchTowr discovered 150 Amazon S3 buckets that had been abandoned, so they registered and found that more than 8 million HTTP requests from government and companies came in for resources that had been hosted at those addresses.</p>
+<p>And with AI enabling a more sophisticated analysis of software projects, attackers may be able to more quickly do the necessary research to find domains that could be a backdoor into users' systems, says Benjamin Harris, founder and CEO of watchTowr.</p>
+<p>"AI is definitely driving the barrier-to-entry down for this kind of research very quickly," he says. "We're seeing AI used to reproduce vulnerabilities, find zero days, but applied to this, AI can be used to install a bunch of software, install network taps, see what all the software reaches out to, see what's not registered, or see what's been abandoned and what we can hijack."</p>
+<p>Related:GhostAction Hacking Wave Fizzles, but Attackers Lurk on in GitHub</p>
+<p>Typically, there are two types of vulnerable domains that questionable operators might take an interest in. The first are homograph domains that look like their legitimate cousins and include both typosquatting domains, such as "gmai[.]com," that try to catch browsers whose users mistyped a URL, and lookalike domains that are used in phishing to visually fool users. The value of these types of domains to the owner varies, depending on the amount of traffic they attract, says Renée Burton, vice president of threat intelligence at cybersecurity vendor Infoblox.</p>
+<p>However, dropcatch domains that are integrated into the supply chain for a piece of software are a completely different — and more serious — risk, she says. Infoblox has registered hundreds of domains that had been part of supply chains to prevent attackers from using them.</p>
+<p>"Supply chain attacks can happen at a moment's notice, and depending on how dropped domains are integrated into existing software, a threat actor can quickly abuse a supply chain dropped domain to conduct sophisticated attacks that lead to data loss and ransomware," Burton says.</p>
+<p>Related:In-the-Wild Attack Abuses AI Agents' Trust in Markdown</p>
+<p>In 2024, Chinese company Funnull bought the polyfill[.]io domain from the creator of the Polyfill service and began redirecting users to tens of thousands of websites.</p>
+<p>The Popcorn Time issue highlights the problem. Anyone with access to the domains, and with some reverse engineering, could figure out how to tinker with the legacy updaters. In fact, that's what Eye Security did, updating the code to stop the automated process of reaching out to the old domains.</p>
+<p>"All we needed to do was supply a link to an executable and the program would download it and then execute it with high privileges (NT AUTHORITYSYSTEM)," Teusink wrote. "There was no code signing and this process was all happening over HTTP."</p>
+<p>Eye Security stressed that another project, confusingly also named Popcorn Time, is a 2025 effort to create a legitimate streaming service and is not impacted by the legacy update issues.</p>
+<p>Companies should know the domains that their employees are reaching out to and the reputation of those domains, and should extend that monitoring and protection to remote users, says watchTowr's Harris.</p>
+<p>"The big challenge with things like BYOD and working from home is that now the network perimeter extends from not just your corporate network ... but the user's home network as well," he says.</p>
+<p>The community needs to come together as well, says Infoblox's Burton. While taking active defense to the same extent as Eye Security continues to be legally problematic, finding legacy and unused infrastructure is something that security communities on the Internet can continue to work on, she says.</p>
+<p>"Threat actors understand the value of controlling a domain which is integrated into an existing supply chain and being queried by real people on a regular basis," Burton says. "We need more defenders looking for proactive ways to disrupt domain drop schemes by purchasing high-value pending drop domains before threat actors, and by looking for ways to reduce threat actors cash out opportunities from these attacks."</p>
+<p>Rob is an award-winning, veteran technology journalist of more than 30 years, reporting on global cybersecurity issues, the latest offensive and defensive technologies, malware incidents, cyber conflict, and AI's impact on software and cybersecurity.</p>
+<p>A former research engineer, Rob has written for more than two dozen publications, including CNET News.com, Dark Reading, MIT's Technology Review, Popular Science, and Wired News. He has received five awards for journalism, including Best Deadline Journalism (Online) in 2003 for his coverage of the Blaster worm. Rob also analyzes data on various trends using Python and R for both his reporting and his clients. Recent reports include analyses of the shortage in cybersecurity workers, annual vulnerability trends, and annual threat reports.</p>
+<p>Rob holds degrees from Cornell University in Electrical Engineering and Computer Science (double major).</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/why-llms-struggle-with-constraint-based-scheduling-and-how-optimization-solvers-help?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/application-security/undead-software-projects-raise-security-risks" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

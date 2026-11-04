@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastAPI: eventos de email sin polling frágil</title>
+    <title>Hugging Face ❤️ TorchTPU: TPUs, Natively</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9842.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>FastAPI: eventos de email sin polling frágil</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
+        <h1>Hugging Face ❤️ TorchTPU: TPUs, Natively</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fmgmfburj02nz8cud8evt.png" alt="FastAPI: eventos de email sin polling frágil" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fmgmfburj02nz8cud8evt.png" alt="FastAPI: eventos de email sin polling frágil" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Los tests de email suelen empezar con una solución sencilla: enviar el mensaje, hacer sleep(5) y buscar el correo más reciente. Funciona en local, pero en CI se vuelve lento y bastante fragil. Un proveedor tarda más, dos jobs comparten inbox o el test encuentra un mensaje viejo.</p>
-<p>Una alternativa práctica es tratar cada email de prueba como un evento correlacionado. La aplicación publica una señal con un identificador de ejecución y el lector busca exactamente ese evento, dentro de una ventana de tiempo. No elimina los retrasos de red, pero evita que el test adivine qué mensaje le pertenece.</p>
-<p>El polling no es malo por sí mismo. El problema aparece cuando es la única forma de saber que algo paso. Un flujo típico tiene estas decisiones escondidas:</p>
-<p>Cuando esas reglas no están en un contrato, cada helper las resuelve de una forma distinta. En una búsqueda de documentación puede aparecer incluso tempail mail o tamp mail com, pero el nombre que se usa no arregla la falta de correlación.</p>
-<p>El objetivo no es convertir un email en un sistema distribuido enorme. Es adjuntar contexto mínimo: run_id, destinatario, tipo de evento, momento de emisión y estado de consumo.</p>
-<p>Imagina que el backend genera un evento cuando crea el email de verificación. Ese evento no tiene que contener el cuerpo completo del mensaje. Puede incluir un identificador, un hash del contenido y la referencia al destinatario:</p>
-<p>El test espera una señal con run_id=ci_2026_11_04_001. Después puede consultar el inbox para confirmar el enlace, pero ya no necesita decidir cuál de cinco mensajes recientes es el correcto.</p>
-<p>Este patrón también mejora el diagnóstico. Si el evento existe pero el mensaje no llega, el problema está entre la cola y el proveedor. Si no existe el evento, hay que revisar la aplicación. La frontera queda bastante más clara.</p>
-<p>FastAPI puede exponer un endpoint interno para registrar y consultar eventos de prueba. En producción conviene usar PostgreSQL o una cola real; este ejemplo se concentra en el contrato HTTP:</p>
-<p>El endpoint devuelve duplicate=true para un reintento del mismo event_id. Esa respuesta es útil para un runner: repetir una llamada no crea una segunda señal que pueda confundir al lector.</p>
-<p>Si el proyecto todavía usa polling, se puede introducir este contrato poco a poco. Primero registra el evento, luego conserva el polling como fallback y finalmente mide cuántos tests siguen necesitándolo. La transición es mas segura cuando cada paso deja métricas.</p>
-<p>El evento debe ser idempotente, pero también lo debe ser el consumidor. Una secuencia razonable es:</p>
-<p>No marques el evento como consumido antes de validar el enlace. Si el parser falla y el test reintenta, perderías una pista importante. También conviene registrar razones distintas para event_not_found, message_not_found y invalid_message; “email timeout” dice muy poco.</p>
-<p>Para operar el flujo, las alertas de rollback con contexto real ofrecen una idea útil: una señal debe incluir contexto accionable, no solo un contador rojo.</p>
-<p>Antes de abrir el navegador o llamar al endpoint de registro, el job puede preparar:</p>
-<p>También ayuda aislar pruebas de email por entorno, porque el mismo contrato puede aplicarse a local, staging y CI sin mezclar bandejas. Si un job falla, guarda el run_id en el mensaje del error. Parece un detalle menor, pero ahorra bastante tiempo al revisar logs.</p>
-<p>No necesariamente. El evento indica qué esperar; el inbox todavía puede requerir polling si el proveedor no ofrece webhook. La diferencia es que el polling tiene una identidad y un límite.</p>
-<p>Solo cuando haga falta para depurar. Un hash, el asunto, el remitente y los timestamps suelen ser suficientes para la mayoría de los fallos.</p>
-<p>El run_id debe seguir siendo distinto y el filtro debe comprobar también el tiempo de emisión. Si el proveedor permite direcciones aisladas, usarlas reduce todavía más la ambigüedad.</p>
-<p>Un evento correlacionado convierte “espera hasta que llegue algo” en “espera este mensaje de esta ejecución”. Con FastAPI, un endpoint pequeño, una clave idempotente y razones de fallo explícitas bastan para dar el primer paso.</p>
-<p>El resultado no es solo un pipeline un poco mas rápido. Es una prueba que explica qué esperaba, qué recibió y en qué frontera se perdió la señal.</p>
-<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
-<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
-<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>If you ever tried to run PyTorch on a TPU, you probably ported your code to torch_xla, or you ended up having to learn JAX. With TorchTPU, a native PyTorch backend, TPU is now just another device. It opens up native support of TPU in the Hugging Face ecosystem. Transformers, Diffusers and Kernels run natively on TPU. Pick a model from the Hub, send it to "tpu", and you're done.</p>
+<p>TPU stands for Tensor Processing Unit. TPUs are Google's own AI accelerators. They are chips built for one job: the matrix math that neural networks spend most of their time on. Google has been designing them for about ten years, and uses them to train and serve its own models, including Gemini.</p>
+<p>TPUs are available on Google Cloud, from a single chip up to pods of thousands of chips. They shine when you need a lot of compute, for training or for serving at scale.</p>
+<p>The catch has always been software. The TPU stack grew up around TensorFlow and JAX, and PyTorch users had to work harder to get in.</p>
+<p>Until now, running PyTorch on TPUs meant going through PyTorch/XLA (torch_xla). It worked, but it had its quirks. Tensors were lazy (the tensors, not you), so your code didn't always run when you thought it did. Small changes could trigger graph recompilations, and debugging was hard to reason about.</p>
+<p>To make life easier, we built Optimum TPU. It gave Hugging Face models inference and training support on TPUs. Now that TorchTPU brings native support, Optimum TPU is not required anymore to run Hugging Face models with Transformers and Diffusers.</p>
+<p>TorchTPU adds TPU as a new backend to PyTorch. You write regular PyTorch code. It comes with Pallas kernels tuned for TPUs, support for distributed training, and a torch.compile integration for when you want more speed. Installing it on a TPU VM takes one command:</p>
+<p>The extra index gives you the CPU build of torch. Without it, pip pulls the much bigger CUDA build, which you don't need on a TPU.</p>
+<p>Transformers v5 was built around one idea: be the source of truth for model definitions, so they can run anywhere. "Anywhere" now includes TPUs. To load a model on a TPU, pass device_map="tpu". That's it.</p>
+<p>The model runs in eager mode by default. You can also use torch.compile for better performance, or run it in a distributed setup.</p>
+<p>TPU is now a first-class device in Diffusers. For prototyping or debugging, eager mode only needs pipe.to("tpu"). For deployment, compiled mode adds one compile call. Your pipelines and code stay the same, and there's no TPU fork to maintain.</p>
+<p>The first call compiles, and every call after that with the same image size reuses the graph.</p>
+<p>Models too big for one chip? Pass a TensorParallelConfig to from_pretrained and the transformer is sharded across chips as it loads, so the full model never has to fit in one place. Many popular pipelines support it out of the box, and the ones that don't are just a tp_plan away. The Diffusers TPU guide has the full recipe.</p>
+<p>Here are some examples run on a Cloud TPU v6e-4:</p>
+<p>TP=4 (each model split across four chips) · bf16 · batch 1</p>
+<p>The Kernels Hub has ready-to-use TPU kernels. Load one with the Kernels library and give your model a speed boost.</p>
+<p>TPU kernels are written in Pallas, which gives you low-level control over the hardware. You can also bring in kernels from the Tokamax library. Here is a ragged-dot kernel from Tokamax plugged into a Mixture-of-Experts model:</p>
+<p>The bigger the batch, the bigger the win. At batch size 64, decoding is 21.5× faster on Qwen3-30B-A3B and 12.8× faster on Gemma 4 26B-A4B.</p>
+<p>Decode throughput on a TPU v6e-8, Hub kernel vs. the default implementation.</p>
+<p>We're continuously improving TPU support in transformers by running the library test suite. We are working to add a nightly CI on TPU and make the results available in the (transformers dashboard)[https://huggingface.co/spaces/transformers-community/transformers-ci-dashboard].</p>
+<p>The Transformers CI dashboard, with TPU results next to other accelerators. Work in progress!</p>
+<p>It's not all green yet, and we're fine with that. Of the tests that run on TPU, 96.5% pass. Every failure we find becomes a small repro script and an issue on the TorchTPU repo. So far we have reported 34 issues, and 19 are already fixed. Running on TPU also caught a few bugs in Transformers itself, like in StaticCache and the Qwen3 tensor-parallel plans. We fixed those upstream.</p>
+<p>If something breaks on TPU, we want to find out before you do.</p>
+<p>TPUs are no longer a side quest for PyTorch users. Install TorchTPU, grab a model from the Hub, and send it to "tpu".</p>
+<p>We can't wait to see what you build 🤗. If you hit a problem, open an issue and tell us about it.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/oliviachen7/fastapi-eventos-de-email-sin-polling-fragil-2874" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/hf-torchtpu" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Surprising Cost of Doomscrolling At Work — And The Simple Way to Stop (M)</title>
+    <title>Supabase Connection Budgets: Pool Size, Roles, Modes, and Limits</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9787.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,113 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Surprising Cost of Doomscrolling At Work — And The Simple Way to Stop (M)</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-03</p>
+        <h1>Supabase Connection Budgets: Pool Size, Roles, Modes, and Limits</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
         
         <div class="article-body">
-            <img src="https://www.spring.org.uk/images/phone-1-3.jpg" alt="The Surprising Cost of Doomscrolling At Work — And The Simple Way to Stop (M)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fo0lrc107mt4wbo65jms1.png" alt="Supabase Connection Budgets: Pool Size, Roles, Modes, and Limits" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.spring.org.uk/images/phone-1-3.jpg" alt="The Surprising Cost of Doomscrolling At Work — And The Simple Way to Stop (M)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fo0lrc107mt4wbo65jms1.png" alt="Supabase Connection Budgets: Pool Size, Roles, Modes, and Limits" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Why do people keep scrolling through bad news when it makes them feel worse?</p>
-<p>Why do people keep scrolling through bad news when it makes them feel worse?</p>
-<p>• Read members-only articles
-• Adverts removed
-• Cancel at any time
-• 14 day money-back guarantee for new members</p>
-<p>Psychologist, Jeremy Dean, PhD is the founder and author of PsyBlog. He holds a doctorate in psychology from University College London and two other advanced degrees in psychology. He has been writing about scientific research on PsyBlog since 2004.			
-				View all posts by Dr Jeremy Dean</p>
+                <p>Your connection budget is three equations, and most "too many connections" surprises come from one of them being a multiplication you did as an addition. I rebuilt a Nano-sized Supabase limit set on my laptop, pushed past every limit, and wrote down what failed, in what order, and with which error text. Some checks ran on a hosted Free project at tiny scale, and a few that only a paid plan exposes ran on a throwaway Pro project I created and deleted the same day. Scripts, numbers and a calculator are in the repo. Everything is from my runs on 2026-11-03 and 2026-11-04; prices and versions change, so numbers carry dates.</p>
+<p>The most serious finding is not about capacity: on the transaction pooler, a setting left behind by one client leaked rows (through an RLS policy) and an admin role's privileges to the next client (section 10).</p>
+<p>How this was made: I wrote this with Claude's help: it drafted, and I ran every step, edited the text, and checked the results. The mistakes are mine.</p>
+<p>The non-technical version (database "seats"): https://medium.com/p/a7f0cb1df4d4
+The code: https://github.com/tomozilla/connection-budget-en-demo</p>
+<p>Before the numbers, one map. Every term in this article is somewhere in this picture: where a request enters, which pool it lands in, and what else is already holding connections.</p>
+<p>The bottom band is the part I kept underestimating: even with zero traffic of your own, the Data API, Auth, Realtime, Storage and the health checker each take connections out of the same total. Section 5 has the measurements.</p>
+<p>I started with a question I couldn't answer: "pool size 15, but 30 backends?" Listing library defaults wouldn't explain it, so I rebuilt the limits locally, where going past a limit hurts nobody, and ran one experiment per term of the budget. Where a claim needed a hosted check, I kept it tiny.</p>
+<p>That last line is the one I used to wave at. The Pooling and limits page lists the same sharers explicitly: "Supabase services hold their own connections, including Auth, Storage, PostgREST, and the health checker, and those come out of the same total." And those are not fixed numbers — some of them grow when used and then keep what they took (section 5).</p>
+<p>The docs' rule of thumb (Connection management): pool size under about 40% of max_connections with heavy Data API use, up to about 80% without. That is 24 or 48 on Nano. Reading it as a budget for all pools together is not my inference — the Supavisor FAQ says it directly: "if you're using the DB REST API or multiple app-based 'user+db+mode' combinations, try to keep the pooler's usage under 40% of available connections." With two roles and two modes you have four pools.</p>
+<p>Idle footprint in the lab, full stack: Supavisor 29, Realtime 5 to 7, PostgREST 1 (LISTEN "pgrst"), Storage 1 to 2, Auth 0. On hosted (both Nano and Micro), grouping by usename showed no supabase_auth_admin row and no supabase_storage_admin row either.</p>
+<p>Stopping there was my mistake in the previous round. "Zero while idle" is not "zero". Both services open connections when used, and one of them keeps them. Section 5 has the numbers.</p>
+<p>No waiting. With node-postgres' default Pool of 10, 21 serverless copies reach it. Is the 200 shared across roles? The FAQ only says the limit comes from the tenant's default_max_clients or a per-user max_clients. So I connected 150 clients each on r1 and r2:</p>
+<p>In my lab the cap applied per role. I didn't connect hundreds of clients to a hosted project; I read the source instead (Supavisor main on 2026-11-03; I did not diff it against the lab's 2.9.12). Manager.check_client_limit looks up the pool by its id (tenant, user, mode, database and so on), takes the size of that pool's client table, and compares it with max_clients (the user's setting or the tenant's default_max_clients) in transaction mode, or with pool_size in session mode. So the counting unit is the pool (role x mode), which matches the lab.</p>
+<p>The docs read the other way, which is why I went and measured it. The Pooling and limits page describes client connections as "how many clients can connect to a pooler at the same time", set by "your compute size's max pooler clients limit" — no mention of roles. The Max client connections reached error is described as exceeding "the allowed limit of your compute add-on". The Pro project's settings page says: "This value is fixed at 200 based on your compute size of Micro and cannot be changed." All project-shaped.</p>
+<p>So I tested it on a hosted project (throwaway Pro/Micro, 2026-11-04, idle connections only — not a single query):</p>
+<p>The cap is per role on hosted too, matching the lab. The settings page's "fixed at 200" is the value of one pool's cap, not a project-wide total.</p>
+<p>Don't celebrate too early, though. While those 300 clients were connected, the database held 2 backend connections — one per role — because nothing was running a query:</p>
+<p>Adding a role buys client slots. It buys zero backend slots, and equation 1 (57 usable on Nano/Micro) is the one that actually bites. Splitting across roles is a legitimate fix for EMAXCONN, but it moves the queue rather than removing it: if those 300 clients all start querying, they are contending for the same 57.</p>
+<p>The docs changed under me while I was writing this, in late October 2026, and the change is in my favour. The sentence I used to quote — that the pool size is shared between ports 5432 and 6543 — is no longer there. What the Connection management page says now:</p>
+<p>This pool size applies per database user (role), not as a single total for the whole project. Each distinct role that connects through a pooler gets its own pool of up to this many direct Postgres connections, so the total connections poolers can open scale with the number of roles in use.</p>
+<p>The "shared" axis moved from between modes to between poolers: "The pool size applies to both the shared pooler (Supavisor) and the dedicated pooler (PgBouncer)", and they "read the same setting but apply it independently, so raising it raises the ceiling for both." If you run both, add the second pooler's backends to equation 1.</p>
+<p>Three granularities still coexist, which is worth knowing when you size: Connection management says per role, the Supavisor FAQ says per user, database and mode combination, and the dashboard's own help text says "per user+db combination". Everything I measured says mode counts too, so size with the largest reading (user x database x mode).</p>
+<p>I put one role on both ports at once, 20 clients each, held for 8 seconds:</p>
+<p>Separate pools per mode. On the hosted Free project with pool size 3, 5 clients per port:</p>
+<p>Same shape. Then roles, with room (the first time the database filled before I could see this):</p>
+<p>Note the 16. A pool size of 15 held 16 backends in transaction mode and exactly 15 in session mode, and the hosted pooler at pool size 3 held 4 on the transaction port. For comparison, PgBouncer 1.26.1 in front of the same database, default_pool_size 15, opened exactly 15.</p>
+<p>The docs read as if connections strictly follow the configured pool size, and there is still no "+1" in them. I can't explain it. With three roles it is three connections, which is the difference between "just fits" and "overflows". The reproduction is in the repo (results/upstream-issue-drafts.md).</p>
+<p>There is one line in the Supavisor FAQ that might be the same mechanism: "If a client is connected to the pooler, then at least 1 hot connection will be sustained, even if no client needs it." I tested that on the Pro project by connecting one transaction-mode client and leaving it idle: exactly one backend stayed, still there at 137 seconds — well past the roughly 2 minutes at which unused backends get closed (section 12). So the "hot connection" claim holds. Whether it is the same thing as the +1, I don't know.</p>
+<p>Three roles at full pool, 87 of 87 used. I probed the other services with the lab's publishable key only:</p>
+<p>The rule is whatever needs a new connection fails first. In my lab Auth held no idle connection, so its sign-in broke first; the Data API and Storage kept working because the connections they already held were enough. That is not a guaranteed order:</p>
+<p>So hosted Auth keeps a warm pool of about ten once it has been used, while my lab's Auth held none. Sign-in was first to break in my lab, for that reason. On a hosted project Auth has about ten connections in hand and should ride out the moment the database fills. I did not fill a hosted database, so that last part is inference, not measurement — the point is that you cannot carry my lab's ordering over to production.</p>
+<p>Storage matters differently: it took 8 and kept them. That is 8 of the 57 usable connections on Nano or Micro, permanently, once you serve a file. Put it in equation 1.</p>
+<p>One caveat on Storage: the Supavisor FAQ says "the Storage server also uses Supavisor as a unique 'user+db+mode' combination, so the pool size you set for your general application will apply to it, too." On the project I measured, those connections had application_name of Supabase Storage API, not Supavisor — they looked direct, not pooled. One project, one observation; I am not generalising from it.</p>
+<p>After the heavy clients stopped, sign-in stayed at 500 for about a minute (it came back at t+62 s, when the pooler released one backend).</p>
+<p>One role using too much can take out other roles, the pooler's logins and Auth. I did not probe Studio.</p>
+<p>A prediction, tested. A closed-loop client (finishes, then sends the next) waits about (clients - backends) / backends x query time. With 199 clients and 16 backends, queries averaging over roughly 5 seconds should push the wait to the 60-second limit. Role r1, transaction mode, 100 seconds per run:</p>
+<p>The p50 includes the query's own run time, so the 4.5 s row compares 51.5 s of predicted wait plus 4.5 s of work (about 56 s) with the measured 54.1 s. At 5.5 s the predicted wait is past 60 s, and the clients that waited that long were refused at 60 s; the ones that succeeded got their turn just before it. The prediction that the edge sits near 5 seconds held.</p>
+<p>A client that runs BEGIN and stalls holds its backend as idle in transaction. With idle_in_transaction_session_timeout = '5s' on the role, Postgres ended it after 5 seconds (terminating connection due to idle-in-transaction timeout).</p>
+<p>Open loop. A closed loop politely waits and hides overload; real traffic keeps arriving. New connection per request (serverless style), 100 ms queries:</p>
+<p>After 4 seconds 200 client connections were in flight, so the cap started refusing; the p50 of the accepted ones plateaued near 200 / 16 x 0.1 s.</p>
+<p>Many waits stack. The shortest one fires first:</p>
+<p>What each library does while it waits for a connection (direct, role r1):</p>
+<p>The role defaults are rungs on the same ladder. Per the docs: anon 3 s, authenticated 8 s, service_role none (falls back to authenticator's 8 s), and postgres has no role timeout, "capped by default global timeout to be 2min". Reading pg_settings on the Pro project confirmed it: statement_timeout was 120000. If your admin scripts or batch jobs connect as postgres, the bottom rung of the ladder is two minutes.</p>
+<p>If you are upgrading from Prisma 6, this is the row to read. The 10-second safety net (pool_timeout) is gone by default with the pg adapter, so a saturated pool waits forever. Pass connectionTimeoutMillis to PrismaPg.</p>
+<p>The Django last row came from a bug in my own test: my first script never called connection.close() and everything but four threads timed out. A web request closes at its end, so this bites long-lived threads (background workers).</p>
+<p>50 concurrent calls of a 2.5-second RPC through PostgREST:</p>
+<p>A slow function exposed to anon lets outsiders hold that pool. My test slow() is deliberately callable; don't copy that to a real project.</p>
+<p>Prisma went from 21 to 10 between majors, and its wait default changed too (previous table). A number from a blog post has a version attached.</p>
+<p>Multiplication: node-postgres Pool(max 10) in 1, 3 and 5 processes held 10, 30 and 50 direct backends (I raised max_connections to 150 for that run). Through the pooler the same 50 clients used 16 backends. Gunicorn workers, node cluster or hot reload create the same multiplication without you noticing.</p>
+<p>I rewrote this section, because the docs caught up. What I used to present as an undocumented trap is now spelled out on the Connecting to Postgres page:</p>
+<p>Query pipelining isn't supported: transaction mode returns a connection to the pool as soon as it sees one reply finish, even if the client already queued more queries on it.</p>
+<p>Caution: postgres.js pipelines queries by default, so this combination can hang queries or return mismatched rows.</p>
+<p>Read that before my experiments. What I hit was the hang.</p>
+<p>postgres.js 4.0.0 hung with 20 concurrent queries. Setting prepare: false and max_pipeline: 1 together fixes it, so I tried them one at a time:</p>
+<p>The cause is pipelining (several queries queued on one connection; postgres.js defaults to 100), not prepared statements. "Transaction mode has no prepared statements" is true, and the docs tell you to turn them off for your library, and prepare: false is the usual postgres.js fix. It didn't fix this hang in my runs.</p>
+<p>Does that mean prepare can stay on with max_pipeline: 1? Prepared-statement bugs only show on repetition (see psycopg below), so I repeated the same query: 200 and 3000 queries over 10 connections.</p>
+<p>No prepared-statement failure with postgres.js here.</p>
+<p>One suggestion was that postgres.js might be retrying silently: its source (GitHub main) does catch the "prepared statement does not exist" error (26000), re-prepare and retry. So I counted what the client sends (25-postgresjs-retry.mjs counts Parse messages and errors). Same 3000 queries, 10 connections:</p>
+<p>With only max_pipeline: 1, Parse went out once per connection (10), not more; a retry path would have added more. The Postgres log and the pooler log had no prepared statement or 26000 lines either. So here it is not a hidden retry; the error does not occur. I don't know why (the pooler may handle it on its side; I didn't check). Through the same pooler, psycopg and Prisma did fail.</p>
+<p>The docs warn about two failures, and I had only chased the hang. So I went after the other one: every query sends a unique marker and must get that marker back.</p>
+<p>I then ran 1000 queries over 20 connections three more times with max_pipeline: 1: not one mismatched row. In my environment it hangs before it can mismatch. "I couldn't reproduce it" is not "it doesn't happen" — trust the docs' warning over my runs here.</p>
+<p>This is the question I should have answered before recommending the setting. The Postgres.js page says:</p>
+<p>postgres.js has no working option to turn pipelining off directly: max_pipeline: 0 breaks sql.begin() transactions instead, a known upstream bug.</p>
+<p>It talks about 0. I recommend 1, which is a different thing, so I tested it with real transactions: two queries inside each sql.begin(), checking (a) that each query gets its own marker back and (b) that both ran on the same backend (pg_backend_pid()), i.e. the transaction never moved to another connection mid-flight.</p>
+<p>max_pipeline: 1 ran transactions cleanly, repeated three times at 8 to 30 concurrent transactions.</p>
+<p>max_pipeline: 0 behaved differently from the docs' description. The upstream issues that match that claim were closed as completed on 2026-10-29, and postgres.js 4.0.0 was published the same day. On 4.0.0 I did not get UNSAFE_TRANSACTION; I got a prepared-statement collision (42P05), which prepare: false clears — at the price of being more than 100x slower (19 ms to 2029 ms), because switching pipelining fully off serialises every query.</p>
+<p>So in my environment max_pipeline: 1 (plus prepare: false if you want it) was the clean option. It is not the documented fix, so if you adopt it, run this same check against your own queries and transactions.</p>
+<p>The same checks against PgBouncer 1.26.1 in transaction mode (max_prepared_statements 200 by default; not necessarily the hosted dedicated pooler's configuration):</p>
+<p>And the ones that really are prepared-statement bugs on Supavisor: Prisma 6 without ?pgbouncer=true (22 of 30 queries; with it, 0) and psycopg 3 (the same query run more than 5 times is auto-prepared; prepare_threshold=None fixes it; a one-shot test won't show it). Prisma 7 with the pg adapter and node-postgres were fine.</p>
+<p>This is a safety issue, not a capacity one, and it is the part of this article that goes furthest past what the docs say.</p>
+<p>The docs describe transaction-mode session state like this:</p>
+<p>Session-level state is lost between transactions. This covers set and reset, session-level advisory locks, listen and notify, and temporary tables.</p>
+<p>"Lost" sounds like an availability problem: your setting disappears, your code breaks, you fix it. What I measured is the other failure mode — the state is not lost, it stays on the backend and the next client inherits it. That turns it from an availability bug into a disclosure bug.</p>
+<p>A setting is only a setting until an RLS policy trusts it. Role r_app, policy owner = current_setting('app.user', true), and r_app allowed to SET ROLE r_admin (which bypasses RLS):</p>
+<p>For contrast, the Data API: PostgREST applies per-request settings inside the request's transaction. With two users (alice, bob) from the local Auth (publishable key only) and 40 mixed concurrent requests, nobody received someone else's data: 0 of 40, and an anonymous call right after a user's call saw nothing.</p>
+<p>Fix: on transaction pooling, don't use session-level SET; use set_config(..., true) inside a transaction you open per request.</p>
+<p>Closed loop, one role, transaction mode, 100 ms queries, 6 s per cell:</p>
+<p>Past 16 backends, throughput stops (about 150/s); more clients only queue. With 1-second queries, 100 clients had p50 6 s (15 queries/s). Little's law (busy = qps x seconds per query) gave 15.3 to 15.4 busy backends at 100 ms and 14.9 to 15.9 at 1 s: the pool. No errors anywhere, so error counts alone won't warn you. Watch p95.</p>
+<p>Killing 5 idle pooled connections with pg_terminate_backend:</p>
+<p>The Supavisor FAQ makes three specific claims about how long backends stick around:</p>
+<p>In transaction mode, once a direct connection is established, the pooler will keep it available for reuse for another client. However, if the connection remains unused for 5 minutes, the pooler will close it to free up database resources. In session mode, the connection will be immediately closed.
+If a client is connected to the pooler, then at least 1 hot connection will be sustained, even if no client needs it.</p>
+<p>My measurement is shorter than the documented 5 minutes, so size with 5 minutes, the larger number: I measured one project a handful of times. Either way, run short tests back to back and you will see slots occupied with nobody using them.</p>
+<p>| connection limit | r1 backends | failed queries |
+  |---|---|---|
+  | 15 (equal to the pool size) | 15 | 25 of 40 (immediately) |
+  | 16 (pool size + 1) | 16 | 0 (the rest wait) |</p>
+<p>A limit equal to the pool size refuses the 16th backend and turns clients that could have waited into errors.</p>
+<p>The repo has the lab scripts, the results table and the calculator: https://github.com/tomozilla/connection-budget-en-demo</p>
+<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
+<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
+<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.spring.org.uk/2026/10/doomscrolling.php" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/tomozilla/supabase-connection-budgets-pool-size-roles-modes-and-limits-4lc8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
