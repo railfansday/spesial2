@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Build Bug-Free Applications with Claude Code</title>
+    <title>Comic Panel Detection With a Vision LLM: Pages Into Shots for Under Half a Cent</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9831.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Build Bug-Free Applications with Claude Code</h1>
+        <h1>Comic Panel Detection With a Vision LLM: Pages Into Shots for Under Half a Cent</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
+            <img src="https://hackernoon.imgix.net/images/lkGLXwyYYqUK5A8D0ODPJsQyxU83-d2d3bgq.png" alt="Comic Panel Detection With a Vision LLM: Pages Into Shots for Under Half a Cent" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/lkGLXwyYYqUK5A8D0ODPJsQyxU83-d2d3bgq.png" alt="Comic Panel Detection With a Vision LLM: Pages Into Shots for Under Half a Cent" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>Use E2E tests to minimize bugs</p>
-<p>The post <a href="https://towardsdatascience.com/how-to-build-bug-free-applications-with-claude-code/">How to Build Bug-Free Applications with Claude Code</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
+                <p>Founder of Outerframe Studio and creator of ScreenWeaver, an AI workspace for writers and filmmakers.</p>
+<p>Founder of Outerframe Studio and creator of ScreenWeaver, an AI workspace for writers and filmmakers.</p>
+<p>Founder of Outerframe Studio and creator of ScreenWeaver, an AI workspace for writers and filmmakers.</p>
+<p>How ScreenWeaver finds the panels on a comic, webtoon or storyboard page with Gemini Flash, and the small decisions that keep it cheap and safe to run twice.</p>
+<p>A comic page is already half a storyboard. Six frames, a reading order, a page number at the bottom. If you want to turn that page into an animated scene, every panel has to become its own image so it can sit on a shot as a reference. Cutting them by hand in an image editor is easy for one page. Do it for a whole chapter and you've spent hours on crop boxes before making a single shot.</p>
+<p>Comic panel detection with a vision LLM means sending one page image to a multimodal model, asking it for a bounding box around every panel in reading order, then cutting those boxes on your own server. In ScreenWeaver, where I'm a co-founder, it runs on Gemini Flash and costs between $0.0036 and $0.0048 a page in our measurements.</p>
+<p>We shipped it on October 13, 2026. This is a look at how it works, and at the dull decisions around the model call that ended up mattering more than the model itself.</p>
+<p>Classic panel detection works, and it's free. The best-known open-source option is Kumiko, the Comics Cutter, which uses OpenCV's contour detection to find panels and can number them left to right or right to left. It runs locally and costs nothing per page.</p>
+<p>So why pay for a model call? Because of the pages we actually get:</p>
+<p>And we wanted one more thing contours can't give you: a one-line caption per panel, saying who is in it and what happens. That caption travels with the cropped image, so the agent that builds the shots later doesn't have to look at every panel again to know what it is.</p>
+<p>A contour finder sees rectangles. A notebook page full of handwriting has plenty of rectangles that aren't panels.</p>
+<p>To be fair to Kumiko: if your pages are clean, with clear gutters around every frame, it's free, offline and worth trying first.</p>
+<p>Kumiko, the open-source comics cutter, on GitHub. Screenshot: github.com/njean42/kumiko, October 2026.</p>
+<p>One page per call. The page is turned upright, flattened on white, shrunk so its longest side is 1,568 pixels and sent as a JPEG. The system prompt is short. It asks for every panel in reading order, each with a box and a caption of 80 characters at most, and then it spends most of its words on what to leave out: the gutters, page numbers, titles, and notes written beside or below a frame on a storyboard sheet. A speech balloon inside a frame stays part of the panel.</p>
+<p>Two edge cases are spelled out because they come up constantly. If the whole page is one picture, the model returns one box around it. If the page has no picture at all (a text page, a blank page), it returns nothing.</p>
+<p>The box format comes straight from Google. Gemini is trained to return boxes as [ymin, xmin, ymax, xmax] on a 0 to 1000 scale relative to the image, and the Gemini API documentation tells you to scale those values back to your original image size yourself. We use structured output, so the response is a JSON object we validate with a schema rather than text we parse with regular expressions. Reasoning is switched off for this call: it's a perception task, and thinking tokens would only add cost.</p>
+<p>The object detection section of Google's Gemini API docs, where the 0 to 1000 box scale is defined. Screenshot: ai.google.dev, October 2026.</p>
+<p>You don't trust it as is. Model output is input from outside your code, and one malformed box is enough to break a crop. Before anything gets cut, every box goes through the same small filter:</p>
+<p>Then the server cuts each box out of the full-resolution page (the model only saw the 1,568 px version, but the coordinates are fractions, so they apply to the original) and stores every panel as its own image, labelled "Page N, panel K" with its caption.</p>
+<p>None of this is clever. The filter is about twenty lines of plain code, and it's the reason a bad box costs you one missing panel instead of a failed import.</p>
+<p>Where the model call sits in ScreenWeaver's panel detection. Diagram: ScreenWeaver.</p>
+<p>The measured cost sits between $0.0036 and $0.0048 a page. One real run: a 20-page storyboard with six panels a page came to $0.097 in total. For budgeting, the app counts about $0.005 a page, which is one credit.</p>
+<p>Because this is the step of an import that spends money, it has guard rails:</p>
+<p>The model call is the cheap part. The expensive part is running it twice by accident.</p>
+<p>This is the decision I'd copy into any pipeline that calls a paid model on files.</p>
+<p>The panels are saved on the page record itself. If an import is retried, after a timeout or because the agent decided to add more crops, the stored panels are reused. The model isn't called again, nobody pays again, and the boxes don't move. That last part matters more than the money: if a second run nudged every box by a few pixels, every shot that already uses a panel would quietly change.</p>
+<p>The IDs make this work. A page's ID is built from a hash of the file plus the page number, and a crop's ID from the page ID plus a hash of the box. Import the same PDF next week and the server recognizes every page and every panel it already rendered, and renders nothing twice.</p>
+<p>Failures stay local too. If the model call fails on page 14, that page is reported as panelsFailed and the import carries on with page 15. You get panels for every other page and a clear note about the one that needs another try, instead of an error and nothing.</p>
+<p>What a first import costs and what a re-import costs. Figures from ScreenWeaver's own measurements, October 2026.</p>
+<p>Webtoons, yes, with one preparation step. A webtoon episode is often a single strip thousands of pixels tall. Shrunk to 1,568 px on its longest side, the panels would be too small to box. So a long strip goes in as a series of images about the height of a page. We did this on Imaginarium, a webtoon adapted into an animated series in ScreenWeaver: pages of episode 1 went in, the panels came out, and each one became the reference for an animated shot.</p>
+<p>Manga, with a caveat I'd rather say out loud. The prompt asks for "reading order" and doesn't say which direction. We haven't measured the result on a run of right-to-left pages yet, so I won't claim the order comes out right every time. If you're processing manga in volume today, check the order on a few pages first. This is one place where Kumiko's explicit right-to-left switch is simply better.</p>
+<p>Storyboard sheets are where the vision model earns its money. On that notebook page of six pencil sketches, the notes under each frame ("plan large", "travelling avant", "insert fleur") stay out of the cropped images. The agent read them separately and used them to set the framing and camera move of shots S14 to S19, with each sketch attached to its shot.</p>
+<p>A real notebook page imported through the ScreenWeaver MCP, each sketch stored as its own image. Diagram: ScreenWeaver.</p>
+<p>Panels on their own are just images. The rest of the chain is what turns a page into a scene:</p>
+<p>Then a person opens the Storyboard and Production tabs and launches the generations. The MCP server prepares; it never generates images or video on its own. That boundary is deliberate: the agent does the tedious part, the author keeps the button that spends real money on footage.</p>
+<p>If you want to see it on a real webtoon, the Imaginarium pages and the shots they became are on our webtoon page.</p>
+<p>Which model does ScreenWeaver use for panel detection?</p>
+<p>Gemini Flash (google/gemini-3.8-flash) through an AI gateway, with structured output and reasoning switched off.</p>
+<p>Can I detect comic panels without paying for an API?</p>
+<p>Yes. Kumiko does it locally with OpenCV contour detection. It suits clean pages with clear gutters best.</p>
+<p>Up to 40, in reading order. Boxes under 1% of the page are dropped.</p>
+<p>Detection keeps balloons inside the panel. They're left out later, when the panel is used as a reference for a shot.</p>
+<p>If you're building something similar, spend your time on the code after the model call, and store what the model told you so you never pay for the same page twice. The panel boxes were the easy part.</p>
+<p>MCP Server Best Practices: Our AI Agent Retyped 22 of 127 Scenes and Called It Done</p>
+<p>Founder of Outerframe Studio and creator of ScreenWeaver, an AI workspace for writers and filmmakers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://towardsdatascience.com/how-to-build-bug-free-applications-with-claude-code/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/comic-panel-detection-with-a-vision-llm-pages-into-shots-for-under-half-a-cent?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

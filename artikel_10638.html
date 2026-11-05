@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Test Location-Aware APIs with FastAPI and PostGIS</title>
+    <title>NASA just used satellites and debris to navigate without GPS</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10638.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,46 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Test Location-Aware APIs with FastAPI and PostGIS</h1>
+        <h1>NASA just used satellites and debris to navigate without GPS</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_sitepoint_location_aware_api_cover_realistic_102ecb9804.png" alt="How to Test Location-Aware APIs with FastAPI and PostGIS" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/nasa-starling-swarm-mission.webp" alt="NASA just used satellites and debris to navigate without GPS" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_sitepoint_location_aware_api_cover_realistic_102ecb9804.png" alt="How to Test Location-Aware APIs with FastAPI and PostGIS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/nasa-starling-swarm-mission.webp" alt="NASA just used satellites and debris to navigate without GPS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Catch coordinate-order bugs, distance mistakes, boundary cases, and bad spatial assumptions before they reach production.</p>
-<p>A location endpoint can return HTTP 200 and still be wrong by kilometers. That is the uncomfortable part of testing geospatial APIs: ordinary API checks tell you whether the request worked, not whether the geography is correct.</p>
-<p>Spatial bugs can look harmless in code review. Latitude and longitude get reversed. A radius value is treated as degrees instead of meters. A query works near one city but behaves differently elsewhere because the geometry column uses the wrong type. The JSON is valid, the tests are green, and the map is still wrong.</p>
-<p>In this tutorial, you will build a small FastAPI endpoint backed by PostGIS and then test the spatial behavior directly. The examples use deterministic fixtures positioned at known distances, so the tests verify geography rather than only response structure.</p>
-<p>The API exposes one endpoint: GET /places/nearby. A client sends longitude, latitude, and a radius in meters. The service returns nearby places as GeoJSON features, ordered by distance.</p>
-<p>The useful part is not the endpoint itself. The useful part is the test strategy. We will check coordinate validation, exact distance boundaries, GeoJSON coordinate order, and the database query that turns a radius into a spatial filter.</p>
-<p>Use a geography column when the API is answering human-scale distance questions in meters. PostGIS can then calculate on the ellipsoid instead of treating longitude and latitude as flat Cartesian coordinates.</p>
-<p>The endpoint below validates longitude, latitude, and radius with Pydantic, then sends a parameterized query to PostgreSQL. The SQL uses ST_DWithin to filter candidates and ST_Distance to return the measured distance.</p>
-<p>The API accepts lon and lat as separate named parameters. That removes ambiguity at the HTTP boundary. GeoJSON still uses [longitude, latitude] when the response is created.</p>
-<p>Hard-coding two real businesses and hoping their distance is approximately right makes a fragile test. A better approach is to create test points at exact distances from a fixed origin.</p>
-<p>PostGIS can generate those fixtures with ST_Project. In the test database, create one point 500 meters away, one 950 meters away, and one 1,500 meters away. Now a 1,000-meter query has an unambiguous expected result: the first two belong in the response and the third does not.</p>
-<p>This is the first test that actually proves something spatial. It is not checking that the endpoint returns a list. It is checking that the 1-kilometer contract means what the API says it means.</p>
-<p>GeoJSON coordinates are longitude first, latitude second. Many developers naturally think latitude first because that is how coordinates are commonly spoken. A validation layer can catch the most obvious reversal before the database ever sees it.</p>
-<p>Longitude must be between -180 and 180. Latitude must be between -90 and 90. That will not catch every reversal, because both numbers may sometimes fall inside both ranges, but it catches a large class of failures and gives clients a useful error instead of a misleading map.</p>
-<p>A response can be syntactically valid JSON and still violate the GeoJSON contract. Assert the geometry type and the coordinate order. For a known query point, longitude should appear in element zero and latitude in element one.</p>
-<p>Spatial boundaries deserve their own tests. A place at 999 meters should be included in a 1,000-meter search. A place at 1,001 meters should not. A place exactly at the boundary should behave consistently with the predicate you chose.</p>
-<p>ST_DWithin includes features whose distance is less than or equal to the supplied threshold, so document that behavior and test it explicitly.</p>
-<p>Unit tests are useful for request validation, but mocking the repository layer removes the most important part of this API: PostGIS itself. Keep a small integration-test database and run at least a few tests against the real extension.</p>
-<p>That catches mistakes that mocks cannot: geography versus geometry behavior, SRID mismatches, spatial indexes, units, and changes to SQL functions. A location API is one of the cases where a cheap database integration test buys a lot of confidence.</p>
-<p>Correctness is only half the story. A radius endpoint that scans every feature will work in development and become painful at production scale. Add a GiST index and inspect the query plan.</p>
-<p>The exact plan depends on your data and PostgreSQL version, but you should see the spatial index participating in candidate filtering. Treat an accidental sequential scan on a large production table as a regression worth investigating.</p>
-<p>For a real project, I would split the tests into two groups. Fast validation tests run on every commit. PostGIS integration tests run in CI with a temporary PostgreSQL/PostGIS service.</p>
-<p>The CI gate should cover invalid coordinates, zero or negative radius values, known-distance fixtures, boundary behavior, GeoJSON output, and at least one query-plan or performance sanity check for larger datasets.</p>
-<p>This is more work than asserting status_code == 200, but it tests the thing users actually care about: whether the API's answer is geographically true.</p>
-<p>Location APIs fail in ways ordinary web tests are not designed to notice. The response can have the right schema, the database call can succeed, and every field can look reasonable while the location itself is wrong.</p>
-<p>The fix is not a giant testing framework. Start with a few spatial invariants you can prove: known distances, valid coordinate ranges, correct GeoJSON order, deterministic boundary behavior, and real PostGIS integration tests. Those checks turn geography from an assumption into something your CI pipeline can verify.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>NASA's Starling mission has reached another milestone in autonomous spaceflight by demonstrating a system that can determine a satellite's orbital position using other objects in space as reference points rather than depending on an external navigation network.</p>
+<p>The technology, called FALCON (Fast Autonomous Lost-in-space Catalog-based Optical Navigation), is designed to help spacecraft operate with greater independence. Such capabilities could become increasingly important as NASA pursues missions farther from Earth, including lunar satellite swarms, distributed science missions, and future human exploration.</p>
+<p>Satellites near Earth commonly rely on GPS for navigation, but those signals may be weak, unreliable, or unavailable around the Moon and in deep space. FALCON offers an alternative by allowing spacecraft to determine where they are using what they can observe around them.</p>
+<p>The FALCON payload is a joint flight experiment developed by NASA and EraDrive, a startup that emerged from Stanford University. The system combines EraDrive's Era-Core flight software and embedded algorithms with Starling's cameras and an onboard catalog of known satellites. Together, these tools enable GPS-independent navigation while also helping the spacecraft track activity and objects in its surroundings.</p>
+<p>"FALCON is yet another success for the Starling demonstration mission. The results from FALCON can have far-reaching implications for on-orbit space-traffic monitoring, collision avoidance, and alternative navigation," said Roger Hunter, program manager for NASA's Small Spacecraft and Distributed Systems program at NASA's Ames Research Center in California's Silicon Valley. "The number of 'firsts' from Starling just keeps growing."</p>
+<p>Using Satellites and Debris as Reference Points</p>
+<p>The FALCON demonstration evaluated two related capabilities using Starling's onboard star tracker cameras. These cameras are standard spacecraft instruments that detect bright objects in space and help determine a spacecraft's orientation and position.</p>
+<p>During position, navigation, and timing experiments, FALCON identified objects seen by Starling's cameras, including other spacecraft and orbital debris, and compared them with a publicly available catalog of known space objects maintained by the U.S. Department of War. Once the observed objects were identified and verified, FALCON used them as reference points to calculate Starling's orbit.</p>
+<p>A separate set of experiments tested whether the spacecraft could improve orbital estimates for the objects it observed. Mission controllers loaded a catalog containing approximately 20,000 space objects and their predicted orbits onto Starling.</p>
+<p>FALCON then compared the catalog information with observations gathered by Starling's cameras. Using those measurements, it calculated Starling's position while also refining the estimated locations of other objects in space. The resulting estimates were even more precise than the existing catalog data.</p>
+<p>Over a period of three days, FALCON improved the known orbits of more than 200 objects without any intervention from operators on the ground.</p>
+<p>A First for Autonomous Optical Navigation</p>
+<p>FALCON's ability to determine its own orbit represents a first for a spacecraft navigating with optical cameras based on its position relative to other objects in space. In separate catalog updating tests, Starling also generated better onboard predictions of object positions than those supplied by ground stations.</p>
+<p>These abilities could be especially valuable for future networks of satellites operating without GPS. Coordinated satellite systems may play an important role in supporting human activities on the surfaces of the Moon or Mars.</p>
+<p>Precise spacecraft positioning is also essential for distributed science missions, where measurements collected from several locations in space must be accurately aligned. For space traffic management, autonomous navigation and onboard catalog updates could reduce dependence on ground-based tracking networks while improving collision avoidance.</p>
+<p>From University Research to Commercial Technology</p>
+<p>The FALCON experiment also demonstrates NASA's role in helping university research develop into commercial technology. The work began as a University SmallSat Technology Partnerships project before developing into EraDrive, which is now commercializing its Era-Core software and related hardware for wider use.</p>
+<p>Starling gave the technology an opportunity to be tested under real conditions in orbit, demonstrating how advanced flight software can allow satellites to function as increasingly autonomous navigators.</p>
+<p>Later this year, Starling, which launched in 2023, will expand the FALCON experiment using Era-Core. The mission's four spacecraft will share tracking information with one another and use those combined observations to refine their positions collectively.</p>
+<p>NASA's Ames Research Center in California's Silicon Valley leads the Starling mission. NASA's Small Spacecraft and Distributed Systems program, based at Ames and within the Research and Technology Mission Directorate, funds and manages the Starling mission.</p>
+<p>Materials provided by NASA. Note: Content may be edited for style and length.</p>
+<p>Scientists Sound the Alarm As Colorectal Cancer Reverses a 20-Year Decline</p>
+<p>A Hidden Cancer-Fighting Switch Could Supercharge the Human Immune System</p>
+<p>A Devastating Disease Is Threatening the Worldâs Chocolate Supply â but Scientists May Have Found the Answer</p>
+<p>Researchers Discover Earth May Have Made Its Own Water 4.5 Billion Years Ago</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-test-location-aware-apis-with-fastapi-and-postgis/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/08/260826055450.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

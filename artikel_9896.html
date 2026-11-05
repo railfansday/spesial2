@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Burnt TOAST</title>
+    <title>11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9896.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,67 +15,165 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Burnt TOAST</h1>
+        <h1>11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://a.storyblok.com/f/187930/1080x566/c14d2d8fc4/burnt-toast-post.png" alt="Burnt TOAST" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://wiredream.com/banner.png" alt="11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.storyblok.com/f/187930/1080x566/c14d2d8fc4/burnt-toast-post.png" alt="Burnt TOAST" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://wiredream.com/banner.png" alt="11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Postgres at AI speed — deploy anywhere. Explore pgEdge Starfleet →</p>
-<p>A financial firm hired me in 2010 to revise their Postgres cluster architecture. During my stint there, I learned a healthy respect for their event_log table. But perhaps “respect” is the wrong word here, as it was more of a deep loathing. This table, you see, was the canonical ledger of system events and consisted of several million rows.</p>
-<p>The high row count wasn’t a problem by itself. We kept a tight visibility window and archived frequently. Unfortunately for us, one of the columns was an unconstrained TEXT type that commonly held a large blob of XML. Thus any fetch from this table was inordinately slow. Writing was equally painful. We went through great pains to shape the application itself to avoid touching it except when absolutely necessary. It was evil incarnate.</p>
-<p>The performance of this table initially confused and enraged me—until I remembered about TOAST. Postgres likes to innocuously dub this backronym “The Oversized-Attribute Storage Technique” but DBAs in the field maintain a love/hate relationship with the system. Whether that’s justified is a different question.</p>
-<p>On the surface, it’s a way to store huge blocks of data elsewhere to keep tuples small and avoid exceeding the relatively petite 8KB data page size. Postgres creates a shadow table for the bulky content, splits it up into chunks, and stores a pointer in the original row. It’s an elegant solution to a pressing issue, but there are deep performance implications.</p>
-<p>So let’s dig into precisely why DBAs secretly dread large text-based columns, shall we?</p>
-<p>To really understand what happened in my event_log case, it’s good to reconstruct some semblance of it.</p>
-<p>And then we can bootstrap the table with 100k rows. Just enough to make it annoying! The data column needs to be big, but not absolutely gigantic. Let’s start with up to 1000 data points:</p>
-<p>Great! Now where did all of that data go? If you thought, “Into the event_log table of course!” you’re wrong. Instead, Postgres helpfully created a TOAST table for most of it. Let’s check the pg_class catalog for the other objects:</p>
-<p>That’s three objects for the price of one: the original table, a toast table, and a toast table index. This doesn’t always happen, but if your table has a text-like column without a maximum length, it probably did. In this case, it’s because an unbounded JSON column can contain anything, so Postgres preemptively initialized a TOAST table to store the “anything”.</p>
-<p>What goes in is a bit more subtle, and is where the trouble starts brewing.</p>
-<p>There’s a kind of inherent hierarchy that determines how data gets managed. The typstorage column in the pg_type catalog explains how this works for each type Postgres understands. There are four valid storage methods:</p>
-<p>PLAIN (p): The value stays inline and uncompressed. This is the default for fixed-width types like INT and TIMESTAMPTZ.</p>
-<p>MAIN (m): Compression is allowed, with TOAST only as the last resort. The default for NUMERIC.</p>
-<p>EXTERNAL (e): TOAST is allowed, but compression is not.</p>
-<p>EXTENDED (x): Anything is fair game. This is the default for TEXT, BYTEA, JSONB, and most other variable-length types.</p>
-<p>Postgres imposes a loop on all text-based column types in a tuple that it applies until the entire row is under the standard 8KB page threshold (minus overhead). It looks something like this:</p>
-<p>Being the default for JSON, all of our data follows the rules for EXTENDED. We can see it in action by checking a few rows:</p>
-<p>The toast_tuple_target storage setting tells Postgres when to toast column contents. The default is around 2KB of compressed data, and anything after that is moved into TOAST automatically. The example above has a row that compresses right under that limit, and as a result, never gets moved.</p>
-<p>If we examine page 57 specifically, this becomes even more clear:</p>
-<p>The tuple size of the rows that didn’t get toasted is much larger than those that did. That’s thanks to a pointer replacing the toasted values. And that’s not all. Toasted data is also broken into chunks. Every toasted value gets broken into 1996-byte blocks and stored in sequential order as rows in the toast table.</p>
-<p>Any toasted value implies at least one fetch from the toast table. That’s a read on the toast index and a read on the toast table itself per chunk.</p>
-<p>Chunks must be re-assembled. That’s extra memory usage and can be significant depending on chunk count.</p>
-<p>Compressed data must also be decompressed. That’s both memory and CPU overhead.</p>
-<p>The intuitive read of this is that TOAST is always worse. But is it?</p>
-<p>Let’s run an experiment! We already have a table where some of the data is toasted. What happens if we force Postgres to select all of it?</p>
-<p>This requires some setup. To begin, we create a non-toasted table by setting the event_data column to use MAIN storage. That allows it to be compressed, but not toasted unless the full tuple exceeds a Postgres page size. Like so:</p>
-<p>Then we can directly compare the costs of pulling out field 999 from the data:</p>
-<p>Take a look at that! Shared buffers really saved our bacon on this one. Total buffer reads on the toasted column required 288127 total reads versus 40754 for the non-toasted version. Conversely, the toasted table is much smaller:</p>
-<p>While Postgres can read through the heap faster, it then has to spend a lot of time seeking through the toast table. This size difference translates to some non-intuitive behavior. For instance, most interactions with the toasted table are actually much faster. Consider counting all rows:</p>
-<p>That’s 26ms vs 91ms. Or jumping through offsets:</p>
-<p>Any time Postgres has to deal directly with the heap, performance suffers immensely. Toast pointers can act as an optimization, particularly when not interacting with the toasted column because they make each row on the heap much smaller.</p>
-<p>This one kind of blew my mind. It turns out that the problem with the event_log table wasn’t necessarily the TOAST system, but the event_data column itself. It turns out there’s a way to fix that.</p>
-<p>Back then, “fixing that” meant to split the table. Our toy example is a mere 100k rows, but the real one was several million and the heap alone was over 1GB. Including TOAST on those huge XML blobs brought the total table size to over 20GB.</p>
-<p>When an application is full of SELECT * and is repeatedly looking up and decoding toasted data, it can eventually take a toll. Even if we ignore the disk IO, that’s a lot of extra network bandwidth. “Just specify the column names!” you might say, and I agree. If only it were that easy to modify ORM-generated queries and five years of accumulated hand-written ones.</p>
-<p>What do we gain from this? For one, we no longer need to carry around the TOAST pointers in the main application table. Secondly, since this column was a mix of toasted and non-toasted values due to the toast_tuple_target cutoff, even non-toasted values have been relocated. We can see this in the new table heap sizes:</p>
-<p>All operations will now be substantially faster simply because page density is now guaranteed to be higher. More rows fit on each page, and there are fewer pages required to represent the primary core of the table. The entire heap is now 5MB rather than 47MB, a saving of over 9x. If it’s at all possible to relocate large columns to an optional JOIN in a high-performance system, it may be worth taking a second look.</p>
-<p>If you think we could have achieved a similar effect by setting toast_tuple_target arbitrarily low, think again. The TOAST system won’t even activate if a row value is shorter than TOAST_TUPLE_THRESHOLD, a compiled value that acts as a hard minimum. Values below this won’t even be considered for toasting. What can I say? Postgres is a picky eater.</p>
-<p>The obvious objection is that applications now need a join. Well, the Postgres planner has you covered:</p>
-<p>The trick is the LEFT JOIN, making the event data optional even though we know every row has a value there. Queries that don’t specify the column will prune the JOIN and everyone is happy.</p>
-<p>As of Postgres 14, it’s even possible to choose the compression type. Stick with the venerable built-in pglz, or use lz4 if it’s been compiled into your binaries. The default for the entire server comes from default_toast_compression:</p>
-<p>Or it can be set using the COMPRESSION decorator during CREATE TABLE or ALTER TABLE.</p>
-<p>One interesting note about the compression types is that pglz is somewhat quirky. It skips values under 32 bytes, demands at least 25% savings, and gives up entirely if it finds nothing to compress in the first 1KB. The last rule is kind of odd to see in action:</p>
-<p>There are also some associated performance implications. Consider:</p>
-<p>When dealing with 100k rows of 10k compressed values, lz4 is a bit slower decompressing by about 20% in this case, but is over 30 times faster at compression. That’s absolutely staggering.</p>
-<p>Look, we all want to play the blame game. I always blamed the TOAST system for how badly our application’s event_log table performed. Every time someone complained. Any occasion when a badly written query made it through the application and touched the table in a way that apparently enraged it and caused every page load to quadruple or time out entirely. In my head, TOAST was at fault.</p>
-<p>Ironically, it was TOAST’s fault in a way, because it’s not aggressive enough. Think about it. Postgres needs TOAST_TUPLE_THRESHOLD to avoid activating the expensive machinery that deconstructs, compresses, and moves data to an external table. But imagine how things could look if anything could be offloaded arbitrarily. Unfortunately there’s no option for that. Out of PLAIN, MAIN, EXTENDED, and EXTERNAL, none cover the case for “move anything over 100 bytes and also compress it if it’s over 2k.” Though there’s an argument for using EXTERNAL on medium-sized but “large-ish” columns: we gain the benefit of a smaller heap, and data less than 1kb doesn’t tend to compress well anyway.</p>
-<p>Instead, we have to compromise our schema design and introduce an extra join for parts of the application that actually interact with the bulky column. Views sidestep this to an extent, but it’s something of an ugly hack compared to leaving the table intact. We also can’t leverage this maneuver every single time a big column shows up, or our schema would end up a horrifying mess. Not all columns are “optional” enough to banish.</p>
-<p>What TOAST provides is a suitable middle-ground. For the cost of a pointer, we get to essentially forget a huge block of text exists in the table at all. The heap is happier and we’re none the wiser. Compression speeds are also dramatically faster for those who switch to lz4.</p>
-<p>So don’t be afraid of Postgres TOAST; it’s the best kind there is.</p>
-<p>Experience the magic of pgEdge for non-distributed and distributed Postgres deployments.</p>
+                <p>A friend recently pointed out a new Word Ladder game variant:
+Find a path of mutations from a start word to an end word,
+where mutations can be single letter changes, single letter
+deletions or additions, or anagramming the word. It annoyed me
+(the paths involving anagrams can be wickedly hard to spot),
+so, naturally, I wrote a solver for it. And when the solver
+took over a second to run, I of course had to optimize it. Along the way, I
+found a fun trick for anagram indexing—fitting a collision-free
+prime-product identifier for every word in the dictionary into a
+single 64-bit integer—that I hadn't seen before (though the history
+of computing is long and Knuth probably noticed it in 1965).</p>
+<p>For completeness, I should note that what I was interested in
+was finding all anagrams in a dictionary---if you just want
+to find anagrams of a specific word you can probably get away
+with a much simpler hash table design! We'll use all of the
+anagrams in the next post talking about solving the whole word
+ladder.</p>
+<p>The two usual tricks for finding anagrams are to use
+either a letter-sorted permutation or a letter-count vector
+as a
+unique identifier for the letters in the word in an
+order-independent way:</p>
+<p>and then run through the dictionary and insert items
+into a hash table based upon their letter count. In python-ish pseudocode:</p>
+<p>Because I'd been feeling a little, uh, rusty in my coding lately, I
+decided to implement this all myself in Rust instead of yelling at an LLM
+to do it (this is a leetcode-like problem so it would have done it trivially).
+That code looked like:</p>
+<p>Using the Scrabble(tm) dictionary pre-read into memory, this function
+produces the anagram dictionary in:</p>
+<p>That seems fine. Oh wait, just kidding, that's INSANELY SLOW. The
+dictionary has 178,690 entries in it, which means we're spending 173
+nanoseconds per word to build up this dictionary. In 173 nanoseconds
+you could execute roughly 4400 instructions on my Macbook Pro M1.
+Who has time to wait for that??</p>
+<p>When optimizing, one of the first places to be suspicious is
+allocations, and this one has them in droves. Every word results
+in either the allocation of a Vec or an append to a Vec, which
+sometimes needs an allocation. Practically, there are about
+161019 keys in the table, so that's 161k allocations (!!).
+Let's improve those by using a slightly more clever data structure,
+noting two things:</p>
+<p>So we'll do two things: We'll find a way to store singleton
+items without needing a dynamic-length data structure at all,
+and we'll implement the equivalent of a linked list for appending
+items to the lists, since they're append-only and we only scan them
+once at the end. To do this, we'll use a structure like this:</p>
+<p>Where heads is indexed by the anagram-identifying-key (e.g.,
+the character-sorted string). We'll overload that u32 by
+using the high bit (we only have 170k or so words) to let
+it represent
+either an actual data value (the index of
+an element in the list) OR an index into the next+word arrays.
+The next array is our linked list - it stores pointers to
+another entry in the next array. The word array stores the
+associated data. It looks like this:</p>
+<p>Much better, but we can do better yet. The time to sort
+that string and create a new string allocation is non-trivial
+and we're doing 178k of them. That's going to be another
+big chunk of nanoseconds.</p>
+<p>Let's try a letter count vector instead, and pack it tightly into an integer.
+With only 26 characters, if we assume that no word has more than 15
+repetitions of the same character, we could use 4 bits per character
+for 26 x 4=104 bits. That fits comfortably in a u128, and while
+that's not tiny, it's at least a nice fixed size 16 byte thing
+we can use as a fast hash table key.</p>
+<p>(Note that we've done something else here - we're only returning
+the list of anagrams, not a full dictionary containing all of the
+words that don't have anagrams.)</p>
+<p>Avoiding the string manipulation and sorting gives a big win:</p>
+<p>At this point, we might ask a question like "how much does
+the slow default Rust hash table cost us?"</p>
+<p>So we'll switch to the rustc_hash FxHashMap, which is much faster
+if you don't have to worry about adversarial inputs to your hash table.</p>
+<p>That seems much better. But are we done yet?</p>
+<p>Storing the letter count as a u128 is also a little slower
+than necessary, because it'll be split across two 64 bit
+registers and requires the compiler to carry that addition
+across them and do twice as much work for equality testing.
+But if we tried lettercounting in 64 bits, we would only be
+able to store 2 bits, and many words have more than 3 of
+the same letter ("MISSISSIPPI", for example, already has 4 S's).</p>
+<p>Instead, we'll use an approach based on
+Gödel numbering:
+we'll create a small
+table associating one distinct prime number with each letter, and identify
+each word by the product of the letter-primes. This guarantees a
+unique identifier for each mix of letters. Naively, one might
+assign "a -> 2, b -> 3, c -> 5" and so on. But this is a practical
+blog post, and we'd like to fit the result in 64 bits; if
+we use the naive assignment, we overflow at the 365th word in our
+dictionary, "ABORTIVENESSES". And that's only 14 characters long,
+we have 3157 15-character words as well!
+If we let it wrap,
+we'll have just implemented a hash function, and there's no guarantee
+that two words won't accidentally collide, so then we'd need to add
+some machinery to check that...</p>
+<p>So here's the trick: Find an optimized assignment of primes to
+letters in the alphabet such that none of the words in our
+Scrabble dictionary overflow a 64 bit number. I started out
+thinking about the standard English letter frequency
+(ETAOINSHRDLU, etc.), but that turns out to be a little
+wrong: We don't care much about words like "the", we care about
+words like "WRONGHEADEDNESS". So instead, we need to go
+based on the patterns found in the 3157 15-character words. In particular,
+while "E" remains assigned to 2, the common "T" is assigned 29,
+and we use 3 for "I". Our friend "J" is assigned 101, since
+the longest word with two or more J's in it is only 12 characters
+long: JEJUNENESSES. Looking at that, those E's and N's and S's better
+have low values, and they do: 2, 19, 17. We could handle 15 N's in
+a row in 64 bits still.</p>
+<p>To solve this, I had a small program start with the letter-frequency
+ordering (which does a lot better than alphabetical but isn't good enough),
+loop finding the first word that overflowed and switch out some of its primes
+for lower valued primes. This would have also been fun to throw at a
+solver.</p>
+<p>which doesn't overflow for any word in the Scrabble dictionary.
+We've found a collision-free canonical 64-bit identifier for the bag of letters in a
+(Scrabble) word, which looks like this in code:</p>
+<p>In this representation, the largest product word is</p>
+<p>which in log2 is 63.945; it's about 96.2% of the way through the 64 bit
+number space. Close, but it fits.</p>
+<p>Result: 4.1ms -> 2.6ms (14.7ns / word — 12x faster than baseline)</p>
+<p>And then there's a final optimization you can do: Instead of reading
+the dictionary into strings, read them into a packed u128 representation
+using 5 bits per character, and then add some instruction-level parallelism
+for our CPU (ILP) by doing the product accumulation using two independent
+accumulators. This u128 representation is useful for speeding up other
+parts of the word ladder solver later. That code looks like this:</p>
+<p>Result: 2.6ms -> 2.3ms (13 ns/word - 13x faster than baseline)</p>
+<p>This is looking pretty good. The only last optimization I have to add
+is to address some branch mispredictions in that rest != 0 loop. We
+can instead just treat all words as if they're 16 characters long and
+ignore the 0's at the end by mapping them to 1 in our primes table
+(i.e., they have no effect on the product). Using a fixed length of 16
+also permits more auto-vectorization by our friendly compiler.
+To support that, we also separate the computation of the prime product
+from the insertion into the hash table, allowing more ILP from our
+now-vectorized multiplication loop.</p>
+<p>Result: 2.3 ms -> 1.96ms (10.9ns/word, 15x faster than baseline)</p>
+<p>We're finally pretty close to what I think a single core on my machine
+can get without explicit vectorization. That 1.96ms is about 1.23ns per
+byte, which could theoretically be about 3.2 x 8 x 1.23 = 31 instructions
+(but realistically fewer), which doesn't leave a ton of
+room for optimization---though I could be wrong! There's some space
+in there for an even faster hash table implementation but I'd rather
+stick with common, off-the-shelf things there.</p>
+<p>In the next post I'll show how we solve the entire word ladder problem,
+using the anagrams we've found as a part of it.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.pgedge.com/blog/burnt-toast" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://wiredream.com/anagram-fun/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
