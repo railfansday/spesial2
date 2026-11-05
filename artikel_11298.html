@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Block Sparse Matrices for Smaller and Faster Language Models</title>
+    <title>Boosting Wav2Vec2 with n-grams in 🤗 Transformers</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11298.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,287 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Block Sparse Matrices for Smaller and Faster Language Models</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>Boosting Wav2Vec2 with n-grams in 🤗 Transformers</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/44_boost_wav2vec2_ngram/wav2vec2_ngram.png" alt="Boosting Wav2Vec2 with n-grams in 🤗 Transformers" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/44_boost_wav2vec2_ngram/wav2vec2_ngram.png" alt="Boosting Wav2Vec2 with n-grams in 🤗 Transformers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Konten tidak tersedia.</p>
+                <p>Wav2Vec2 is a popular pre-trained model for speech recognition.
+Released in September 2020
+by Meta AI Research, the novel architecture catalyzed progress in
+self-supervised pretraining for speech recognition, e.g. G. Ng et
+al., 2021, Chen et al,
+2021, Hsu et al.,
+2021 and Babu et al.,
+2021. On the Hugging Face Hub,
+Wav2Vec2's most popular pre-trained checkpoint currently amounts to
+over 250,000 monthly
+downloads.</p>
+<p>Using Connectionist Temporal Classification (CTC), pre-trained
+Wav2Vec2-like checkpoints are extremely easy to fine-tune on downstream
+speech recognition tasks. In a nutshell, fine-tuning pre-trained
+Wav2Vec2 checkpoints works as follows:</p>
+<p>A single randomly initialized linear layer is stacked on top of the
+pre-trained checkpoint and trained to classify raw audio input to a
+sequence of letters. It does so by:</p>
+<p>Previously audio classification models required an additional language
+model (LM) and a dictionary to transform the sequence of classified audio
+frames to a coherent transcription. Wav2Vec2's architecture is based on
+transformer layers, thus giving each processed audio representation
+context from all other audio representations. In addition, Wav2Vec2
+leverages the CTC algorithm for
+fine-tuning, which solves the problem of alignment between a varying
+"input audio length"-to-"output text length" ratio.</p>
+<p>Having contextualized audio classifications and no alignment problems,
+Wav2Vec2 does not require an external language model or dictionary to
+yield acceptable audio transcriptions.</p>
+<p>As can be seen in Appendix C of the official
+paper, Wav2Vec2 gives impressive
+downstream performances on LibriSpeech without using a language model at
+all. However, from the appendix, it also becomes clear that using Wav2Vec2
+in combination with a language model can yield a significant
+improvement, especially when the model was trained on only 10 minutes of
+transcribed audio.</p>
+<p>Until recently, the 🤗 Transformers library did not offer a simple user
+interface to decode audio files with a fine-tuned Wav2Vec2 and a
+language model. This has thankfully changed. 🤗 Transformers now offers
+an easy-to-use integration with Kensho Technologies' pyctcdecode
+library. This blog
+post is a step-by-step technical guide to explain how one can create
+an n-gram language model and combine it with an existing fine-tuned
+Wav2Vec2 checkpoint using 🤗 Datasets and 🤗 Transformers.</p>
+<p>For a deep dive into how Wav2Vec2 functions - which is not necessary for
+this blog post - the reader is advised to consult the following
+material:</p>
+<p>As shown in 🤗 Transformers exemple docs of
+Wav2Vec2,
+audio can be transcribed as follows.</p>
+<p>First, we install datasets and transformers.</p>
+<p>Let's load a small excerpt of the Librispeech
+dataset to demonstrate
+Wav2Vec2's speech transcription capabilities.</p>
+<p>We can pick one of the 73 audio samples and listen to it.</p>
+<p>Having chosen a data sample, we now load the fine-tuned model and
+processor.</p>
+<p>Comparing the transcription to the target transcription above, we can
+see that some words sound correct, but are not spelled correctly,
+e.g.:</p>
+<p>Let's see whether combining Wav2Vec2 with an n-gram lnguage model
+can help here.</p>
+<p>First, we need to install pyctcdecode and kenlm.</p>
+<p>For demonstration purposes, we have prepared a new model repository
+patrickvonplaten/wav2vec2-base-100h-with-lm
+which contains the same Wav2Vec2 checkpoint but has an additional
+4-gram language model for English.</p>
+<p>Instead of using Wav2Vec2Processor, this time we use
+Wav2Vec2ProcessorWithLM to load the 4-gram model in addition to
+the feature extractor and tokenizer.</p>
+<p>In constrast to decoding the audio without language model, the processor
+now directly receives the model's output logits instead of the
+argmax(logits) (called predicted_ids) above. The reason is that when
+decoding with a language model, at each time step, the processor takes
+the probabilities of all possible output characters into account. Let's
+take a look at the dimension of the logits output.</p>
+<p>We can see that the logits correspond to a sequence of 624 vectors
+each having 32 entries. Each of the 32 entries thereby stands for the
+logit probability of one of the 32 possible output characters of the
+model:</p>
+<p>Intuitively, one can understand the decoding process of
+Wav2Vec2ProcessorWithLM as applying beam search through a matrix of
+size 624 $\times$ 32 probabilities while leveraging the probabilities of
+the next letters as given by the n-gram language model.</p>
+<p>OK, let's run the decoding step again. pyctcdecode language model
+decoder does not automatically convert torch tensors to numpy so
+we'll have to convert them ourselves before.</p>
+<p>Cool! Recalling the words facebook/wav2vec2-base-100h without a
+language model transcribed incorrectly previously, e.g.,</p>
+<p>we can take another look at the transcription of
+facebook/wav2vec2-base-100h with a 4-gram language model. 2 out of
+3 errors are corrected; christmas and similes have been correctly
+transcribed.</p>
+<p>Interestingly, the incorrect transcription of rose persists. However,
+this should not surprise us very much. Decoding audio without a language
+model is much more prone to yield spelling mistakes, such as
+christmaus or similes (those words don't exist in the English
+language as far as I know). This is because the speech recognition
+system almost solely bases its prediction on the acoustic input it was
+given and not really on the language modeling context of previous and
+successive predicted letters 1 {}^1 1. If on the other hand, we add a
+language model, we can be fairly sure that the speech recognition
+system will heavily reduce spelling errors since a well-trained n-gram
+model will surely not predict a word that has spelling errors. But the
+word rose is a valid English word and therefore the 4-gram will
+predict this word with a probability that is not insignificant.</p>
+<p>The language model on its own most likely does favor the correct word
+roast since the word sequence roast beef is much more common in
+English than rose beef. Because the final transcription is derived
+from a weighted combination of facebook/wav2vec2-base-100h output
+probabilities and those of the n-gram language model, it is quite
+common to see incorrectly transcribed words such as rose.</p>
+<p>For more information on how you can tweak different parameters when
+decoding with Wav2Vec2ProcessorWithLM, please take a look at the
+official documentation
+here.</p>
+<p>1{}^1 1 Some research shows that a model such as
+facebook/wav2vec2-base-100h - when sufficiently large and trained on
+enough data - can learn language modeling dependencies between
+intermediate audio representations similar to a language model.</p>
+<p>Great, now that you have seen the advantages adding an n-gram language
+model can bring, let's dive into how to create an n-gram and
+Wav2Vec2ProcessorWithLM from scratch.</p>
+<p>A language model that is useful for a speech recognition system should
+support the acoustic model, e.g. Wav2Vec2, in predicting the next word
+(or token, letter) and therefore model the following distribution:
+ P(wn∣w0t−1) \mathbf{P}(w_n | \mathbf{w}_0^{t-1}) P(wn​∣w0t−1​) with wn w_n wn​ being the next word
+and w0t−1 \mathbf{w}_0^{t-1} w0t−1​ being the sequence of all previous words since
+the beginning of the utterance. Simply said, the language model should
+be good at predicting the next word given all previously transcribed
+words regardless of the audio input given to the speech recognition
+system.</p>
+<p>As always a language model is only as good as the data it is trained on.
+In the case of speech recognition, we should therefore ask ourselves for
+what kind of data, the speech recognition will be used for:
+conversations, audiobooks, movies, speeches, , etc, ...?</p>
+<p>The language model should be good at modeling language that corresponds
+to the target transcriptions of the speech recognition system. For
+demonstration purposes, we assume here that we have fine-tuned a
+pre-trained
+facebook/wav2vec2-xls-r-300m
+on Common Voice
+7
+in Swedish. The fine-tuned checkpoint can be found
+here. Common Voice 7 is
+a relatively crowd-sourced read-out audio dataset and we will evaluate
+the model on its test data.</p>
+<p>Let's now look for suitable text data on the Hugging Face Hub. We
+search all datasets for those that contain Swedish
+data.
+Browsing a bit through the datasets, we are looking for a dataset that
+is similar to Common Voice's read-out audio data. The obvious choices
+of oscar and
+mc4 might not be the most
+suitable here because they:</p>
+<p>A dataset that seems sensible here and which is relatively clean and
+easy to pre-process is
+europarl_bilingual
+as it's a dataset that is based on discussions and talks of the
+European parliament. It should therefore be relatively clean and
+correspond well to read-out audio data. The dataset is originally designed
+for machine translation and can therefore only be accessed in
+translation pairs. We will only extract the text of the target
+language, Swedish (sv), from the English-to-Swedish translations.</p>
+<p>We see that the data is quite large - it has over a million
+translations. Since it's only text data, it should be relatively easy
+to process though.</p>
+<p>Next, let's look at how the data was preprocessed when training the
+fine-tuned XLS-R checkpoint in Swedish. Looking at the run.sh
+file, we
+can see that the following characters were removed from the official
+transcriptions:</p>
+<p>Let's do the same here so that the alphabet of our language model
+matches the one of the fine-tuned acoustic checkpoints.</p>
+<p>We can write a single map function to extract the Swedish text and
+process it right away.</p>
+<p>Let's apply the .map() function. This should take roughly 5 minutes.</p>
+<p>Great. Let's upload it to the Hub so
+that we can inspect and reuse it better.</p>
+<p>You can log in by executing the following cell.</p>
+<p>Next, we call 🤗 Hugging Face's
+push_to_hub
+method to upload the dataset to the repo
+"sv_corpora_parliament_processed".</p>
+<p>That was easy! The dataset viewer is automatically enabled when
+uploading a new dataset, which is very convenient. You can now directly
+inspect the dataset online.</p>
+<p>Feel free to look through our preprocessed dataset directly on
+hf-test/sv_corpora_parliament_processed.
+Even if we are not a native speaker in Swedish, we can see that the data
+is well processed and seems clean.</p>
+<p>Next, let's use the data to build a language model.</p>
+<p>While large language models based on the Transformer architecture have become the standard in NLP, it is still very common to use an n-gram LM to boost speech recognition systems - as shown in Section 1.</p>
+<p>Looking again at Table 9 of Appendix C of the official Wav2Vec2 paper, it can be noticed that using a Transformer-based LM for decoding clearly yields better results than using an n-gram model, but the difference between n-gram and Transformer-based LM is much less significant than the difference between n-gram and no LM.</p>
+<p>E.g., for the large Wav2Vec2 checkpoint that was fine-tuned on 10min only, an n-gram reduces the word error rate (WER) compared to no LM by ca. 80% while a Transformer-based LM only reduces the WER by another 23% compared to the n-gram. This relative WER reduction becomes less, the more data the acoustic model has been trained on. E.g., for the large checkpoint a Transformer-based LM reduces the WER by merely 8% compared to an n-gram LM whereas the n-gram still yields a 21% WER reduction compared to no language model.</p>
+<p>The reason why an n-gram is preferred over a Transformer-based LM is that n-grams come at a significantly smaller computational cost. For an n-gram, retrieving the probability of a word given previous words is almost only as computationally expensive as querying a look-up table or tree-like data storage - i.e. it's very fast compared to modern Transformer-based language models that would require a full forward pass to retrieve the next word probabilities.</p>
+<p>For more information on how n-grams function and why they are (still) so useful for speech recognition, the reader is advised to take a look at this excellent summary from Stanford.</p>
+<p>Great, let's see step-by-step how to build an n-gram. We will use the
+popular KenLM library to do so. Let's
+start by installing the Ubuntu library prerequisites:</p>
+<p>before downloading and unpacking the KenLM repo.</p>
+<p>KenLM is written in C++, so we'll make use of cmake to build the
+binaries.</p>
+<p>Great, as we can see, the executable functions have successfully
+been built under kenlm/build/bin/.</p>
+<p>KenLM by default computes an n-gram with Kneser-Ney
+smooting.
+All text data used to create the n-gram is expected to be stored in a
+text file. We download our dataset and save it as a .txt file.</p>
+<p>Now, we just have to run KenLM's lmplz command to build our n-gram,
+called "5gram.arpa". As it's relatively common in speech recognition,
+we build a 5-gram by passing the -o 5 parameter.
+For more information on the different n-gram LM that can be built 
+with KenLM, one can take a look at the official website of KenLM.</p>
+<p>Executing the command below might take a minute or so.</p>
+<p>Great, we have built a 5-gram LM! Let's inspect the first couple of
+lines.</p>
+<p>There is a small problem that 🤗 Transformers will not be happy about
+later on. The 5-gram correctly includes a "Unknown" or <unk>, as
+well as a begin-of-sentence, <s> token, but no end-of-sentence,
+</s> token. This sadly has to be corrected currently after the build.</p>
+<p>We can simply add the end-of-sentence token by adding the line
+0 </s>  -0.11831701 below the begin-of-sentence token and increasing
+the ngram 1 count by 1. Because the file has roughly 100 million
+lines, this command will take ca. 2 minutes.</p>
+<p>Great, this looks better! We're done at this point and all that is left
+to do is to correctly integrate the "ngram" with
+pyctcdecode and
+🤗 Transformers.</p>
+<p>In a final step, we want to wrap the 5-gram into a
+Wav2Vec2ProcessorWithLM object to make the 5-gram boosted decoding
+as seamless as shown in Section 1. We start by downloading the currently
+"LM-less" processor of
+xls-r-300m-sv.</p>
+<p>Next, we extract the vocabulary of its tokenizer as it represents the
+"labels" of pyctcdecode's BeamSearchDecoder class.</p>
+<p>The "labels" and the previously built 5gram_correct.arpa file is all
+that's needed to build the decoder.</p>
+<p>We can safely ignore the warning and all that is left to do now is to
+wrap the just created decoder, together with the processor's
+tokenizer and feature_extractor into a Wav2Vec2ProcessorWithLM
+class.</p>
+<p>We want to directly upload the LM-boosted processor into the model
+folder of
+xls-r-300m-sv to have
+all relevant files in one place.</p>
+<p>Let's clone the repo, add the new decoder files and upload them
+afterward. First, we need to install git-lfs.</p>
+<p>Cloning and uploading of modeling files can be done conveniently with
+the huggingface_hub's Repository class.</p>
+<p>More information on how to use the huggingface_hub to upload any
+files, please take a look at the official
+docs.</p>
+<p>Having cloned xls-r-300m-sv, let's save the new processor with LM
+into it.</p>
+<p>Let's inspect the local repository. The tree command conveniently can
+also show the size of the different files.</p>
+<p>As can be seen the 5-gram LM is quite large - it amounts to more than
+4 GB. To reduce the size of the n-gram and make loading faster,
+kenLM allows converting .arpa files to binary ones using the
+build_binary executable.</p>
+<p>Great, it worked! Let's remove the .arpa file and check the size of
+the binary 5-gram LM.</p>
+<p>Nice, we reduced the n-gram by more than half to less than 2GB now. In
+the final step, let's upload all files.</p>
+<p>That's it. Now you should be able to use the 5gram for LM-boosted
+decoding as shown in Section 1.</p>
+<p>As can be seen on xls-r-300m-sv's model
+card
+our 5gram LM-boosted decoder yields a WER of 18.85% on Common Voice's 7
+test set which is a relative performance of ca. 30% 🔥.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/pytorch_block_sparse" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/wav2vec2-with-ngram" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From the Hugging Face Hub to robot hardware with Strands Agents and LeRobot</title>
+    <title>Staying Evergreen: How we automated secure access and repo hygiene in a shared org</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10002.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,68 +15,125 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From the Hugging Face Hub to robot hardware with Strands Agents and LeRobot</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>Staying Evergreen: How we automated secure access and repo hygiene in a shared org</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/qvSGZ0tZsgr4U4BCx_bVX.png" alt="From the Hugging Face Hub to robot hardware with Strands Agents and LeRobot" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://github.blog/wp-content/uploads/2026/01/00ab37fbbb9bc343b007734b0e5805a26e747c90d955750bd976cb9ce84f6a2a-1920x1080-1.png" alt="Staying Evergreen: How we automated secure access and repo hygiene in a shared org" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/qvSGZ0tZsgr4U4BCx_bVX.png" alt="From the Hugging Face Hub to robot hardware with Strands Agents and LeRobot" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://github.blog/wp-content/uploads/2026/01/00ab37fbbb9bc343b007734b0e5805a26e747c90d955750bd976cb9ce84f6a2a-1920x1080-1.png" alt="Staying Evergreen: How we automated secure access and repo hygiene in a shared org" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A walkthrough of the LeRobot integration in Strands Robots - one agent loop, from a Hub dataset to a physical robot, with sim-to-real datasets in the same on-disk format and policies you swap with a string.</p>
-<p>You have a robot, a folder of demonstration data on the Hugging Face Hub, and a new task you want it to learn. Today that takes five separate tools: one to record new demonstrations, another to train, a third to test in simulation, custom code to deploy on hardware, and yet another to coordinate when you have more than one robot. The pieces work on their own. They don't talk to each other.</p>
-<p>Strands Robots is an open source SDK from AWS (Apache 2.0) that exposes robot abstractions, simulation, and the LeRobot stack as AgentTools that you compose into a single Strands agent. The integration is deliberately thin: LeRobot's own scripts handle hardware recording and calibration, and the Strands AgentTools come in for the parts an agent actually orchestrates. The simulation tool records LeRobotDatasets in the same format LeRobot writes on hardware. LerobotLocal serves policy inference behind one interface for GR00T, ACT, SmolVLA, and MolmoAct2 checkpoints. A peer mesh fans the agent out to remote robots. The dataset format stays exactly as LeRobot wrote it; the agent loop is the glue.</p>
-<p>This post walks you through five steps inside a single agent: build the agent over the LeRobot AgentTools, record a demonstration as a LeRobotDataset in simulation, run a policy on the same robot, deploy the same agent code to a physical SO-101  with one keyword argument change, and broadcast commands across a fleet over the Zenoh mesh. At the end, you can clone the working sample application from GitHub and run it on your laptop in simulation. No hardware, no GPU, no Hugging Face credentials needed for the default path. The runnable companion to this post lives at examples/lerobot/hub_to_hardware.py and hub_to_hardware.ipynb. The notebook is sim-only and Mock-policy by default.</p>
-<p>The Strands Robots SDK exposes the LeRobot stack as AgentTools that you compose into one Strands agent. The example agent in this post does four things: record new demonstrations in simulation, push the result to the Hub as a LeRobotDataset, run a policy in simulation against that same format, and deploy the same agent code to a physical robot with one keyword argument change. When you have more than one robot, the agent can coordinate the whole fleet through a built-in peer mesh. For hardware recording and calibration, LeRobot's own CLIs (lerobot-record, lerobot-calibrate) handle the bring-up; the agent picks up from there.</p>
-<p>Figure 1. Robot("so100") defaults to a MuJoCo-backed simulation; mode="real" returns a hardware robot driven by LeRobot. Both modes share the same DatasetRecorder and the same policy providers, so a dataset captured in sim and a dataset captured on hardware use the same on-disk LeRobotDataset format.</p>
-<p>Two design choices make this work. First, Robot("so100") returns a simulation by default (no hardware, no risk), and mode="real" returns a hardware-backed robot driven by LeRobot. The agent code is identical across both modes. Second, the DatasetRecorder that writes a LeRobotDataset is shared between the simulation path and LeRobot's own hardware recording, so a dataset captured in MuJoCo and one captured from a physical SO-101 are in the same format.</p>
-<p>The whole workflow in five lines of Python:</p>
-<p>What follows is what's actually happening inside that call, step by step.</p>
-<p>That's it. The example in this post runs end-to-end on a laptop with these three.</p>
-<p>Install Strands Robots and get the example files:</p>
-<p>Export your Hugging Face token if you want the agent to push datasets or pull policies from the Hub. This is optional for the default simulation path in this post; the example runs end-to-end with the Mock policy and writes the dataset to your local cache without needing Hub access.</p>
-<p>The runnable example lives at examples/lerobot/hub_to_hardware.py (Python script) and hub_to_hardware.ipynb (notebook), in the strands-labs/robots repository alongside the MuJoCo examples. The notebook is the recommended starting point: open it in JupyterLab and run cells top-to-bottom in simulation mode without any hardware connected.</p>
-<p>The simulation tool records LeRobotDatasets in the same format LeRobot writes on hardware. No hardware required. The Simulation tool's start_recording action writes through the same DatasetRecorder class: same parquet schema for joint states and actions, same per-camera MP4 layout. The agent prompt is almost identical:</p>
-<p>Figure 2. The recording scene in MuJoCo simulation: the SO-100 arm reaching toward a red cube on the ground plane, captured to a LeRobotDataset. No hardware, no GPU, no Hugging Face credentials needed for this default path.</p>
-<p>The Mock policy is intentional: it generates placeholder joint actions so the workflow runs end-to-end without a trained checkpoint. The robot moves through random motions rather than completing the grasp, and the recording is structurally complete (valid joint states, valid camera frames, a well-formed LeRobotDataset episode), but the demonstration itself isn't useful as training data. Step 3 below swaps in a GR00T checkpoint through LerobotLocal for real grasping behavior. To see actual cube-picking in this step, run --policy lerobot_local --checkpoint allenai/MolmoAct2-SO100_101 (a MolmoAct2 checkpoint, auto-detected from its config.json and routed through the LerobotLocal path); the prompt, dataset format, and agent code stay the same.</p>
-<p>The proof is what happens next. LeRobot's own dataset loader reads the sim-recorded data with no Strands-specific code path:</p>
-<p>This features dict is identical in shape to any LeRobot dataset on the Hub: same column names, same parquet+MP4 layout, same loader path. Training scripts that consume hardware-recorded data consume the sim-recorded data without modification. Datasets pushed from sim sit alongside hardware recordings in the same Hub repository if you want them to.</p>
-<p>A single episode from a recorded LeRobotDataset, played back from the per-camera MP4 the recorder wrote, the same on-disk video a training script reads.</p>
-<p>To record demonstrations on a physical SO-101 instead of simulation, use LeRobot's record CLI directly. The Strands integration doesn't wrap that command as an AgentTool because LeRobot already does the job cleanly:</p>
-<p>The dataset that lands on the Hub from this command is in the same format as the simulation recording. To fine-tune a policy on it, run LeRobot's training CLI (lerobot-train); training itself is out of scope for this post and follows the standard LeRobot workflow. From Step 3 onward, the agent picks up either the original or a fine-tuned checkpoint interchangeably. For full SO-101 hardware setup, calibration walkthroughs, and troubleshooting, see the README in the example folder.</p>
-<p>With the dataset on the Hub, the next step is to run a policy. The example uses the Robot() factory in its default sim mode and runs a GR00T checkpoint through the LerobotLocal provider, in the same process:</p>
-<p>Under the hood, the agent runs a run_policy action on the simulated robot with policy_provider="lerobot_local". The provider downloads the checkpoint from the Hub and loads it through LeRobot's GR00T policy in the same process. The simulation steps with the policy's action chunks, and a render of the result is available via Simulation.render. To run inference on a separate GPU host instead, start strands_robots.inference.server.PolicyServer there and use policy_provider="remote".</p>
-<p>Figure 3. With a trained policy (a GR00T or MolmoAct2 checkpoint), the agent drives the SO-100 to grasp the red cube in simulation, the behavior the Mock policy stands in for.</p>
-<p>The same provider loads any LeRobot checkpoint. A model ID under the lerobot/ organization routes to it by name:</p>
-<p>LerobotLocalPolicy supports ACT, Diffusion Policy, SmolVLA, π0, and π0.5, anything LeRobot's own policy registry can resolve from a config.json. Real-Time Chunking turns on automatically for flow-matching policies that ship an rtc_config (π0, SmolVLA).</p>
-<p>NVIDIA's recently released Cosmos 3 is also available as a policy provider behind the same interface, so the agent code stays the same whichever provider you point it at.</p>
-<p>Note: LerobotLocalPolicy loads Hugging Face models with trust_remote_code=True. Set STRANDS_TRUST_REMOTE_CODE=1 to opt in, and only load checkpoints from organizations you trust.</p>
-<p>This is the same code as Step 3, with one keyword argument changed. The Robot factory returns a hardware-backed robot driven by LeRobot's make_robot_from_config:</p>
-<p>The same agent prompt now runs against a physical arm. The hardware path uses LeRobot's robot abstraction for joint commands and camera reads, and the same GR00T checkpoint, loaded in-process, generates the action chunks.</p>
-<p>Before this runs against your SO-101, calibration for both follower and leader has to be in place. Run LeRobot's calibration command (lerobot-calibrate) once per device; the files land under ~/.cache/huggingface/lerobot/calibration/ and any Strands code path that touches the hardware reads them from there. If a calibration is missing, the agent surfaces the error from the LeRobot driver layer.</p>
-<p>Up to now we've driven one robot at a time. The mesh is how Strands Robots handles more than one. Picture a leader arm on your desk teleoperating a follower arm in another room, or five SO-101s running the same warehouse task in parallel, or a humanoid coordinating with a mobile base. All of those are mesh patterns. The mesh is built on Zenoh, an open source peer-to-peer protocol, and you don't manage IP addresses, write discovery code, or pick a broker; new robots show up on the mesh the moment they come up, and the agent can talk to all of them at once.</p>
-<p>A Robot() or Simulation() joins a Zenoh peer mesh when you pass mesh=True, or set STRANDS_MESH=true; the mesh is off by default. The robot_mesh tool gives the agent a vocabulary for fleet operations such as discovery, structured commands, broadcasts, and emergency stop:</p>
-<p>By default, every physically-actuating mesh action pauses for a human approval interrupt before it runs: the fleet-wide broadcast and emergency_stop, plus the single-peer tell, send, and stop. You can tune this set with the STRANDS_MESH_HITL_ACTIONS environment variable (set it to all, none, or a comma-separated subset). The first time you run this example, you'll see a robot_mesh-broadcast-approval prompt in your terminal; type y (or yes / approve) to authorize the broadcast. The approval is delivered out-of-band of the LLM's tool arguments, so a prompt-injection attempt that tries to slip an approval flag into the command body cannot bypass the gate.</p>
-<p>The transport scales without touching agent code. The built-in Zenoh mesh is the automatic fallback: on the LAN, Zenoh peers find each other with no broker (gossip by default; set STRANDS_MESH_MULTICAST=true for multicast scouting), and adding the [mesh-iot] extra routes traffic through AWS IoT Core (MQTT5 with mTLS) for cloud fleets, with a BridgeTransport that fans LAN and cloud behind one API (select it with STRANDS_MESH_BACKEND=bridge).</p>
-<p>For production fleets, Device Connect, a device-aware networking layer developed in collaboration with Arm, handles discovery, presence, structured RPC, event routing, and safety. The same robot_mesh tool dispatches through Device Connect when it is available and falls back to the built-in Zenoh mesh otherwise, so the agent code in this post is unchanged either way. See the Device Connect documentation for setup and current availability.</p>
-<p>The full sample is on GitHub at strands-labs/robots in the examples/lerobot/ folder. It packages all five steps into a single CLI script (hub_to_hardware.py) and a notebook (hub_to_hardware.ipynb). The CLI defaults run end-to-end in simulation with the Mock policy. No GPU, no Docker, no Hugging Face credentials needed.</p>
-<p>The recorded dataset lands at ~/.cache/huggingface/lerobot/local/strands-cube-pick/. To push to the Hugging Face Hub instead of keeping it local, pass --hf-user <your-user> after exporting HF_TOKEN with write scope. For real grasping behavior in Step 3, pass --policy lerobot_local --checkpoint nvidia/GR00T-N1.7-3B, or another Hub checkpoint. This needs a GPU and STRANDS_TRUST_REMOTE_CODE=1.</p>
-<p>The notebook (examples/lerobot/hub_to_hardware.ipynb) walks through the same workflow cell by cell, with narration between each step. Open it in JupyterLab and run top-to-bottom in simulation mode.</p>
-<p>The code snippets shown in this setup represent a “hello world” example of setting up Strands Robots with HuggingFace. For more serious, production-ready use cases there are some important considerations users should be aware of:</p>
-<p>Supplying untrusted data into agents can lead to prompt injection, where untrustworthy context is treated as LLM instructions. Given the actuation of these robots in physical space, this is an important risk to track. To mitigate this behavior, developers should be careful to feed the robots only data that comes from a trusted source. If not all input data can be trusted, developers should restrict the tools available to the agent to prevent the robots from making safety-critical actions.</p>
-<p>The STRANDS_MESH_LOCAL_DEV=1 setting shared in the code snippets in this blog initializes the robot mesh without authentication or access controls. This means that any device on the same network can provide commands to the robot fleet. This is acceptable for trusted development environments, but is not suitable for untrusted networks or production environments. For these use cases, STRANDS_MESH_AUTH_MODE=mtls is required.</p>
-<p>The robot_mesh tool's physically-actuating actions affect peers on the network: broadcast and emergency_stop reach every peer, while tell, send, and stop reach a single targeted peer. To prevent an agent from issuing these commands autonomously (or under prompt injection), all five are gated behind a human-in-the-loop interrupt by default. When the agent invokes a gated action, the Strands runtime pauses the agent loop and asks the operator to approve out-of-band of the LLM's tool arguments. You can adjust the gated set with the STRANDS_MESH_HITL_ACTIONS environment variable (all, none, or a comma-separated subset). Per-action rate limits, command validation, and an audit trail run alongside the interrupt. Outside an agent loop (a bare script or unit test), the gated actions fail closed.</p>
-<p>The preceding workflow opens serial ports on hardware and writes a local dataset cache. To return your environment to a clean state:</p>
-<p>The integration's central design choice is that Strands Robots doesn't reimplement what LeRobot already provides. Hardware abstraction, calibration, and the dataset format stay upstream. Strands adds the AgentTool surface that makes them composable from natural language.</p>
-<p>Two consequences follow. For users, every dataset on the Hub is an asset an agent can extend, fine-tune from, and deploy against with no conversion step. For developers, simulation data and hardware data share a single file format, so training scripts written for one consume the other unchanged. The line between sim and real becomes a deployment detail, not an architectural divide.</p>
-<p>Figure 4. The Strands Robots catalog spans arms, humanoids, quadrupeds, and hands, all in the same MuJoCo simulation and behind the same Robot() factory. The SO-100 in this post is one of many supported embodiments.</p>
-<p>The full Strands Robots documentation covers the robot catalog, simulation, policy providers, the mesh, and Device Connect in depth. For larger workloads, Strands Robots also ships heavier simulation backends, Isaac Sim and Newton. Both backends plug into the same Robot abstraction shown in this post, so the agent code stays the same as you scale up.</p>
-<p>Contributions are welcome under Apache 2.0. If you build something with this workflow, open an issue with what worked and what didn't. The SDK improves fastest when developer feedback lands directly on the surface that needs it.</p>
-<p>Cagatay Cali is a Research Engineer at AWS focused on Agentic AI and robotics. He designs interfaces that connect AI agents to physical robots, enabling developers to control robotic systems through natural language and making agents and robotics development accessible to builders at any skill level.</p>
-<p>Sundar Raghavan is a Sr Solutions Architect at AWS on the Agentic AI Foundations team. He leads the developer experience for Amazon Bedrock AgentCore, owning the SDK and CLI, and drives the framework and ecosystem integrations strategy. He focuses on how developers build, deploy, and scale production AI agents on AWS. He is currently extending that focus into physical AI, collaborating on Strands Robots to bring the same agent developer experience to robotics.</p>
-<p>Fantastic to see! The single-kwarg flip from MuJoCo sim to mode="real" (same agent code, same LeRobotDataset format end to end) is exactly the friction-removal that gets robotics agents into real labs. Work like this lifts all the ships: the easier and more open we make agent-to-hardware control, the faster the whole industry moves. The Device Connect team at Arm is excited to collaborate!</p>
+                <p>Learn about artificial intelligence and machine learning across the GitHub ecosystem and the wider industry.</p>
+<p>Everything developers need to know about LLMs.</p>
+<p>Machine learning tips, tricks, and best practices.</p>
+<p>Explore the capabilities and benefits of AI code generation and how it can improve your developer experience.</p>
+<p>Resources for developers to grow in their skills and careers.</p>
+<p>Insights and best practices for building apps.</p>
+<p>Tips & tricks to grow as a professional developer.</p>
+<p>Learn how to move into your first professional role.</p>
+<p>Stay current on what’s new (or new again).</p>
+<p>Learn how to start building, shipping, and maintaining software with GitHub.</p>
+<p>Get an inside look at how we’re building the home for all developers.</p>
+<p>Discover how we deliver a performant and highly available experience across the GitHub platform.</p>
+<p>Explore best practices for building software at scale with a majority remote team.</p>
+<p>Get a glimpse at the technology underlying the world’s leading AI-powered developer platform.</p>
+<p>Learn how we build security into everything we do across the developer lifecycle.</p>
+<p>Find out what goes into making GitHub the home for all developers.</p>
+<p>Our engineering and security teams do some incredible work. Let’s take a look at how we use GitHub to be more productive, build collaboratively, and shift security left.</p>
+<p>Explore how to write, build, and deploy enterprise software at scale.</p>
+<p>Automating your way to faster and more secure ships.</p>
+<p>Guides on continuous integration and delivery.</p>
+<p>Tips, tools, and tricks to improve developer collaboration.</p>
+<p>DevOps resources for enterprise engineering teams.</p>
+<p>Learn why Gartner positioned GitHub as a Leader for the second year in a row.</p>
+<p>Keep up with what’s new and notable from inside GitHub.</p>
+<p>An inside look at news and product updates from GitHub.</p>
+<p>The latest on GitHub’s platform, products, and tools.</p>
+<p>Insights into the state of open source on GitHub.</p>
+<p>The latest policy and regulatory changes in software.</p>
+<p>Data-driven insights around the developer ecosystem.</p>
+<p>Learn how to use retrieval-augmented generation (RAG) to capture more insights.</p>
+<p>How open source is driving positive change.</p>
+<p>Organizations worldwide are incorporating open source methodologies into the way they build and ship their own software.</p>
+<p>Helpful tips on securing web applications.</p>
+<p>Learn about core challenges in DevSecOps, and how you can start addressing them with AI and automation.</p>
+<p>Learn about artificial intelligence and machine learning across the GitHub ecosystem and the wider industry.</p>
+<p>Everything developers need to know about LLMs.</p>
+<p>Machine learning tips, tricks, and best practices.</p>
+<p>Explore the capabilities and benefits of AI code generation and how it can improve your developer experience.</p>
+<p>Resources for developers to grow in their skills and careers.</p>
+<p>Insights and best practices for building apps.</p>
+<p>Tips & tricks to grow as a professional developer.</p>
+<p>Learn how to move into your first professional role.</p>
+<p>Stay current on what’s new (or new again).</p>
+<p>Learn how to start building, shipping, and maintaining software with GitHub.</p>
+<p>Get an inside look at how we’re building the home for all developers.</p>
+<p>Discover how we deliver a performant and highly available experience across the GitHub platform.</p>
+<p>Explore best practices for building software at scale with a majority remote team.</p>
+<p>Get a glimpse at the technology underlying the world’s leading AI-powered developer platform.</p>
+<p>Learn how we build security into everything we do across the developer lifecycle.</p>
+<p>Find out what goes into making GitHub the home for all developers.</p>
+<p>Our engineering and security teams do some incredible work. Let’s take a look at how we use GitHub to be more productive, build collaboratively, and shift security left.</p>
+<p>Explore how to write, build, and deploy enterprise software at scale.</p>
+<p>Automating your way to faster and more secure ships.</p>
+<p>Guides on continuous integration and delivery.</p>
+<p>Tips, tools, and tricks to improve developer collaboration.</p>
+<p>DevOps resources for enterprise engineering teams.</p>
+<p>Learn why Gartner positioned GitHub as a Leader for the second year in a row.</p>
+<p>Keep up with what’s new and notable from inside GitHub.</p>
+<p>An inside look at news and product updates from GitHub.</p>
+<p>The latest on GitHub’s platform, products, and tools.</p>
+<p>Insights into the state of open source on GitHub.</p>
+<p>The latest policy and regulatory changes in software.</p>
+<p>Data-driven insights around the developer ecosystem.</p>
+<p>Learn how to use retrieval-augmented generation (RAG) to capture more insights.</p>
+<p>How open source is driving positive change.</p>
+<p>Organizations worldwide are incorporating open source methodologies into the way they build and ship their own software.</p>
+<p>Helpful tips on securing web applications.</p>
+<p>Learn about core challenges in DevSecOps, and how you can start addressing them with AI and automation.</p>
+<p>Put native GitHub features to work to review outside collaborator access and archive stale repositories.</p>
+<p>Working with outside collaborators can add more work for a repository owner. You need to confirm who still needs access, change permissions as projects evolve, and archive repositories once they’ve served their purpose.</p>
+<p>To keep up, repository owners need to track collaborators, deadlines, and follow-ups for each repository. As a project grows, that manual housekeeping becomes harder to keep up with and easier to defer.</p>
+<p>We faced this problem in a shared organization where GitHub employees (“Hubbers”) collaborate with customers and partners on product trials and professional services engagements. Our answer was Evergreen, a GitHub App built with native GitHub features. The workflows below exhibit a pattern you can adapt for your own organization.</p>
+<p>Evergreen is a GitHub App that automates organization hygiene through two workflows:</p>
+<p>Fail secure. If nobody responds to an access review, we don’t leave access in place and hope for the best. We revoke it. The safe outcome is the default outcome.</p>
+<p>Never destroy anything. Evergreen will never delete a repository or its contents. Archived repos are recoverable, and every access change is written into the repo’s tracking issue, so reverting a mistake is as easy as a copy-paste to Copilot.</p>
+<p>Under the hood, Evergreen is a small Go webhook server running in a container. But the interesting part is the choreography. Every moving piece is a stock GitHub feature: a GitHub App, scheduled actions, webhooks, issues, custom properties, and plain files in a repo. Nothing exotic to reinvent.</p>
+<p>A dedicated controller repo acts as Evergreen’s clock and its memory. Four scheduled GitHub Actions workflows fire repository_dispatch events on a quarterly cadence, and the app wakes up and does the work:</p>
+<p>Reviews open two weeks before their cleanup runs, and there’s a hard grace period baked in so a stray manual run can never fast‑forward the guillotine. Each workflow also supports workflow_dispatch, so we can trigger any step by hand as needed.</p>
+<p>Evergreen tracks every repo’s status as a JSON file (one per repository) committed to the controller repo under state/repos/<repo_id>.json. The snapshot of who had access, when the review opened, the deadline, who decided, and what happened all lives there. Here’s a completed review where a Hubber kept Alice’s access and let Bob’s lapse:</p>
+<p>The best part: because state is just files in git, the commit history is the audit trail. Want to know why someone lost access last spring? git log the state file. There’s no separate database or bespoke audit pipeline to track.</p>
+<p>Evergreen does its talking through issues inside each repository. When an access review kicks off, every repo gets a checklist issue:</p>
+<p>The interaction model is delightfully simple: check the boxes for who stays, then close the issue. That’s it. When the issue closes, Evergreen listens for the issues.closed webhook event, reads the checkboxes, retains the checked collaborators, and revokes the rest, then posts a receipt comment listing exactly what it kept and what it removed.</p>
+<p>Closing an access review issue is a privileged action, so Evergreen guards it. If someone who isn’t a Hubber closes an issue, the app quietly reopens it and posts a note explaining why. Decisions only count when they come from the people authorized to make them.</p>
+<p>Here’s a subtle problem: we know the people who need to respond to a review are Hubbers, but we didn’t always know which Hubber(s) owned a given repository.</p>
+<p>Evergreen resolves the right people to notify through a fallback chain:</p>
+<p>The result: the right owners get pinged automatically, without anyone maintaining a spreadsheet of “who owns what.”</p>
+<p>When a review deadline passes with no response, cleanup revokes every collaborator in the snapshot. We were careful about a subtle edge case: what if some removals succeed while others hit a transient API error? Marking the review “done” while a removal is still outstanding would be a quiet inconsistency, and we didn’t want that.</p>
+<p>So Evergreen fails closed. If any removal fails, the review stays pending and the issue stays open, and the next run retries the stragglers. It only records “revoked” once every removal actually succeeded. And whatever gets removed is written into the issue, so restoring access is a matter of re‑adding the handles it listed.</p>
+<p>Automated housekeeping has a reputation for being the office smoke alarm: loud, easy to ignore, and usually going off while you’re cooking something perfectly fine. We worked hard to make Evergreen feel like the opposite:</p>
+<p>Automation that manages access and archives repositories deserves a careful rollout, especially into a large, active org (ours has 1,400+ Hubbers, and many more customers and partners). We wanted the very first run to be a complete non‑event. A few practices got us there:</p>
+<p>Dry‑run first. Evergreen ships with a DRY_RUN mode that logs every write it would make without touching a single collaborator or repo. We ran it against the real org and read the logs like tea leaves until we trusted the decisions it wanted to make.</p>
+<p>Overcommunicate. Before flipping the switch, we broadcast what was coming, when, and what people needed to do, so the first issue anyone saw wasn’t a surprise. We found that when you’re telling a large group the same thing for the seventh time, it’s often when many are still hearing it for the first time.</p>
+<p>Watch everything with Splunk. Evergreen emits structured logfmt logs to a dedicated Splunk index. That observability is how we caught edge cases in the wild (empty collaborator lists, unusual permissions, repos with issues disabled) and tightened the logic before they mattered.</p>
+<p>Respect the platform’s speed limits. When you open issues and post comments across every repo in a big org, you slam into GitHub’s secondary rate limits for content creation: 80 requests/minute and 500/hour. While this is a thoughtful preventative control to avoid system abuse, it requires a bit of intention when automating IssueOps at large scale.</p>
+<p>So Evergreen paces itself by construction. It processes repos in batches, spaces out each content‑creating call by a couple of seconds, and sleeps between batches to let the rolling window clear, and it only counts the repos that actually create content, so a quiet quarter where nothing’s eligible still runs fast. We opted for proactive avoidance over reactive back‑off.</p>
+<p>Routine hygiene is the kind of work that’s easy to defer and perfect to automate. The trick isn’t heroic cleanup sprints: it’s making the boring, safe thing happen on a schedule, with a friendly face and an undo button.</p>
+<p>That’s Evergreen. And because it’s built entirely from native GitHub features, you can stand up the same pattern yourself.</p>
+<p>Ready to make repository hygiene routine? Start with one recurring access or archival task, then use GitHub Apps, actions, issues, and custom properties to automate the problem away.</p>
+<p>Senior Service Delivery Engineer at GitHub, passionate about the intersection of software engineering & security, and helping businesses focus on innovation, growth, and speed to market.</p>
+<p>How we fully migrated github.com away from CSS-in-JS.</p>
+<p>If you can write down how you do your work, you can automate it. Here’s what I did to support GitHub’s APAC marketing team.</p>
+<p>We moved a copy of 99.99999% of GitHub’s repositories to Azure. Here’s how per-reference quorums will bring over the rest, and how object storage lets reads scale independently.</p>
+<p>Our new repo star history API now provides trends without returning individual identities or requiring unbounded database work. These are the engineering tradeoffs we made.</p>
+<p>We’re rebuilding GitHub’s Git infrastructure while GitHub keeps running, creating a foundation for agent-scale software development.</p>
+<p>Everything you need to master GitHub, all in one place.</p>
+<p>Build what’s next on GitHub, the place for anyone from anywhere to build anything.</p>
+<p>Meet the companies and engineering teams that build with GitHub.</p>
+<p>Catch up on the key announcements shaping the future of software development.</p>
+<p>Discover tips, technical guides, and best practices in our biweekly newsletter just for devs.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/amazon/strands-lerobot-hub-to-hardware" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://github.blog/engineering/platform-security/staying-evergreen-how-we-automated-secure-access-and-repo-hygiene-in-a-shared-org/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

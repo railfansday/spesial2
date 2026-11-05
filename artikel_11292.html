@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fit More and Train Faster With ZeRO via DeepSpeed and FairScale</title>
+    <title>Fine-Tune ViT for Image Classification with 🤗 Transformers</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11292.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,59 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fit More and Train Faster With ZeRO via DeepSpeed and FairScale</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>Fine-Tune ViT for Image Classification with 🤗 Transformers</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/51_fine_tune_vit/vit-thumbnail.jpg" alt="Fine-Tune ViT for Image Classification with 🤗 Transformers" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/51_fine_tune_vit/vit-thumbnail.jpg" alt="Fine-Tune ViT for Image Classification with 🤗 Transformers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Konten tidak tersedia.</p>
+                <p>Just as transformers-based models have revolutionized NLP, we're now seeing an explosion of papers applying them to all sorts of other domains. One of the most revolutionary of these was the Vision Transformer (ViT), which was introduced in June 2021 by a team of researchers at Google Brain.</p>
+<p>This paper explored how you can tokenize images, just as you would tokenize sentences, so that they can be passed to transformer models for training. It's quite a simple concept, really...</p>
+<p>It turns out that once you've done the above, you can pre-train and fine-tune transformers just as you're used to with NLP tasks. Pretty sweet 😎.</p>
+<p>In this blog post, we'll walk through how to leverage 🤗 datasets to download and process image classification datasets, and then use them to fine-tune a pre-trained ViT with 🤗 transformers.</p>
+<p>To get started, let's first install both those packages.</p>
+<p>Let's start by loading a small image classification dataset and taking a look at its structure.</p>
+<p>We'll use the beans dataset, which is a collection of pictures of healthy and unhealthy bean leaves. 🍃</p>
+<p>Let's take a look at the 400th example from the 'train' split from the beans dataset. You'll notice each example from the dataset has 3 features:</p>
+<p>That's definitely a leaf! But what kind? 😅</p>
+<p>Since the 'labels' feature of this dataset is a datasets.features.ClassLabel, we can use it to look up the corresponding name for this example's label ID.</p>
+<p>First, let's access the feature definition for the 'labels'.</p>
+<p>Now, let's print out the class label for our example. You can do that by using the int2str function of ClassLabel, which, as the name implies, allows to pass the integer representation of the class to look up the string label.</p>
+<p>Turns out the leaf shown above is infected with Bean Rust, a serious disease in bean plants. 😢</p>
+<p>Let's write a function that'll display a grid of examples from each class to get a better idea of what you're working with.</p>
+<p>Now we know what our images look like and better understand the problem we're trying to solve. Let's see how we can prepare these images for our model!</p>
+<p>When ViT models are trained, specific transformations are applied to images fed into them. Use the wrong transformations on your image, and the model won't understand what it's seeing! 🖼 ➡️ 🔢</p>
+<p>To make sure we apply the correct transformations, we will use a ViTImageProcessor initialized with a configuration that was saved along with the pretrained model we plan to use. In our case, we'll be using the google/vit-base-patch16-224-in21k model, so let's load its image processor from the Hugging Face Hub.</p>
+<p>You can see the image processor configuration by printing it.</p>
+<p>To process an image, simply pass it to the image processor's call function. This will return a dict containing pixel values, which is the numeric representation to be passed to the model.</p>
+<p>You get a NumPy array by default, but if you add the return_tensors='pt' argument, you'll get back torch tensors instead.</p>
+<p>...where the shape of the tensor is (1, 3, 224, 224).</p>
+<p>Now that you know how to read images and transform them into inputs, let's write a function that will put those two things together to process a single example from the dataset.</p>
+<p>While you could call ds.map and apply this to every example at once, this can be very slow, especially if you use a larger dataset. Instead, you can apply a transform to the dataset. Transforms are only applied to examples as you index them.</p>
+<p>First, though, you'll need to update the last function to accept a batch of data, as that's what ds.with_transform expects.</p>
+<p>You can directly apply this to the dataset using ds.with_transform(transform).</p>
+<p>Now, whenever you get an example from the dataset, the transform will be 
+applied in real time (on both samples and slices, as shown below)</p>
+<p>This time, the resulting pixel_values tensor will have shape (2, 3, 224, 224).</p>
+<p>The data is processed and you are ready to start setting up the training pipeline. This blog post uses 🤗's Trainer, but that'll require us to do a few things first:</p>
+<p>Define an evaluation metric. During training, the model should be evaluated on its prediction accuracy. You should define a compute_metrics function accordingly.</p>
+<p>Load a pretrained checkpoint. You need to load a pretrained checkpoint and configure it correctly for training.</p>
+<p>After fine-tuning the model, you will correctly evaluate it on the evaluation data and verify that it has indeed learned to correctly classify the images.</p>
+<p>Batches are coming in as lists of dicts, so you can just unpack + stack those into batch tensors.</p>
+<p>Since the collate_fn will return a batch dict, you can **unpack the inputs to the model later. ✨</p>
+<p>The accuracy metric from evaluate can easily be used to compare the predictions with the labels. Below, you can see how to use it within a compute_metrics function that will be used by the Trainer.</p>
+<p>Let's load the pretrained model. We'll add num_labels on init so the model creates a classification head with the right number of units. We'll also include the id2label and label2id mappings to have human-readable labels in the Hub widget (if you choose to push_to_hub).</p>
+<p>Almost ready to train! The last thing needed before that is to set up the training configuration by defining TrainingArguments.</p>
+<p>Most of these are pretty self-explanatory, but one that is quite important here is remove_unused_columns=False. This one will drop any features not used by the model's call function. By default it's True because usually it's ideal to drop unused feature columns, making it easier to unpack inputs into the model's call function. But, in our case, we need the unused features ('image' in particular) in order to create 'pixel_values'.</p>
+<p>What I'm trying to say is that you'll have a bad time if you forget to set remove_unused_columns=False.</p>
+<p>Now, all instances can be passed to Trainer and we are ready to start training!</p>
+<p>Here were my evaluation results - Cool beans! Sorry, had to say it.</p>
+<p>Finally, if you want, you can push your model up to the hub. Here, we'll push it up if you specified push_to_hub=True in the training configuration. Note that in order to push to hub, you'll have to have git-lfs installed and be logged into your Hugging Face account (which can be done via huggingface-cli login).</p>
+<p>The resulting model has been shared to nateraw/vit-base-beans. I'm assuming you don't have pictures of bean leaves laying around, so I added some examples for you to give it a try! 🚀</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/zero-deepspeed-fairscale" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/fine-tune-vit" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

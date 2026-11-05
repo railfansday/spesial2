@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Agent Aced the Task. Will It Do It Again?</title>
+    <title>The Agent Said It Was Done. The Database Disagreed.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9812.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,95 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Your Agent Aced the Task. Will It Do It Again?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>The Agent Said It Was Done. The Database Disagreed.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/64b8491203124195cd795cad/NStwJm1AafDELVsU4KGwS.png" alt="The Agent Said It Was Done. The Database Disagreed." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/64b8491203124195cd795cad/NStwJm1AafDELVsU4KGwS.png" alt="The Agent Said It Was Done. The Database Disagreed." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Your agent works in rehearsal, but during the live demo, it takes a different path and fails the same task.</p>
-<p>That is embarrassing onstage. In production, it is a reliability problem: a workflow that succeeded once may fail the next time a user makes the same request. For mission-critical work, such as reconciling a financial transaction or checking a contract for an obligation, that can be a showstopper.</p>
-<p>Most benchmarks hide this variability behind an average. On AppWorld, a ReAct agent using GPT-4.1 succeeded on 77.4% of runs across five repetitions. But it succeeded in all five runs for only 53.0% of tasks — a 24.4-point consistency gap.</p>
-<p>Most benchmarks report the first number. We built a way to measure the second — and improve it.</p>
-<p>In an earlier post, we introduced ALTK-Evolve — a system that turns an agent's own past trajectories into reusable guidelines, distilled automatically and injected back at inference time. It measurably improves task success, but those results only asked the average-case question too.  This post introduces consistency guidelines, a new guideline type in altk-evolve built on top of a diagnostic tool we call the Consistency Analyzer, that targets this gap directly.</p>
-<p>Standard agent evaluation reports Mean@k: run a benchmark k times, average the pass rate. Often k=3, sometimes just 1. It's the number on every leaderboard, and it's what "77% accurate" means in practice.</p>
-<p>Mean@k answers "how good is this agent, on average?" It does not answer the question a real user cares about: will it still be good if I ask this exact question again? For that you need Pass^k: the fraction of tasks where the agent succeeds on all k runs.</p>
-<p>⚠️ Pass^k is not Pass@k. The familiar Pass@k is optimistic — it asks whether at least one of k attempts succeeded, the right question when you can verify and retry. Pass^k is its pessimistic mirror image: every attempt must succeed. Same letters, opposite question. Pass^k ≤ Mean@k ≤ Pass@k, always.</p>
-<p>A ReAct agent backed by GPT-4.1 posts a Mean@5 of 77.4% — genuinely strong. But Pass^5 is only 53.0%. Nearly a quarter of the benchmark consists of tasks the agent can sometimes solve and sometimes can't, with nothing about the task changing between runs. We call this gap — Mean@k minus Pass^k — the consistency gap.</p>
-<p>This isn't a capability problem you fix with a bigger model. It's an orthogonal axis: an agent can be capable and inconsistent at the same time.</p>
-<p>Every time an LLM agent decides something — which API to call, what argument to pass, whether to retry — that decision comes out of a probability distribution over next tokens. What matters is the shape of that distribution. A sharp one puts most of its mass on a single token: the runners-up are far behind, and the same choice comes out run after run. A flat one spreads comparable mass across several near-tied tokens, and which one wins is close to a coin flip.</p>
-<p>The shape decides how much noise it takes to change the outcome. Sharp distributions are resilient — GPU floating-point non-associativity, request batching, and other platform-side effects nudge the numbers slightly, but nowhere near enough to reorder a clear winner. Flat distributions are vulnerable to exactly that nudge: near-ties may reorder under small perturbations. And because a trajectory chains dozens of decisions, a small per-step chance of flipping compounds into a large chance that some run goes differently. That's where a 24-point gap comes from.</p>
-<p>This is also why the problem survives your decoding settings. Greedy decoding and a fixed seed both govern how a distribution gets turned into a token — they say nothing about the distribution itself. On a hosted endpoint the probabilities shift slightly from run to run, so the same prompt to the same model at temperature zero can still resolve a near-tie one way today and the other way tomorrow.</p>
-<p>Our setup: the ReAct agent runs at temperature 0.0, so none of the variance above is ordinary sampling.</p>
-<p>Which turns the problem into a search: which steps in a given trajectory were the flat ones — and what do you do about them once you know?</p>
-<p>Consistency guidelines come out of a two-stage pipeline that plugs into ALTK-Evolve's existing machinery — with a new source signal driving what gets written.</p>
-<p>1. Detect — the Consistency Analyzer. 
-Given one recorded trajectory, the analyzer replays each decision step through controlled resampling, measuring how much the model's output actually varies at that point. Concretely, that's one additional model call per decision step, done once offline — issued with the sampling parameter set to draw k completions at once (k=5 by default) — replayed against the already-recorded context, not new tool calls, not new environment interactions, and not a second end-to-end rollout of the task. This yields a consistency score per decision step that is written into a scorecard to pinpoint exactly which decisions are at risk of flipping on the next run. Detection is fully black-box — no logits, no model internals, no instrumentation beyond the trace you already have.</p>
-<p>2. Generate — targeted guidelines.  Every flagged step becomes a candidate consistency guideline in the standard ALTK-Evolve format, so it slots into the existing storage and retrieval pipeline. Here's a real example, generated by GPT-4.1 from a trajectory of the AppWorld task "How many activities are done in my bucket list as per my SimpleNote note?":</p>
-<p>[Guideline 1] When counting checkbox-style markers in note content, use a line-anchored regex match rather than a plain substring count — note titles often repeat the marker symbol in a legend line.</p>
-<p>[Guideline 2] Always verify search results for note queries by checking for multiple matches and confirming the correct note before proceeding.</p>
-<p>Nothing here is task-specific trivia. String-counting bugs and unverified search results are decision points that show up with high uncertainty across many AppWorld tasks. That's the point: the analyzer targets instability, not failure — so it catches steps the agent happened to get right this time but could easily get wrong next time.</p>
-<p>Watch the 2-minute demo — five parallel runs of the agent split 3-2 on this task because of agent uncertainty about the counting strategy, then run again after these guidelines in context: all five agree.</p>
-<p>We evaluated on AppWorld test_normal (168 tasks) with a ReAct agent on GPT-4.1, generating consistency guidelines from a single baseline trajectory per task and testing them on 5 fresh runs.</p>
-<p>Mean@5 (%), aggregate — same scale as Pass^5 above.</p>
-<p>The consistency gap is cut roughly in half. Aggregate Pass^5 rises 53.0% → 69.0% while Mean@5 rises 77.4% → 81.0%, narrowing the gap between "looks capable" and "can be counted on" from 24.4pp to 12.0pp. Nearly a third of previously-inconsistent tasks become tasks the agent passes on every single run.</p>
-<p>The middle and hard tiers gain most. Medium +22.9pp (+44% relative), Hard +14.3pp (+45% relative) — effectively tied in relative terms, with Medium ahead absolutely. Easy gains +12.2pp, having had the least room. This is consistency guidelines doing what they're designed to do: finding and stabilizing the specific decision points where an agent's own uncertainty was leaking into the outcome.</p>
-<p>Mean@5 never drops. Preserving average accuracy was a hard requirement, not a nice-to-have: a system that boosts Pass^5 by trading away Mean@5 would just be shifting unreliability around, not fixing it. Mean accuracy holds or improves at every difficulty level.</p>
-<p>Applied to a different but related task in the same AppWorld scenario — another variant of the scenario the guidelines were mined from — consistency guidelines still lift Pass^5 by +13.0pp, only 3 points below the same-task number. A guideline derived from one run isn't just patching that run; it's capturing something that transfers.</p>
-<p>The sharper evidence comes from a weaker model, gpt-oss-120b. Same-task Pass^5 rose +6.0pp from a much lower baseline (10.1% → 16.1%) — and, interestingly, the similar-task generalization number (+8.7 pp) actually exceeded the same-task gain, suggesting the guidelines were capturing genuinely reusable failure patterns rather than memorizing one trajectory's specifics.</p>
-<p>Try the ALTK-Evolve — the open-source repo now includes the Consistency Analyzer and consistency-guideline generation used in these experiments — or read the technical report on arXiv for the complete methodology.</p>
-<p>If accuracy numbers you can't reproduce on your own tasks sound familiar, we'd like to hear about it — concrete examples of flip-prone behavior in your own agents are exactly the kind of feedback that shapes what we build next. Open an issue or a discussion.</p>
-<p>Great perspective on agent reliability. Measuring consistency alongside accuracy seems especially important as AI agents move into workflows where reproducibility matters. The Consistency Analyzer approach is a fascinating way to identify unstable decisions without requiring full task replays.</p>
-<p>The useful split is the one most dashboards still refuse to print: Mean@k answers “how good is this agent on average?” Pass^k answers “will the same request still succeed if I ask again?”</p>
-<p>Once you’ve watched a trajectory chain dozens of near-tied tool choices, a strong average with a wide consistency gap is exactly the demo that fails live. Capability and consistency are orthogonal — buying a bigger model can lift Mean without closing the gap.</p>
-<p>What I want teams to take from the Consistency Analyzer framing is operational, not the guideline machinery itself: treat flip-prone decision steps as first-class eval targets. One offline resample pass over a recorded trace is a cheaper reliability signal than another end-to-end leaderboard screenshot.</p>
-<p>Practical ask for anyone shipping agents from this: do you report Pass^k (even k=3) next to Mean@k in the release gate, and do you refuse the “stable” label when the consistency gap is still large on your hard tier?</p>
-<p>Reproducible reliability will not remove disagreement about which guidelines to inject. It will make the disagreement about the right metric.</p>
-<p>Thanks, and you've landed on exactly the operational takeaway we hoped for: flip-prone decision steps should be eval targets in their own right. Beyond that, knowing where they are also turns the eval into a diagnostic: a consistency gap tells you that an agent is unreliable, while the flip-prone steps tell you where and why.</p>
-<p>On your release-gate question: we'd strongly encourage it, and k=3 is a sensible default. A few things we'd suggest to anyone adopting Pass^k as a gate:</p>
-<p>I'd like to understand your closing point better. In our experiments, we didn't choose among individual guidelines: for each new task, we injected the guidelines derived from the most similar task. I'm curious where you see the disagreement about which guidelines to inject arising.</p>
-<p>https://huggingface.co/spaces/observantdistressed/minimax-h3</p>
-<p>Loved your space, any plan to set it up again in near future?</p>
+                <p>Microsoft ThinkingBox grades AI agents on the records they leave behind, not the sentences they generate, and then asks whether they can do it twenty times in a row. It is now available through Hugging Face.</p>
+<p>Figure 1: ThinkingBox runs an agent against isolated MCP tool sessions, then grades the terminal backend state and side effects it leaves behind. From our ThinkingBox paper.</p>
+<p>A customer writes in. Her $745 kitchen appliance has been stuck in a courier "exception" at a Nashville distribution center, fifteen days past its estimated delivery date.</p>
+<p>The AI agent does careful work. Nine tool calls: it pulls the order, checks tracking, looks up her customer profile, searches the refund policy twice, confirms no ticket exists, opens one, documents the timeline, and reads the policy correctly; her account segment genuinely does not qualify for late-delivery compensation.</p>
+<p>Then it closes the ticket as resolved and replies “ Since your query is resolved, is there anything I may assist you with? ”</p>
+<p>Two things are wrong. The carrier exception is still open, so the required end state was on hold, pending resolution. And the customer never got a real answer to what she actually asked.</p>
+<p>An AI grader checking tool calls would see nine well-formed ones. The grader checking whether the agent wrote to the database would see that too. The database is what disagrees.</p>
+<p>That gap is what ThinkingBox measures. Across 507 stateful business workflows, each run 20 times against various LLM models, it grades agents on terminal backend state and side effects. This post covers what we found, what consistency costs, and how to run the benchmark yourself through OpenEnv.</p>
+<p>You can run this one yourself: the example above is adapted from a benchmark task sandbox_external_retail_group1.py:test_case_ST003_006, and the executable check that fails is a single field: the ticket's status is solved where the required end state is hold. The full trace is in  Appendix D.4, Case 3 of our paper.</p>
+<p>Want to try it before reading the results? Skip to section Run it yourself.</p>
+<p>Final responses and valid tool calls are only proxies. An agent can sound correct while leaving the wrong value, changing the wrong record, or creating an extra side effect. Only the records it leaves behind settle the question.</p>
+<p>The gap is substantial. In a common-set ablation covering 121,680 valid trials across 12 LLM models, 79,853 attempts failed the executable checks. Of those failures, 67.24% still terminated cleanly, invoked a state-changing tool, and reported no final tool error. Executable checks nevertheless found wrong field values in 77.61% of them, unintended extra effects in 43.30%, and missing required effects in 25.36%. Those state-check findings overlap.</p>
+<p>A trajectory is a claim. Database state is the evidence. Repetition is the trust test.</p>
+<p>An agent that processes a refund correctly once and mishandles it the next four times is not a working refund agent. So every task runs 20 independent times, each from an identical clean backend, and we report three different things:</p>
+<p>Table 1: The three numbers we report, and the question each one answers.</p>
+<p>We use observed 20/20 in this blog post as the literal count of how many of the 507 tasks passed 20 out of 20. No estimator, no smoothing.</p>
+<p>Starting with the familiar view. The table below reports pass@1, the single-attempt score estimate, broken out by domain. This is the number most leaderboards publish, and on its own it reads like an ordinary capability ranking.</p>
+<p>Table 2: ThinkingBox-Bench pass@1 (%) by domain. Each model is evaluated on every task for 20 repeated trials. Bold marks the group leader; underline marks the runner-up. The standard errors for the single attempt score estimates are provided in Table 4 in our ThinkingBox paper.</p>
+<p>Claude Opus 5.5 leads overall at 67.16%, two-thirds of a point above Claude Opus 5. Kimi-K3 is the strongest open-weights model, within a point of GPT-6-Astra. Domain matters just as much: Claude Opus 4.6 scores 68.62% on retail but 8.30% on auto insurance.</p>
+<p>One good run tells you a model can do the work. It does not tell you whether it will do it again. So run every task 20 times and ask how much of that score survives.</p>
+<p>Figure 2: How much of each model's single-attempt score survives 20 repeats.</p>
+<p>Only three hold on to most of their pass@1 scores: GPT-6 Astra retains 78% of its single-attempt rate, and Claude Opus 5.5 and Claude Opus 5 each retain 71%. At the other end, GLM-5.1, Kimi-K2.6 and DeepSeek-V4-Pro each keep about 8%.</p>
+<p>The gap between what a model can do once and what it does every time is the whole story.</p>
+<p>Figure 3: Breadth and consistency pull apart. Twelve of the eighteen models are shown; six below 33% pass@1 are omitted for legibility.</p>
+<p>Kimi-K3 has the broadest coverage of any model we tested. It solves 93.89% of the benchmark at least once: 476 of 507 tasks. Only 31 tasks defeat it entirely, the lowest count in the field. On retail workflows it leads outright at 82.24% pass@1, ahead of every proprietary model.</p>
+<p>Kimi-K3 is also among the least consistent. Just 68 of 507 tasks, 13.41%, succeed in all 20 attempts.</p>
+<p>Claude Opus 5 inverts this. It solves fewer tasks at least once (79.09%; 106 defeat it entirely) but completes 47.53% of the benchmark on every single attempt.</p>
+<p>A newer model does not fix this. Claude Opus 5.5 scores higher than Claude Opus 5 on every-attempt average, 67.16% against 66.50%, and solves more tasks at least once. It passes exactly the same number of tasks on all 20 attempts: 241. Half a point of headline accuracy bought no additional dependability at all.</p>
+<p>If you are choosing a model for work that touches real records, pass@20 is the wrong column to look at.</p>
+<p>Capability comparisons usually stop at the score. For anyone deploying, the relevant question is what a successful unit of work costs. We measure that as cost per successful task attempt. We say task attempt because every benchmark task is run repeatedly and cost is incurred per attempt, so pass@1 is the matching quality denominator.</p>
+<p>We took each model's recorded token usage from its full 507 × 20 campaign and priced it at undiscounted list rates available on OpenRouter+, reversing promotional discounts and excluding endpoints that declare quantization. Input, output and cache rates all come from one provider endpoint per model.</p>
+<p>Then we divided one run's cost by the number of attempts that succeeded:</p>
+<p>Cost per successful task attempt = estimated cost for 507 attempts, one per task ÷ (507 × pass@1)</p>
+<p>This is a comparative efficiency index, not an invoice, and not the price of serving one production request. It also prices single successes, not consistency. We price consistency next.</p>
+<p>Example: GPT-5.4 costs $43.49 for 507 attempts (one attempt per task) and has 65.36% pass@1, so $43.49 ÷ (507 × 0.6536) = $0.131 per successful task attempt.</p>
+<p>A model is on the frontier if no other model is both no more expensive and at least as accurate. Three models qualify; every other model is dominated on at least one axis.</p>
+<p>Figure 4: Cost per successful task attempt against pass@1. Ringed dots are pareto cost frontier models.</p>
+<p>The frontier has three steps. GPT-5.6 Sol has the lowest cost per success at $0.127; GPT-5.4 raises pass@1 by 3.45 percentage points for $0.004 more per success; Claude Opus 5.5 adds another 1.80 points at $0.276 per success. Each of the three remains on the cost frontier line because no cheaper model matches its pass@1.</p>
+<p>Claude Opus 5 is the clearest case: at $0.475 per successful attempt and 66.50% pass@1, it is both more expensive and less accurate than Claude Opus 5.5 at $0.276 and 67.16%.</p>
+<p>Cost per success rewards a model that is cheap and often right. It does not reward a model that is right every time. So we also compute cost per dependable task: the cost of the full 20-run campaign divided by the number of tasks the model passed on all 20 attempts.</p>
+<p>Cost per dependable task = estimated cost of 20 runs of 507 attempts ÷ tasks passing 20/20</p>
+<p>Example: GPT-6-Astra costs 20 × $86.03 = $1,720.60 for the campaign and passes 231 tasks on every attempt, so $1,720.60 ÷ 231 = $7.45 per dependable task.</p>
+<p>Table 3: The nine lowest costs per dependable task among models with at least one observed 20/20 task, sorted low to high. Estimated $, not actual cloud bills.</p>
+<p>Now rank by consistency. GPT-5.4 is the cheapest at $6.80, though only 128 tasks meet the bar. GPT-6 Astra reaches 231 at $7.45, and Claude Opus 5.5 the joint-highest 241 at $7.80.</p>
+<p>None of the three dominates the others: each additional dependable task costs more. Claude Opus 5 also passes 241, but at $13.30, so Opus 5.5 dominates it outright. GPT-5.6 Sol, the cheapest per single success at $0.127, costs $9.76 per dependable task. The cheapest way to get a right answer is not the cheapest way to get a dependable one.</p>
+<p>We assign each failed trace one deterministic diagnostic signature, and the headline is actionable: roughly four in five failures are tool handling, not reasoning. Across an ablation study in Table 5 of our paper:</p>
+<p>These are unweighted averages of per-model shares and observable labels, not unique causal explanations.</p>
+<p>The practical pattern is simple: agents usually get far enough to attempt the workflow, then fail to recover from tool errors, failed preconditions, or empty lookups. That is a retry and error-recovery problem before it is a model problem.</p>
+<p>Difficulty also changes by domain: across the models listed in Table 2 above, retail averages 59.52% pass@1 while auto insurance averages 33.83%.</p>
+<p>What to do about it. Treat the 20/20 rate as a design input, not a verdict. The same signal the benchmark grades on is available in production: check the terminal state before you commit, not the model's summary of it.</p>
+<p>Classify tool and system errors so retries target the recoverable ones. Cut the tool surface to what the workflow needs. And require human approval on the changes you cannot cheaply reverse. We have not measured the lift from any of these on this benchmark, which is exactly the kind of thing the environment now makes testable.</p>
+<p>ThinkingBox is the agent sandbox, while ThinkingBox-Bench is a dataset benchmark to evaluate agents. The diagram at the top of this post shows the loop; here is what each part does.</p>
+<p>Figure 5: The sandbox loop from panel A in Figure 1 above: isolated tool session, terminal database state, side effects, executable judges.</p>
+<p>Each task defines a starting backend state, a user goal, the available MCP tools, the domain policy, and executable checks over the terminal state. A simulated user holds private context (a booking reference, a preference, or a date of birth) and releases it only when asked.</p>
+<p>Every attempt gets an isolated MCP session with freshly initialized state. Two attempts of the same task never share a database row or cached tool state, which is what makes 20-trial comparison meaningful.</p>
+<p>At the end, a side-effect extractor derives what actually changed, and deterministic judges compare it against the required end state, accepting any trajectory that produces the right outcome while rejecting wrong, missing or extra effects. For requirements with no clean database value ("did the agent disclose this is not guaranteed?"), a narrow binary rubric question handles the semantics. 477 of the 507 tasks are graded on state alone; 30 add response rubrics.</p>
+<p>The trust boundary: the model sees tasks, dialogue and tool schemas. Golden state, assertions, grading internals and credentials stay on the evaluator side.</p>
+<p>ThinkingBox is now on Hugging Face, both the harness and the dataset. ThinkingBox-Bench now sits behind the OpenEnv interface, and each finished episode returns a binary pass/fail reward. The released adapter is designed for evaluation; separate, non-benchmark scenarios can use the same interface in training workflows.</p>
+<p>Tested on Linux and WSL, with Python 3.11+, uv and Docker. You also need a thinkingbox-data checkout at the pinned release and model endpoints for the agent, simulated user and judge. One endpoint can serve all three roles, which is the simplest way to start. The OpenEnv image starts only the OpenEnv API; everything else you run yourself.</p>
+<p>In a second terminal, start Typesense 30.1 and wait for its health check:</p>
+<p>In a third terminal, start the Session Proxy and MCP servers.</p>
+<p>Back in the first terminal, start the OpenEnv server against a ThinkingBox YAML config naming your three models (config guide):</p>
+<p>Gate on readiness before running anything. It returns 503 until its observable data, configuration and Session Proxy checks pass. It cannot observe Typesense or live-probe every model endpoint, so confirm those separately:</p>
+<p>Now score a real episode. example_usage.py only resets and lists tools; for agent actions, effects and assertions use the packaged evaluator:</p>
+<p>The OpenEnv adapter writes operational failures to an errors sidecar so they can be rerun rather than silently mixed with model outcomes. A canonical result must resolve or explicitly account for those attempts; we counted system errors as unsuccessful trials.</p>
+<p>Runs are gated on a pinned framework commit, a pinned data release and a bundle hash, so a canonical result is verifiable rather than asserted.</p>
+<p>The useful part of this work is not our pass@1 leaderboard. It is the environment.</p>
+<p>If you are evaluating an agent that touches real records:</p>
+<p>Further details can be found in the following links:</p>
+<p>ThinkingBox code is MIT-licensed; the benchmark data is CDLA-Permissive-2.0; the OpenEnv environment ships under OpenEnv's BSD-3-Clause.</p>
+<p>Disclaimer: every task in the public benchmark is a synthetic reconstruction. The workflows and policies are modeled on real AI agentic enterprise patterns; the customers are not real.</p>
+<p>ThinkingBox and ThinkingBox-Bench is built by the Microsoft Copilot Studio team in partnership with Toloka with collaborators from the University of Pittsburgh, Northwestern University, Columbia University and UC Irvine who interned at Microsoft. Questions are welcome in the comments section below or on github or by email at firstnamelastname@microsoft.com.</p>
+<p>+ OpenRouter cost snapshot taken on Sept 20th 2026; Opus 5.5 pricing as per the Anthropic site.</p>
+<p>ST003_006 delegates its pass check to validate_database. Unequal result and golden database hashes fail even when diff is empty. The diff explains a failure; it does not decide the pass.</p>
+<p>This small replay exercises the released function with four authored effect inputs. Run python3 reproduce.py. It verifies the source pin and tests supplied hashes; it does not calculate a database hash, run an agent, or reproduce the full environment.</p>
+<p>AI-assisted source reading and example by CyberNative AI LLC.</p>
+<p>The useful cut is agent-reported "done" versus backend terminal state.</p>
+<p>A green success from the same process that acted is a claim, not a grade. I'd want the eval to score durable side effects (ticket status, refund state, policy-cited fields) against a frozen oracle — and fail when the narrative is green while the database disagrees.</p>
+<p>Practical check: can a run be marked done when the terminal-state fixture is red?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-consistency" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/microsoft/thinkingbox" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

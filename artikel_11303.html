@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>An Introduction to Deep Reinforcement Learning</title>
+    <title>Training CodeParrot 🦜 from Scratch</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11303.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>An Introduction to Deep Reinforcement Learning</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>Training CodeParrot 🦜 from Scratch</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/40_codeparrot/thumbnail.png" alt="Training CodeParrot 🦜 from Scratch" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/40_codeparrot/thumbnail.png" alt="Training CodeParrot 🦜 from Scratch" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Konten tidak tersedia.</p>
+                <p>In this blog post we'll take a look at what it takes to build the technology behind GitHub CoPilot, an application that provides suggestions to programmers as they code. In this step by step guide, we'll learn how to train a large GPT-2 model called CodeParrot 🦜, entirely from scratch. CodeParrot can auto-complete your Python code - give it a spin here. Let's get to building it from scratch!</p>
+<p>The first thing we need is a large training dataset. With the goal to train a Python code generation model, we accessed the GitHub dump available on Google's BigQuery and filtered for all Python files. The result is a 180 GB dataset with 20 million files (available here). After initial training experiments, we found that the duplicates in the dataset severely impacted the model performance. Further investigating the dataset we found that:</p>
+<p>You can learn more about our findings in this Twitter thread. We removed the duplicates and applied the same cleaning heuristics found in the Codex paper. Codex is the model behind CoPilot and is a GPT-3 model fine-tuned on GitHub code.</p>
+<p>The cleaned dataset is still 50GB big and available on the Hugging Face Hub: codeparrot-clean. With that we can setup a new tokenizer and train a model.</p>
+<p>First we need a tokenizer. Let's train one specifically on code so it splits code tokens well. We can take an existing tokenizer (e.g. GPT-2) and directly train it on our own dataset with the train_new_from_iterator() method. We then push it to the Hub. Note that we omit imports, arguments parsing and logging from the code examples to keep the code blocks compact. But you'll find the full code including preprocessing and downstream task evaluation here.</p>
+<p>Learn more about tokenizers and how to build them in the Hugging Face course.</p>
+<p>See that inconspicuous streaming=True argument? This small change has a big impact: instead of downloading the full (50GB) dataset this will stream individual samples as needed saving a lot of disk space! Checkout the Hugging Face course for more information on streaming.</p>
+<p>Now, we initialize a new model. We’ll use the same hyperparameters as GPT-2 large (1.5B parameters) and adjust the embedding layer to fit our new tokenizer also adding some stability tweaks. The scale_attn_by_layer_idx flag makes sure we scale the attention by the layer id and reorder_and_upcast_attn mainly makes sure that we compute the attention in full precision to avoid numerical issues. We push the freshly initialized model to the same repo as the tokenizer.</p>
+<p>Now that we have an efficient tokenizer and a freshly initialized model we can start with the actual training loop.</p>
+<p>We train with the 🤗 Accelerate library which allows us to scale the training from our laptop to a multi-GPU machine without changing a single line of code. We just create an accelerator and do some argument housekeeping:</p>
+<p>We are now ready to train! Let's use the huggingface_hub client library to clone the repository with the new tokenizer and model. We will checkout to a new branch for this experiment. With that setup, we can run many experiments in parallel and in the end we just merge the best one into the main branch.</p>
+<p>We can directly load the tokenizer and model from the local repository. Since we are dealing with big models we might want to turn on gradient checkpointing to decrease the GPU memory footprint during training.</p>
+<p>Next up is the dataset. We make training simpler with a dataset that yields examples with a fixed context size. To not waste too much data (some samples are too short or too long) we can concatenate many examples with an EOS token and then chunk them.</p>
+<p>The more sequences we prepare together, the smaller the fraction of tokens we discard (the grey ones in the previous figure). Since we want to stream the dataset instead of preparing everything in advance we use an IterableDataset. The full dataset class looks as follows:</p>
+<p>Texts in the buffer are tokenized in parallel and then concatenated. Chunked samples are then yielded until the buffer is empty and the process starts again. If we set infinite=True the dataset iterator restarts at its end.</p>
+<p>Before we start training we need to set up the optimizer and learning rate schedule. We don’t want to apply weight decay to biases and LayerNorm weights so we use a helper function to exclude those.</p>
+<p>A big question that remains is how all the data and models will be distributed across several GPUs. This sounds like a complex task but actually only requires a single line of code with 🤗 Accelerate.</p>
+<p>Under the hood it'll use DistributedDataParallel, which means a batch is sent to each GPU worker which has its own copy of the model. There the gradients are computed and then aggregated to update the model on each worker.</p>
+<p>We also want to evaluate the model from time to time on the validation set so let’s write a function to do just that. This is done automatically in a distributed fashion and we just need to gather all the losses from the workers. We also want to report the perplexity.</p>
+<p>We are now ready to write the main training loop. It will look pretty much like a normal PyTorch training loop. Here and there you can see that we use the accelerator functions rather than native PyTorch. Also, we push the model to the branch after each evaluation.</p>
+<p>When we call wait_for_everyone() and unwrap_model() we make sure that all workers are ready and any model layers that have been added by prepare() earlier are removed. We also use gradient accumulation and gradient clipping that are easily implemented. Lastly, after training is complete we run a last evaluation and save the final model and push it to the hub.</p>
+<p>Done! That's all the code to train a full GPT-2 model from scratch with as little as 150 lines. We did not show the imports and logs of the scripts to make the code a little bit more compact.  Now let's actually train it!</p>
+<p>With this code we trained models for our upcoming book on Transformers and NLP: a 110M and 1.5B parameter GPT-2 model. We used a 16 x A100 GPU machine to train these models for 1 day and 1 week, respectively. Enough time to get a coffee and read a book or two!</p>
+<p>This is still relatively short training time for pretraining but we can already observe good downstream performance as compared to similar models. We evaluated the models on OpenAI's HumanEval benchmark that was introduced in the Codex paper. It measures the performance of code generation models on almost 200 coding challenges.</p>
+<p>Note that we trained CodeParrot on roughly 25-30B tokens whereas GPT-neo was trained on 300B tokens and Codex on 300B (GPT-3 checkpoint) + 100B (code) tokens. So you definitely get a good bang for your buck here.</p>
+<p>But what is this pass@k metric exactly? Simply put it measures the probability of at least one program passing the unittest of a programming problem given k candidate generations from the model. Naturally, the metric increases with k as more candidates can potentially solve the coding challenge. You can use the metric with datasets:</p>
+<p>You can also load OpenAI's HumanEval dataset with datasets:</p>
+<p>Now let's have a look at what we get after anxiously waiting for so long!</p>
+<p>Let's start slow and check if we can prompt the model to write a function to return the size of a file given its path:</p>
+<p>So far so good, but let's take this a step further and try something a bit more interesting. One of the less exciting aspects of building production ready code is writing unittest. Let's see if we can use CodeParrot to do this for us!</p>
+<p>Although the test condition itself does not look quite right the model has built all the boilerplate code for us. This alone could already be quite useful and save us a couple of minutes time!</p>
+<p>But what we really want to do is build better transformer models. Let's use CodeParrot to help us do that:</p>
+<p>Looking at a few examples is nice but by now you probably want to try it yourself. We prepared a few online demos just for that!</p>
+<p>You can play with the models in two demos we added to Hugging Face Spaces. With the first you can quickly generate code with the model and with the second you can highlight your code with the model to spot bugs!</p>
+<p>You can also directly use the models from the transformers library:</p>
+<p>In this short blog post we walked through all the steps involved for training a large GPT-2 model called CodeParrot 🦜 for code generation. Using 🤗 Accelerate we built a training script with less than 200 lines of code that we can effortlessly scale across many GPUs. With that you can now train your own GPT-2 model!</p>
+<p>This post gives a brief overview of CodeParrot 🦜, but if you are interested in diving deeper into how to pretrain this models, we recommend reading its dedicated chapter in the upcoming book on Transformers and NLP. This chapter provides many more details around building custom datasets, design considerations when training a new tokenizer, and architecture choice.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/deep-rl-intro" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/codeparrot" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

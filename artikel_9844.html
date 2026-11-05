@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Granite 4.2 LLMs: How They&#x27;re Built</title>
+    <title>A new Go API for JSON</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9844.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,84 +15,316 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Granite 4.2 LLMs: How They&#x27;re Built</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>A new Go API for JSON</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They&#x27;re Built" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They're Built" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A technical walkthrough of how we built the Granite 4.2 reasoning model family.</p>
-<p>TL;DR: Granite 4.2 is our first family of dense, decoder-only reasoning LLMs, released in three sizes: 3B, 8B, and 30B. These  models are post-trained from Granite-4.1 base models. Granite-4.1 base models were pre-trained from scratch on roughly 15T tokens with a five-phase strategy that extends the context window to 512K tokens, supervised fine-tuned on chain-of-thought, reasoning, and agentic-trajectory data, then post-trained with a multi-stage reinforcement learning pipeline. That pipeline includes agentic RL, where the 8B and 30B models learn to act with tools inside real sandboxed environments. Every model has a thinking / non-thinking switch, a low-effort thinking mode that spends a short reasoning budget on easy questions, and native tool calling. All Granite 4.2 models are released under the Apache 2.0 license.</p>
-<p>Granite 4.2 is the reasoning-focused release of the Granite language-model family. Earlier Granite releases were strong instruction-following assistants; Granite 4.2 adds explicit reasoning. Every model can produce a chain of thought before its answer and can run in thinking or non-thinking mode depending on how much deliberation a task needs. A low-effort mode falls between the two, spending a short reasoning budget on easy questions.</p>
-<p>The three sizes (3B, 8B, and 30B) share the same architectural design and follow the same training pipeline (base model, SFT, then multi-stage RL), each at its own scale. All three are strong reasoners and instruction followers. The clearest capability split shows up in post-training. The 8B and 30B models additionally go through an agentic RL block that teaches them to operate as agents: calling tools, editing and running code, driving a terminal, and searching the web inside real environments. Every model supports native tool calling. Served through an OpenAI-compatible endpoint (for example, with vLLM), it emits tool calls in the OpenAI function-calling format and plugs into agentic harnesses without extra glue. Granite 4.2 is also supported in SGLang, see the SGLang cookbook for a ready-to-serve recipe.</p>
-<p>The rest of this post walks through the build: architecture, pre-training, supervised fine-tuning, the multi-stage RL pipeline, and results.</p>
-<p>Granite 4.2 models are built on a decoder-only dense transformer architecture with the following core components:</p>
-<p>Granite 4.2 models are post-trained from Granite-4.1 base models. Granite-4.1 base models were trained from scratch on approximately 15 trillion tokens using a five-phase training strategy. Phases 1–2 focus on foundational pre-training, phases 3–4 perform mid-training with progressively higher-quality data annealing, and phase 5 introduces long-context training, extending the context window to 512K tokens. Each phase uses a distinct data mixture and learning-rate schedule, gradually shifting from broad web-scale data toward more curated, high-quality sources.</p>
-<p>The pre-training recipe closely follows the previous generation; for a detailed treatment of the data blend, phase schedule, and long-context extension, see the Granite 4.1 blog.</p>
-<p>Supervised fine-tuning (SFT) turns the base model into a reliable instruction-following, reasoning, and tool-using assistant. The SFT data mixture combines agentic (31.6%) and non-agentic (68.4%) data, totaling approximately 7.2 million samples, or roughly 100B tokens, of which about 65B are trainable.</p>
-<p>The agentic corpus covers a broad range of domains, including software engineering (SWE, 69%), tool calling (12.1%), terminal use (8.0%), math (3.5%), search (0.8%), and action (0.2%). These samples and trajectories are generated using a diverse set of agent scaffolds and harnesses, including OpenHands, OpenCode, Terminus-2, SWE-agent, OpenResearcher, MiniSWE, OpenSeeker, EnvScaler, Gemini CLI, Hermes, Codex, and Goose. The agentic data combines samples from both open-source datasets and our own synthetically generated RL environments, spanning a variety of agent–harness combinations.</p>
-<p>The non-agentic corpus consists of several major categories: instruction following (18.8%), coding (18.8%), math (14.6%), multilingual (7.0%), science (5.4%), reasoning (3.0%), and safety (0.8%).</p>
-<p>We apply multiple stages of quality control before a sample enters the final SFT mixture. First, data from different sources is normalized and reformatted into a consistent OpenAI Chat format, making the conversation structure and tool interactions uniform across datasets and scaffolds.</p>
-<p>We then use GPT-OSS-120B and Gemma 4 as LLM-based judges to assess sample quality. Low-scoring samples are removed, as are samples containing hallucinated or fabricated information, invalid tool interactions, or tool calls to functions that are not defined in the corresponding tool list. Several targeted, dataset-specific heuristic rules are also applied where appropriate to further improve quality and remove known sources of noise.</p>
-<p>Finally, we perform both local and global deduplication. Deduplication is based on SHA-256 hashes computed over the combination of the tools and messages fields, removing duplicate samples both within individual data sources and across the overall SFT mixture.</p>
-<p>The complete corpus is first globally shuffled to reduce ordering effects and ensure that samples from different domains are well mixed during training. The shuffled corpus is then partitioned into equally sized .parquet shards, which are tokenized using the model's tokenizer and chat template and prepared for large-scale distributed training.</p>
-<p>Before launching the final large-scale runs, we tune hyperparameters on representative configurations, sweeping learning-rate schedules, initial learning rates, and warm-up ratios to find settings that train stably across model sizes. The final training configuration is summarized below:</p>
-<p>For the 30B model, we additionally perform a second phase of SFT focused specifically on agentic coding. In this phase, agentic, SWE, and coding data are upsampled to increase their effective contribution to the training distribution, while approximately 16% of the mixture is retained as replay data from the original SFT corpus.</p>
-<p>The 30B model is then fine-tuned for roughly one additional epoch at a lower learning rate of 3.0e-6. This targeted second phase increases the model's exposure to agentic coding trajectories without discarding the capabilities acquired during the initial SFT phase.</p>
-<p>After SFT, we apply a multi-stage, multi-environment reinforcement learning pipeline. Rather than a single RL pass, we run a chain of focused stages spanning many environments: math, code, science, instruction following, tool use, and structured output, then software engineering, terminal use, and web search. Each stage is an independent RL run that targets one capability and warm-starts from the previous stage's checkpoint.</p>
-<p>Figure 1. The staged RL curriculum. Foundational RL (verifiable rewards + skill boosters) runs for all sizes; the agentic RL block (SWE → Terminal → Search) runs for 8B and 30B only. Every model finishes with RLHF. Each stage is a separate GRPO run that warm-starts from the previous checkpoint.</p>
-<p>Every stage trains with asynchronous GRPO (Group Relative Policy Optimization), so the generator and trainer halves of the loop never block on each other. A pool of generation workers keeps sampling responses and dropping the finished trajectories into a shared buffer; once the buffer holds a full step's worth, the trainer pulls that batch, takes an optimizer step, and streams the updated parameters back to the generator workers without pausing them. A refresh can land partway through a rollout, leaving a single trajectory stitched together from two adjacent policy versions. We allow this instead of paying to prevent it: the workers reuse their existing KV cache rather than rebuilding it after each refresh, and the one guardrail is a limit that keeps them from drifting more than a single update behind the trainer, which bounds how off-policy any sample can get. Whatever mismatch survives that limit is handled in the objective by truncated importance sampling, which clamps the train-versus-generation log-probability ratio to a fixed ceiling so a handful of stale tokens cannot dominate an update.</p>
-<p>Advantages are group-relative with a leave-one-out baseline: each response is judged against the mean reward of the other samples drawn for the same prompt, which removes the need for a separate value network. To make this concrete, take RLVR, the first and longest-running stage: each step pairs 256 prompts with 16 sampled responses apiece for a 4,096-example batch, which the trainer consumes in a single optimizer step before the next rollout begins. Later stages keep this machinery unchanged and adjust only the per-stage shape, shown next.</p>
-<p>The pipeline keeps a common backbone of hyperparameters across every stage, which makes the curriculum easier to run and compare. A handful of knobs are fixed everywhere:</p>
-<p>What changes from stage to stage is the shape of each run: how many prompts and generations per step, how long the context is, whether the agent loop runs, and how hard we pull back toward the reference policy. The table below gives the exact settings for the 30B chain, stage by stage:</p>
-<p>Parameters shown for the 30B model. Global batch size = prompts/step × generations/prompt (e.g. 256 × 16 = 4096 for RLVR). The 3B and 8B models use the same recipe and hyperparameters with fewer stages (see How the Three Sizes Differ); the stage list is what changes, not the knobs.</p>
-<p>The KL schedule follows the reward type: explore freely where the reward is objective and verifiable (RLVR and SWE 2 run at KL 0), and stay close to the reference where the objective is preference, safety, or a narrow skill graft (RLHF and the code booster use KL 0.05). The rollout-turns column counts the environment interactions GRPO itself sees per rollout. In every case the model is trained on complete, real-environment trajectories.</p>
-<p>Each stage is a separate RL run with a single objective and its own reward signal. When it finishes, its policy is exported to Hugging Face format and becomes the base model for the next stage, so the pipeline is a sequence of warm-starts:</p>
-<p>The 8B and 30B models follow the full ladder. The 3B model takes a shortened path: foundational RL and alignment, without the agentic block.</p>
-<p>A stage is defined mostly by how it is rewarded. Across the pipeline there are three reward types, and a single stage can use more than one:</p>
-<p>Verifiable rewards are objective and hard to game, so the pipeline front-loads them. Judge- and preference-based rewards handle open-ended qualities that no checker can express. Agentic-outcome rewards are the sparsest: often a single bit at the end of a long tool-use trajectory.</p>
-<p>RLVR is the foundational stage and the broadest data mix in the pipeline: a single blended dataset spanning many verifiable domains.</p>
-<p>Each task type carries its own verifier, so the reward is grounded per example. RLVR runs for two rounds on 3B and 8B, and three on 30B. Each round is a fresh warm-started run on a re-weighted mix of public and internally curated RL data.</p>
-<p>After RLVR, a few short booster stages sharpen specific capabilities that benefit from concentrated training focusing on the following domains:</p>
-<p>Boosters are small, focused runs. A light KL penalty keeps the model close to its current behavior while nudging one skill.</p>
-<p>In the agentic stages the model learns to act: call tools, observe results, and iterate inside a real environment, rewarded on whether the task was actually solved. These stages share the same shape: multi-turn tool use, real (not simulated) environments, sparse outcome rewards, and GRPO, warm-started from the coding-boosted checkpoint. They run in order: SWE → Terminal → Search.</p>
-<p>Figure 2. The three agentic-RL environments. Each pairs a real harness with a real environment and a sparse, outcome-based reward. The 3B model runs none of these.</p>
-<p>The final stage of every model is RLHF for human preference and safety. It optimizes against a generative reward model (GenRM) for preference, plus a safety reward covering jailbreak resistance and appropriate refusals. This stage uses the highest KL penalty in the pipeline, aligning tone and safety without eroding the capabilities the earlier stages built. In addition to human preference and safety alignment, this stage also applies a reasoning-length penalty to discourage overly verbose reasoning behavior acquired during earlier stages.</p>
-<p>Same method and infrastructure; the difference is how far up the ladder each model goes.</p>
-<p>3B is a strong foundational-RL model; 8B and 30B add the agentic-RL block on top, learning to act with tools in real environments.</p>
-<p>Reinforcement learning at this scale needs infrastructure that can drive a training loop and a fleet of live environments at the same time. This matters most in the agentic stages, where every training example is a multi-turn rollout that edits code, runs commands, or browses the web. Granite 4.2's RL runs on two open components: NeMo-RL on the training side and NeMo-Gym on the rollout side.</p>
-<p>Figure 3. The RL system. NeMo-RL drives the GRPO loop (Megatron-Core training backend, vLLM generation, and Megatron-Bridge for HF⇄Megatron weight conversion). NeMo-Gym orchestrates rollouts and hosts the tools, sandboxes, and reward/verifier calls as pluggable Resources.</p>
-<p>That uniformity is what makes the staged curriculum above practical: a booster's rule-based checker and a full SWE sandbox present the same interface to GRPO.</p>
-<p>This split is also what makes the asynchronous training loop described above physically possible: generation and policy updates live on separate GPU pools, so the expensive generation fleet — including the live agentic environments — stays busy instead of idling through optimizer steps.</p>
-<p>Granite 4.2 was evaluated across agentic coding, general agentic and tool use, reasoning, chat and instruction following, and long context. The full benchmark table is below, followed by charts that break out the headline results by model size.</p>
-<p>Supported languages: English, German, Spanish, French, Japanese, Portuguese, Arabic, Czech, Italian, Korean, Dutch, and Chinese.</p>
-<p>The charts below break these results out by capability area.</p>
-<p>Figure 4. Reasoning (pass@1). Scores rise consistently with model size across math (AIME25, HMMT), science (GPQA), and code reasoning (LiveCodeBench, SciCode).</p>
-<p>Figure 5. Agentic coding resolve rates. The agentic-RL block is trained only for 8B and 30B; the 30B model leads across SWE-Bench variants and Terminal-Bench.</p>
-<p>Figure 6. General agentic and tool-use benchmarks, reported for all three sizes.</p>
-<p>We also released four quantized variants of the Granite 4.2 models for inference with vLLM. The models are converted to FP8, NVFP4, and MXFP4 using LLM Compressor, and to the GGUF format using the llama.cpp framework for reduced-memory deployment.</p>
-<p>The FP8 version is quantized with dynamic per-channel weights and per-token activations.  No calibration is used.</p>
-<p>The NVFP4 and MXFP4 versions are quantized using GPTQ calibrated on 2K samples drawn from the SFT dataset.  Max context length is 2K during calibration.</p>
-<p>Conversion of the Granite 4.2 models to GGUF is done with the canonical llama.cpp tool as described in https://github.com/IBM/gguf#gguf-conversion--quantization.</p>
-<p>We trained the Granite 4.2 language models on an NVIDIA GB200 NVL72 cluster hosted by CoreWeave, featuring:</p>
-<p>This infrastructure delivers the high-bandwidth, low-latency communication required for efficient large-scale distributed training.</p>
-<p>The training software stack is packaged into .sqsh container images, each giving a run a reproducible, portable environment with its SBSA-compatible CUDA targets, Linux aarch64 Python wheels, and GPU-specific binaries pinned. The large-scale SFT runs build on an NGC PyTorch base image (Ubuntu 22.04, CUDA 12.8, Python 3.12); the RL stack runs in its own NeMo-RL container.</p>
-<p>Granite models support tool calling with integrated reasoning: the model reasons about which tool to call and why before calling it. Tools are defined with the OpenAI function definition schema.</p>
-<p>Granite models can serve as the backbone for agentic coding tools. Because they support reasoning and tool calling through the OpenAI-compatible API, they integrate with popular agentic harnesses without extra adapters. Start the vLLM server, then follow the harness-specific instructions below.</p>
-<p>OpenCode is an AI coding agent that runs in your terminal.</p>
-<p>Configure ~/.config/opencode/opencode.json:</p>
-<p>For full documentation, see opencode.ai/docs.</p>
-<p>Pi is a minimal agent harness for AI-powered coding that runs in your terminal. It supports custom providers via a models.json configuration file.</p>
-<p>Then select the granite-4.2-30b model with /model or Ctrl+L in the interactive session.</p>
-<p>OpenHands is an AI software engineer that can plan, write code, and execute commands.</p>
-<p>Install and launch OpenHands following the official installation guide.</p>
-<p>Configure the LLM in the OpenHands settings with:</p>
-<p>Note: The openai/ prefix is required when connecting to OpenAI-compatible endpoints like vLLM. Refer to the OpenHands local LLM documentation for detailed setup instructions, troubleshooting, and alternative installation methods.</p>
-<p>Last updated: September 11, 2026 to clarify base models.</p>
+                <p>Stories about how and why companies use Go</p>
+<p>How Go can help keep you secure by default</p>
+<p>A complete introduction to building software with Go</p>
+<p>Reference documentation for Go's standard library</p>
+<p>Tips for writing clear, performant, and idiomatic Go code</p>
+<p>Learn and network with Go developers from around the world</p>
+<p>Michael Pratt, Joe Tsai, Daniel Martí, Johan Brandhorst-Satzkorn, Roger Peppe, Chris Hines,  and Damien Neil
+      4 November 2026</p>
+<p>JavaScript Object Notation (JSON) is a simple data interchange format, the most popular data format used on the internet, and widely read and written by Go programs.
+Go has included support for JSON in the standard library since well before Go 1.0.
+We first we wrote about support for JSON in Go more than 15 years ago!</p>
+<p>Over time, packages evolve with the needs of their users, and encoding/json is no exception.
+Last year, we wrote about a new experimental API for JSON designed to bring long-awaited improvements and fixes.</p>
+<p>After additional feedback and refinement, the new encoding/json/v2 and encoding/json/jsontext packages are stable and generally available in Go 1.27!
+This post is an updated version of the article introducing the experiment, describing the problems with encoding/json, and an introduction to the new packages.</p>
+<p>Overall, encoding/json has held up well.
+The idea of marshaling and unmarshaling arbitrary Go types
+with some default representation in JSON, combined with the ability to
+customize the representation, has proven to be highly flexible.
+However, in the years since its introduction,
+various users have identified numerous shortcomings.</p>
+<p>There are various behavioral flaws in encoding/json:</p>
+<p>Imprecise handling of JSON syntax: Over the years, JSON has seen
+increased standardization in order for programs to properly communicate.
+Generally, decoders have become stricter at rejecting ambiguous inputs,
+to reduce the chance that two implementations will have different
+(successful) interpretations of a particular JSON value.</p>
+<p>encoding/json currently accepts invalid UTF-8,
+whereas the latest Internet Standard (RFC 8259) requires valid UTF-8.
+The default behavior should report an error in the presence of invalid UTF-8,
+instead of introducing silent data corruption,
+which may cause problems downstream.</p>
+<p>encoding/json currently accepts objects with duplicate member names.
+RFC 8259 does not specify how to handle duplicate names,
+so an implementation is free to choose an arbitrary value,
+merge the values, discard the values, or report an error.
+The presence of a duplicate name results in a JSON value
+without a universally agreed upon meaning.
+This could be exploited by attackers in security applications
+and has been exploited before (as in CVE-2017-12635).
+The default behavior should err on the side of safety and reject duplicate names.</p>
+<p>Leaking nilness of slices and maps: JSON is often used to communicate with
+programs using JSON implementations that do not allow null to be unmarshaled
+into a data type expected to be a JSON array or object.
+Since encoding/json marshals a nil slice or map as a JSON null,
+this may lead to errors when unmarshaling by other implementations.
+A survey
+indicated that most Go users prefer that nil slices and maps
+are marshaled as an empty JSON array or object by default.</p>
+<p>Case-insensitive unmarshaling: When unmarshaling, a JSON object member name
+is resolved to a Go struct field name using a case-insensitive match.
+This is a surprising default, a potential security vulnerability, and a performance limitation.</p>
+<p>Inconsistent calling of methods: Due to an implementation detail,
+MarshalJSON methods declared on a pointer receiver
+are inconsistently called by encoding/json. While regarded as a bug,
+this cannot be fixed as too many applications depend on the current behavior.</p>
+<p>The API of encoding/json can be tricky or restrictive:</p>
+<p>It is difficult to correctly unmarshal from an io.Reader.
+Users often write json.NewDecoder(r).Decode(v),
+which fails to reject trailing junk at the end of the input.</p>
+<p>Options can be set on the Encoder and Decoder types,
+but cannot be used with the Marshal and Unmarshal functions.
+Similarly, types implementing the Marshaler and Unmarshaler interfaces
+cannot make use of the options and there is no way to plumb options down the call stack.
+For example, the Decoder.DisallowUnknownFields option loses its effect
+when calling a custom UnmarshalJSON method.</p>
+<p>The Compact, Indent, and HTMLEscape functions write to a bytes.Buffer
+instead of something more flexible like a []byte or io.Writer.
+This limits the usability of those functions.</p>
+<p>Setting aside internal implementation details,
+the public API commits it to certain performance limitations:</p>
+<p>MarshalJSON: The MarshalJSON interface method forces the implementation
+to allocate the returned []byte. Also, the semantics require that
+encoding/json verify that the result is valid JSON
+and also to reformat it to match the specified indentation.</p>
+<p>UnmarshalJSON: The UnmarshalJSON interface method requires that
+a complete JSON value be provided (without any trailing data).
+This forces encoding/json to parse the JSON value to be unmarshaled
+in its entirety to determine where it ends before it can call UnmarshalJSON.
+Afterwards, the UnmarshalJSON method itself must parse the provided JSON value again.</p>
+<p>Lack of streaming: Even though the Encoder and Decoder types operate
+on an io.Writer or io.Reader, they buffer the entire JSON value in memory.
+The Decoder.Token method for reading individual tokens is allocation-heavy
+and there is no corresponding API for writing tokens.</p>
+<p>Furthermore, if the implementation of a MarshalJSON or UnmarshalJSON method
+recursively calls the Marshal or Unmarshal function,
+then the performance becomes quadratic.</p>
+<p>Introducing a new, incompatible major version of a package is a heavy consideration.
+If possible, we should try to fix the existing package.</p>
+<p>While it is relatively easy to add new features,
+it is difficult to change existing features.
+Unfortunately, these problems are inherent consequences of the existing API,
+making them practically impossible to fix within the Go 1 compatibility promise.</p>
+<p>We could in principle declare separate names, such as MarshalV2 or UnmarshalV2,
+but that is tantamount to creating a parallel namespace within the same package.
+This leads us to encoding/json/v2 (henceforth called v2),
+where we can make these changes within a separate v2 namespace
+in contrast to encoding/json (henceforth called v1).</p>
+<p>Before discussing the v2 API, we first introduce the
+encoding/json/jsontext package
+that lays the foundation for improvements to JSON in Go.</p>
+<p>JSON serialization in Go can be broken down into two primary components:</p>
+<p>We use the terms “encode” and “decode” to describe syntactic functionality and
+the terms “marshal” and “unmarshal” to describe semantic functionality.
+We aim to provide a clear distinction between functionality
+that is purely concerned with encoding versus that of marshaling.</p>
+<p>This diagram provides an overview of this separation.
+Purple blocks represent types, while blue blocks represent functions or methods.
+The direction of the arrows approximately represents the flow of data.
+The bottom half of the diagram, implemented by the jsontext package,
+contains functionality that is only concerned with syntax,
+while the upper half, implemented by the json/v2 package,
+contains functionality that assigns semantic meaning to syntactic data
+handled by the bottom half.</p>
+<p>The basic API of jsontext is the following:</p>
+<p>The jsontext package provides functionality for interacting with JSON
+at a syntactic level and derives its name from
+RFC 8259, section 2
+where the grammar for JSON data is literally called JSON-text.
+Since it only interacts with JSON at a syntactic level,
+it does not depend on Go reflection.</p>
+<p>The Encoder and
+Decoder
+provide support for encoding and decoding JSON values and tokens.
+The constructors
+accept variadic options
+that affect the particular behavior of encoding and decoding.
+Unlike the Encoder and Decoder types declared in v1,
+the new types in jsontext avoid muddling the distinction between syntax and
+semantics and operate in a truly streaming manner.</p>
+<p>A JSON value is a complete unit of data and is represented in Go as
+a named []byte.
+It is identical to RawMessage in v1, which is now a type alias to jsontext.Value.
+A JSON value is syntactically composed of one or more JSON tokens.
+A JSON token is represented in Go as the opaque Token type
+with constructors and accessor methods.
+It is analogous to Token in v1
+but is designed represent arbitrary JSON tokens without allocation.</p>
+<p>To resolve the fundamental performance problems with
+the MarshalJSON and UnmarshalJSON interface methods,
+we need an efficient way of encoding and decoding JSON
+as a streaming sequence of tokens and values.
+In v2, we introduce the MarshalJSONTo and UnmarshalJSONFrom interface methods
+that operate on an Encoder or Decoder, allowing the methods’ implementations
+to process JSON in a purely streaming manner. Thus, the json package need not
+be responsible for validating or formatting a JSON value returned by MarshalJSON,
+nor would it need to be responsible for determining the boundaries of a JSON value
+provided to UnmarshalJSON. These responsibilities belong to the Encoder and Decoder.</p>
+<p>Building on the jsontext package, we now introduce the
+encoding/json/v2 package.
+It is designed to fix the problems in v1,
+while remaining familiar to users of the v1 package.
+Our goal is that usages of v1 will operate mostly the same if directly migrated to v2.</p>
+<p>Here, we primarily cover the high-level API of v2.
+For examples on how to use it, we encourage readers to
+study the examples in the v2 package,
+the “Working with JSON” tutorial, or
+read Anton Zhiyanov’s blog covering the topic.</p>
+<p>The Marshal
+and Unmarshal functions
+have a signature similar to v1, but accept options to configure their behavior.
+The MarshalWrite
+and UnmarshalRead functions
+directly operate on an io.Writer or io.Reader,
+avoiding the need to temporarily construct an Encoder or Decoder
+just to write or read from such types.
+The MarshalEncode
+and UnmarshalDecode functions
+operate on a jsontext.Encoder and jsontext.Decoder and
+is actually the underlying implementation of the previously mentioned functions.
+Unlike v1, options are a first-class argument to each of the marshal and unmarshal functions,
+greatly extending the flexibility and configurability of v2.
+There are several options available
+in v2 which are not covered by this article.</p>
+<p>Similar to v1, v2 allows types to define their own JSON representation
+by satisfying particular interfaces.</p>
+<p>The Marshaler
+and Unmarshaler interfaces
+are identical to those in v1.
+The new MarshalerTo
+and UnmarshalerFrom interfaces
+allow a type to represent itself as JSON using a jsontext.Encoder or jsontext.Decoder.
+This allows options to be forwarded down the call stack, since options
+can be retrieved via the Options accessor method on the Encoder or Decoder.</p>
+<p>See the OrderedObject example
+for how to implement a custom type that maintains the ordering of JSON object members.</p>
+<p>In v2, the caller of Marshal and Unmarshal can also specify
+a custom JSON representation for any arbitrary type,
+where caller-specified functions take precedence over type-defined methods
+or the default representation for a particular type.</p>
+<p>MarshalFunc and
+MarshalToFunc
+construct a custom marshaler that can be passed to a Marshal call
+using WithMarshalers to override the marshaling of particular types.
+Similarly,
+UnmarshalFunc and
+UnmarshalFromFunc
+support similar customization for Unmarshal.</p>
+<p>The ProtoJSON example
+demonstrates how this feature allows serialization of all
+proto.Message types
+to be handled by the protojson package.</p>
+<p>While v2 aims to behave mostly the same as v1,
+its behavior has changed in some ways
+to address problems in v1, most notably:</p>
+<p>v2 reports an error in the presence of invalid UTF-8.</p>
+<p>v2 reports an error if a JSON object contains a duplicate name.</p>
+<p>v2 marshals a nil Go slice or Go map as an empty JSON array or JSON object, respectively.</p>
+<p>v2 unmarshals a JSON object into a Go struct using a
+case-sensitive match from the JSON member name to the Go field name.</p>
+<p>v2 redefines the omitempty tag option to omit a field if it would have
+encoded as an “empty” JSON value (which are null, "", [], and {}).</p>
+<p>v2 reports an error when trying to serialize a time.Duration,
+which currently has no default representation,
+but provides options to let the caller decide.</p>
+<p>For most behavior changes, there is a struct tag option or caller-specified option
+that can configure the behavior to operate under v1 or v2 semantics,
+or even other caller-determined behavior.
+See “Migrating to v2” for more information.</p>
+<p>The Marshal performance of v2 is roughly at parity with v1.
+Sometimes it is slightly faster, but other times it is slightly slower.
+The Unmarshal performance of v2 is significantly faster than v1,
+with benchmarks demonstrating improvements of up to 10x.</p>
+<p>In order to obtain greater performance gains,
+existing implementations of
+Marshaler and
+Unmarshaler should
+migrate to also implement
+MarshalerTo and
+UnmarshalerFrom,
+so that they can benefit from processing JSON in a purely streaming manner.
+For example, recursive parsing of OpenAPI specifications in UnmarshalJSON methods
+significantly hurt performance in a particular service of Kubernetes
+(see kubernetes/kube-openapi#315),
+while switching to UnmarshalJSONFrom improved performance by orders of magnitude.</p>
+<p>For more benchmark details, see the
+go-json-experiment/jsonbench
+repository.</p>
+<p>On top of structural improvements, we’re continuing to invest in performance optimizations in the implementation for cases where the v2 implementation is slower than v1.
+You can expect additional improvements in Go 1.28.</p>
+<p>The Go 1 compatibility promise is a core guarantee from the Go project that allows developers to build applications that will stand the test of time and continue working on future versions of Go.</p>
+<p>The original encoding/json and new encoding/json/v2 packages are of course both subject to the Go 1 compatibility promise.
+Applications using v1 will continue to be supported indefinitely and need not ever migrate to v2.</p>
+<p>That said, when designing the v2 packages we wanted to do better than keeping v1 supported.
+We wanted to ensure that v1 and v2 are compatible with one another so that packages using different versions can work together.
+Doing so allows a smooth ecosystem migration rather than forcing users to use one version or another due to the choices of their dependencies.</p>
+<p>For instance, suppose your package uses v2 to marshal a struct containing a field with a type defined in another package.
+That package may use the original v1 MarshalJSON method to define its marshaling behavior.
+No problem, v2 supports MarshalJSON methods, so marshaling will continue working as expected.</p>
+<p>Vice versa, suppose your package uses v1 to marshal the same struct.
+The other package may use the v2 MarshalJSONTo method for better performance.
+No problem here either, as the v1 implementation supports v2’s MarshalJSONTo method under the hood.</p>
+<p>We’ve achieved this by designing the new packages such that, under the hood, v1 is implemented in terms of v2.
+As mentioned above, v2 supports a variety of Options.
+Each behavior difference is controlled by one of the these options.
+Thus, v1 can be implemented in terms of v2 by passing the full set of v1 compatibility options.</p>
+<p>With this approach, backwards-compatible additions such as new methods (e.g., MarshalJSONTo) or new struct tags (e.g., embed) are automatically supported to the benefit of existing v1 users.</p>
+<p>Implementing v1 in terms of v2 options has the additional benefit of allowing gradual migration of callsites.</p>
+<p>encoding/json documents the full set of behavior differences between v1 and v2, and which option controls that behaviors.</p>
+<p>Many applications can migrate directly to v2 with no visible behavior changes, but applications that depend on v1 behavior can use the options to change only the behaviors they depend on.</p>
+<p>For example, we can select all v2 behavior except for allowing duplicate names:</p>
+<p>Alternatively, we can select all v1 behavior except for disallowing duplicate names:</p>
+<p>The encoding/json/v2 Migration Guide goes into more detail, covering a variety of scenarios for approaching migration of an application from v1 to v2.</p>
+<p>For additional references on working with the new JSON packages, see:</p>
+<p>The planning for a new major version of encoding/json spanned years.
+In late 2020, spurred on by the inability to fix issues in the current package,
+Daniel Martí (one of the maintainers of encoding/json) first drafted his
+thoughts on what a hypothetical v2 package should look like.
+Separately, after previous work on the Go API for Protocol Buffers,
+Joe Tsai was disappointed that the protojson package
+needed to use a custom JSON implementation because encoding/json was
+neither capable of adhering to the stricter JSON standard that the
+Protocol Buffer specification required,
+nor of efficiently serializing JSON in a streaming manner.</p>
+<p>Believing a brighter future for JSON was both beneficial and achievable,
+Daniel and Joe joined forces to brainstorm on v2 and
+started to build a prototype
+(with the initial code being a polished version of the JSON serialization logic from the Go protobuf module).
+Over time, a few others (Roger Peppe, Chris Hines, Johan Brandhorst-Satzkorn, Damien Neil, Austin Clements, and Michael Pratt)
+joined the effort by providing design review, code review, and regression testing.
+Many of the early discussions are publicly available in our
+recorded meetings and
+meeting notes.
+Later discussions are available in our encoding/json/v2 working group meeting notes.</p>
+<p>This work has been public since the beginning,
+and we increasingly involved the wider Go community,
+first with a
+GopherCon talk and
+discussion posted in late 2023,
+formal proposal posted in early 2025,
+and finally adopting encoding/json/v2 as a Go experiment in Go 1.25
+for wider-scale testing by all Go users.</p>
+<p>The v2 effort took about 6 years to reach this point,
+incorporating feedback from many contributors and also gaining valuable
+empirical experience from use in production settings.</p>
+<p>It’s worth noting that it’s largely been developed and promoted by people
+not employed by Google, demonstrating that the Go project is a collaborative endeavor
+with a thriving global community dedicated to improving the Go ecosystem.</p>
+<p>Previous article: Our Response To The eMudhra Key Disclosure Incident
+Blog Index</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-granite/granite-4-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://go.dev/blog/jsonv2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

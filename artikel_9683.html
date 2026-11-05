@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock API Charts Need Complete Downloads and Explicit Data Gaps</title>
+    <title>Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9683.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,80 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Stock API Charts Need Complete Downloads and Explicit Data Gaps</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F800wapcub4cdhcrn2jxx.png" alt="Stock API Charts Need Complete Downloads and Explicit Data Gaps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2026-08/steam-bread-baking-.jpg" alt="Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F800wapcub4cdhcrn2jxx.png" alt="Stock API Charts Need Complete Downloads and Explicit Data Gaps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2026-08/steam-bread-baking-.jpg" alt="Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Summary: A stock chart can look convincing even when its history is incomplete. A stock API supplies records under specific retrieval and aggregation rules; your application must finish the download and preserve missing observations. This article explains pagination, absent candles, and a small Python example that keeps an unknown price from becoming a false market move.</p>
-<p>A stock API is a programmatic interface for retrieving stock-related data. For a historical chart, that often means requesting bars: records containing open, high, low, close, and volume for an interval. Those records can power chart viewers, research dashboards, and historical comparisons. They do not, by themselves, establish that every part of your requested window has been downloaded.</p>
-<p>Consider a chart that has prices before and after a missing minute. Replacing the missing price with zero invents a collapse. Repeating the previous price creates a flat segment that was never observed. A sound implementation keeps the absence explicit while it determines whether the cause is normal market behavior, a retrieval problem, or a coverage limit.</p>
-<p>The first completeness check belongs in the downloader. An HTTP success means a request succeeded; a paginated endpoint may still have more records to return.</p>
-<p>Alpaca's Historical bars documentation gives a concrete example. Its multi-symbol results are ordered by symbol and then timestamp, so the first page can contain only one symbol. The page limit applies across the response, and a short page can still have a continuation token. An application must follow the documented token rather than decide that fewer rows means the download is finished.</p>
-<p>That behavior is specific to the endpoint. Other APIs use different retrieval controls. TickDB's Candlestick Data endpoint, for example, exposes a symbol, interval, time bounds, and a record limit. Its documentation caps the limit at 1,000 and says the Free plan cannot specify start or end times. These constraints matter when designing a history browser: access to recent candles does not automatically provide arbitrary historical navigation.</p>
-<p>Keep retrieval logic in the provider adapter. Confirm how boundaries and ordering work before splitting a request into time windows. If that behavior is undocumented, treat it as an unresolved integration requirement; guessing how to advance a timestamp can skip records or repeatedly retrieve the same window.</p>
-<p>Figure 1. Suggested application flow. Retrieval follows the chosen endpoint's rules; validation and gap handling happen before rendering. This is a design illustration, not a measured system result.</p>
-<p>Once retrieval has finished, a missing interval still needs interpretation. Databento's Aggregate bars documentation states that an interval without a trade produces no record. Under that convention, an absent bar can be an expected result. It does not establish that the service lost data, and the rule should not be assumed for every provider.</p>
-<p>Start with the query context. Was the instrument trading during that period? Does the selected dataset cover the session you want? Does the provider omit intervals without qualifying observations? Did the downloader finish all required requests? These questions distinguish expected absence from an unexplained gap.</p>
-<p>An exchange calendar also belongs in this interpretation. Do not generate a continuous minute grid across nights, weekends, and holidays and label every empty slot a failure. Use the calendar and session policy appropriate to the instrument. Keep timestamp conversion separate from session selection, including daylight saving changes.</p>
-<p>Bar boundaries need their own check. Databento documents that its daily OHLCV schema follows UTC dates. A daily bucket therefore should not automatically be treated as the exchange-session day your chart intends to show.</p>
-<p>Until the cause is established, a useful status is simply “no bar returned.” Labels such as “market closed” or “no trades” make stronger claims and need supporting context.</p>
-<p>Suppose a synthetic series has a close of 100.00 at 14:30 UTC, no returned bar at 14:31, and a close of 101.00 at 14:32. The missing slot contains no observed close. It is neither a zero nor proof that the price stayed at 100.00.</p>
-<p>For a close-price line, pass an explicit missing value to the chart adapter and configure the renderer to show a break. Some charting systems connect surrounding observations unless told otherwise, so inspect the rendered result as well as the input array. For candlesticks, do not manufacture an OHLC record from a missing slot.</p>
-<p>Forward filling can serve a different purpose, such as displaying a last-known value in a dashboard. Preserve its original observation time and mark it as carried forward. Store that derived value separately from the observed series so it cannot silently become a reported trade or candle.</p>
-<p>Figure 2. Synthetic close-price example in UTC. The middle slot has no returned observation. Its cause is unknown from these records alone; it must not become an invented zero-price candle.</p>
-<p>The following Python example runs offline with synthetic data. It accepts an already selected, increasing UTC time grid and normalized close records for one instrument. It preserves missing slots, accepts identical duplicate records, and rejects conflicting duplicates instead of silently choosing a value.</p>
-<p>The output is 14:30 100.00, 14:31 MISSING, and 14:32 101.00 on separate lines. The function has preserved what the input says without claiming why the middle slot is absent.</p>
-<p>This is a close-series example, not a downloader or exchange calendar. Production adapters should use full normalized timestamps rather than time-of-day strings, partition records by instrument and series settings, and validate the complete OHLCV record. A conflicting revision may be legitimate, but resolving it requires a documented revision policy. Raising an error here makes that decision visible.</p>
-<p>Open-source clients and data-processing tools can help build a stock API application. The distinction is between the software you can inspect or run and the underlying market-data service. An open-source client does not establish the upstream feed's coverage, usage rights, or historical depth.</p>
-<p>For this charting task, inspect what the client does with pagination and missing values. A convenient wrapper may return a clean table while hiding a truncated query or a fill operation. Trace those transformations before using the result for research.</p>
-<p>The same separation applies when using TickDB: the chart layer should retain the requested series settings and retrieval status alongside the returned candles. TickDB also documents that the final candle may still be forming. Mark that record as provisional when applicable; a changing current bar and an absent historical bar require different display behavior.</p>
-<p>An acceptance check should cover more than whether the chart renders. Confirm that retrieval reached the endpoint's documented stopping condition, that the result is partitioned by the intended instrument and settings, and that unexplained gaps remain visible. Exercise an unfinished download, a missing slot, an identical duplicate, and a conflicting duplicate. Each should produce a deliberate result.</p>
-<p>Do not turn the ratio of returned bars to clock minutes into a completeness score without establishing the expected-bar policy. A sparse instrument can legitimately have fewer bars under a trade-based aggregation rule. Conversely, a full-looking grid can conceal invented values.</p>
-<p>The useful promise of a historical chart is that its displayed observations and limitations can be explained. A stock API supplies the records. The application must preserve the difference between a value that was observed, a value it derived, and a value it does not know.</p>
-<p>Source basis: Alpaca Historical bars, Databento Aggregate bars, and TickDB Candlestick Data documentation, checked November 4, 2026. Code and numerical examples are synthetic.</p>
-<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
-<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
-<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Adapted from King Arthur Baking Company’s Big Book of Bread</p>
+<p>One of the most crucial steps for making crusty artisan-style bread comes at the very end: steaming.</p>
+<p>Baking bread with steam is critical for achieving expansive, open-crumbed loaves with a golden, crisp crust. If you bake bread in a dry oven, the crust quickly sets, which prevents the dough from expanding to its full potential; this, in turn, leads to loaves with a denser crumb. If you introduce steam at the start of the bake, the crust remains moist and pliable and the loaf can stretch and expand before the crust sets, resulting in a lighter, more open crumb.</p>
+<p>What’s more, steam also helps gelatinize starches on the loaf’s exterior, which helps it brown and creates an especially crispy, flavorful, and shiny loaf. (Learn more: A guide to baking bread with steam at home.)</p>
+<p>There are many different ways to steam your bread, all of which are designed to introduce moisture to the oven during the first part of baking. The most common method involves setting a large cast-iron skillet below your baking stone or steel when you preheat the oven. After you load your bread into the oven, you immediately pour a cup or so of warm water into the preheated cast-iron skillet and quickly close the door so the steam doesn’t escape.</p>
+<p>This method works great, with one exception: It’s not effective in a gas oven.</p>
+<p>If you have a gas oven, it’s very hard to add sufficient steam. By design, gas ovens vent out effluence, meaning whatever steam you add is very quickly vented out of the oven chamber. This is particularly true if you steam your bread by pouring hot water into a cast-iron skillet, as outlined above. All the water quickly dissipates, and there’s not enough moisture left to enhance the crust.</p>
+<p>But all is not lost. There is a workaround.</p>
+<p>If you’re steaming bread in a gas oven, you need to use a preheated covered baker, such as a Dutch oven. Instead of adding an additional water source, the lidded vessel traps the steam that escapes from the loaf as it bakes, becoming a kind of self-steaming oven. Because the steam is sealed in, the gas oven won’t vent it out.</p>
+<p>You can use a Dutch oven for a round, boule-shaped loaf, or any other form of covered baker, like the Brod & Taylor Bread Steel for elongated, bâtard-shaped loaves. (There’s also a round version of the Bread Steel available.)</p>
+<p>For more guidance on this method, see our previous blogs, Bread baking in a Dutch oven and For crispy, crackle crusts, put a lid on it.</p>
+<p>When you load your dough into the oven, slip a few ice cubes between the parchment beneath your loaf and the pan to give the loaf an extra initial burst of steam. Just don’t skip the parchment beneath the dough. Otherwise, the extra water from the melting ice may cause your bread to stick to the pot.</p>
+<p>Cover photo and food styling by Martin Philip.</p>
+<p>Mini pies may be the secret to a stress-free celebration.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>A baker’s guide to our new T85 Baker's Reserve Bread Flour.</p>
+<p>Don’t fall for this classic sourdough starter trick.</p>
+<p>A tactical guide to managing your sourdough baking (while still having a life).</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/wang_vball_2e41b5cfbc194e/stock-api-charts-need-complete-downloads-and-explicit-data-gaps-1ea8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/09/10/is-a-gas-oven-bad-for-bread" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shlemiel the Painter Is Back: How Zig’s libc Rewrite Made SQLite Slower</title>
+    <title>PapRAT Cyber-Espionage Campaign Leaves a &#x27;Bitter&#x27; Taste in South Asia</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9800.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,42 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Shlemiel the Painter Is Back: How Zig’s libc Rewrite Made SQLite Slower</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-04</p>
+        <h1>PapRAT Cyber-Espionage Campaign Leaves a &#x27;Bitter&#x27; Taste in South Asia</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
         
         <div class="article-body">
-            <img src="https://dennisforbes.ca/include/images/og_dennis_forbes.jpg" alt="Shlemiel the Painter Is Back: How Zig’s libc Rewrite Made SQLite Slower" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt5084e1dd5e7db648/6ae882291b7efb363cec70fb/rat-David_Chapman-Alamy.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="PapRAT Cyber-Espionage Campaign Leaves a &#x27;Bitter&#x27; Taste in South Asia" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://dennisforbes.ca/include/images/og_dennis_forbes.jpg" alt="Shlemiel the Painter Is Back: How Zig’s libc Rewrite Made SQLite Slower" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt5084e1dd5e7db648/6ae882291b7efb363cec70fb/rat-David_Chapman-Alamy.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="PapRAT Cyber-Espionage Campaign Leaves a 'Bitter' Taste in South Asia" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Back in 2001, Joel Spolsky â whose writings had a big influence my career â wrote a great piece titled Back to Basics. The premise of the piece is that practitioners should understand the basics: However abstract and remote we may seem from the basic algorithms that drive computing, they can unexpectedly have enormous consequences on our projects.</p>
-<p>One of his examples is the âShlemiel the Painterâ trap, where a seemingly simple choice leads to quadratic runtime complexity. In that parable, a street line painter never moves his can of paint. As he gets further and further along in the line, increasingly more of his time is spent walking to and from his can of paint.</p>
-<p>It is astonishing how often this Shlemiel the Painter pattern recurs1, including now in 2026.</p>
-<p>A few days ago I posted about a chess analysis service I put online â2. This is primarily a Rust service backed by sqlite that dishes out analysis tasks to runners. Each runner processes upwards of hundreds of chess games and return a large set of JSON bundles back to the main service, where they are processed and then stuffed into sqlite.</p>
-<p>While the analysis pegs two dozen cores on a runner for minutes on end, the process of storing the data should take milliseconds. Sub-milliseconds.</p>
-<p>Imagine my surprise when on the first really large set of games, the simple process of inserting the JSON data â maybe about 40,000 records â into the data store took minutes. During all of my testing this never really appeared as a critical path, but with a large set of records it suddenly was a breaking problem.</p>
-<p>What made this more perplexing was that it completely saturated a core, being a CPU-bound operation. How could inserting simple JSON into SQLite yield minutes of CPU time?</p>
-<p>Shlemiel the painter has made an appearance. To drop a spoiler, he was introduced to the project via Zigâs cc compiler and its replacement for standard library functions.</p>
-<p>The project isnât built in Zig, but instead uses Rust. The sqlx sqlite crate needs to be compiled for the target environment â sqlite is of course a C project â so to facilitate cross-platform building, generating both Mac ARM64 and Linux ARM64 / x86-64 binaries from this machine in a convenient build and deploy workflow, zig cc is used to compile sqlite when targeting Linux, generously offering up cross-platform targeting via cargo-zigbuild.</p>
-<p>From one build and deploy script on my Mac I can target all of my platforms without containers or build machines. Zigâs elegant libzigc re-implements the standard library so you can static link the necessary functionality.</p>
-<p>Zig uses musl (the standard library rewrite), but they have been rewriting it piece by piece in pure Zig (via libzigc), removing the C dependencies one at a time.</p>
-<p>And thatâs where the performance issue was introduced.</p>
-<p>In the rewrite of strspn, replacing the musl version with the pure zig variant), the first step measures the entire length of the string. This is also seen in the rewrites of strcspn, strpbrk and strstr.</p>
-<p>This is a problem for tokenizers. A tokenizer takes a giant string and a common iterating step is to skip whitespace, getting the new string location and then repeating this pattern repeatedly. With this shlemiel the painter pattern introduced with these rewrites, as it steps through the text it is tokenizing it is remeasuring the entire length of the string endlessly.</p>
-<p>This is what caused my performance issue, and itâs why it appeared on Linux but was never seen on my Mac (where zig wasnât used for compiling sqlite).</p>
-<p>Tokenizing a 1.2MB file, which was seen passing json to sqlite, is approximately 12,000x slower with this pattern. As the file gets larger, the slowdown is quadratic.</p>
-<p>I mean no malice or disrespect to anyone involved with these great tools that enable so much. But itâs interesting that in the year 2026, these same old issues can recur, and we all need to be vigilant for them. Something so trivial was grinding a process to a halt, in the most unexpectedly trivial of places.</p>
-<p>My original fix for this issue, at least in my own code, was to pre-prune whitespace from JSON, which greatly reduced the cost when tokenizing in sqlite3, but not knowing where else it might bite I moved my Linux builds over to Linux containers.</p>
-<p>Years and years ago, back when Sunspider was the go-to benchmark and browsers would herald their supremacy, the same pattern could be seen in the way Firefox handled string concatenations, causing it to be a laggard in that benchmark. Sunspiderâs benchmark run somehow entailed an enormous number of string concatenations â even the tests having little to do with strings â and a simple profile3 of a benchmark run showed that a significant amount of the runtime was consumed constantly allocating slightly larger string memory, copying to the new location, and then repeating this pattern. It was Shlemiel the Painter.</p>
-<p>I corrected this (overallocate strings with a size-dependent buffer such that subsequent concatenations could reuse the buffer until it actually need to be resized again, which again would overallocate), blogged about it, Brendon Eich took note, and voila Firefox took the lead in the benchmark4. Such a trivial thing turned it from slowpoke to benchmark. â©</p>
-<p>Iâm under no delusions Iâm going to support my family with a niche chess analysis service, and at most Iâm looking to break even with the costs of running it. I put it online because I found my work to these ends useful to my own game, and hope that occasionally it will find the right user without burdening me with the costs of doing so. â©</p>
-<p>Profilers are awesome. They are the most powerful tool we have available to us, so itâs strange to me how seldom they are utilized. â©</p>
-<p>And for what itâs worth, string concatenation was extremely common in almost all web projects, so the benefit was substantial in the real world as well. There was a best practice of using string builders, but so often people just slammed strings together in a loop. â©</p>
-<p>Sharing what I built to get better at the game</p>
-<p>Thoughts, ideas, and stories from my journey. 100% of the text content of this blog is human authored, though genAI is used for supplemental images.</p>
-<p>© 2026 Dennis Forbes. Built with â¤ï¸ and Astro.</p>
+                <p>Organizations in the region face growing cyberattacks from the known India-linked threat group, which leverages legitimate Windows functionality in three distinct attack chains.</p>
+<p>A known South Asian cyber-espionage group has been targeting organizations across the region with attacks designed to compromise Windows systems, establish persistence, and give attackers remote control over infected machines using custom malware.</p>
+<p>The attacks, attributed "with high confidence" to the South Asian threat group known as Bitter (aka TA397), involve three distinct infection chains and demonstrate the group's expanding malware capabilities, according to new research from FortiGuard Labs published today.</p>
+<p>Bitter, one of several threat groups linked to India, has been active since at least 2013 and has historically targeted government, energy, and engineering organizations. The group is known for using tailored attack campaigns to gain persistent access to victim networks, collect information, and maintain remote control over compromised systems.</p>
+<p>At the center of the latest threat campaign is PapRAT, a custom remote access Trojan (RAT) that gives attackers extensive control over compromised Windows systems, including the ability to execute commands, manipulate files, capture screenshots, and download additional payloads, according to FortiGuard Labs.</p>
+<p>Related:Philippine Migrant Worker Data Likely Leaked in 69GB Government Breach</p>
+<p>"This campaign illustrates how Bitter combines native Windows tools with custom malware to establish and maintain access to targeted systems," Cara Lin, a FortiGuard Labs threat researcher, wrote in the post.</p>
+<p>Bitter has recently revamped PapRAT from a C++ code base to Rust, expanding its functionality in the process from eight commands to 11, according to the report. Additional capabilities in the latest version include PowerShell execution, a sleep directive, and a clean-exit command.</p>
+<p>"PapRAT's C++ and Rust implementations indicate continued investment in Bitter's toolset," Lin wrote.</p>
+<p>Indeed, attackers have increasingly adopted Rust for malware development for various reasons, including its cross-platform development capabilities and potential evasion advantages.</p>
+<p>The latest updates to PapRAT also underscore the importance of certain defensive measures, including "monitoring malicious behavior across scripting tools, scheduled tasks, and installer activity alongside detecting known malware signatures," Lin wrote.</p>
+<p>Researchers observed three distinct attack chains being used by Bitter, all of which exploit legitimate Windows functionality to disguise malicious behavior.</p>
+<p>These tactics demonstrate "how advanced cyberespionage operations deliberately abuse native system tools to evade traditional endpoint detection," notes Shane Barney, chief information security officer at Keeper Security.</p>
+<p>Related:One Compromised Laptop, Billions Lost: The Binance Attack-Path Warning</p>
+<p>The first attack chain uses a malicious LNK file that abuses the native Windows ftp.exe utility to execute scripts and create scheduled tasks that maintain contact with the attackers' command-and-control (C2) server.</p>
+<p>The second uses a VHDX disk image containing an LNK file that opens a decoy spreadsheet while silently launching an MSI installer to deploy PapRAT.</p>
+<p>The third attack begins with a URL shortcut that retrieves an LNK file through WebDAV, leading to an MSI installer that deploys PapRAT. In this chain, PapRAT also delivers WmRAT, a secondary implant previously documented by other researchers, according to FortiGuard Labs.</p>
+<p>"By co-opting native Windows utilities like ftp.exe and scheduled tasks to establish initial command-and-control communication, threat actors operate within trusted administrative channels before deploying custom malware," Barney observes. "When an intrusion leverages trusted system processes, signature-based controls simply have nothing to alert on."</p>
+<p>This so-called "hybrid tradecraft," which combines legitimate Windows functionality with custom malware, requires organizations to focus on strict privilege boundaries and identity security rather than relying on endpoint signatures alone as part of a comprehensive defense strategy, Barney says.</p>
+<p>Related:Microsoft's AI Risk Report Misses This Key Detail</p>
+<p>To defend against these attacks, organizations should treat unexpected LNK files, URL shortcuts, disk images, and MSI packages with caution, particularly when delivered through unsolicited messages, Lin recommended in the post.</p>
+<p>"Combining user awareness with controls that detect suspicious execution chains and outbound C2 traffic can help limit exposure to campaigns that blend legitimate Windows functionality with custom malware," she wrote.</p>
+<p>The third attack chain is particularly problematic for defenders because removing PapRAT from compromised systems may not eliminate the attacker's access, observes Jason Soroko, senior fellow at Sectigo.</p>
+<p>This means defenders need to look deeper into their systems "to check what else was installed and identify scripts and scheduled tasks that could keep fetching commands," he says. A comprehensive recovery effort must look beyond the file that triggered the original alert to identify any additional payloads, persistence mechanisms, or other components of the compromise.</p>
+<p>Elizabeth Montalbano is freelance writer, editor, and journalist with 30 years of professional experience and a master's degree from Arizona State University. Her areas of expertise include enterprise technology, cybersecurity, business, and culture. During her long career, Elizabeth has lived and worked as a full-time journalist in Phoenix, San Francisco, and New York City. She specializes in news coverage and analysis, using her years of experience to look at the current state of cybersecurity with a critical gaze. She currently resides in a village on the southwest coast of Portugal, where in her free time she enjoys surfing, hiking with her dogs, growing plants, and playing and performing as a singer and musician.</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dennisforbes.ca/blog/microblog/2026/10/the_accidental_12000x_sqlite_slowdown/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyberattacks-data-breaches/paprat-cyberespionage-campaign-bitter-south-asia" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
