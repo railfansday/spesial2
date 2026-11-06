@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPS in PyTorch 2.15</title>
+    <title>Transformers now runs llama.cpp quants</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9847.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>MPS in PyTorch 2.15</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
+        <h1>Transformers now runs llama.cpp quants</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/mps-pytorch-2-15/thumbnail.png" alt="MPS in PyTorch 2.15" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/mps-pytorch-2-15/thumbnail.png" alt="MPS in PyTorch 2.15" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>If you run models on your Mac or use MPS as your primary acceleration tool for computing, there's plenty to look forward to in PyTorch 2.15! FP8 arrives on MPS, language-model decoding gets faster paths through linear layers and softmax and new Metal kernels tackle some surprisingly expensive parts of audio, video and training workloads.</p>
-<p>A quick word about who we are: we're the PyTorch team at Hugging Face. We contribute across PyTorch, and one of our focus areas is the MPS backend, where the goal is to make your Mac a first-class place to run and train PyTorch models. At the start of 2026, running even small models on MPS often meant working around unsupported operations, performance cliffs and unexpected memory growth. So we run real models from the Hugging Face Hub across language, image and video, find where MPS falls short and fix it upstream in PyTorch, more and more often by replacing MPSGraph with dedicated Metal kernels. Much of this post is the result of that work, done together with the PyTorch maintainers and community contributors.</p>
-<p>If you run models on a Mac with transformers, diffusers or tools like ComfyUI, here's what 2.15 changes in practice:</p>
-<p>You'll need an Apple silicon Mac with macOS 15 or later and Python 3.11 or later (see the 2.15 compatibility matrix). If your OS is too old or no Metal GPU is available, the MPS availability check now tells you why.</p>
-<p>To try the release candidate in a separate environment:</p>
-<p>FP8 gives you another way to save memory on your Mac. PyTorch 2.15 adds torch.float8_e4m3fn tensors on MPS: one byte per value, half the storage of FP16 or BF16.</p>
-<p>You can multiply these tensors with F.scaled_mm, which supports both tensorwise and rowwise scaling. Here's a small example with one scale per tensor:</p>
-<p>Every LLM has a prefill phase and a decode phase. During decode, each new token goes through the model as a single row, so the big matrix multiplications turn into matrix-vector products. PyTorch 2.15 speeds up both kinds of layers that dominate this step: dense linear layers and mixture-of-experts layers.</p>
-<p>MPS has had GEMV kernels for torch.mm since 2.14, but F.linear still went through MPSGraph. PyTorch 2.15 connects them to F.linear, so the common [1, 1, hidden_size] decoding input uses them directly, with eligible bias additions fused in. Across 96 BF16 layer shapes from real models, that's a 1.23× geometric-mean speedup. The biggest wins land on small projections, such as the gates in MoE models, where the old path left most of the memory bandwidth unused. Large layers and LM heads were already close to bandwidth-bound, so they stay near 1×.</p>
-<p>A mixture-of-experts layer sends different numbers of tokens to each expert. Grouped matmul handles those uneven groups in a single operation, and 2.15 gives MPS a native implementation.</p>
-<p>In 2.14, grouped matmul copied the group offsets to the CPU and looped over the groups. The new Metal kernels read the offsets directly on the GPU, using Metal Performance Primitives where available and a separate Metal path elsewhere. Small groups, the common case during decoding, get their own kernel as well.</p>
-<p>For example, 64 tokens can be split into groups of 16, 32, and 16:</p>
-<p>The decoding kernel shows up directly in token throughput. On an M3 Ultra with torch.compile, MoE models generate about 1.3× more tokens per second:</p>
-<p>Working with complex tensors gets easier. complex64 LU factorization, LU solve and triangular solve now run on MPS, which also unlocks the operations and gradients built on them, such as complex determinants. Here's a small system solved directly on the GPU:</p>
-<p>Small matrices get fast kernels too. For camera geometry and image transformations, batches of FP32 matrices up to 4 × 4 are inverted in a single Metal kernel that combines factorization and solving. Larger problems get attention as well: QR uses blocked updates, and triangular solves turn much of their work into efficient matrix multiplication.</p>
-<p>Gated DeltaNet workloads get a dedicated fast path for batches of 16 × 16, 32 × 32 and 64 × 64 FP32 triangular systems with at least eight right-hand sides.</p>
-<p>SVD is also more robust at numerical extremes. It now correctly handles very small singular values, very large or very small input magnitudes and basis completion with full_matrices=True, which in turn makes pseudoinverse and least-squares results more reliable.</p>
-<p>Audio models, video decoders and training loops have their own expensive operations. This release gives several of them new paths through Metal:</p>
-<p>Token sampling gets faster in 2.15 as well. softmax and log_softmax now run on dedicated Metal kernels, and large vocabularies benefit the most: an FP32 softmax over a [1, 128256] row of logits drops from 57 µs to 7 µs, about 8× faster than the MPSGraph version. The speedup holds across other common vocabulary sizes:</p>
-<p>One of the most striking results in this release comes from the constant-padding change. The VAE decode in Wan-AI/Wan2.2-TI2V-5B-Diffusers makes 8,764 padding calls over a full 28-tile decode. With padding on Metal, peak driver memory drops from about 270 GiB to 8 GiB:</p>
-<p>You can now pick which MPS stream runs your work, directly from Python. torch.mps.Stream and the torch.mps.stream context manager provide the interface, and Tensor.record_stream lets the allocator track a tensor's use on another stream.</p>
-<p>Here's a small example that sends work to a separate stream and synchronizes before reading the result:</p>
-<p>Several more operations now run on MPS: torch.frexp, torch.logspace, torch.take and Tensor.put_, torch.heaviside, torch.special.laguerre_polynomial_l and unsigned-integer comparisons. logspace doesn't yet support integer or boolean outputs with more than one element.</p>
-<p>Attention gets a correctness fix too: the MPS math implementation of scaled dot-product attention now handles batch and head broadcasting correctly.</p>
-<p>Work on 2.16 is already well underway. Some of the changes below have landed on main and are available in the nightlies; others are still in review, so details may change before the release.</p>
-<p>Once a model's decode path no longer contains any MPSGraph ops, the GPU only starts on a token after the CPU has finished encoding all of its kernels. PyTorch 2.16 commits the command buffer every 16 kernels, so the GPU gets to work while the CPU is still encoding the rest. For compiled BF16 decoding at a 2048-token context:</p>
-<p>Scaled dot-product attention is dropping MPSGraph completely: every shape will run on Metal kernels, with dedicated vector kernels for decoding and Metal Performance Primitives for half-precision prefill on newer macOS versions. The shapes that used to fall back to MPSGraph benefit the most. On an M5 Pro, decoding with grouped-query attention (32 query heads, 8 KV heads, head dim 80, 4K context) drops from 465 µs to 65 µs, and a 4K × 4K prefill with head dim 40 goes from 42 ms to 6 ms.</p>
-<p>The move away from MPSGraph continues. Batch norm forward and backward are in progress, while MSE loss (up to 12× faster on small inputs), std_mean and var_mean (up to 4× faster) and bincount have already landed. bincount is the most dramatic: when most values fall into a single bin, counting 4 million integers used to take 6.8 seconds and now takes half a millisecond.</p>
-<p>Bundled shaders will build for Metal 3.1 by default, with Metal 4 versions compiled only for the kernels that need them. That shrinks libtorch_cpu.dylib by about 25%, from 384 MiB to 287 MiB, and lays the groundwork for Metal 4.1 shaders with faster matmuls and native FP8 matrix multiplication.</p>
-<p>PyTorch 2.15 brings FP8 to the Mac, faster LLM decoding for dense and MoE models, more linear algebra on the GPU and a long list of operations moved from MPSGraph to dedicated Metal kernels. Give the release candidate a try!</p>
-<p>A big thank you to Nikita Shulga, Kurt Mohler and Aaron Gokaslan for reviewing much of this work, and to everyone who contributed to MPS in this release.</p>
+                <p>We're adding support for running GGUF models efficiently in transformers, so you can use checkpoints sized for your laptop's memory through the familiar transformers APIs. Pick a GGUF from the Hub, load it with from_pretrained, and start generating on your own machine.</p>
+<p>Running AI models on your laptop has become much easier, and llama.cpp has been a big part of that. Its inference engine powers local AI tools such as Ollama, LM Studio, and Jan. Alongside projects like MLX, it has helped make local inference a practical option for everyday use.</p>
+<p>A recent example of what local AI can feel like:</p>
+<p>This is where we are right now. And i’m not gonna lie it feels pretty magical 🧙‍♀️Qwen3.6 27B running inside of Pi coding agent via Llama.cpp on the MacBook ProFor non-trivial tasks on the @huggingface codebases, this feels very, very close to hitting the latest Opus in Claude… pic.twitter.com/lsIxLoUneU</p>
+<p>GGUF, developed by the llama.cpp team, is a widely used format for local inference. The team also shares quantized checkpoints under ggml-org on the Hub. Publishers such as Unsloth, LM Studio Community, and bartowski also provide ready-to-use GGUF checkpoints in a range of quantizations, so users can pick the version that fits their machine. GGUF models have been downloaded millions of times.</p>
+<p>We want to make it easier to run these models locally with transformers, too. Compatibility is only useful if the model is pleasant to run. To bring performance close to llama.cpp, we're reusing its underlying ggml kernels through the kernels library, and reducing overhead in generate. Our initial focus is local inference on Apple Silicon, starting with the Qwen3.5 architecture.</p>
+<p>GGUF packages model weights and metadata, including tokenizer information and an optional chat template, in one file. It supports different quantization levels, letting you trade some precision for a smaller memory footprint. Variants such as Q4_K_M mix tensor precisions, using mostly 4-bit weights while keeping sensitive tensors at higher precision.</p>
+<p>Here's how quantization changes the file size of Unsloth's Qwen3.5-4B:</p>
+<p>We suggest starting with Q4_K_M, then trying Q5_K_M or Q6_K if you have more memory available. More aggressive quantization can help larger models fit, but the quality tradeoff depends on the model and the task. Evaluate it on the work you actually want the model to do. The Hub's GGUF documentation describes the available quantization types.</p>
+<p>To load a GGUF model, pass its Hub model_id and filename as gguf_file to from_pretrained.</p>
+<p>No extra configuration is needed: when the weights stay packed on Metal, transformers automatically loads the compatible ggml/Metal layer kernels and uses ggml-org/ggml-attn as the attention implementation. If that kernel cannot be fetched, the model falls back to "sdpa" with a warning, and you can always force "sdpa" by passing attn_implementation="sdpa" explicitly. See the GGUF documentation for more loading options.</p>
+<p>That is the only GGUF-specific step. Everything after it is the standard transformers API:</p>
+<p>Without a compatible quantization kernel, the loader falls back to dequantizing the model and uses more memory.</p>
+<p>You can also use the same checkpoint with transformers serve, which exposes an OpenAI-compatible API:</p>
+<p>The model argument uses <model_id>:<filename>.gguf: before the colon is the Hub repository (unsloth/Qwen3.5-4B-GGUF), and after it is the file to load (Qwen3.5-4B-Q4_K_M.gguf). This selects a specific quantization from a repository that may contain several.</p>
+<p>For models whose chat template supports thinking, add --reasoning off to skip it or --reasoning on to enable it. The default, --reasoning auto, follows the chat template’s default. See the reasoning options for details.</p>
+<p>You can connect a client such as Jan or Pi by adding a custom OpenAI-compatible provider with these settings:</p>
+<p>transformers runs the model on your Mac, while the client provides the conversation interface. The same endpoint can be used by other clients that support this API.</p>
+<p>Our reference for local inference performance is llama.cpp. The comparison below focuses on three GGUF checkpoints: a small dense model, a larger dense model, and a mixture-of-experts model.</p>
+<p>The llama.cpp column comes from the llama-bench tool (build 5f55650a7, release b10200, Metal backend from ggml 0.18.0), run as llama-bench -m <file> -p 0 -n 128 -r 3, which reports tg128: the token-generation rate over 128 decoded tokens, averaged across three repetitions, with prompt processing excluded. The transformers column is generate producing the same 128 tokens from a 12-token prompt, best of three warmed runs, and it includes prefill.</p>
+<p>Measured on a MacBook Pro M2 Max, 32 GB unified memory, macOS 26.6, PyTorch 2.12.1, kernels 0.17.0,
+plugged in.</p>
+<p>Transformers is close to llama.cpp across all three checkpoints. The chart uses the same measurements described above; it does not imply identical benchmark conditions, since the Transformers measurement includes prefill while llama-bench reports decode-only throughput.</p>
+<p>When GGML and llama.cpp joined Hugging Face, we described their complementary roles: llama.cpp provides a foundation for local inference, while transformers provides a foundation for model definition. GGUF support brings those two closer together.</p>
+<p>llama.cpp remains our recommended engine when your priority is efficient local inference. Its dedicated runtime, memory management, and broad hardware support are built around that goal. This integration gives developers a convenient way to work with the same GGUF checkpoints inside transformers:</p>
+<p>For that last case, use GgufConfig(dequantize=True):</p>
+<p>The bigger opportunity is bringing ggml's performance to models that llama.cpp does not support.</p>
+<p>transformers already provides the PyTorch implementations of these architectures. With ggml kernels and quantization schemes available in PyTorch, we can work toward accelerating their supported operations without first implementing the entire model in llama.cpp. This is especially useful for new architectures, research models, and custom variants that may never receive a dedicated llama.cpp implementation.</p>
+<p>That opportunity extends beyond the GGUF format itself. A kernel operates on tensors; it does not require the whole model to come from a GGUF file. The same building blocks can be integrated into other transformers models and loading workflows. This also opens a path to other modalities: computer vision models, audio models, and multimodal models could reuse compatible attention, normalization, and matrix multiplication kernels without first having a full implementation in llama.cpp. Each architecture still needs integration and validation; the initial GGUF examples here cover text generation.</p>
+<p>We also wanted to show how far we can get while keeping the model and generation loop in Python. With the right kernels and an efficient generation loop, Python and PyTorch can deliver strong local inference performance. The kernels handle the heavy computation, while the generation loop keeps the GPU busy by avoiding unnecessary synchronization.</p>
+<p>Our focus was to make eager execution fast without requiring torch.compile. For interactive use, we wanted a quick start and a steady stream of tokens, without compilation pauses or recompilation when input shapes change. The two main pieces of that work are the kernels and generate itself.</p>
+<p>A kernel is a small program that performs an operation on the GPU. PyTorch supplies general-purpose implementations; a specialized kernel can do less work, combine several operations, or read quantized weights directly in their stored format.</p>
+<p>The kernels library lets us distribute compatible builds of ggml's Metal kernels on the Hub and call them from transformers. That brings ggml's work into the PyTorch model without replacing the model with a separate inference runtime.</p>
+<p>The first four packages build on ggml's kernels; the top-k kernel addresses a separate bottleneck in MoE routing. Together they reduce the GPU work needed for each generated token.</p>
+<p>To show the contribution of the layer kernels, we compare the same packed GGUF checkpoints with and without them. The quantization kernel stays enabled in both configurations: disabling it would also change how weights are represented and would measure a different tradeoff.</p>
+<p>Faster kernels only help if the GPU has work to do. During generation, the CPU schedules GPU operations and controls the loop that produces the next token. Reading a result back from the GPU can force the CPU to wait until queued operations finish. Repeating even a small wait for every token can noticeably reduce throughput.</p>
+<p>Two changes address this in generate, which results in improvements for all transformers models (not just when running GGUF files):</p>
+<p>These changes improve the generation loop around the model, so their usefulness extends beyond GGUF. They complement the kernel work: kernels reduce the cost of an operation, while fewer synchronization points let CPU scheduling and GPU execution overlap.</p>
+<p>These measurements keep all layer kernels enabled; the bars isolate the changes to the generation loop.</p>
+<p>The initial target is a single interactive conversation on Apple Silicon. There are a few boundaries to keep in mind:</p>
+<p>If you have a GGUF model you would like to use in transformers, open an issue with the checkpoint and your use case. That will help us prioritize support for the models people are running locally.</p>
+<p>We would like to thank Arthur Zucker for initiating this work and reviewing all of my PRs, and Cyril Vallez for the generate PRs. We are grateful to Sayak Paul, the llama.cpp team, and Bertrand Chevalier for their help integrating the kernels. We also thank Aritra Roy Gosthipaty and Pedro Cuenca for reviewing this blog post, and Lysandre Debut for overseeing the project.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/mps-pytorch-2-15" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/transformers-llama-cpp-quants" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

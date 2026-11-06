@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thinking of ACE? We Can Do It with Fewer Tokens</title>
+    <title>Build Generative UI Apps with A2UI &amp; CopilotKit Agents</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9989.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Thinking of ACE? We Can Do It with Fewer Tokens</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
+        <h1>Build Generative UI Apps with A2UI &amp; CopilotKit Agents</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/G2z5bU66FNnhBf_UhSNij.jpeg" alt="Thinking of ACE? We Can Do It with Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cover-without-title.2e16d0ba.fill-1200x600.png" alt="Build Generative UI Apps with A2UI &amp; CopilotKit Agents" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/G2z5bU66FNnhBf_UhSNij.jpeg" alt="Thinking of ACE? We Can Do It with Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cover-without-title.2e16d0ba.fill-1200x600.png" alt="Build Generative UI Apps with A2UI & CopilotKit Agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>ALTK-Evolve and ACE both let an agent learn from its own trajectories. The difference is what they do with what they learn — and that decides the token bill.</p>
-<p>Give an LLM agent a realistic multi-step task — split a bill, find a song, reconcile an order across nine simulated apps — and when it fails, it usually isn't for lack of knowledge. It mis-paginates an API, resolves the wrong person, or returns a value when none was asked for. The model knows the APIs; what it hasn't internalized is how to use them reliably. That's learnable from the agent's own history.</p>
-<p>Two recent systems do exactly this, on the same kind of agent: ACE (Agentic Context Engineering) and our ALTK-Evolve (introduced here). Both are a form of agentic memory — turning an agent's past trajectories into reusable lessons and feeding them back at inference time, no weight updates, no human labels. They even agree on the hard part. Where they part ways is delivery.</p>
-<p>A note on words, because the two systems name things differently: we'll call the raw thing an agent learns a lesson. ACE organizes its lessons into one comprehensive, evolving playbook; we consolidate ours into individually retrievable guidelines. Same lessons, two containers.</p>
-<p>ACE names the failure modes precisely: brevity bias — optimization collapsing toward short, generic instructions — and context collapse — a model asked to rewrite its whole context each step summarizing the detail away. Its answer is to keep a rich, itemized playbook, with a helpful/harmful counter on every bullet, and let the model distill relevance at read time.</p>
-<p>We reach the same conclusion from the other direction. Every distinct guideline keeps a support count — how many independent episodes produced it — and we never summarize the store down to a handful of rules. A lesson five different tasks discovered is a different object from one that appeared once, and both are worth keeping.</p>
-<p>So on the core question — should you compress an agent's hard-won lessons into a tidy summary? — ACE and ALTK-Evolve give the same answer: no. Count them, don't collapse them. ACE's per-bullet counters and our support counts are two spellings of the same idea.</p>
-<p>Two places: how the memory is built, and how it's delivered — and it's the delivery difference that shows up in the token bill.</p>
-<p>Consolidation (how the store is built). ACE grows one playbook through a Generator → Reflector → Curator loop, applying incremental delta updates and de-duplicating by embedding. We cluster near-duplicate lessons and merge within a cluster, support-conserving — when several lessons merge, the survivor inherits their combined count, so the store shrinks without losing the record of how much experience backs each guideline. We also extract typed guidelines — strategy, recovery, and optimization — with causal attribution and provenance back to the source trajectory, and at subtask granularity, so a lesson learned on one app can transfer to another.</p>
-<p>Delivery (what reaches the model at inference). This is the one that drives the numbers. ACE injects the comprehensive playbook on every step, the same way regardless of model or task. We treat delivery as a dial, not a constant: a small fixed core of high-support guidelines, extended per task with a handful selected for the task at hand (cosine or LLM-guided, priority-weighted) — or, when a model has the headroom to use it, the full consolidated set. The same lessons are available to both agents; the difference is that ACE always sends all of them, and we send however many a given model can actually use.</p>
-<p>On AppWorld, with the same base ReAct agent, running both systems in-house:</p>
-<p>On the strong model we're better on both metrics at ~40% of ACE's inference cost. On the weak model we edge ACE 56.0 to 54.8 — close enough that we call it a tie on accuracy (a repeat run of ours landed at 54.8, matching ACE almost exactly, which is within this benchmark's run-to-run noise) — at about one-seventh the cost.</p>
-<p>A fair word on cost: ACE's own efficiency story is about building its context cheaply. Ours is on a different axis — serving it. Retrieving a few guidelines per task instead of injecting the whole playbook on every step is where the tokens go, and it's the direct consequence of the delivery difference above.</p>
-<p>Where does the accuracy come from? The by-difficulty breakdown tells two different stories:</p>
-<p>Figure 1. Post-memory Task Goal Completion by difficulty, ours vs. ACE. On DeepSeek-V3.2 (right) we win Easy, Hard, and Overall; ACE only edges Medium. On gpt-oss-120b (left) ACE leads easy and medium, but per-task selection wins the hard tasks — and the aggregate. Each system improves from its own no-memory baseline (see the by-difficulty reference tables under Method notes below).</p>
-<p>The two models tell different stories. On gpt-oss-120b, ACE's full playbook has the edge on Easy and Medium — there's enough of the task solved by generic instruction-following that a comprehensive prompt helps more than it distracts. But on Hard tasks, where the model has to pick the right lesson rather than wade through all of them, curated retrieval pulls ahead — and that's the tier that decides the aggregate. On DeepSeek-V3.2 the story flips: the stronger model absorbs ACE's full playbook well enough to edge us on Medium, but we lead Easy, Hard, and Overall — with more capacity to spare, more lessons (delivered our way) keep helping instead of crowding each other out.</p>
-<p>We give each model its best configuration — the full consolidated set for the strong model, selective retrieval for the weaker one, because a large context overwhelms a weaker model rather than helping it. (Exactly how much to inject, and how it scales across the capability spectrum, is the focus of our follow-up post.)</p>
-<p>Both systems refuse to compress an agent's hard-won experience into a tidy summary — that part, we agree on. The difference is whether delivery is fixed or calibrated: ACE sends the whole playbook every step no matter what; we send however much of the guideline set a given model can actually use. That calibration is what bought the numbers above — same-or-better accuracy at a fraction of ACE's inference cost — and on the weaker model, it was the difference between guidance that helped and guidance that got in the way.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld test_normal, 168 tasks. A ReAct code agent (each step writes Python; the environment returns the output). TGC = Task Goal Completion; SGC = Scenario Goal Completion, which requires every variant of a scenario to pass. Memory is mined from train/dev only; results are single runs (pass@1), as is standard on this benchmark.</p>
-<p>The ACE numbers are our own runs of the ACE agent, evaluated in-house on the same AppWorld splits and the same base models as ALTK-Evolve (DeepSeek-V3.2 and gpt-oss-120b). The ACE paper reports on a different base model (DeepSeek-V3.1), so running it ourselves keeps the comparison controlled for model and harness. Both systems are the same ReAct agent and differ only in the prompt template — which is why the two no-memory baselines differ (72.0 vs 79.8 TGC); we don't rest the comparison on that baseline gap, only on the claims a prompt tweak can't touch: same-or-better accuracy at a fraction of the tokens.</p>
-<p>DeepSeek-V3.2 — by difficulty (baseline → +memory): the two systems start from different no-memory baselines (79.8 vs 72.0 TGC overall) because of the prompt-template difference above.</p>
+                <p>Agent-User Interactions are now evolving from text exchanges to rich UIs. Until recently, most conversations looked like this:</p>
+<p>User: "Find me a holiday package to Bali in March." Agent: (six packages in prose, each with dates, hotel, flights, price) User: "The five-night one with breakfast." Agent: "Here's the link. You can book it on the operator's site."</p>
+<p>Agents could plan the trip, but everything came back as walls of text. They had no standard way to render a selectable list of packages, a map of the destinations, or a date picker to carry you through the rest of the booking, inside the conversation itself.</p>
+<p>Generative UI is the layer that lets agents build interfaces at runtime, shaped by what each request needs - giving users a rich, interactive experience. Implementing that takes two pieces: a way to describe the UI and an agentic stack that connects your agent to your application and renders that UI.</p>
+<p>Generative UI covers a spectrum of approaches, from using predefined higher order components, to enabling your AI agent to have the flexibility to decide how to build the UI.</p>
+<p>At the controlled end, you build each component ahead of time, and the agent picks which one to render and with what data. It's brand-safe but it does not allow for deep customization and personalization based on the user’s intent. At the open end, the agent returns a raw UI program written in HTML, Javascript and/or Dart that renders inside a sandboxed iframe. That covers anything you did not plan for, at the cost of a surface that drifts from your design system and executes code a model wrote.</p>
+<p>A2UI works through the entire spectrum. It participates in controlled generation with decision models like Typesafe’s Jev and also open-ended code generation that may output A2UI JSON messages. The declarative mode, where agents assemble pre-declared components and functions, is the most popular. A2UI is the framework-agnostic standard for declaring UI intent, so local or remote agents can generate your UI from your existing component catalog using a common language.</p>
+<p>Frontend developers can now ship the building blocks once, and the agent composes them for each request.</p>
+<p>Sorry, your browser doesn't support playback for this video</p>
+<p>The Basic Catalog ships 18 general-purpose primitives across layout, display, input, and containers. The agent can compose entirely different interfaces from the same 18 primitives, depending on what the request needs.</p>
+<p>The Basic Catalog is deliberately sparse, so most production apps define their own custom catalog. A custom component can be anything your frontend already renders, including a live map the agent fills with coordinates while your renderer draws the route.</p>
+<p>CopilotKit is built on AG-UI (Agent-User Interaction Protocol), which supports A2UI payload and provides Agent SDKs across many agentic backends.</p>
+<p>Your agent emits A2UI operations. AG-UI carries them to the client as typed events. When the user takes any action, the values are sent back along the same stream.</p>
+<p>A2UI works with any AG-UI compatible agent. Frameworks like Google ADK, LangChain, Mastra and Strands are all AG-UI compatible, so the setup is identical whichever one your agent runs on.</p>
+<p>Setup comes down to two things: connecting your agent to CopilotKit, and defining which components the agent is allowed to use.</p>
+<p>Using Google ADK as the example, the ag_ui_adk package wraps any ADK agent and serves it as an AG-UI endpoint on FastAPI:</p>
+<p>On the app side, you register that endpoint with the CopilotKit runtime at /api/copilotkit. It's a few lines of standard setup, covered in the Google ADK quickstart, and it needs nothing A2UI-specific.</p>
+<p>A2UI itself turns on from the client, where your components already are. Define what the agent is allowed to draw, map each definition to a renderer, and pass the catalog to the CopilotKit provider.</p>
+<p>The description goes into the agent's prompt, so the model knows when to reach for FlightCard instead of a generic card. The Zod schema validates the props it sends back.</p>
+<p>The A2UI configuration can be set up ahead of time on the server, or it can be created dynamically, shipped from the client to the server with the request. The ADK code above used dynamic configuration which is why it used generate_a2ui without defining it. The docs cover both approaches.</p>
+<p>That’s the CopilotKit path. You can also consume the event stream directly with @ag-ui/client and hand the A2UI operations to any compliant renderer: @a2ui/react, or the Flutter, Lit, or Angular equivalent.</p>
+<p>Sorry, your browser doesn't support playback for this video</p>
+<p>Most agent-generated UI is one-shot. The agent draws something, you read it, and it goes stale the moment anything changes.</p>
+<p>A2UI surfaces are bi-directional and the components are reactive, which makes multi-step flows possible. Any action the user takes on the interface (picking dates, choosing a flight, entering passenger details) travels back along the same stream, and the agent re-emits the surface from there using those values.</p>
+<p>Here is a high-level architecture example of an end-to-end booking flow, with an AG-UI agent on Cloud Run streaming A2UI surfaces to a CopilotKit frontend.</p>
+<p>Two things make the round trip work: inputs bound to a data path, and a button carrying an action that names which paths to send back.</p>
+<p>Validation runs on the client, so a bad email shows an error inline without a model call. Nothing reaches the agent until the button fires.</p>
+<p>Then the client sends the bound values, and the agent re-emits against the same surfaceId. That is how the whole flow lives on one surface: flight search, results, passenger details, and confirmation.</p>
+<p>Sorry, your browser doesn't support playback for this video</p>
+<p>Every AG-UI integration inherets these benefits, so you don't have to build them yourself:</p>
+<p>Create a complete A2UI + CopilotKit application. This creates a starter A2UI application with Copilotkit Agent integration.</p>
+<p>The CopilotKit Dojo has runnable A2UI demos: fixed server-side schema, dynamic schema against a custom catalog, and an error-recovery example where an invalid first render heals into a valid one.</p>
+<p>Explore how to build Generative UI Agents with CopilotKit, or dive into A2UI documentation to learn how to integrate A2UI with any framework of your choice.</p>
+<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
+<p>Fast, reliable A2UI, with swappable inference formats</p>
+<p>Hill-Climbing Agent Quality with Agents CLI Evaluation</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-sldd" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://developers.googleblog.com/build-generative-ui-apps-with-a2ui-copilotkit-agents/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

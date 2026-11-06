@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend Interview Question: Your Search Works Until You Type Faster</title>
+    <title>How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9758.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,78 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Frontend Interview Question: Your Search Works Until You Type Faster</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
+        <h1>How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F7wcc5pc4i9pu17g83hqf.png" alt="Frontend Interview Question: Your Search Works Until You Type Faster" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/6a725daa5ca641a21ab61956/OWGtXjnbBov-7SI_04o4z.png" alt="How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F7wcc5pc4i9pu17g83hqf.png" alt="Frontend Interview Question: Your Search Works Until You Type Faster" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6a725daa5ca641a21ab61956/OWGtXjnbBov-7SI_04o4z.png" alt="How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 5
-•
-Originally published at Medium 
-•
-
-
-
-
-Fully Autonomous</p>
-<p>You type a few letters, the suggestions appear, and your little search component looks ready to show someone. Then you add one more letter and watch the results quietly travel backwards.</p>
-<p>Honestly, this is the kind of interview exercise I like because the screen gives you nowhere to hide. You can explain promises beautifully and still put suggestions for ca underneath an input that says car.</p>
-<p>Both requests can return successfully. Your debounce can work exactly as written. Nobody has to lose their internet connection for the interface to become wrong.</p>
-<p>Let’s build the part that prevents that, and then make the bug appear on purpose. This is a worked practice scenario, with invented timings, rather than a story about an interview I attended.</p>
-<p>Meanwhile, if you want to try first by yourself, try this one</p>
-<p>For this exercise, suggestions must belong to the user’s current input. Changing the input immediately clears the previous suggestions, and an empty input stays empty. We’ll send a request after a 300 ms pause and leave caching out of the first version.</p>
-<p>That delay is a practice choice, not a universal recommendation. In a real conversation, clarify the minimum query length, expected latency, selection behavior, and whether old results should remain visible while fresh ones load.</p>
-<p>I prefer clearing the list here because it makes the rule wonderfully easy to inspect. If the box says car, suggestions left over from ca are not allowed to pretend they belong there.</p>
-<p>Imagine this sequence with a trailing debounce.</p>
-<p>At 0 ms, the input becomes ca. Its request starts at 300 ms.</p>
-<p>At 350 ms, the user adds r. The car request starts at 650 ms.</p>
-<p>At 700 ms, the newer request finishes and displays car suggestions.</p>
-<p>At 900 ms, the older request finishes and overwrites them with cat and cafe.</p>
-<p>There is nothing wrong with the older response considered on its own. It answered the question it was asked. The mistake is letting it answer a question the user is no longer asking.</p>
-<p>That distinction changes where you look for the fix. Making the API faster might make the bug harder to notice, but it doesn’t establish which response owns the screen.</p>
-<p>Debounce controls when work begins. Each input change clears the pending timer and schedules a new one. If typing pauses long enough between changes, multiple requests can still be in flight.</p>
-<p>Cancellation asks obsolete work to stop. When your request function passes an AbortSignal to fetch, aborting can interrupt the fetch or response-body consumption. It doesn’t rewind server work that already happened, and a custom asynchronous function may ignore that signal.</p>
-<p>An ownership check decides whether a completion may change the interface. This is the part that still protects us when obsolete work finishes anyway.</p>
-<p>React’s guidance on fetching and cleanup makes the same underlying point about ignoring responses that are no longer relevant. We’ll express that rule in a small JavaScript controller so the reasoning stays visible without getting buried in component markup.</p>
-<p>Keep a counter for the current search intent. Every input change increments it immediately. A request captures the version that created it, and may publish results only while that version is still current.</p>
-<p>Here is the sneaky part. Incrementing the counter only when the next request starts leaves a gap during the debounce delay.</p>
-<p>Suppose the user changes ca to car at 350 ms, but the old response arrives at 400 ms. The new request won’t start until 650 ms. If invalidation waits until then, the old response still looks current for another quarter of a second.</p>
-<p>So the input event takes ownership immediately. Waiting to send the replacement request is a separate decision.</p>
-<p>Checking only the query text also deserves care. With a sequence such as ca → car → ca, two different requests can share the same text. This exercise uses latest-intent semantics, so the first ca request does not get permission again just because the user returned to that spelling.</p>
-<p>The controller below owns the timer, request version, and cancellation handle. fetchSuggestions is an injected asynchronous function returning an array. publish is a synchronous UI-state callback that does not throw or call back into the controller.</p>
-<p>It implements the request lifecycle, not an entire accessible autocomplete widget. A browser component calls search.setQuery(input.value) on input changes and search.dispose() when it is removed.</p>
-<p>Walk through the first two lines inside setQuery before admiring anything else. They make obsolete callbacks lose permission before the new timer even exists.</p>
-<p>The same guard protects errors. Otherwise an old request could fail after a newer one succeeds and replace a perfectly useful result with an error message. Loading state needs ownership too, which is why there is no unconditional loading = false in finally.</p>
-<p>Keep one controller per mounted search box. Recreating it on every React render gives each instance a separate timer and counter, which defeats their purpose. A React adapter needs stable ownership across renders and matching cleanup; this function is deliberately not presented as a drop-in hook.</p>
-<p>For the fetch adapter, pass the signal through, reject unsuccessful HTTP responses, and validate the response shape before treating it as an array. Also decide whether trimming matches your product’s search semantics. Here it is an explicit simplifying assumption.</p>
-<p>Typing quickly and hoping to catch the bug is a frustrating test plan. Give yourself control over when each request completes instead.</p>
-<p>Use fake timers for the debounce and deferred promises for the responses. Have the mock deliberately ignore cancellation in one test, because that proves the version guard works on its own.</p>
-<p>Set the input to ca, advance the fake clock by 300 ms, and confirm that exactly one request started.</p>
-<p>Change it to car, advance another 300 ms, and confirm that the second request started.</p>
-<p>Resolve car with ['car', 'carpet'], then resolve ca with ['cat', 'cafe'], flushing promise callbacks after each completion.</p>
-<p>Confirm that the final published state still belongs to car, contains its two items, and reports success.</p>
-<p>Now repeat with the old response finishing during the new debounce window. The state should remain waiting with no items. That catches a different bug from simply resolving the requests backwards.</p>
-<p>Clear the input while a request is pending and resolve it afterwards. Remove the component and resolve another pending request. Reject an old request after a newer success. Each case asks the same question about permission, so the tests reinforce the explanation instead of becoming a random edge-case collection.</p>
-<p>For debounce itself, enter several values less than 300 ms apart and verify that only the final value starts a request after the last pause. Keep that check separate from response ordering, because a correct timer can coexist with incorrect results.</p>
-<p>Please don’t let the network exercise distract you from the person using the search box. A dropdown that only works with a mouse is unfinished.</p>
-<p>Once the lifecycle is sound, add a visible label, keyboard navigation, a clear active option, Enter to accept a suggestion, and Escape to dismiss the popup. Follow the W3C combobox pattern for the relationships between the input, popup, and active option, rather than scattering ARIA attributes until the markup looks impressive.</p>
-<p>If choosing a suggestion or pressing Escape should keep the popup closed, those actions must also invalidate pending work. Otherwise a late completion can reopen a list the user just dismissed. That extension belongs in the component’s interaction model; the controller above only exposes query changes and disposal.</p>
-<p>Give waiting, loading, no matches, and failure distinct states. They answer different questions for the reader of your screen, and they become much easier to test when they are represented explicitly.</p>
-<p>Try the autocomplete and debounce exercise with the article closed, then explain what happens when the old request finishes before the new debounce timer fires. That one variation reveals whether the ownership rule has actually clicked.</p>
-<p>My favourite way to rehearse the answer is to draw two requests and circle the moment the user changes their mind. From there, the implementation has a clear job to do.</p>
-<p>You don’t need to make the network behave politely. You need to make sure an outdated answer cannot take over the screen.</p>
-<p>Templates let you quickly answer FAQs or store snippets for re-use.</p>
-<p>Are you sure you want to hide this comment? It will become hidden in your post, but will still be visible via the comment's permalink.</p>
-<p>For further actions, you may consider blocking this person and/or reporting abuse</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Models specialized for a domain or a task by fine-tuning general open-source models, such as Qwen and Gemma, inherit a vocabulary built for many domains and general applications.</p>
+<p>In an essay grader we run in production, that vocabulary split the text the model writes most into many tokens. This article previews some results from the VocabX paper, which we will publish soon: how we specialized the vocabulary around the cost of each token rather than its frequency, and cut measured inference cost by 77% without changing the base model.</p>
+<p>The tokenizer is usually treated as a fixed property of the base model, inherited and left alone. For a model specialized in a single domain, it can be one of the largest cost levers, and it is set before any training step.</p>
+<p>One of the systems we run in production is an automated grader for Portuguese essays, built on Qwen3-4B. It receives the essay, the prompt and the supporting texts, and returns a JSON assessment with a grade and a comment for each competency.</p>
+<p>The model was already small, at 4 billion parameters, and had already been trained for the task. Its tokenizer, however, was still the original Qwen3-4B one, built for many languages and many kinds of text. In the grader, it was used for a single language, Portuguese, and a single response format. That had two costs: the text the grader writes on every request took more tokens than it needed, and at every generated token the model scored a vocabulary of 151,669 entries, including many this task almost never uses.</p>
+<p>We rebuilt that vocabulary with a method we call VocabX, keeping the same base model, the same data and the same training recipe. The numbers in this article come from the current version of the paper, still under review, and may change before publication.</p>
+<p>The leading language models read and write in tokens, and the tokenizer decides how text becomes tokens. The tokenizers of the leading general-purpose models are trained on large collections of text from many domains and languages, from source code to contracts to Chinese. For a general-purpose model, that choice makes sense.</p>
+<p>For a model used in a single domain, it creates two kinds of waste at once.</p>
+<p>The first is fragmentation. The tokenizer splits into many pieces exactly what the domain repeats most. In the grader, every response starts with the same JSON envelope, the same competency names, the same evaluation phrases. In contracts, it is the boilerplate clauses. In code, the identifiers. Each of these sequences costs several tokens where one would do, and the model pays for every one of them on every request.</p>
+<p>The second is excess. The vocabulary carries tens of thousands of entries the domain never uses, and the model computes a score for all of them at every token it generates. A model tuned to grade American school biology exams will almost never write in Chinese, yet it computes the probability of every Chinese-language token at every step. The vocabulary splits into many pieces what the domain repeats most, and carries entries the domain never uses.</p>
+<p>The natural reaction is to count tokens and try to reduce the count. But the count is not the bill.</p>
+<p>To see why a generated token costs more, it helps to look at how inference works. It has two phases. In prefill, the model processes the whole input in a single pass through the network: each weight read from GPU memory is reused for every input token, and the limit is compute. In decode, the model generates the response one token at a time, and each token needs a full pass. Each weight read is used only a few times, and the GPU spends most of its time waiting for data to arrive from memory: the limit becomes memory bandwidth.</p>
+<p>This effect is strongest exactly where we operate: small models served with moderate batches. Batching requests splits the weight reads across them and eases the problem, but does not solve it. At every decode step, the model also reads the KV cache, the attention memory that holds the context already processed and grows with it. In the case we measured, the grader, a generated token costs 7.4 times a token read, but the ratio varies with the hardware, the problem, the batch size, the context length and other factors, and it can be larger than that. In general, the direction holds: generating costs more than reading.</p>
+<p>Think of a shipping company that charges per box, but charges seven times more for outgoing boxes than for incoming ones. Reducing the total number of boxes helps. Reducing the outgoing boxes helps seven times more. A method that compresses input and output equally misses most of the possible savings.</p>
+<p>The third component of the bill is the vocabulary itself. The model's last layer, the LM head, turns the internal state into a score for every possible token. To do that, it holds one row of parameters per vocabulary entry. In a model the size of Qwen3-4B, that matrix accounts for almost 10% of the parameters. It is a share that large models absorb without noticing, but it weighs on a small model.</p>
+<p>And the cost is not paid only once. The input layer looks up only the row of the token being read, but the LM head reads and multiplies the entire matrix for every generated token. Since decode is already memory-bound, every extra row is more data to move at every step. An entry the domain never uses costs exactly the same as a frequent one. That is why adding tokens can lower the count and raise the bill at the same time. VocabX does not include this term in its selection criterion, but it controls vocabulary size in two steps: the sub-word merge replaces the base vocabulary with a smaller, domain-specific one, and macros enter under a fixed budget. In the grader, the output layer went from about 152,000 to about 65,000 rows.</p>
+<p>Adapting a model's vocabulary is not a new idea. Reference methods in the literature, such as fast vocabulary transfer (FVT), multi-word tokenization (MWT) and Liquid AI's in-place tokenizer expansion (in-place BPE), which continues BPE training from the original vocabulary, already reduce fragmentation. When we tested them on our problem, we found two limitations.</p>
+<p>They choose tokens by frequency, not by cost. An expression that appears often in the input is worth more to them than one that appears less often in the response, even if the second is the more expensive one to serve.</p>
+<p>They work on a single layer. They either adjust how words are cut into pieces, or merge whole phrases into one token. None of these three does both under the same criterion. And the grader's biggest waste was precisely in long, repeated spans such as the JSON envelope, which a sub-word method only reaches after merging each part, one by one.</p>
+<p>VocabX addresses both limitations, plus a third problem that appears on the obvious path to solving the first.</p>
+<p>First, we changed the question. Instead of asking how many tokens a candidate saves, we ask how much cost and time it saves. Each eliminated token is multiplied by the price of the field it appears in: system prompt, user message or model response. In the case we measured, the grader, a token saved in the response is worth 7.4 times one saved in the input, and the vocabulary is built accordingly.</p>
+<p>Second, we work on both layers at once. Back to the shipping company: you can cut boxes by packing each item better, or by recognizing that the same twelve-item kit ships every week and sending the kit in a single box. VocabX does both. At the sub-word layer, it rebuilds how domain words are cut into pieces. At the multi-word layer, it looks for whole spans that repeat, from short expressions to full lines and JSON envelopes, and turns each into a single token, which we call a macro token. Both layers are chosen under the same cost criterion, each with its own budget.</p>
+<p>To find these spans, we use five miners, automatic searches for spans that repeat across the corpus, each specialized in one kind of repetition: long words, whole lines, expressions, complete sentences, and structures with punctuation such as JSON and tags. Averaged over eight corpora, the last one contributed the most, and on code it alone accounted for 17.5 points. Without all five, token reduction on the grader would drop by 55.6 points.</p>
+<p>Third, we estimate what the sample cannot see. Choosing tokens by cost requires knowing how much each candidate still saves after the ones already chosen. Measuring that exactly would require reprocessing the entire corpus after every choice, tens of thousands of times. A common way to do this at scale is to measure on a sample of documents, and then a candidate absent from the sample gets zero gain.</p>
+<p>An expression that appears 37 times in 50,000 documents shows up in a 400-document sample only about 26% of the time. In a contracts corpus, only 16.6% of the candidates appear in a 400-document sample; the rest are never evaluated.</p>
+<p>A candidate's gain has two parts. One is how much it saves over the entire corpus, and that can be counted exactly, without a sample. The other is how much of that saving is not yet covered by the tokens already chosen, and only that part needs to be estimated. For candidates the sample cannot see, we use a statistical estimate based on the behavior of the ones it can see, instead of zero. A candidate that is rare in the sample but frequent in the corpus is back in the running.</p>
+<p>That change alone, with the same sample and the same budget, raised token reduction on a contracts corpus from 44.7% to 52.8%.</p>
+<p>To measure the real effect, we trained seven versions of the grader with the same base model, the same data, the same recipe and the same seed. The only difference between them is the tokenizer. All of them ran the same 500 requests on the same test machine, with an RTX 5090 GPU and the vLLM inference server, and cost was calculated from measured runtime.</p>
+<p>The model's response dropped from 350 to 101 tokens on average. Cost dropped 77.0%. Quality, measured by the bench score, which combines grading accuracy and the accuracy of screening off-topic or rule-breaking essays, rose from 0.703 to 0.810.</p>
+<p>Getting there required a course correction. The first version of the vocabulary fused each competency's grade with the surrounding JSON into a single macro token. It was the most compact option, but quality dropped: its bench score was 0.689, below the production grader's 0.703. With the grade inside the macro, each combination of grade and structure became a different variant of the same token, and the model chose both in a single step. Giving the grade its own token cost 2 extra tokens per response, raised the bench score to 0.810 and, in the measurement, was even cheaper: a 77.0% reduction, against 73.3% for the fused version.</p>
+<p>The lesson applies beyond the grader. Compression has a cost when the compressed span carries the very decision the model exists to make. The goal is not the cheapest possible vocabulary, but the cheapest one that preserves the tokens that matter.</p>
+<p>To find out whether the gain was specific to our case, we compared VocabX with the three reference methods on five public domains (contracts, medical papers, scientific papers, news and Python code) and three model families (Qwen3, Llama-3.1 and Gemma-3). All methods used the same mining and test documents, and the same vocabulary ceiling.</p>
+<p>VocabX compressed more than the strongest reference method in all fifteen combinations, by 1.2 to 9.3 points. In estimated inference cost, the pruned version of VocabX also led in all fifteen, with average margins of 10.2 points on Qwen3, 7.5 on Llama-3.1 and 13.6 on Gemma-3. On contracts, the pruned version reached 62.6% token reduction with 113,426 vocabulary entries, against 61.8% for the best in-place BPE configuration, which uses 207,803.</p>
+<p>VocabX does not make the model smarter. It makes the model stop paying for text it does not need to write piece by piece, and stop scoring a vocabulary it will never use. In our grader, that cut measured inference cost by 77%, with the same base model and the same training recipe.</p>
+<p>Specialization usually starts with data and weights. It can also start one layer earlier, in the vocabulary.</p>
+<p>The full method, the tables for every experiment and the discarded interventions will be in the VocabX paper, which we will publish soon.</p>
+<p>Explore Dharma AI on Hugging Face to try our demos, download our open models, and see how specialized AI systems outperform general-purpose models in real enterprise applications.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/emilywoodsnyc/frontend-interview-question-your-search-works-until-you-type-faster-35oc" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/Dharma-AI/vocabx-vocabulary-specialization" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
