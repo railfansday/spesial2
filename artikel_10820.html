@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From Files to Chunks: Improving HF Storage Efficiency</title>
+    <title>Pokemon Center is selling collectible music box dioramas and framed maps for all nine regions</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10820.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,37 +15,36 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From Files to Chunks: Improving HF Storage Efficiency</h1>
+        <h1>Pokemon Center is selling collectible music box dioramas and framed maps for all nine regions</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/from-files-to-chunks/thumbnail.png" alt="From Files to Chunks: Improving HF Storage Efficiency" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.dexerto.com/cdn-image/wp-content/uploads/2026/11/06/pokemon-music-box-dioramas.jpg" alt="Pokemon Center is selling collectible music box dioramas and framed maps for all nine regions" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/from-files-to-chunks/thumbnail.png" alt="From Files to Chunks: Improving HF Storage Efficiency" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.dexerto.com/cdn-image/wp-content/uploads/2026/11/06/pokemon-music-box-dioramas.jpg" alt="Pokemon Center is selling collectible music box dioramas and framed maps for all nine regions" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Hugging Face stores over 30 PB of models, datasets, and spaces in Git LFS repositories. Because Git stores and versions at the file level, any change to a file requires re-uploading the full asset – expensive operations when average Parquet and CSV files on the Hub range between 200-300 MB, average Safetensor files around 1 GB, and GGUF files can exceed 8 GB. Imagine modifying just a single line of metadata in a GGUF file and waiting for the multi-gigabyte file to upload; in addition to user time and transfer costs, Git LFS also then needs to save full versions of both files, bloating storage costs.</p>
-<p>The plot below illustrates the growth of LFS storage in model, dataset, and space repositories on the Hub between March 2022 and September 2024:</p>
-<p>Hugging Face's Xet team is taking a different approach to storage by storing files as chunks. By only transferring modified chunks, we can dramatically improve both storage efficiency and iteration speed while ensuring reliable access to evolving datasets and models. Here’s how it works.</p>
-<p>The method that we use to chunk files is called content-defined chunking (CDC). Instead of treating a file as an indivisible unit, CDC breaks files down into variable-sized chunks, using the data to define boundaries. To compute the chunks, we apply a rolling hash algorithm that scans the file’s byte sequence.</p>
-<p>We’re using text for illustration, but this could be any sequence of bytes.</p>
-<p>A rolling hash algorithm computes a hash over a sliding window of data. In this case, with a window of length 4 the hash would be computed first over tran, then rans, then ansf and so on until the end of the file.</p>
-<p>Chunk boundaries are determined when a hash satisfies a predefined condition, such as:</p>
-<p>If the sequence mers produces a hash that meets this condition, the file will be split into three chunks:</p>
-<p>The content of these chunks is hashed to create mapping between chunk hash and bytes and will eventually be stored in a content-addressed store (CAS). Since all three chunks are identical, we only store one chunk in the CAS for built-in deduplication. 🪄</p>
-<p>When the contents of a file change, CDC allows for fine-grained updates that make it robust to handling insertions and deletions. Let’s modify the file by inserting super, making the new file contents:</p>
-<p>After applying the rolling hash again with the same boundary condition, the new chunks look like this:</p>
-<p>We do not need to save chunks we have seen before; they are already stored. However, supertransformers is a new chunk. Thus, the only cost of saving the updated version of this file is uploading and storing one new chunk.</p>
-<p>To validate this optimization in the real world, we benchmarked our previous implementation of CDC-backed storage at XetHub against Git LFS and found a consistent 50% improvement in storage and transfer performance across three iterative development use cases. One example was the CORD-19 dataset, a collection of COVID-19 research papers curated between 2020 and 2022 with 50 incremental updates. The comparison between Xet-backed and Git LFS-backed repositories is summarized below:</p>
-<p>By only transferring and saving modified chunks, the Xet-backed repository using CDC (alongside various techniques to improve compression and streamline network requests) showed significantly faster upload/download times and drastically cut the amount of storage required to capture all versions of the dataset. Curious to learn more? Read the full benchmark.</p>
-<p>How would CDC work on the types of files stored on Hugging Face Hub? We threw together a simple deduplication estimator to visualize the potential storage savings of applying CDC to a collection of files. Running this tool on two versions of the model.safetensors file in openai-community/gpt2 uploaded over the course of the repository's commit history returned the following result:</p>
-<p>The greenness reflects significant overlap between the two versions, and thus an opportunity to deduplicate both within each file and across the versions.</p>
-<p>In this case, using our Xet-based storage backend would save considerable upload/download time for the second version, as well as reduce the total storage footprint by 53%. With compression, we estimate an additional 10% of savings.</p>
-<p>Our initial research into repositories across the Hub shows positive results for some fine-tuned models and many model checkpoints. Fine-tuned models modify only a subset of parameters, so most of the model remains unchanged across versions, making them a great candidate for deduplication. Model checkpoints, which capture incremental training states, are also good targets as changes between checkpoints are often minimal. Both show deduplication ratios in the range of 30-85%. PyTorch model checkpoints make up around 200 TB of total storage on the Hub. At 50% deduplication, we would save up to 100 TB of storage immediately and roughly 7-8 TB monthly going forward.</p>
-<p>Beyond reducing storage costs, chunk-level deduplication also improves upload/download speeds, as only the modified chunks are transferred. This is a great benefit to teams working with multiple versions of models or datasets as it minimizes user and machine waiting time.</p>
-<p>If you want to see chunk-based dedupe in action, join the waitlist today https://huggingface.co/join/xet</p>
-<p>Is there a mechanism for handling Content-Defined Chunking Attacks? I checked restic and it has this mechanism. You can refer to the paper provided by restic: https://eprint.iacr.org/2025/532.pdf</p>
+                <p>Pokemon Center has revealed a new collection of framed maps, dioramas, and miniature landmarks celebrating all nine Pokemon regions, from Kanto to Paldea.</p>
+<p>On November 6, The Pokemon Company announced a massive new merchandise lineup inspired by the locations players have explored throughout the franchise’s 30-year history.</p>
+<p>The collection features 27 different products, with each region receiving its own framed map, diorama music box, and papercraft model based on an iconic location.</p>
+<p>The dioramas are arguably the highlight, recreating famous routes from each generation in miniature form. These include Route 1 from Pokemon Red and Green, Route 29 from Gold and Silver, and Route 209 from Diamond and Pearl.</p>
+<p>Better yet, they’re functional music boxes that play melodies from their respective games, giving fans a little nostalgia to go along with their miniature adventures.</p>
+<p>Each music-box diorama costs 12,100 yen (around $76), while the framed maps are priced at 16,500 yen (around $105).</p>
+<p>As Famitsu reports, the maps feature raised terrain details rather than simply printing the regions onto paper. Each comes surrounded by a decorative frame featuring Pikachu and various Berries.</p>
+<p>There are also buildable papercraft models recreating landmarks such as the S.S. Anne in Kanto, Bell Tower in Johto, Prism Tower in Kalos, and the academies from Scarlet and Violet. Some even feature moving parts, with prices ranging from 2,750 to 3,850 yen.</p>
+<p>The announcement comes as miniature gaming dioramas have become popular collectibles, particularly among PlayStation fans.</p>
+<p>The Console Heroes PlayStation dioramas recreate scenes from classics such as Final Fantasy VII, Metal Gear Solid, and Twisted Metal inside miniature PS1 jewel cases.</p>
+<p>Those collectibles have proven difficult to get hold of, with certain sets listed as sold out by retailers.</p>
+<p>Oh, we neglected to mention the coolest part – those music boxes play iconic Route music! https://t.co/7FkbutRGYd pic.twitter.com/Y6oHtuuvjc</p>
+<p>Pokemon has also been ramping up its own unusual merchandise. Earlier this week, Pokemon Center revealed customizable keychains that let fans display their full team of six.</p>
+<p>Pokemon Center is selling customizable keychains so fans can show off their full team of six</p>
+<p>Pokemon’s $140 mystery TCG skateboards immediately sell out and resell for $1,000</p>
+<p>New Pokemon donuts turn Pikachu, Diglett, and Slowpoke into tasty snacks</p>
+<p>That’s on top of other bizarre releases, including a Quagsire table designed to hold snacks and TV remotes.</p>
+<p>The new maps and dioramas launch on November 12 at 10 AM Japan time through the Japanese Pokemon Center Online store.</p>
+<p>Unfortunately for international collectors, an overseas release hasn’t been announced. The products also won’t be available at physical Pokémon Center stores in Japan when they launch.</p>
+<p>Sign up to Dexerto for the latest news, views & reviews</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/from-files-to-chunks" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.dexerto.com/pokemon/pokemon-center-is-selling-collectible-music-box-dioramas-and-maps-for-all-nine-regions-3425415/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

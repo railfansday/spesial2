@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1 Billion Classifications</title>
+    <title>6 Email Tools Developers Can Use to Build, Test, and Monitor Better Email</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10750.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,87 +15,65 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>1 Billion Classifications</h1>
+        <h1>6 Email Tools Developers Can Use to Build, Test, and Monitor Better Email</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/billion-classifications/billion-classifications-thumbnail.png" alt="1 Billion Classifications" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/billion-classifications/billion-classifications-thumbnail.png" alt="1 Billion Classifications" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>You’ve optimized your model. Your pipeline is running smoothly. But now, your cloud bill has skyrocketed. Running 1B+ classifications or embeddings per day isn’t just a technical challenge—it’s a financial one. How do you process at this scale without blowing your budget? Whether you're running large-scale document classification or bulk embedding pipelines for Retrieval-Augmented Generation (RAG), you need cost-efficient, high-throughput inference to make it feasible, and you get that from having a well optimized configuration.</p>
-<p>These tasks often use encoder models, which are much smaller than modern LLMs, but at the 1B+ inference request scale it's still quite a non-trivial task. Just to be clear, that's English Wikipedia 144x over. I haven’t seen much information on how to approach this with cost in mind and I want to tackle that. This blog breaks down HOW to calculate cost and latency for large scale classification and embedding. We’ll analyze different model architectures, benchmark costs across hardware choices, and give you a clear framework for optimizing your own setup. Additionally we should be able to build some intuition if you don't feel like going through the process yourself.</p>
-<p>Here is the code to make it happen: https://github.com/datavistics/encoder-analysis</p>
-<p>tl;I'm not gonna reproduce this, tell me what you found;dr</p>
-<p>With this pricing I was able to get this cost:</p>
-<p>To evaluate cost and latency we need 4 key components:</p>
-<p>I’ll be leveraging Inference Endpoints for my Hardware Options, as it allows me to choose from a wide range of hardware choices. Do note you can replace that with your GPUs of choice/consideration. For the Deployment Facilitator I'll be using the ever so useful Hugging Face Hub Library which allows me to programmatically deploy models easily.</p>
-<p>For the Inference Server I’ll also be using Infinity which is an amazing library for serving encoder based models (and more now!). I’ve already written about TEI, which is another amazing library. You should definitely consider TEI when approaching your use-case, though this blog focuses on methodology rather than framework comparisons. Infinity has a number of key strengths, like serving multimodal embeddings, targeting different hardware (AMD, Nvidia, CPU and Inferentia) and running any new models that contain remote code that have not been integrated into huggingface’s transformer library. The most important of these to me is that most models are compatible by default.</p>
-<p>For Load Testing I'll be using k6 from Grafana which is an open-source load testing tool written in go with a javascript interface. It’s easily configurable, has high performance, and has low overhead. It has a lot of built-in executors that are super useful. It also pre-allocates Virtual Users (VUs), which can be much more realistic than throwing some testing together yourself.</p>
-<p>I'll go through 3 use-cases that should cover a variety of interesting points:</p>
-<p>Optimization is a tricky issue, as there is a lot to consider. At a high level, I want to sweep across important load testing parameters and find what works best for a single GPU, as most encoder models will fit in a single GPU. Once we have a baseline of cost for a single GPU, the number of GPUs and throughput can be scaled horizontally by increasing the number of replica GPUs.</p>
-<p>For each use-case this is the high-level flow I’ll use:</p>
-<p>Since you have the code, feel free to adjust any part of this to your:</p>
-<p>VUs and Batch Size are important because these influence how well we take advantage of all the compute available in the GPU. A large enough Batch Size makes sure we are fully utilizing the Streaming Multiprocessors and VRAM. There are scenarios where we have VRAM left over but there is a bandwidth cost that prevents throughput from increasing. So experimentation can help us. VUs allow us to make sure we are fully utilizing the batch size we have available.These are the main parameters I'll be testing:</p>
-<p>Depending on your model you might want to consider:</p>
-<p>K6 is great because it allows you to pre-allocate VUs and prevent some insidious bugs. It's quite flexible in how you are sending requests. I decided to use it in a specific way.</p>
-<p>When I'm calling a k6 experiment, I mainly want to know what the throughput and average latency is for the requests, and have a few sanity checks for the load testing parameters I have chosen. I also want to do a sweep which means many experiments.</p>
-<p>I use the shared-iterations executor (docs) which means K6 shares iterations between the number of VUs. The test ends once k6 executes all iterations. This allows me to have a reasonable time-out, but also put through enough requests to have a decent confidence that I can discriminate between load testing parameters choices in my sweep. In contrast to other executors, this allows me to be confident that I'm simulating the client working as hard as possible per VU which should show me what the cheapest option is.</p>
-<p>I use 10_000 requests† and have a max experiment time of 1 min. So if 10_000 requests aren’t finished by 1 minute, then that experiment is over.</p>
-<p>† I use less max requests for the Vision Embeddings given that the throughput is much lower and images are heavy.†† P95 means that 95% of requests complete within this time. It represents the worst-case latency for most users.</p>
-<p>You can find the 3 notebooks that put the optimization workflow together here:</p>
-<p>The main purpose was to get my experiments defined, launch the correct Inference Endpoint with the right parameters, and launch k6 with the right parameters to test the endpoint.</p>
-<p>I made a couple design choices which you may want to think through to see if they work for you:</p>
-<p>Text Classification can have a variety of use-cases at scale, like Email Filtering, Toxicity Detection in pre-training datasets, etc. The OG classic architecture was BERT, and quickly many other architectures came about. Do note that in contrast to popular decoder models, these need to be fine-tuned on your task before using them. Today I think the following architectures† are the most notable:</p>
-<p>† Do note that for these models, you typically need to fine-tune this on your data to perform well†† I'm using “Engineering performance” to denote anticipated latency/throughput</p>
-<p>I chose DistilBERT to focus on as it’s a great lightweight choice for many applications. I compared 2 GPUs, nvidia-t4 and nvidia-l4 as well as 2 Infinity Docker Images.</p>
-<p>You can see the results in an interactive format here or in the space embedded below in the Analysis section. This is the cheapest configuration across the experiments I ran:</p>
-<p>Text Embeddings are a loose way of describing the task of taking a text input and projecting it into a semantic space where close points are similar in meaning and distant ones are dissimilar (example below). This is used heavily in RAG and is an important part of AI search (which some are fans of).</p>
-<p>There are a large number of architectures which are compatible, and you can see the most performant ones in the MTEB Leaderboard.</p>
-<p>ModernBERT is the most exciting encoder release since DeBERTa back in 2020. It has all the ahem modern tricks built into an old and familiar architecture. It makes for an attractive model to experiment with as it's much less explored than other architectures and has a lot more potential. There are a number of improvements in speed and performance, but the most notable for a user is likely the 8k context window. Do check out this blog for a more thorough understanding.</p>
-<p>It's important to note that Flash Attention 2 will only work with more modern GPUs due to the compute capability requirement, so I opted to skip the T4 in favor of the L4. An H100 would also work really well here for the heavy hitters category.</p>
-<p>You can see the results in an interactive format here. This is the cheapest configuration across the experiments I ran:</p>
-<p>ColQwen2 is a Visual Retriever which is based on the Qwen2-VL-2B-Instruct and uses ColBERT style multi-vector representations of both text and images. We can see that it has a complex architecture compared to the encoders we explored above.</p>
-<p>There are a number of use-cases which might benefit from this at large scale like, e-commerce search, multi-modal recommendations, enterprise multi-modal RAG, etc</p>
-<p>ColBERT style is different than our previous embedding use-case since it breaks the input into multiple tokens and returns a vector for each instead of 1 vector for the input. You can find an excellent tutorial from Jina AI here.This can lead to superior semantic encoding and better retrieval, but is also slower, and more expensive.</p>
-<p>I'm excited for this experiment as it explores 2 lesser known concepts, vision embeddings and ColBERT style embeddings†. There are a few things to note about ColQwen2/VLMs:</p>
-<p>†Do check out this more detailed blog if this is new and interesting to you.</p>
-<p>I wanted to try a small and modern GPU like the nvidia-l4 since it should be able to fit the 2B param model but also scale well since it's cheap. Like the other embedding model, I'm varying batch_size and vus.</p>
-<p>You can see the results in an interactive format here. This is the cheapest configuration across the experiments I ran:</p>
-<p>Do check out the detailed analysis in this space (derek-thomas/classification-analysis) for the classification use-case (hide side-bar and scroll down for the charts):</p>
-<p>Scaling to 1B+ classifications or embeddings per day is a non-trivial challenge, but with the right optimizations, it can be made cost-effective. From my experiments, a few key patterns emerged:</p>
-<p>Your data, hardware, models, etc might differ, but I hope you find some use in the approach and code provided. The best way to get an estimate is to run this on your own task with your own configurations. Let's get exploring!</p>
-<p>Special thanks to andrewrreed/auto-bench for some inspiration, Michael Feil for creating Infinity. Also thanks to Pedro Cuenca, Erik Kaunismaki, and Tom Aarsen for helping me review.</p>
-<p>It's important to scale sanity checks as your complexity scales. Since we are using subprocess and jinja  to then call k6 I felt far from the actual testing so I put a few checks in place.</p>
-<p>The goal of task performance is that for a specific configuration we are performing similarly to what we expect. Task Performance will have different meanings across tasks. For classification I chose accuracy, and for embeddings I skipped it. We could look at average similarity and other similar metrics. It gets a bit more complex with ColBERT style since we are getting many vectors per request.</p>
-<p>Even though 58% isn't bad for some 3 class classification tasks, it's irrelevant. The goal is to make sure that we are getting the expected task performance. If we see a significant change (increase or decrease) we should be suspicious and try to understand why.</p>
-<p>Below is a great example from the classification use-case since we can see an extremely tight distribution and one outlier. Upon further investigation the outlier is due to a low amount of requests sent.</p>
-<p>You can see the interactive results visualized by nbviewer here:</p>
-<p>We should expect to see no failed requests as Inference Endpoints has a queue to handle extra requests. This is relevant for all 3 use-cases: Classification, Embedding, and Vision Embedding.</p>
-<p>sum(df.total_requests - df.successful_requests) allows us to see if we had any failed requests.</p>
-<p>As described above we are using a nice strategy of using exponential increases and then a binary search to find the best number of VUs. But how do we know that we tried enough VUs? What if we tried a higher amount of VUs and throughput kept increasing? If that's the case then we would see a monotonically increasing relationship between VUs and Throughput and we would need to run more tests.</p>
-<p>You can see the interactive results visualized by nbviewer here:</p>
-<p>When we request an embedding it makes sense that we would always get back an embedding of the same size as specified by the model type. You can see the checks here:</p>
-<p>We are using a ColBERT style model for Vision Embedding which means we should be getting multiple vectors per image. It's interesting to see the distribution of these as it allows us to check for anything unexpected and to get to know our data. To do so I stored the min_num_vectors, avg_num_vectors, max_num_vectors, in the experiments.</p>
-<p>We should expect to see some variance in all 3, but it’s ok that min_num_vectors and max_num_vectors have the same value across experiments.</p>
-<p>Here is a short description, but you can get a more detailed interactive experience in the space: derek-thomas/classification-analysis</p>
-<p>For the classification use-case we looked at 2 different Infinity Images, default and trt-onnx. Which one was better? It's best if we can compare these across the same settings (GPU, batch_size, VUs). We can simply group our results by those settings and then see which one was cheaper.</p>
-<p>This is a key chart as for many use-cases there is a maximum latency that a user can experience. Usually if we allow the latency to increase we can increase throughput creating a trade-off scenario. That's true in all the use-cases I've looked at here. Having a pareto curve is great to help visualize where that tradeoff is.</p>
-<p>Lastly it's important to build intuition on what is happening when we try these different settings. Do we get beautiful idealized charts? Do we see unexpected gradients? Do we need more exploration in a region? Could we have issues in our setup like not having an isolated environment? All of these are good questions and some can be tricky to answer.</p>
-<p>The contour plot is built by interpolating intermediate points in a space defined by the 3 dimensions. There are a couple phenomena that are worth understanding:</p>
-<p>We can see a complex contour chart with some interesting results from the classification use-case:</p>
-<p>But here is a much cleaner one from the vision-embedding task:</p>
-<p>For actual usage, do consider using the infinity client. When we are benchmarking it's good practice to use k6 to know what’s possible. For actual usage, use the official lib, or something close for a few benefits:</p>
-<p>You also have OpenAI lib compatibility with the Infinity backend as another option.</p>
-<p>As an example vision-embeddings can be accessed like this:</p>
-<p>A visualization for optimizing classification</p>
-<p>📻 🎙️ Hey, I made a podcast about this blog post, check it out!</p>
-<p>This podcast is generated via ngxson/kokoro-podcast-generator, using DeepSeek-R1 and Kokoro-TTS</p>
-<p>You showed you can damn write! Keep these coming! Very well written 😍</p>
-<p>Thanks a bunch bro. Your words mean a lot!</p>
-<p>A visualization for optimizing classification</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>A password-reset email can leave your application successfully and still fail the user. It might arrive too late, display an unreadable button, or contain a link pointing to the staging environment.</p>
+<p>These failures belong to different parts of the email workflow. Fixing the HTML will not repair authentication, and improving sender reputation will not correct an expired verification token.</p>
+<p>For developers and designers, the useful question is therefore: which tool helps us inspect the layer that is failing?</p>
+<p>The following six options cover mailbox reputation, local testing, message construction, responsive design, compatibility research, and production monitoring. They serve different purposes; they are not interchangeable alternatives.</p>
+<p>For teams managing connected business mailboxes, EmailPond describes a service for automated warmup and reputation monitoring, including connections to Google Workspace and Microsoft 365.</p>
+<p>The engineering lesson is to distinguish three outcomes:</p>
+<p>A successful submission does not establish that a message reached the inbox.</p>
+<p>When evaluating mailbox warmup or reputation services, ask what their measurements actually represent. Are they based on participating test accounts, provider feedback, or a proprietary score? What period and sample size do they cover?</p>
+<p>Treat any score as one diagnostic input. A result from a testing network is not evidence that every real recipient will receive the same placement.</p>
+<p>Also match the tool to your infrastructure. A connected employee mailbox and an application sending through a transactional email provider may use different delivery paths. Activity on one does not demonstrate the health of the other.</p>
+<p>Practical exercise: document the sending path for each message type: visible From address, sending provider, authentication domain, and responsible team. This makes later investigations much more precise.</p>
+<p>Mailpit runs an SMTP testing server with a web interface and an API for inspecting captured messages. It is useful when testing registration, receipts, invitations, and password resets without delivering development messages to real customers.</p>
+<p>Use local capture to inspect more than appearance:</p>
+<p>Point the application at SMTP host 127.0.0.1, port 1025, and open http://127.0.0.1:8025 to inspect messages. This example assumes the application runs on the host; an application in another container needs appropriate container networking.</p>
+<p>Binding the ports to localhost keeps this development instance off public interfaces. For a repeatable team environment, pin the image to a reviewed version or digest.</p>
+<p>Practical exercise: trigger account verification, capture the message, and confirm that the link works once and fails after reuse. Test token behavior through the application, not just by inspecting the email.</p>
+<p>Nodemailer provides email-sending functionality for Node.js, including SMTP transport and HTML/plain-text message construction.</p>
+<p>Keeping message construction in a dedicated module makes it easier to review and test. Here is a minimal local example using Mailpit:</p>
+<p>Run it with node send-test.mjs. Production configuration needs the authentication and TLS settings required by your provider.</p>
+<p>SitePoint’s guide to sending email using Node.js provides additional context for building an email workflow.</p>
+<p>Practical exercise: move rendering into a separate function and test missing optional fields, long names, and HTML-sensitive characters. Escape untrusted text when inserting it into HTML.</p>
+<p>MJML is a markup language that compiles components into responsive email HTML. Its sections, columns, text blocks, and buttons let teams maintain a readable template source.</p>
+<p>Keep source templates in version control and compile them during a reproducible build. Review the final output after personalization and any link rewriting.</p>
+<p>A component system reduces repetitive layout work, but it does not establish that every message is accessible or renders correctly in every client.</p>
+<p>Practical exercise: test a long translated heading, enlarged text, blocked images, and a narrow viewport. The essential message and primary action should remain understandable in each case.</p>
+<p>SitePoint’s HTML email design overview offers background on designing within email-client constraints. Pair its established principles with current compatibility data.</p>
+<p>Can I Email publishes support information for HTML and CSS across email clients. It helps developers investigate a specific feature before building a template around it.</p>
+<p>Start with the clients that matter to your audience. Then inspect support notes for the features your design depends on, including partial support and the date of testing.</p>
+<p>A global support percentage cannot tell you whether a feature works for your particular recipients.</p>
+<p>For critical content, design a usable fallback. A button should remain identifiable without a decorative background image. A heading should communicate its meaning even when a custom font is unavailable.</p>
+<p>Practical exercise: select three visual features in a proposed template and document what users see when each is unsupported. If losing a feature hides the primary action, revise the design.</p>
+<p>Compatibility research narrows the risks. Testing the final message in representative clients checks the actual result. SitePoint’s HTML email testing guide provides further background on that review process.</p>
+<p>Google Postmaster Tools provides information about email sent to personal Gmail accounts, including authentication, reputation, spam reports, and delivery errors.</p>
+<p>Use it alongside application and sending-provider telemetry. Its data concerns Gmail traffic; it is not a universal view of delivery across every mailbox provider.</p>
+<p>For example, if delivery errors increase after a provider change, compare the timing with authentication configuration and sending-volume changes. If users report missing messages while the application shows no failures, inspect later delivery events rather than assuming the original SMTP response proves success.</p>
+<p>Google’s email sender guidelines explain authentication and sending requirements. SPF authorizes sending infrastructure for the envelope domain, DKIM provides a verifiable signature, and DMARC evaluates alignment with the visible From domain. Configuring them correctly is foundational, but does not guarantee inbox placement.</p>
+<p>Practical exercise: create a release checklist that verifies authentication on real test messages from the production sending path, rather than checking DNS records alone.</p>
+<p>Tool selection becomes useful when each tool supports a clear acceptance check.</p>
+<p>Production systems also need explicit retry behavior. Queueing email can keep slow sending operations out of an HTTP request, but retries can create duplicate messages.</p>
+<p>Use a stable application event identifier to track a notification attempt. Where a provider supports idempotency keys, use them according to its documented limits. Otherwise, record provider message identifiers and handle uncertain outcomes carefully: a timeout can occur after the provider has accepted a message.</p>
+<p>Test expired notifications as well. A password-reset message delayed in a queue should not promise that its link is still valid.</p>
+<p>For delivery-event webhooks, verify authenticity using the provider’s documented mechanism, deduplicate repeated events, and tolerate out-of-order arrival. Avoid logging message bodies or authentication tokens as routine diagnostics.</p>
+<p>A useful email workflow gives the team a clear answer to each question: what did we generate, where did we send it, what happened afterward, and could the recipient complete the intended task?</p>
+<p>Start with local capture and reliable message construction. Add template and compatibility checks. Then connect production delivery signals to application events.</p>
+<p>The measure of success is whether users can verify an account, retrieve a report, or recover access reliably—not simply whether a send function returned successfully.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/billion-classifications" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/6-email-tools-developers-can-use-to-build-test-and-monitor-better-email/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

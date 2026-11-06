@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Look at Datastar</title>
+    <title>4 money bugs that bite AI agents (and how I fixed them in PurseString)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9825.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,239 +15,77 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>A Look at Datastar</h1>
+        <h1>4 money bugs that bite AI agents (and how I fixed them in PurseString)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6rgc0hj2va9btmeswsaa.jpg" alt="4 money bugs that bite AI agents (and how I fixed them in PurseString)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6rgc0hj2va9btmeswsaa.jpg" alt="4 money bugs that bite AI agents (and how I fixed them in PurseString)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I have always been interested in frontend solutions for building web
-applications. Even though I’m more of a backend programmer, I really dig all the
-different techniques people come up with for creating browser-based apps that
-are both reactive (reflecting remote state in real-time) and interactive
-(responding to user actions).</p>
-<p>Over the last few years, I’ve been looking at different frontend frameworks and
-libraries, to see how they work, and what I can learn from them. I adore
-Svelte, which is really smart and efficient. Its sister
-framework SvelteKit inspired the
-file-based routing in my own web framework for Ruby,
-Syntropy. I also really like the
-approach of the Phoenix framework to
-building reactive apps using
-LiveView, which is an
-amazing technology that builds on the solid concurrency foundation of
-Elixir/Erlang.</p>
-<p>Many people have tried to recreate the same functionality for other languages or
-frameworks, with varying degrees of success. Recently, Marco
-Roth came up with
-ReActionView, which promises to bring reactive
-views to Rails apps, building on his previous work on
-Herb, a set of tools that improve on the developer
-experience of writing ERB templates for Rails apps.</p>
-<p>All those different technologies are certainly impressive, but they all are tied
-to specific languages/frameworks: Svelte/SvelteKit is a JS framework, LiveView
-is for Phoenix/Elixir, ReActionView is for Ruby on Rails, LiveWire is for
-Laravel/PHP, etc.</p>
-<p>And then there’s Datastar, which dubs itself “the
-Hypermedia framework”. It is somewhat similar to other frontend declarative
-frameworks/libraries such as HTMX or
-Alpine.js, in that interactivity/reactivity is done
-declaratively by adding attributes to HTML tags. But what is different about
-Datastar is that it insists on keeping state where it should be, such that it
-doesn’t try to copy server state to the client and keep it in sync with the
-server. Instead, the server continuously sends updates (in the form of HTML
-patches, or signal patches) to
-the client. In that respect, Datastar is more like LiveView, but without the
-coupling to Phoenix/Elixir. In fact, Datastar offers SDKs for different
-languages and frameworks, including Ruby (the Ruby SDK is maintained by Ismael
-Celis).</p>
-<p>I find this approach so refereshing! With Datastar, you can use any backend
-technology in order to build reactive web apps. Furthermore, Datastar relies on
-SSE
-(server-sent events) for streaming updates from the server to the client,
-instead of the somewhat older approach of using a WebSocket connection used in
-technologies such as LiveView, or HotWire (the current go-to solution for Rails
-apps).</p>
-<p>While SSE does not provide a full-duplex connection to the server (meaning, you
-can’t use an SSE request/connection to send data from the client to the
-server), it provides two important advantages over WebSocket: A WebSocket
-connection normally requires establishing a separate HTTP/1.1 connection to the
-server (there’s partial support for WebSocket over HTTP/2, but that depends on
-the browser and the server/reverse proxy used. HTTP/3 support is very limited as
-far as I could tell). In contrast, SSE requests can be multiplexed on top of an
-HTTP/2 or HTTP/3 connection, along with any number of other concurrent requests.
-Secondly, because SSE requests are just normal (streaming) HTTP requests, the
-server can use standard HTTP compression in order to achieve significant
-reduction in bandwidth.</p>
-<p>Let’s look at a simple example of working with Datastar. Here’s the markup for a
-simple reactive app that displays the current time on the server:</p>
-<p>This example does three things: load the datastar library (BTW it’s only about
-15KB!), set up a connection to an SSE stream at /ds/time_stream using the
-@get action, and binds a span to a signal named $time. On the server side,
-the controller looks as follows (using Syntropy):</p>
-<p>The controller code is quite simple: after calling respond_sse, which sends
-some HTTP response headers, we send a first update, then we send further updates
-once per second. What actually gets sent over the wire looks as follows:</p>
-<p>The Datastar wire protocol is based on the SSE response format, where each event
-contains an (optional) event: entry and one or more data: entries. Distinct
-events are separated by double newline characters (\n\n). In this case, we’re
-sending a datastar-patch-signals event that tells the browser to update signal
-values. The patched values are expressed as a JSON object where the keys
-correspond to signal names and the values correspond to the signal values.</p>
-<p>You can look at this example on a separate page,
-but for the sake of convenience I’ll go ahead and embed it right here:</p>
-<p>Although this is a very simple example, look at all the things we’re not doing
-😜: we don’t need to set up an EventSource object, or use fetch to start the
-SSE connection on the client side, we don’t need to go through the DOM and
-update anything that’s bound to the $time signal. On the server side we just
-stream changes to the server state to the client (eventually though, we might
-want to introduce some abstractions for sending a datastar-patch-signals event
-or other types of events, but this is pretty trivial…)</p>
-<p>Let’s look at how signals are handled in Datastar a bit more closely. I’ve been
-playing with Datastar in the last few days and have observed the some
-peculiarities:</p>
-<p>In Datastar, signals are global to the page. They can’t be scoped to a part of
-the DOM, but they can be namespaced by
-nesting them
-inside objects:</p>
-<p>Alternatively, you can use the following notation, handy when you have key
-values that contain slashes, or other special characters:</p>
-<p>By default, Datastar will send all signal values back to the server on every
-user action, which may be problematic if you have lots of signals on your page.
-In order to prevent signal values from being sent to the server on each request,
-the signal name must begin with an underscore.</p>
-<p>Finally, an important aspect of Datastar signals (and indeed, Datastar in
-general,) is that Datastar doesn’t really have a Javascript API. You can’t just
-access signal values from Javascript (this is by
-design), which may
-make it harder to integrate Datastar with other tools. But there is a workaround
-for that and it’s pretty simple:</p>
-<p>Here, we use the data-init attribute that lets us run an arbitrary piece of
-JS. We call Datastar.start, while in a separate <script> we declare a global
-Datastar object, which stores the reference to the $foo signal, and then
-sets up a recurring timer to increment the value of $foo.bar once per second:</p>
-<p>This is not too complicated, but then again, a random frontend developer might
-balk at the fact that Datastar actually makes it hard to access the app state
-from any other JS library or script on the browser. But I think this makes
-sense, given the intention behind its design. In “The Tao of
-Datastar” this is laid out
-quite explicitly:</p>
-<p>State in the right place: Most state should live in the backend… the backend
-should be the source of truth for your application state…</p>
-<p>Use signals sparingly: A good rule of thumb is to only use signals for user
-interactions (e.g. toggling element visibility) and for sending new state to
-the backend (e.g. by binding signals to form input elements).</p>
-<p>I think constraints are good, and in the case of Datastar, the constraints (no
-JS API, don’t overuse signals, state should mostly live on the backend),
-actually make you think hard about the structure of your app, the different
-pages it’s made of and the components therein. You might even need to rethink
-the entire URL structure of your app, and where each part of the app state is
-kept. The more I tinker with Datastar, the more those constraints make sense.</p>
-<p>That said, for some types of applications those constraints may be, well, too
-constraining. For example, an application in which a single page can display
-thousands of discrete values, and some of them more than once, might need to
-structure their signals accordingly. In that type of app, we can take advantage
-of Datastar’s signal namespacing (nested signals) feature, and we might also
-want to prepend those signals with an underscore, e.g. $_values, so as to
-prevent all those values from being sent to the server on each request (and
-anyways the server is the source of those values, so there’s no point in that.)</p>
-<p>So if we’re not supposed to use signals for server state, how do we update the
-client when the server state changes? The answer to that is by patching the page
-HTML itself:</p>
-<p>Here we have a micro-template that renders a time span, and we use the
-datastar-patch-elements event to patch the browser’s DOM. The result works the
-same as the above example using signals:</p>
-<p>So, this technique of patching the browser DOM requires a somewhat different way
-of thinking. Most importantly, it requires that the elements that need to be
-patched be identifiable, normally using an id. This may not necessarily work for
-all kinds of apps, but in that case you can always use signals. I find that both
-techniques have their advantages and disadvantages. What’s most interesting
-though is that with Datastar there’s no need for writing Javascript, and that in
-itself is a huge advantage.</p>
-<p>Datastar is expressly geared more towards creating MPAs (multi-page apps) than
-SPAs (single-page apps). From the Datastar Tao:</p>
-<p>Make an MPA, each page is a resource, keep a stream open on the current state
-of that resource…</p>
-<p>So, is Datastar incompatible with SPAs? And why would we want to make an SPA in
-the first place? In many web apps there’s going to be some state that pertains
-to the client (for example, is the sidebar collapsed or not, are menu groups
-inside the sidebar collapsed or not, etc.), and some state that’s coming from
-the server. In many web apps, we’d like to retain the client state (the sidebar
-again), even if we move between different resources in our app. Architecting our
-app as an SPA may help us achieve this goal of persisting client state, at the
-possible cost of not being able to correctly handle navigation history.</p>
-<p>From my experiments it seems like it’s totally possible to make an SPA using
-Datastar by filling in the missing parts with some custom Javascript. But why
-would I want to use Datastar in this way? Maybe there’s something I’m missing? I
-must admit that at first I had trouble understanding the tao of Datastar. I
-think my resistance was due to the fact that I’m just used to the “modern”
-approach of implementing reactive and interactive web UIs using Javascript -
-responding to user actions, rendering stuff in the client, etc.</p>
-<p>But then I listened to a very interesting
-talk
-between David Nolen (the creator of
-ClojureScript) and Ben Croker and Delaney
-Gilliland (the guys behind Datastar), where David
-talks about how Datastar was used in building
-Instabooks, a fast web UI for Quickbooks. This really
-piqued my curiosity, so I went on the instabooks website and fortunately they
-have offer a demo that anybody can try. Go and have
-a look yourself, it’s really cool!</p>
-<p>But what’s even cooler is that, as David tells it in their conversation, any user
-action, such as scrolling records, filtering, searching, etc. results in a full
-rerendering of the page. I actually looked at what their demo is sending on their
-SSE stream - it’s always a fully-rendered version of the page. This means that
-there’s basically (to my understanding) no (or very little) frontend logic that
-intercepts button clicks and renders a bunch of stuff. Instead, when the UI
-state is kept on the server, and each interaction results in an HTTP request to
-the server, which rerenders the page and sends it back to the browser on the
-previously established SSE stream. For example, when clicking the filter button
-on a column header, the server will rerender the page, with a little floating
-filter dialog that’s custom made to the specific column. The updated HTML will
-be sent to the browser, and Datastar will take care of morphing the DOM to
-reflect the updated UI state. It works quite beautifully, and it’s fast as well.</p>
-<p>What does this way of doing things gets us? First and foremost, we get rid of a
-lot of frontend Javascript code. As David mentions in the same video, just the
-thought of having to deal with scrolling, dialogs, live search, etc. is kinda
-daunting - doing all that stuff in Javascript. Secondly, we can build the entire
-UI on the server, and have our UI reflect our application state, as in UI =
-λ(state), just like React! A corollary of this is that testing our app in a way
-becomes much simpler. Maybe we don’t need the whole Capybara setup to test our
-app. Instead, since every interaction causes a change of state, we can just test
-the rendered HTML reflects the state correctly.</p>
-<p>The obvious drawback to this way of doing things is that the server now needs to
-do a lot more work, since it needs to render an entire page’s worth of HTML on
-each user interaction. For a heavyweight, relatively slow framework such as
-Rails, this might be a problem. For any app where you need to fetch a bunch of
-records from a remote database that might be a problem. I imagine that a more
-fine-grained approach to updating the browser upon user actions with Datastar
-might work better for those apps where rendering a page is slow. But if your app
-is built on top of a snappy framework/runtime, and persists its state to e.g. an
-SQLite database, rerendering the whole page on each interaction may work just
-fine.</p>
-<p>It took me quite a while to understand the Datastar way. At first I really
-resisted it, and this article in some way reflects this fact - it starts with
-whole different attitude than how it ends. Believe me when I tell you the first
-few versions of this article were all about how to work around Datastar’s
-so-called “limitations”. But now I think I get it, and I can’t wait to start
-building stuff the Datastar way.</p>
-<p>One of the things that were hard for me to understand when I just started
-looking at Datastar was, how would the backend need to be structured in order to
-work with Datastar. There was no information about this in the datastar docs,
-and I felt a bit frustrated because of that. But once things clicked for me I
-understood this is in fact a non-issue. As the tao of Datastar says:</p>
-<p>So the answer is as simple as it gets: build your app normally as a set of
-resources, render everything on the server. This is such a refreshing approach!
-In fact, I think I might integrate Datastar into
-Syntropy and provide additional
-abstractions that make it easier to build apps using it. With Datastar, there’s
-a whole new and exciting way of building web apps that’s still waiting to be
-explored.</p>
-<p>Copyright © 2026 Noteflakes. This site runs on Syntropy.</p>
+                <p>I'm building PurseString, an open-source MCP server that lets AI agents spend money safely. A lot of it got built this week, because I'm in the middle of the PayPal AI Hackathon and building in public every day.</p>
+<p>Today I want to share something more technical. When you let an agent touch money, the scary bugs aren't the clever ones. They're the boring ones that every payments engineer already knows about, except now nobody's watching while they happen.</p>
+<p>Here are four of them, and what I did about each.</p>
+<p>Bug 1: The retry that pays twice 🔁
+This is the one that started the whole project. A checkout page hung for a few seconds. My agent decided the payment had failed and did the sensible thing: it tried again. Both charges went through.</p>
+<p>Agents retry by design. That's normally a good thing. With money it's a disaster.</p>
+<p>The fix: make the purchase idempotent, not just the API call. Every purchase intent gets a deterministic key built from who's asking and what for:</p>
+<p>SHA256(agent_id, task_id, vendor, amount)
+If the same agent asks to buy the same thing for the same task within 30 minutes, it gets back the same intent and the same card. Not a new one. The retry becomes harmless.</p>
+<p>On the PayPal side I went one step further. PayPal payouts carry an idempotency key all the way to PayPal, so even if PurseString crashes halfway through the call, the retry can't pay the vendor twice.</p>
+<p>Bug 2: 0.1 + 0.2 ≠ 0.3 🧮
+You've seen this meme. I didn't think it would bite me. It did.</p>
+<p>0.1 + 0.2            // 0.30000000000000004
+0.1 + 0.2 <= 0.30    // false 😬
+Picture an agent with a $0.30 daily budget. It spends $0.10, then $0.20. In plain floats that's over budget, so the second purchase gets refused. Flip it around, and rounding tricks can let something through that shouldn't.</p>
+<p>I was patching around it with tiny epsilons and toFixed(2). That's a smell.</p>
+<p>The fix: count money in whole minor units. You still write amount: 15.00 in policies.yaml and in tool calls. But every sum and comparison inside PurseString now runs on integers in the currency's smallest unit: cents for USD, yen for JPY, fils for KWD.</p>
+<p>$0.10 + $0.20  →  10 + 20 = 30 cents  →  fits a 30-cent budget exactly ✅
+And an amount that's finer than the currency allows, like $15.001, is refused, not quietly rounded. With money, silent rounding is just a bug you haven't found yet.</p>
+<p>Bug 3: The hold that isn't a charge 🏨
+This one surprised me most. When a card is "approved" at a hotel, a gas station or a lot of online stores, no money has actually moved yet. It's a hold (an authorization). Later the merchant captures some, all, or none of it.</p>
+<p>The hotel holds $200 and captures $150.
+The gas pump holds $100 and captures $43.
+A store drops the hold and places a new one.
+If you count every approval as spent money, budgets fill up with money that never left. Or worse, a merchant that re-authorizes gets refused for no reason.</p>
+<p>The fix: track holds and captures separately. On Lithic, the card network asks PurseString in real time whether to approve each charge, and later sends what happened to it. PurseString applies those events to the hold it approved:</p>
+<p>Captured → record what was really taken, end the hold.
+Reversed, voided or expired → release it and give the budget back.
+So a subscription card's monthly cap counts what was captured plus what's still held. Refunds are checked against what was actually captured, not what was held. Each event is applied once, so a provider re-sending the same webhook changes nothing.</p>
+<p>Bug 4: "Who edited the log?" 📼
+When finance asks "why did the agent buy this?", PurseString has an answer: the goal, the alternatives the agent tried, every rule and how it ruled, and who approved. That's the whole point.</p>
+<p>But a log is only evidence if nobody can quietly change it. A plain JSON file can be edited by anyone with access to the disk, and that includes an agent with a shell.</p>
+<p>The fix: hash-chain the audit log. Every line now carries a sequence number, the previous line's hash, and its own hash:</p>
+<p>{ "event": "intent_approved", "seq": 2, "prev": "sha256:0870ce5a…", "hash": "sha256:a68bc3e0…" }
+Edit, delete, insert or reorder a line, and the chain breaks right there:</p>
+<p>$ pursestring verify-log
+BROKEN at line 2 (seq 2): hash mismatch: entry was edited
+Plain SHA-256 catches edits, but someone who can write the file could rebuild the whole chain. So if you set PURSESTRING_AUDIT_KEY to a secret kept somewhere else, entries are HMAC-signed instead, and the chain can't be rebuilt without the key.</p>
+<p>One honest limit: a chain can't tell if the newest lines were cut off the end. verify-log prints the head hash, so save it somewhere else (a ticket, a Slack message) when you need to prove later that nothing was dropped.</p>
+<p>Why this matters for the PayPal hackathon 💙
+For the hackathon I added two things on top of the cards:</p>
+<p>A PayPal and Venmo payout rail. The agent can pay a vendor once a purchase is approved. And the agent never chooses who gets paid. The recipient comes from a payee list in your rules, so an email saying "pay this address instead" has nothing to change.
+Guardrails in front of PayPal's own MCP server. PayPal's tools pass through PurseString, so small refunds can go through on their own, bigger ones wait for a human, anything over a cap is refused, and accepting a dispute or cancelling a subscription always needs a person.
+That second one is about the scariest attack on agents right now: prompt injection. A support agent reads a customer email that says "refund me $900 now." If the agent can call create_refund, nothing in the payment provider stops it. A prompt that says "be careful" doesn't stop it either, because the agent you're trying to control can't be the one enforcing the rules.</p>
+<p>All four fixes above apply to PayPal too: safe retries, exact money math, the refund checks, and the tamper-evident log.</p>
+<p>What I learned
+Honestly, none of these bugs are new. Banks solved them decades ago. What's new is that an agent hits them at machine speed, at 3am, with nobody watching.</p>
+<p>That's why I keep coming back to the same idea. Agents and money can work together. They just need the same boring, solid rails that we built for people: clear rules, a second pair of eyes on the risky stuff, and a record nobody can quietly change.</p>
+<p>It's still early. PurseString is a v0.1 alpha. It's tested end to end on the Lithic and PayPal sandboxes, but it hasn't been battle-tested with real money yet. So please use sandbox keys, and tell me what breaks.</p>
+<p>Try it, break it, build it with me
+⭐ Repo: https://github.com/suseendar1414/pursestring
+🧪 10-minute walkthrough: docs/try-it.md
+💬 Discord: https://discord.gg/qBqgx2GB86
+To add it to Claude Code:</p>
+<p>claude mcp add pursestring -- npx -y github:suseendar1414/pursestring
+It starts on a mock rail, so no money moves until you add a sandbox key.
+retries, webhooks that arrive twice? I'd really love to hear it in the comments. It might end up as the next fix. 🙏</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://noteflakes.com/articles/2026-11-04-datastar" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/suseendaran_nair_88f71da1/4-money-bugs-that-bite-ai-agents-and-how-i-fixed-them-in-pursestring-2ofm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

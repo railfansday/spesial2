@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤗 Kernels: Major Updates</title>
+    <title>Build Low-Latency Multilingual Voice Agents: Open Weights &amp; Full Deployment Control with NVIDIA Magpie TTS</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10033.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,52 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>🤗 Kernels: Major Updates</h1>
+        <h1>Build Low-Latency Multilingual Voice Agents: Open Weights &amp; Full Deployment Control with NVIDIA Magpie TTS</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/revamped-kernels/thumbnail.png" alt="🤗 Kernels: Major Updates" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/68127936de624fb6f57d9989/Ol-uDBWtBtVDbowXgP-Un.png" alt="Build Low-Latency Multilingual Voice Agents: Open Weights &amp; Full Deployment Control with NVIDIA Magpie TTS" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/revamped-kernels/thumbnail.png" alt="🤗 Kernels: Major Updates" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/68127936de624fb6f57d9989/Ol-uDBWtBtVDbowXgP-Un.png" alt="Build Low-Latency Multilingual Voice Agents: Open Weights & Full Deployment Control with NVIDIA Magpie TTS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post (From Zero to GPU), we introduced the 🤗 Kernels project, which aims at standardizing how custom kernels are packaged, distributed, and consumed. We want the project to be frictionless and secure, while making it as Hub-friendly as possible.</p>
-<p>Over the past few months, we have worked towards this goal. In the process, we also almost completely redesigned the project. This post will summarize the major updates we have shipped and what’s coming.</p>
-<p>We have introduced a new repository type on the Hub called "kernel". This enables us to cater to users with compute-related specificities. For example, a user can get a sense of which accelerators, operating systems, and backend versions are supported for a given kernel:</p>
-<p>One can browse all available kernels on the Hub here: https://huggingface.co/kernels.</p>
-<p>Making these kernels first-class citizens of the Hub also benefits the AI ecosystem. Users can now see trends across kernels, models, and the applications that use them. The kernels become more discoverable to users.</p>
-<p>Kernels run native code with the same privileges as the Python process that loads them, so a malicious kernel can do real harm. Therefore, security has always been of utmost importance to the Kernels project.</p>
-<p>This is why we focused early on reproducibility: you should be able to recompile a kernel yourself and verify that it matches the publicly available source. We use Nix to make this possible, since it keeps builds pure through hermetic evaluation of the build recipe and a strongly isolated sandbox. We further improve provenance by embedding the source Git SHA1 into the kernel itself.</p>
-<p>In recent months, we have added additional layers of defense: trusted kernel publishers and code signing.</p>
-<p>With the new repo type, we also introduced “trusted publishers”. Since kernels execute code on a machine with the same privileges as the Python process they are used in, an attacker could compromise machines by uploading a malicious kernel and coaxing you to use that kernel. To help you avoid such malicious kernels, the kernels package will now only load kernels by trusted publishers by default. A trusted publisher is an organization that is trusted by the community to act in good faith.</p>
-<p>We still want to support loading kernels from organizations or users that are not trusted publishers, but you have to explicitly opt in using the trust_remote_code argument when loading a kernel from the Hub:</p>
-<p>By default, users cannot publish kernel repositories on the Hub. They have to request to be a kernel publisher. Users and organizations can request for access from their account settings. This gives us time to treat these requests on a case-by-case basis.</p>
-<p>An additional layer of security that we are adding is code signing. Code signing protects against the scenario where an attacker uploads a malicious kernel to a kernel repo from a trusted publisher whose Hub credentials were compromised. In code signing, a kernel is signed with a private key known only to the kernel developer and validated with a public key that is generally available. In the Hub compromise scenario, an attacker cannot sign the malicious kernel since they do not own the private key needed for signing.</p>
-<p>To further improve security, we use Sigstore’s cosign to sign using ephemeral private keys. Since these signing keys are only valid for a limited time, an attacker typically cannot use the private key, even when it is leaked. We also verify that the kernel was signed by a trusted GitHub workflow from a trusted GitHub repository.</p>
-<p>Kernel signing is already supported by kernel-builder and we have provided the kernels verify-signature to verify a kernel. Kernels does not verify the signature upon loading a kernel yet, since we would like to test this new functionality more before fully rolling it out. Preliminary notes on setting up code signing for your own kernels can be found in the kernels 0.16.0 release notes: https://github.com/huggingface/kernels/releases/tag/v0.16.0.</p>
-<p>Previously, a bunch of utilities were intertwined between kernels and kernel-builder. We have established a better separation of concern between the CLI of kernels and kernel-builder. The mental model here is that kernels is a library for loading and preparing kernels for use. Therefore, it should not include anything related to “building” kernels.</p>
-<p>As a result of this, both kernels and kernel-builder are now much leaner and more specific. Refer to the documentation to learn more about this:</p>
-<p>This improved CLI experience also lets us cater to the rise of agentic kernel
-development in a better manner. More on this later.</p>
-<p>We have extended support for frameworks, the most visible changes are:</p>
-<p>kernel-builder and kernels complement the rise of agentic kernel development wherein an agent is leveraged to come up with an (optimized) kernel from scratch. Together, they support a workflow in which agents can scaffold, build, benchmark, and iteratively optimize kernels.</p>
-<p>Agentic kernel development is still nascent, and the right development loops will continue to evolve. That makes simple, clear fundamentals especially important where the tools should be easy to compose into whichever agent workflows or frameworks people choose to use.</p>
-<p>kernel-builder helps enforce a structure in how kernel source code should be scaffolded and used to perform reproducible builds. This gives agents a predictable project layout and repeatable workflow to operate within. Its CLI is also meant to be agent-optimized. For example, this can mean non-interactive commands and outputs that are straightforward for an agent to interpret programmatically. To this end, we also have backend-specific skills to help agents navigate the idiosyncrasies of different backends. These skills can capture backend-specific toolchains, compilation paths, and performance considerations.</p>
-<p>Building a kernel successfully isn’t the only goal, we need to ensure that it delivers actual speedups over a baseline on the target hardware. A successful build is therefore only the first validation step. Usually, this target hardware can include many different accelerators, even different families of the same accelerator.</p>
-<p>This makes it important to evaluate results across hardware vendors and generations where relevant. Our tight integration with HF Jobs can make this benchmarking process easy. Agents can use this integration to run benchmark suites, collect performance results, and compare them against a defined baseline.</p>
-<p>This way, agents can run tests across different hardware configurations to get reliable feedback on the performance of the generated kernels and identify what needs to be done. That feedback can then inform the next optimization iteration.</p>
-<p>Below are some examples of agent-augmented kernels. These illustrate the kinds of kernels that can be developed and evaluated through this workflow:</p>
-<p>The environment setup for building kernels with kernel-builder can be daunting. To make it easier for users, we now have an installation script for setting up an environment in one click. If you prefer working with ephemeral instances, our Terraform setup guide is worth following.</p>
-<p>After the kernels are built, we create a system card for each kernel to expose useful information, including how to use it and its exposed interfaces. When the kernel is pushed to the Hub, this system card becomes the front matter for the kernel:</p>
-<p>Is a question one would ask multiple times to plan things better. Use the has_kernel() method for this purpose:</p>
-<p>It returns a bool. If you’re looking for more explanations around why a given kernel isn’t supported then use get_kernel_variants():</p>
-<p>It should print (depends on the machine you’re on):</p>
-<p>Kernel-builder has targeted manylinux_2_28 almost since the beginning. We used to target manylinux by using a modern gcc toolchain compiled with glibc 2.28. To avoid compatibility issues with older versions of libstdc++, we statically linked libstdc++.</p>
-<p>However, this approach recently resulted in some issues. Some libstdc++ functionality uses global initialization. This can lead to corrupted data when multiple libstdc++ versions come into play, such as the libstdc++ that is linked dynamically by PyTorch and the libstdc++ that is linked statically by a kernel. Some recent kernels use functionality (e.g. C++ regexes) that trigger global initializations, leading to such corrupted data, causing segfaults and other issues.</p>
-<p>To solve this issue, kernels now link libstdc++ dynamically. To ensure compatibility with old libstdc++ versions, we now compile kernels with the official manylinux_2_28 toolchain.</p>
-<p>Our goal with the Kernels project is to serve both kernel developers and users of custom kernels. We’re always keen on receiving feedback from the community on how we can improve it. Don’t hesitate to contribute!</p>
-<p>Acknowledgements: Thanks to Aritra for reviewing the post.</p>
+                <p>Every voice interaction has a latency budget.</p>
+<p>By the time a user hears your application respond, you've already spent precious milliseconds capturing audio, transcribing speech, running an LLM, retrieving context, and generating a response. Text-to-speech (TTS) is the final step — and the one users notice most. If speech generation is slow, the whole experience feels slow.</p>
+<p>The more of that pipeline you can run and tune yourself, the more of the latency budget you get back.</p>
+<p>Voice AI is moving fast. Integrated speech models offer simplicity — one API call, audio in, audio out — but they trade the ability to fine-tune each component for your domain, swap in better models as they ship, enforce data residency, and understand exactly where latency is coming from. For more control, a cascaded architecture — purpose-built ASR, TTS, and LLM components running together — keeps each layer independently tunable and deployable on infrastructure you own.</p>
+<p>NVIDIA Magpie Multilingual TTS is built for that. With open weights, production-ready NVIDIA NIM, and support for 12 languages, you can deploy multilingual speech inside your own infrastructure, optimize latency for your workload, and customize the model for your domain — end to end, in your own environment.</p>
+<p>The latest release expands multilingual coverage with Modern Standard Arabic, Korean, and Brazilian Portuguese, while improving quality across many existing languages through updated training data and model improvements.</p>
+<p>Whether you're building customer support agents, healthcare assistants, enterprise copilots, translation systems, or conversational AI applications, Magpie provides an open foundation for production voice AI.</p>
+<p>Today's voice applications don't serve a single language.</p>
+<p>Global customer support, enterprise assistants, healthcare documentation, retail automation, and translation workflows increasingly require natural conversations across multiple languages — all while maintaining low latency.</p>
+<p>Supporting more languages is only part of the challenge. Developers also need the ability to:</p>
+<p>Open models change what's possible on every one of these.</p>
+<p>Magpie TTS Multilingual is a 364M-parameter open-weights model supporting:</p>
+<p>English · Spanish · French · German · Italian · Vietnamese · Mandarin · Hindi · Japanese · Modern Standard Arabic (new) · Korean (new) · Brazilian Portuguese (new)</p>
+<p>Each language includes male and female speaker voices through a shared multilingual speaker representation.</p>
+<p>This release also improves multilingual flexibility with expanded code-switching support for Hindi and Japanese, enabled through IPA grapheme-to-phoneme processing and custom pronunciation dictionaries — making it easier to accurately pronounce names, technical terminology, and mixed-language content.</p>
+<p>Instead of maintaining separate TTS models for different regions, developers can build multilingual applications on a single open foundation.</p>
+<p>In conversational AI, text-to-speech is the final stage before users hear a response. That makes Time to First Audio (TTFA) — the delay between speech generation beginning and the first audio reaching the user — one of the most important latency metrics in a voice pipeline.</p>
+<p>Because Magpie TTS can be deployed inside your own environment, the latency you measure is the server-side latency you actually control, with no managed-service round-trip in the number.</p>
+<p>Source: NVIDIA TTS NIM Performance documentation (v26.07), average of three trials, on-prem.TTFA = latency to first audio; RTFX = throughput as a multiple of real time.</p>
+<p>At 32ms on B200, Magpie's TTFA leaves the rest of the latency budget for ASR and LLM processing — keeping total end-to-end latency within the sub-200ms window natural conversation requires. Across NVIDIA GPUs, Magpie delivers first audio in 32–79ms on a single stream. At 64 concurrent streams, B200 reaches 239ms TTFA while delivering throughput at 320× real time — generating audio more than 300 times faster than it plays back, even under concurrent load.</p>
+<p>The table above shows Magpie served as the NVIDIA NIM, measured on-prem — the optimized container running on your own GPU. The open Hugging Face checkpoint is the same model and your path for research and fine-tuning; the NIM is the tuned serving stack that produces these production latencies. Both run on hardware you control.</p>
+<p>Because the model runs on your own infrastructure, you can benchmark performance directly, tune it for your deployment, and scale according to your workload. For real-time voice agents, that's the difference between conversations that feel responsive and conversations that feel delayed.</p>
+<p>Low latency isn't accidental. Magpie introduces two complementary architectural improvements that reduce inference time while maintaining speech quality.</p>
+<p>Frame stacking. The decoder predicts two audio frames during each decoding step rather than one. This cuts the number of decoder iterations in half, shortening generation time and improving throughput.</p>
+<p>Local transformer. Frame stacking alone would reduce audio quality by introducing dependencies between simultaneously generated codebook tokens. The local transformer models those dependencies and refines the generated audio, recovering the quality that frame stacking would otherwise sacrifice.</p>
+<p>Together, these techniques deliver both faster generation and natural speech synthesis. The architecture is described in Frame-Stacked Local Transformers for Efficient Multi-Codebook Speech Generation (ICASSP 2026).</p>
+<p>This release doesn't only add languages — it also improves synthesis quality across many existing ones. Compared to the previous release, Magpie shows reduced character error rates (CER) and higher speaker similarity (SSIM) on several languages, with the clearest gains on French and Spanish:</p>
+<p>Source: Magpie TTS Multilingual model card. CER lower is better; SSIM higher is better.</p>
+<p>The newly added Arabic (1.62% CER), Korean (2.69%), and Brazilian Portuguese (2.91%) models establish baseline quality for future improvements.</p>
+<p>While objective metrics help measure progress, speech quality is ultimately perceptual. You can hear the difference yourself on NVIDIA Build or the Hugging Face demo.</p>
+<p>Latency you can measure is useful. Latency you can control is even better.</p>
+<p>Open weights give developers capabilities that come from owning the deployment. With Magpie you can:</p>
+<p>For enterprises building production voice AI, this control over deployment, performance, and customization is often what matters most.</p>
+<p>Voice AI in production is a system of models, not a single one. Magpie TTS is part of the NVIDIA Nemotron Voice Agent Developer Example, a reference implementation showing how purpose-built speech, language, and reasoning models work together as a coordinated system — so you can build always-on voice agents, not just better-sounding speech.</p>
+<p>The Nemotron Voice Agent developer example provides an end-to-end reference implementation that developers can clone, customize, and deploy in hours. It includes production patterns for:</p>
+<p>Rather than assembling individual components from scratch, developers can start from a complete reference architecture and adapt it to their own applications.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/revamped-kernels" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/nvidia/magpie-tts-multilingual-voice-agents" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

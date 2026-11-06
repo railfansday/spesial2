@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Decoding Morse Code with a Finite-State Machine in TypeScript</title>
+    <title>Easy Eggplant Bolognese (1 Pot!)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9665.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Decoding Morse Code with a Finite-State Machine in TypeScript</h1>
+        <h1>Easy Eggplant Bolognese (1 Pot!)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fssrigp1kjf181g8a3rck.png" alt="Decoding Morse Code with a Finite-State Machine in TypeScript" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://minimalistbaker.com/wp-content/uploads/2026/02/Easy-Vegetarian-Eggplant-Bolognese-9.jpg" alt="Easy Eggplant Bolognese (1 Pot!)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fssrigp1kjf181g8a3rck.png" alt="Decoding Morse Code with a Finite-State Machine in TypeScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://minimalistbaker.com/wp-content/uploads/2026/02/Easy-Vegetarian-Eggplant-Bolognese-9.jpg" alt="Easy Eggplant Bolognese (1 Pot!)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Morse code is a stream problem. Signals arrive one at a time — a short beep, a long beep, a pause — and the decoder has to turn that stream into text without ever seeing the future. Most hobby decoders handle this with nested if statements and a handful of timers, and most of them break the moment input gets noisy: a slightly long dit becomes a dah, a hesitant pause splits a letter in two, and the whole message drifts out of sync.</p>
-<p>There is a cleaner way to think about it. Morse decoding is exactly what finite-state machines were invented for: a small set of states, a small set of events, and a transition table that says what happens next. This article builds a complete Morse decoder as an explicit state machine in TypeScript — no libraries, no timers scattered through the logic, and a design you can test exhaustively.</p>
-<p>A finite-state machine (FSM) is a program that is always in exactly one state, moves between states only on defined events, and carries a small amount of memory with it. Morse decoding maps onto that shape perfectly:</p>
-<p>Because every decision lives in the transition table, there is nowhere for timing bugs to hide. If a decode is wrong, you can point at exactly one transition.</p>
-<p>The common first attempt buffers raw on/off durations into arrays, then post-processes them: anything under X milliseconds is a dit, anything over is a dah, gaps under Y milliseconds are intra-character, and so on. It works on clean, machine-generated input — and fails on humans, because human keying is uneven. A beginner's dah at 12 WPM can be shorter than an expert's dit at 30 WPM. Fixed thresholds assume a single speed, and real senders vary.</p>
-<p>A state machine does not fix that by itself. What it does is isolate the classification logic in one place, so you can swap fixed thresholds for adaptive ones without rewriting the decoder. That is the design we will build toward.</p>
-<p>Two timers matter, and both are derived from the unit length — the duration of one dit at the current speed. At N words per minute, one unit is 1200 / N milliseconds (the PARIS standard). A dit is 1 unit, a dah is 3, the gap inside a character is 1 unit, between characters 3 units, and between words 7 units.</p>
-<p>The classification thresholds sit at the midpoints: a mark shorter than 2 units is a dit, longer is a dah. A space shorter than 2 units is an intra-character gap (do nothing); between 2 and 5 units it ends a character; 5 units or more ends a word.</p>
-<p>Here is the whole machine. The Decoder class owns the state, the transition table is the onSignal / onSilence pair, and the only mutable memory is the current symbol buffer plus the running unit estimate.</p>
-<p>Read the transitions, not the code around them:</p>
-<p>Note what is absent: there is no setTimeout per element, no queue of pending durations, and no string-splitting pass. The machine consumes events as they arrive, which means it works identically on live keying and on recorded audio.</p>
-<p>Fixed thresholds break on real humans, so the machine should learn the sender's speed as it goes. The trick is to track a running estimate of the dit length and derive the unit from it, rather than fixing the unit up front.</p>
-<p>A simple, robust estimator: keep a rolling average of the shortest marks seen recently. Dits are the most common element in English Morse (the letter E, a single dit, is the most frequent letter), so the shortest marks in a rolling window are almost always dits. Update the unit estimate after every mark:</p>
-<p>Call adapt(dur) inside signalOff before classifying. The 80/20 weighting makes the estimate track a sender who speeds up over a QSO without jumping at a single sloppy dit. With this one change, the same decoder handles a nervous beginner at 8 WPM and a confident operator at 25 WPM, and it recovers gracefully when a new operator takes over mid-message — the failure mode of every fixed-threshold decoder.</p>
-<p>The decoder does not care where its events come from. Three sources cover nearly every project:</p>
-<p>Because the state machine is pure — no DOM, no audio, no timers inside it — you can unit-test it by feeding synthetic event sequences and asserting the output text. That is the real payoff: a decoder you can prove correct before it ever hears a real signal. You can check your decoder's output against a free online Morse code translator to confirm the text matches.</p>
-<p>Test a decoder with property-based checks, not a handful of examples. The round-trip property is the strongest one: for any random string, encoding it to timed events and decoding those events must return the original string. Generate the events from the same timing rules the decoder assumes, then fuzz the timings by ±20% to simulate human unevenness:</p>
-<p>If the round-trip fails, the bug is in exactly one transition — the table tells you where to look. That debuggability is the point of the design.</p>
-<p>Why three states and not two?
-Two states (on/off) force the gap logic into the mark handler, where it does not belong. The SPACE state exists so that gaps are classified exactly once, in one place, whether the next mark arrives or silence simply continues. It is the state that turns "nothing is happening" into information.</p>
-<p>Do I need the tick?
-Yes — without it, the final character of a message never flushes, because no event ever arrives to close the last space. A 25 ms interval is plenty; at 20 WPM a unit is 60 ms, so the tick fires more than twice per unit and adds no visible latency.</p>
-<p>What about characters that are not in the table?
-flushChar silently drops unknown symbol sequences. For a practice tool that is the right call — a mistyped character should not crash the session. For a logging tool, emit a placeholder like � instead so the error is visible in the transcript.</p>
-<p>Can this decode audio from a real radio?
-Yes, with the analyser-threshold glue described above. Real-world signals add noise, fading and interference, so expect to tune the energy threshold and the debounce window for your band conditions. The state machine itself needs no changes — that separation is the whole reason to build it this way.</p>
-<p>Morse Zone (morsezone.com) is a free online Morse code translator with audio playback and learning tools — a handy reference for checking your decoder's output against known-good text.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Disclosure: This post may contain affiliate links which provide us a small commission when used for purchase. We're grateful for your support!</p>
+<p>When we add another bolognese to the blog (Yes, we already have versions 1, 2, 3, and 4), you know it’s something special! This newest version is made with EGGPLANT, meaning it’s the perfect bolognese for late summer. It’s light yet satisfying, creamy yet bright, and full of bold Italian-inspired flavor — everyone will be asking for seconds!</p>
+<p>Even better? It’s a breeze to make — just 1 pot required! What are you waiting for? Get that pasta water boiling!</p>
+<p>Bolognese is an Italian sauce that gets its name from the Italian city of Bologna. It’s typically made with meat, soffrito (onions, celery, and carrots), white wine, milk, and tomato paste or sauce, all simmered to create a rich, flavorful sauce.</p>
+<p>Our eggplant version strays from the traditional as it excludes meat (and includes eggplant) and incorporates dairy alternatives. But the rest of the dish is very similar to traditional bolognese and feels so hearty it might convert even the most adamant veggie skeptics!</p>
+<p>This 1-pot eggplant bolognese is everything you want for a cozy pasta night, minus the fuss! It starts with sautéing onion and carrots to create a simple, savory-sweet base. Next, we add eggplant (cut into very small cubes) and let it sauté until it has softened and browned (hello, flavor!).</p>
+<p>Build the flavor even further with garlic and red pepper flakes and by deglazing the pan with wine. Crushed tomatoes and tomato paste ensure a bright, tomato-forward sauce, and a small amount of dairy-free milk (we like homemade cashew milk) gives it a gentle creaminess and richness. The final flavor touches include dried Italian herbs (basil + oregano), sea salt, and maple syrup to balance the acidity of the tomatoes.</p>
+<p>Once all the ingredients are in your pan, it’s time to let the heat do its magic. Simmering for at least 20-30 minutes allows the sauce to thicken and concentrates the flavors as liquid evaporates away. If you have the time, you can let it continue simmering for up to an hour for even more flavor!</p>
+<p>When it’s done simmering, you’ll be left with an oh-so delicious, plant-powered sauce perfect for serving with your favorite pasta! It would also be lovely over polenta and is elevated by garnishing with fresh basil and our homemade vegan parmesan cheese.</p>
+<p>We think you’ll LOVE this eggplant bolognese! It’s:RichSavoryCreamy yet brightLight yet satisfyingEasy to make& SO delicious!</p>
+<p>It’s the perfect dish for a late summer pasta night! While quick enough for a weeknight, it’s also impressive enough to serve to dinner guests, especially paired with our Simple Vegan Meatballs, Pesto Turkey Meatballs, or Chickpea Caesar Salad (30 Minutes!).</p>
+<p>If you try this recipe, let us know! Leave a comment, rate it, and don’t forget to tag a photo @minimalistbaker on Instagram. Cheers, friends!</p>
+<p>Tag @minimalistbaker on Instagram and hashtag it #minimalistbaker so we can see all the deliciousness!FacebookTwitterPin It</p>
+<p>Have a question? Use ctrl+f or ⌘+f on your computer or the "find on page" function on your phone browser to search existing comments! Need help? Check out this tutorial!</p>
+<p>This recipe is perfect. I did add the ground beef into the recipe as noted, so had to increase the salt, red pepper flakes, and Italian seasoning. Was so delicious!</p>
+<p>We’re so glad you enjoyed it, Meg! Thanks so much for the lovely review. xo</p>
+<p>So glad you enjoyed it, Don! Thanks so much for sharing!</p>
+<p>I love the idea of turning eggplant into a hearty bolognese, especially when it can all be made in one pot. Eggplant can soak up so much flavor, so it seems like a really good fit for a rich tomato-based sauce. I also appreciate recipes like this that make a meat-free meal feel filling rather than like a compromise. Definitely adding this one to my list to try.</p>
+<p>THIS WAS SO EASY AND SO RICH! I MADE CASHEW MILK AND USED CABERNET TO DREDGE UP THE PIECES. I DON’T USUALLY MAKE MY OWN SAUCES BUT THIS WAS A REAL WINNER WITH GREAT BODY AND RICHNESS. JUST LOVED AND WILL BE A STAPLE..</p>
+<p>We’re so glad you enjoyed it! Thanks so much for the lovely review. xo</p>
+<p>Made this for the first time and love it!
+Thank you for making simple vegan recipes!</p>
+<p>We’re so glad you enjoyed it, Christine! Thanks so much for the lovely review. xo</p>
+<p>I made this. I substituted the tomato ingredients with my first every tomato sauce made with fresh tomatoes from my garden. I also used cashew cream and added a pepper from the garden. Delicious. What a great recipe for eggplant.</p>
+<p>We’re so glad you enjoyed it, Heidi! Thanks so much for the lovely review. xo</p>
+<p>This was absolutely delicious. However I did substitute chopped zucchini for the carrots. It was very flavorful and quite satisfying. I’m going to try putting it on a plain pizza crust next and sprinkle it with cheese for a new type of pizza bolognese. Thank you so much for this recipe.</p>
+<p>We’re so glad you enjoyed it, Makenzie! Thanks so much for the lovely review. Pizza Bolognese sounds delicious!</p>
+<p>Ooh, I just drooled a little.  I’ll be adding this to my “must try soon” list!</p>
+<p>Get our copy of FAN FAVORITES featuring 20 of our most loved, highly-rated recipes!</p>
+<p>Our FREE 49-Page Fan Favorites e-Book has 20 recipes we think you’ll LOVE!
+Please enable JavaScript in your browser to complete this form.Email *EmailSubmit</p>
+<p>Our FREE 49-Page Fan Favorites e-Book has 20 recipes we think you’ll LOVE!
+Please enable JavaScript in your browser to complete this form.Email *PhoneSubmit</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/morsezone/decoding-morse-code-with-a-finite-state-machine-in-typescript-2jpo" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://minimalistbaker.com/eggplant-bolognese/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hill-Climbing Agent Quality with Agents CLI Evaluation</title>
+    <title>Nondeterminism in Futhark</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10012.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,60 +15,180 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Hill-Climbing Agent Quality with Agents CLI Evaluation</h1>
+        <h1>Nondeterminism in Futhark</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A live walkthrough of the Agents CLI eval loop, from a first run to regression tracking, model-backend experiments, and automated alerting</p>
-<p>Building an agent that works on a demo is a different problem from building an agent that stays working across model upgrades, tool changes, and new conversation shapes. The first takes a weekend; the second takes a loop. A team writes test cases, runs them, grades them, reads what failed, changes the agent, and runs the cases again. If the score goes up, the change was good. If it goes down, revert. Over weeks of this, the agent inches toward the ceiling of what the model, tools, and prompt can do together. The quality-engineering name for this is hill-climbing.</p>
-<p>The Agents CLI eval namespace was built around this loop. The commands are small and framework-agnostic: eval generate runs the agent against a dataset of cases, eval grade scores the generated traces, eval compare diffs two run results side by side, eval analyze clusters failures into themes, and eval optimize runs an automated hill-climbing pass on the agent's prompt.</p>
-<p>Below: baseline → regression → model swap → scheduling and alerting.</p>
-<p>The scaffold used throughout is the LangChain template that ships with Agents CLI v1.8.0. The setup is a single command:</p>
-<p>The scaffold ships with an eval dataset at tests/eval/datasets/basic-dataset.json, a config at tests/eval/eval_config.yaml, and a custom LLM-as-judge metric at tests/eval/response_quality.py. The config declares the metric to run:</p>
-<p>The metric grades each response on a 1-to-5 scale for accuracy, relevance, and clarity, using gemini-3.8-flash as the judge. The default dataset has a single trivial case, which is not enough for a hill-climb. The first thing we do is expand it to four cases that probe different behaviors:</p>
-<p>Four cases: a greeting, a weather question the mock tool handles with the hardcoded foggy response, a weather question for a city the tool defaults on, and an off-topic question that the agent has to decide how to handle. This is a small dataset by design; the hill-climbing loop pays off when the dataset is small enough to run on every change.</p>
-<p>With the dataset in place, we run eval generate to drive the agent against each case, then eval grade to score the resulting traces:</p>
-<p>Mean 4.0 out of 5 across four cases, with a standard deviation of 1.41. That stdev tells us immediately that the cases are not scoring uniformly, which is a healthier starting point than a flat 5.0 across the board. A flat 5.0 either means the agent is perfect (unlikely) or the dataset is too easy to show variation. 4.0 with real spread is a hill to climb.</p>
-<p>To demonstrate the loop, we introduce a realistic regression. A developer working across several agent projects accidentally pastes the wrong system prompt into our weather agent: a chef persona meant for a different codebase. In app/agent.py:</p>
-<p>The change compiles, the agent still runs, and nothing in the pre-eval pipeline (lint, unit tests, type checks) catches it. Re-running the same eval generate plus eval grade sequence produces:</p>
-<p>Mean 2.75, down from 4.0. The judge agrees with our intuition that a chef persona on a weather agent is a worse product than a general-purpose helpful assistant. The stdev also tightened from 1.41 to 0.96, consistent with the chef prompt pushing most cases toward the same mediocre range.</p>
-<p>A 1.25-point drop on a 1-to-5 scale is substantial, and the kind of regression that can slip through code review when the diff looks small ("one string literal changed"). The loop surfaced the change at all, with a specific number attached to it, before the agent reached production.</p>
-<p>Mean scores are a start; the per-case diff is where the hill-climb happens. eval compare reads two result files and produces a structured JSON diff:</p>
-<p>The output lists which keys changed and which stayed the same:</p>
-<p>The differences object has the full per-case breakdown with the baseline and candidate values side by side. For a hill-climbing workflow, we typically pipe the output through jq or a small Python script to extract the signal; the raw JSON is the complete evidence.</p>
-<p>Walking the two result files and lining up the scores per case shows where the regression landed:</p>
-<p>Three cases dropped, one held. The most important of the three is sf_weather: the chef persona pulled the model's attention away from the registered get_weather tool, so the agent stopped calling it and started making up weather values. Unit tests can't catch this: the code runs, the tool is still registered, but the model's behavior around it has shifted. Only an end-to-end eval that scores the response in context surfaces this.</p>
-<p>The mean drop by itself (−1.25) is a clear signal, but the per-case breakdown is what tells the developer where to look. A one-line system-prompt change propagated through three different cases in three different ways: greeting lost a point on tone, sf_weather lost two on tool usage, off_topic lost two on scope creep.</p>
-<p>A common hill-climbing question is whether a cheaper or faster model would do the job acceptably. For the LangChain template, the model is defined in app/agent.py:</p>
-<p>We swap gemini-3.8-flash for gemini-2.5-flash (restoring the helpful system prompt first), re-run eval generate plus eval grade, and compare the two result files. The mean drops from 4.00 to 2.75, the same magnitude as the chef-prompt regression, but the per-case breakdown tells a completely different story:</p>
-<p>The cheaper model matched 3.8-flash exactly on the greeting and rome_weather cases and lost a point on sf_weather (slightly less polished phrasing). The whole visible drop traces to off_topic, where the cheaper model refused with a hedge about the event "not having happened yet" (a training-cutoff artifact), and the judge marked it harshly.</p>
-<p>The lesson is that the summary number is misleading. Look only at the mean and you'd call gemini-2.5-flash as bad as the chef prompt. Look at the per-case breakdown and you'd call it a reasonable swap for most of the agent's workload, with one case (handling out-of-scope questions about recent events) exposing a real limitation. If the production distribution of user questions matches the first three cases more than the fourth, the swap is worth considering. If off_topic-style questions are common, it is not.</p>
-<p>Two caveats on this experiment. First, model swaps interact with the prompt: a prompt tuned for a stronger model often leaks capability when ported to a weaker one, so the right comparison is "weaker model with a prompt tuned for it" versus "stronger model with its own tuned prompt." Second, the Vertex AI Eval Service calls a judge model to grade the traces, and the judge is held constant across the comparison. Changing the judge is a different experiment and should be done separately.</p>
-<p>Agents CLI does not ship a scheduler, but the eval commands are designed to drop into standard infrastructure. The pattern we can use here is a cron job or Cloud Scheduler trigger that runs eval generate plus eval grade on a cadence and writes the results to a persistent location:</p>
-<p>A nightly run against a stable regression dataset catches drift from model updates, data changes in the agent's tools, and dependencies that shift under the agent's feet. For a production agent, the scheduled run also captures the model vendor's quiet upgrades, which can move the agent's behavior without any change on our side. The dataset for the scheduled run is typically larger than the one used in the inner loop (dozens to hundreds of cases rather than a few), since it only runs once a day.</p>
-<p>The scheduled run produces a result file every day, but a file nobody looks at is not an alert. The pattern here can be a wrapper script that compares each new run's mean against a baseline (the previous run, or a committed known-good) and exits non-zero when the drop exceeds a threshold. The non-zero exit is what triggers the alert from the surrounding scheduler.</p>
-<p>Running it against our regression demo (baseline 4.0, candidate 2.75 from the chef-prompt run):</p>
-<p>And against an identical pair (self-compare):</p>
-<p>The non-zero exit code is what a cron job, Cloud Scheduler, or GitHub Actions step picks up to send the alert.</p>
-<p>For ADK projects, eval optimize runs an automated hill-climbing pass on the agent's prompt using the GEPA framework (not currently supported for the LangChain extension). The command takes a dataset and a target metric, proposes prompt variants, grades each one, keeps the variants that improve the metric, and iterates. The output is a set of candidate prompts ranked by their eval score, which a human then reviews and promotes to the agent definition.</p>
-<p>Two things to understand about eval optimize. First, it is scoped to prompt optimization, not to arbitrary agent changes: the agent's tools, structure, and model stay fixed. Second, GEPA sometimes finds genuine improvements and sometimes finds prompt variants that score higher on the specific metric by overfitting to its wording. The reviewer is the control. For projects where the loop applies, the discipline is to run eval optimize on the regression dataset (where improvements are measurable) and to review the candidate prompts carefully before promotion.</p>
-<p>A few patterns and anti-patterns from running this loop ourselves and watching teams do the same.</p>
-<p>Lead with a small, representative dataset, not a comprehensive one. The temptation when starting an eval is to try to cover every edge case the agent will ever see. The result is a dataset that takes an hour to run and that nobody runs on a change. Four cases that run in under a minute, as above, exercise the main behaviors and get run on every change. A regression dataset of three hundred cases that runs for an hour becomes a release gate at best and shelfware at worst.</p>
-<p>Snapshot result files, not scores. The score is a summary; the result file is the evidence. When a regression surfaces three weeks after a prompt change, having the full result JSON from before and after the change (not just the mean score) is what lets eval compare show the specific case that moved. The per-case breakdown in Step 4 above would not have been possible from scores alone.</p>
-<p>Separate the dataset from its expectations. The dataset is the inputs. The eval config is the expectations. They evolve on different cadences: the dataset grows as new real-world cases surface in production, and the config evolves as the team's definition of "good" matures. Keeping them in separate files, both committed to version control, makes it clear which half changed when a score moves.</p>
-<p>Treat summary metrics with suspicion. The model-swap experiment in Step 5 is the clearest example. The mean dropped by half a point, but the per-case breakdown showed the drop was concentrated in one case while the others held or improved. A team that only looked at the mean would have made the wrong call.</p>
-<p>More evals do not automatically lead to more fixes. A recent controlled study we ran found that coding agents using agents-cli run four times as many evals as coding agents without it, but change the agent after an eval about as often as the baseline. The behavior gain comes from what the skills put into the build at the start, not from the inner iteration. Evals are necessary for quality, but the quality comes from acting on what the evals show.</p>
-<p>Scaffold an Agents CLI project and run the first eval loop in a handful of commands:</p>
-<p>The full eval namespace is documented at google.github.io/agents-cli/cli. The source code, including the first-party eval primitives, is at github.com/google/agents-cli.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
-<p>Fast, reliable A2UI, with swappable inference formats</p>
+                <p>Last week I attended IFL2026, which was
+probably one of the best conference experiences I have ever had. One of the many
+good presentations was by Michael Haddon, who
+presented The Replay
+Lattice, which is a type
+system for floating-point reproducibility. The type system was presented for a
+demonstration language called Lane, but it inspired me to think more carefully
+about nondeterminism in Futhark (there is some), and what it might cost to get
+rid of it.</p>
+<p>I often use the terms âdeterminismâ or âdeterministicâ when explaining why I
+think data parallel programming is such a good paradigm, so perhaps it is
+surprising to see me write a blog post about nondeterminism in Futhark. But as
+is so often the case with such bold promises, they often tend to get a little
+weaker once you look closely enough. Michael Haddonâs work defines some
+nomenclature that is helpful for this discussion:</p>
+<p>Exact means that the computation produces the same result every time,
+guaranteed. (Michael describes this as matching the âserial referenceâ, which
+I think is not the best way of looking at it, but thatâs a question of
+perspective)</p>
+<p>Replay means that if you rerun the computation with the same âscheduleâ
+(in some sense âmachineâ), you will get the same result, but other machines
+may give different results.</p>
+<p>Approx means potentially nondeterministic results.</p>
+<p>The kind of nondeterminism we are talking about here is not the kind of
+free-form nondeterminism that arises from classic shared-state concurrent
+programming. Indeed, both Lane and Futhark are pretty much exclusively concerned
+with the kind of nondeterminism that arises from floating-point rounding errors.
+The simplest example is the non-associativity of addition:</p>
+<p>If we have an array of numbers we need to sum, then the result depends on the
+order in which you sum them. When parallelising a summation, you often do things
+like split the numbers into blocks, sum each block on a separate processor, then
+combine the partial results. This changes the order of addition, and hence the
+result. Now, an important point is that there is no reason to think that the
+parallelised result is numerically worse than a serial left-to-right
+summation, but it will be different. Further, an efficient implementation will
+likely choose a number of chunks somewhat proportional to the number of
+processors on the machine, which means the result may also be different on other
+machines (but again, not necessarily worse). This corresponds to the âReplayâ
+class of nondeterminism. Finally, the partial results may be combined using
+atomic instructions, which may be
+resolved in a different order when the program is rerun on the same machine.
+This is then âApproxâ.</p>
+<p>Even in this simple example of summing a bunch of numbers, we encounter both
+classes of nondeterminism. Note that none of them are ârace conditionsâ in the
+usual sense of the program sometimes just malfunctioning: the point is that
+the result changes, but given that the result is in some sense already âwrongâ
+(due to roundoff error), the main issue is that there are cases where we care
+about getting the same âwrongâ result every time.</p>
+<p>So in Futhark, ostensibly a deterministic language, where does the
+nondeterminism come from? There are a few sources. Some of them come when
+programmers violate mandated constraints (but which are unchecked for various
+reasons), and others are basically down to floating-point roundoff error.</p>
+<p>Let us start by considering language abuse. The worst but also least interesting
+case is using the #[unsafe] attribute
+to disable safety checks, after which you can do arbitrary memory reads and
+writes. This can be avoided by passing
+--safe to the compiler, or perhaps by just not doing this kind of cowboy
+coding in the first place. If you are a good enough programmer that your code
+does not need any safety checks, why not just go and write in C? Those folks
+never make mistakes.</p>
+<p>Another more insidious problem is related to the scatter construct. The
+semantics of an expression scatter d is vs are simple enough, and can be
+expressed with this imperative pseudocode:</p>
+<p>That is, scatter d is vs pairs the indexes in is with the corresponding
+values in vs and writes each value to the corresponding index. It is a
+parallel random-access write. To ensure that the writes can indeed be written in
+parallel, Futhark requires that is contains no duplicates, or in a slight
+weakening, that if is contains duplicates, then the corresponding values are
+also identical. This is not checked dynamically, and a program can get in an
+awful lot of trouble by violating this property. Which write âwinsâ is
+unpredictable - in the worst case, you can even get a âtornâ write that combines
+two different values.</p>
+<p>This behaviour of scatter is thorny, and even experienced Futhark programmers
+sometimes make this mistake. The reason it has no safety checks is twofold:</p>
+<p>scatter is a fundamental
+construct used in
+most sophisticated parallel algorithms, and so its performance is paramount.</p>
+<p>Iâm not sure how to detect duplicate writes in a way that does not violate
+the cost model (although
+scatter is already a bit iffy in that
+regard). Basically, the
+cost of scatter must be proportional to the number of elements written, not
+to the total size of the target array, and that makes it difficult to
+construct appropriate auxiliary structures for safety checks.</p>
+<p>And yes, I do realise the irony of insisting on an unsafe scatter after making
+fun of C programmers for using an unsafe language.</p>
+<p>Anyway, letâs move on to reduce. Parallel reductions, just like parallel
+scans, histograms, and so on, work only if the provided operator is
+associative and in some
+cases also commutative. This is documented but unchecked - in Futhark you can
+do a reduce with an arbitrary operator of the right type, and it just might
+give you nonsensical or nondeterministic results. It is a common error among new
+Futhark programmers to treat reduce as a general fold and use operators that
+are not associative, but it seems not to show up so much among more experienced
+programmers. The reason we do not check for associativity is that it is
+impossible, and even when it is
+possible it remains hard - well beyond what a practical type checker is capable
+of. It is not too hard to empirically test
+associativity and other properties, and so it seems
+that this source of nondeterminism is not so problematic in practice.</p>
+<p>That actually concludes the list of âtrueâ nondeterminism in Futhark, and in
+both cases we can wash our hands and blame the programmer. Of course, there is
+one rather important caveat hereâ¦</p>
+<p>Strictly speaking, floating-point addition is not associative, and so we could
+just declare that reduce (+) 0 on floating-point numbers is simply wrong.
+However, Futhark is not mainly intended as a framework for explaining why the
+program you wrote is wrong, but rather as a practical tool for parallel
+programming, and clearly people want to sum floating-point numbers. Indeed,
+summing and multiplying floating-point numbers is worth trillions of currency
+units these days!</p>
+<p>As such, Futharkâs reduce (and similar functions) do not say that the result
+you get back is completely arbitrary in case the provided operator is
+nonassociative. Instead, they say that the result you get back is some
+arbitrary ordering of applying the operator to the input elements. The precise
+ordering is unspecified (weâll return to this), but it will be some order, and
+if the function is associative, it just so happens that the order does not
+matter for the final result.</p>
+<p>The application order chosen by Futhark depends on the backend and the hardware.
+With the c backend, it will be a straightforward left-to-right loop across the
+input array. With the GPU backend, it will split the input into chunks, sum them
+separately, and combine the partial results. The number of chunks depends on
+runtime queries of the GPU hardware topology, and can also be configured by the
+user via tuning parameters. Since the chunking
+strategy (the âscheduleâ) depends on the hardware and the input size, repeatedly
+re-running the same reduction on the same system will consistently give the same
+result - the âReplayâ case in Michael Haddonâs terminology. This is not a
+language guarantee, but it is how it is implemented right now.</p>
+<p>A reasonable question is whether we could implement summation in a different way
+that will always give the same result, no matter the input. Indeed, this is
+possible. Consider for simplicity that the input array is a power of two. We can
+then implement reduction by repeatedly splitting the array in half, combining
+the two halves using the provided operator, and continuing until only a single
+element is left:</p>
+<p>We can generalise this to arbitrary operators (even non-commutative ones) and
+non-power-of-two sizes with a bit more complexity. Note that this implementation
+does not use any Futhark constructs that are nondeterministic, hence by
+construction it is also fully deterministic. Will it produce the same result as
+a sequential foldl (+) 0? No, because the order of application is different,
+but if you compile sum_tree with the c backend then it will produce
+exactly the same results as if you compile with the cuda backend. This is
+the âExactâ case.</p>
+<p>There is a reason we donât implement reduce like that, of course. In a quick
+experiment for summing 100 million numbers, I observe that using reduce (+) 0
+is almost 3x faster than sum_tree on an MI100 GPU. The gap can be narrowed
+by using blocking to reduce the number of GPU kernels necessary, but ultimately
+the fastest way to perform a reduction does depend on fine details of the
+hardware, and when your operator is not truly associative, that will result in
+observable differences.</p>
+<p>The same situation arises with Futharkâs other basic building blocks. I suspect
+reduce is actually the best case, in the sense that a hand-written version
+can approach the performance of the built-in one. For scan, I know that the
+compilerâs fancy decoupled
+lookback
+is much faster than anything that can be written in Futhark itself, and for
+reduce_by_index a fully deterministic implementation involves a sort and a
+segmented
+reduction, which
+is wildly slower than the code produced by the compiler, which makes careful
+use of atomic instructions.</p>
+<p>This does make me wonder if one could write a Futhark library that replaces all
+the SOAC implementations with guaranteed deterministic implementations, and what
+the performance of that might be across the benchmark
+suite, but that will have to
+wait for a future post.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/hill-climbing-agent-quality-with-agents-cli-evaluation/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://futhark-lang.org/blog/2026-11-04-nondeterminism.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

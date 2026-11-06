@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Reformer - Pushing the limits of language modeling</title>
+    <title>Image search with 🤗 datasets</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11406.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,77 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Reformer - Pushing the limits of language modeling</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-05</p>
+        <h1>Image search with 🤗 datasets</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/54_image_search_datasets/spaces_image_search.jpg" alt="Image search with 🤗 datasets" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/54_image_search_datasets/spaces_image_search.jpg" alt="Image search with 🤗 datasets" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Konten tidak tersedia.</p>
+                <p>🤗 datasets is a library that makes it easy to access and share datasets. It also makes it easy to process data efficiently -- including working with data which doesn't fit into memory.</p>
+<p>When datasets was first launched, it was associated mostly with text data. However, recently, datasets has added increased support for audio as well as images. In particular, there is now a datasets feature type for images. A previous blog post showed how datasets can be used with 🤗 transformers to train an image classification model. In this blog post, we'll see how we can combine datasets and a few other libraries to create an image search application.</p>
+<p>First, we'll install datasets. Since we're going to be working with images, we'll also install pillow. We'll also need sentence_transformers and faiss. We'll introduce those in more detail below. We also install rich - we'll only briefly use it here, but it's a super handy package to have around -- I'd really recommend exploring it further!</p>
+<p>To start, let's take a look at the image feature. We can use the wonderful rich library to poke around python
+objects (functions, classes etc.)</p>
+<p>We can see there a few different ways in which we can pass in our images. We'll come back to this in a little while.</p>
+<p>A really nice feature of the datasets library (beyond the functionality for processing data, memory mapping etc.) is that you get
+some nice things 'for free'. One of these is the ability to add a faiss index to a dataset. faiss is a "library for efficient similarity search and clustering of dense
+vectors".</p>
+<p>The datasets docs shows an example of using a faiss index for text retrieval. In this post we'll see if we can do the same for images.</p>
+<p>This is a dataset of images which have been pulled from a collection of digitised books from the British Library. These images come from books across a wide time period and from a broad range of domains. The images were extracted using information contained in the OCR output for each book. As a result, it's known which book the images came from, but not necessarily anything else about that image i.e. what is shown in the image.</p>
+<p>Some attempts to help overcome this have included uploading the images to flickr. This allows people to tag the images or put them into various different categories.</p>
+<p>There have also been projects to tag the dataset using machine learning. This work makes it possible to search by tags, but we might want a 'richer' ability to search. For this particular experiment, we'll work with a subset of the collections which contain "embellishments". This dataset is a bit smaller, so it will be better for experimenting with. We can get the full data from the British Library's data repository: https://doi.org/10.21250/db17. Since the full dataset is still fairly large, you'll probably want to start with a smaller sample.</p>
+<p>Our dataset consists of a folder containing subdirectories inside which are images. This is a fairly standard format for sharing image datasets. Thanks to a recently merged pull request we can directly load this dataset using datasets ImageFolder loader 🤯</p>
+<p>We can get back a DatasetDict, and we have a Dataset with image and label features. Since we don't have any train/validation splits here, let's grab the train part of our dataset. Let's also take a look at one example from our dataset to see what this looks like.</p>
+<p>Let's start with the label column. It contains the parent folder for our images. In this case, the label column represents the year of publication for the books from which the images are taken. We can see the mappings for this using dataset.features:</p>
+<p>In this particular dataset, the image filenames also contain some metadata about the book from which the image was taken. There are a few ways we can get this information.</p>
+<p>When we look at one example from our dataset that the image feature was a PIL.JpegImagePlugin.JpegImageFile. Since PIL.Images have a filename attribute, one way in which we can grab our filenames is by accessing this.</p>
+<p>Since we might want easy access to this information later, let's create a new column to extract the filename. For this, we'll use the map method.</p>
+<p>We can look at one example to see what this looks like now.</p>
+<p>We've got our metadata now. Let's see some pictures already! If we access an example and index into the image column we'll see our image 😃</p>
+<p>Note in an earlier version of this blog post the steps to download and load the images was much more convoluted. The new ImageFolder loader makes this process much easier 😀 In particular, we don't need to worry about how to load our images since datasets took care of this for us.</p>
+<p>One of the super awesome things about the 🤗 ecosystem is the Hugging Face Hub. We can use the Hub to access models and datasets. It is often used for sharing work with others, but it can also be a useful tool for work in progress. datasets recently added a push_to_hub method that allows you to push a dataset to the Hub with minimal fuss. This can be really helpful by allowing you to pass around a dataset with all the transforms etc. already done.</p>
+<p>For now, we'll push the dataset to the Hub and keep it private initially.</p>
+<p>Depending on where you are running the code, you may need to authenticate. You can either do this using the huggingface-cli login command or, if you are running in a notebook, using notebook_login</p>
+<p>Note: in a previous version of this blog post we had to do a few more steps to ensure images were embedded when using push_to_hub. Thanks to this pull request we no longer need to worry about these extra steps. We just need to make sure embed_external_files=True (which is the default behaviour).</p>
+<p>At this point, we've created a dataset and moved it to the Hub. This means it is possible to pick up the work/dataset elsewhere.</p>
+<p>In this particular example, having access to a GPU is important. Using the Hub as a way to pass around our data we could start on a laptop
+and pick up the work on Google Colab.</p>
+<p>If we move to a new machine, we may need to login again. Once we've done this we can load our dataset</p>
+<p>We now have a dataset with a bunch of images in it. To begin creating our image search app, we need to embed these images. There are various ways to try and do this, but one possible way is to use the CLIP models via the sentence_transformers library. The CLIP model from OpenAI learns a joint representation for both images and text, which is very useful for what we want to do since we want to input text and get back an image.</p>
+<p>We can download the model using the SentenceTransformer class.</p>
+<p>This model will take as input either an image or some text and return an embedding. We can use the datasets map method to encode all our images using this model. When we call map, we return a dictionary with the key embeddings containing the embeddings returned by the model. We also pass device='cuda' when we call the model; this ensures that we're doing the encoding on the GPU.</p>
+<p>We can 'save' our work by pushing back to the Hub using
+push_to_hub.</p>
+<p>If we were to move to a different machine, we could grab our work again by loading it from the Hub 😃</p>
+<p>We now have a new column which contains the embeddings for our images. We could manually search through these and compare them to some input embedding but datasets has an add_faiss_index method. This uses the faiss library to create an efficient index for searching embeddings. For more background on this library, you can watch this YouTube video</p>
+<p>Note that these examples were generated from the full version of the dataset so you may get slightly different results.</p>
+<p>We now have everything we need to create a simple image search. We can use the same model we used to encode our images to encode some input text. This will act as the prompt we try and find close examples for. Let's start with 'a steam engine'.</p>
+<p>We can use another method from the datasets library get_nearest_examples to get images which have an embedding close to our input prompt embedding. We can pass in a number of results we want to get back.</p>
+<p>We can index into the first example this retrieves:</p>
+<p>This isn't quite a steam engine, but it's also not a completely weird result. We can plot the other results to see what was returned.</p>
+<p>Some of these results look fairly close to our input prompt. We can wrap
+this in a function so we can more easily play around with different prompts</p>
+<p>Now we have a function for getting a few results, we can try a bunch of
+different prompts:</p>
+<p>For some of these I'll choose prompts which are a broad 'category' i.e. 'a musical instrument' or 'an animal', others are specific i.e. 'a guitar'.</p>
+<p>Out of interest I also tried a boolean operator: "An illustration of a cat or a dog".</p>
+<p>Finally I tried something a little more abstract: "an empty abyss"</p>
+<p>We can see these results aren't always right, but they are usually reasonable. It already seems like this could be useful for searching for the semantic content of an image in this dataset. However we might hold off on sharing this as is...</p>
+<p>One obvious next step for this kind of project is to create a Hugging Face Space demo. This is what I've done for other models.</p>
+<p>It was a fairly simple process to get a Gradio app setup from the point we got to here. Here is a screenshot of this app:</p>
+<p>However, I'm a little bit vary about making this public straightaway. Looking at the model card for the CLIP model we can look at the primary intended uses:</p>
+<p>We primarily imagine the model will be used by researchers to better understand robustness, generalization, and other capabilities, biases, and constraints of computer vision models.
+source</p>
+<p>This is fairly close to what we are interested in here. Particularly we might be interested in how well the model deals with the kinds of images in our dataset (illustrations from mostly 19th century books). The images in our dataset are (probably) fairly different from the training data. The fact that some of the images also contain text might help CLIP since it displays some OCR ability.</p>
+<p>However, looking at the out-of-scope use cases in the model card:</p>
+<p>Any deployed use case of the model - whether commercial or not - is currently out of scope. Non-deployed use cases such as image search in  a constrained environment, are also not recommended unless there is thorough in-domain testing of the model with a specific, fixed class  taxonomy. This is because our safety assessment demonstrated a high need for task specific testing especially given the variability of  CLIP's performance with different class taxonomies. This makes untested and unconstrained deployment of the model in any use case > currently potentially harmful.  > source</p>
+<p>suggests that 'deployment' is not a good idea. Whilst the results I got are interesting, I haven't played around with the model enough yet (and haven't done anything more systematic to evaluate its performance and biases) to be confident about 'deploying' it. Another additional consideration is the target dataset itself. The images are drawn from books covering a variety of subjects and time periods. There are plenty of books which represent colonial attitudes and as a result some of the images included may represent certain groups of people in a negative way. This could potentially be a bad combo with a tool which allows any arbitrary text input to be encoded as a prompt.</p>
+<p>There may be ways around this issue but this will require a bit more thought.</p>
+<p>Although we don't have a nice demo to show for it, we've seen how we can use datasets to:</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/reformer" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/image-search-datasets" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

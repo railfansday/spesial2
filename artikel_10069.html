@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creating Web Widgets Using the Document Picture-in-Picture API</title>
+    <title>GNU Mes and the 0.28 release</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10069.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,283 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Creating Web Widgets Using the Document Picture-in-Picture API</h1>
+        <h1>GNU Mes and the 0.28 release</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://css-tricks.com/wp-content/uploads/2019/05/framed-image.png" alt="Creating Web Widgets Using the Document Picture-in-Picture API" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2019/05/framed-image.png" alt="Creating Web Widgets Using the Document Picture-in-Picture API" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Firefox 151 recently shipped the Document Picture-in-Picture API. This isn’t the same thing as the (regular?) Picture-in-Picture API, which pushes videos into a resizable window that remains visible even after switching browser tabs or OS windows. No, the Document Picture-in-Picture API enables us to put anything into the window.</p>
-<p>I guess we can think of these windows as web widgets. We can use them for floating stock tickers, live chat conversations, playlists, to-do lists, notes, spreadsheets — anything that we’d want to keep on the screen at all times.</p>
-<p>The general idea is that we create a Document Picture-in-Picture window (DPIP window), and then we put HTML, CSS, and JavaScript into it. It’s pretty simple when you think about it, but as we explore how the Document Picture-in-Picture API works, we’re going to tackle a slightly more complex scenario that you’ll probably run into.</p>
-<p>We’re going to clone a stock ticker from the main document into a DPIP window. This not only gives us an opportunity to talk about some relevant media queries and pseudo-classes, which we’ll use to write targeted CSS for the DPIP window, but it’s also a stark reminder that taking a HTML component out of context can break the CSS, so you’ll need to keep that in mind.</p>
-<p>But for it to work, you’ll need to open the demo in debug mode. This is because picture-in-picture doesn’t work in nested browsing contexts such as CodePen <iframe>s.</p>
-<p>In addition, Safari doesn’t support the DPIP API yet, so make sure that you’re using Chrome or Firefox.</p>
-<p>First we need to check if the browser supports the Document Picture-in-Picture API. I imagine that it’d be a nice-to-have feature, so why wait for Safari support? Unfortunately though, there’s no way to query whether or not @media (display-mode: picture-in-picture) is supported using feature queries (@supports) because the at-rule() function is only supported by Chrome, and any plans to support preludes (that’s this part: (display-mode: picture-in-picture)) appear to have been dropped anyway.</p>
-<p>Note: Safari Technology Preview 251 release notes do mention support for at-rule detection in @supports but it’s unclear when that will rollout. And Firefox 155 announced support for it just a day after this published.</p>
-<p>Instead we have to check browser support using JavaScript, removing the button if DPIP isn’t supported, or making it create a DPIP window if it is supported):</p>
-<p>Keep in mind that the Document Picture-in-Picture API is a desktop-only API, so the check above accounts for that too while illustrating exactly why a full-featured at-rule() function would be so useful.</p>
-<p>As for creating the DPIP window, there’s one thing that we might want to do first — handle an existing DPIP window. DPIP windows replace existing DPIP windows, so we don’t need to worry about that part of it, but we do need to decide what happens if the button is clicked a second time. The code below closes the DPIP window if it’s already open, effectively making the button a toggle button:</p>
-<p>The problem is that focus always switches to the DPIP window, so toggling the DPIP window off might require two button clicks. One solution to that is cloning the button into the DPIP window, but the DPIP window already has a “Close” icon-button, so there’s no point in that. Personally, I wouldn’t do anything, letting subsequent button clicks recreate the DPIP window. In fact, if the user moves or resizes the DPIP window, subsequent button clicks will reset it to its original position and size (with the right options).</p>
-<p>On that note, let’s talk about creating DPIP windows and said options. It’s pretty obvious what the width and height options do, but note that we can’t set one without the other, and if we don’t set either, the browser chooses. The preferInitialWindowPlacement option, if set to true, prevents the browser from saving the position and size of the DPIP window. The disallowReturnToOpener option (not used here), if set to true, hides the “Back to tab” icon-button (which does the same thing as the “Close” icon button, but also takes the user back to the originating tab).</p>
-<p>The requestWindow() method of the DocumentPictureInPicture interface returns a promise (hence why we’re using async and await), which means that we can take care of everything else while the window is being prepared.</p>
-<p>We can clone HTML into the DPIP window like this:</p>
-<p>But to clone multiple elements, we’d need to take a different approach. This is what we’re going to do as we clone all <style>s and <link rel=stylesheet>s (and <script>s if you need any, or whatever resources the DPIP window requires).</p>
-<p>It’s quite simple, though — use querySelectorAll() to create an array of NodeList objects and createDocumentFragment() to create an arbitrary DOM tree, before looping through the array using forEach() and cloning each node into said off-screen document fragment. Finally, append the entire document fragment to the <head> of the DPIP window, causing just one reflow instead of multiple, which is more performant.</p>
-<p>And remember, cloning everything probably isn’t necessary, so adjust as needed.</p>
-<p>Here’s the complete JavaScript snippet from the demo, which you’ll probably want to expand on (to add error handling, at least):</p>
-<p>Remember, if taking HTML out of context (along with its CSS) and putting it in a DPIP window, make sure that the CSS selectors aren’t too specific and are written for both contexts.</p>
-<p>That being said, you might want to write some targeted CSS specifically for either window, and that’s where the display-mode media query comes into it. It’s fairly self-explanatory — here’s what I’m using in the demo to adjust the container:</p>
-<p>Also note that the :picture-in-picture pseudo-class is for the regular Picture-in-Picture API, not the Document Picture-in-Picture API.</p>
-<p>I couldn’t think of a good use for the vaguely named enter event, which fires when the DPIP window opens (not to be confused with the enterpictureinpicture event for regular picture-in-picture):</p>
-<p>Otherwise, I think that’s a wrap for the Document Picture-in-Picture API. It’s not a terribly large or complicated API, but it sounds like it could be really useful?</p>
-<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
-<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
-<p>Your email address will not be published. Required fields are marked *</p>
-<p>Save my name, email, and website in this browser for the next time I comment.</p>
-<p>Notify me of follow-up comments by email.</p>
-<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
-<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
-<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
-<p>CSS-Tricks is powered by a small team of real-life humans.</p>
-<p>Coming back November 10! See past issues →</p>
+                <p>From the series:
+        GNU Mes interpreter speedup</p>
+<p>It’s been a while since the latest blog post in the series but we have been
+working very hard behind the scenes 1. This means I’ll probably forget a
+few things from all we did, but there’s a good reason for that: we were making
+a release.</p>
+<p>This is the first official and serious release I make as a (co-)maintainer, and
+the whole thing makes me uncomfortable. Even though people treat me as an
+expert programmer sometimes, there are many things in programming that I
+struggle a lot with. The first one, that I think I improved on in the last few
+years, is writing software from scratch. The second is delivering things to people.</p>
+<p>This is normal, as all my career has been focused on R&D and that’s the way
+I’ve been trained to work. In the case of this specific release, something
+inside me still thinks my most valuable contribution was that: the idea and
+demonstration that this attempt could work.</p>
+<p>Most of my career has been based on learning in a short time period the right
+amount of information so I can achieve a reasonable result. Then I normally
+move on to the next project.</p>
+<p>Thinking about that, trying to read through my feelings, I started to realize
+more and more that whatever that drives me is pushing me to somewhere else,
+maybe to those parts I struggle more with…</p>
+<p>Releasing code is important. It’s the only way to make people actually enjoy
+the result of your work. I have no problem to admit I struggle with this.</p>
+<p>As an R&D guy I’ve always considered myself an “enabler”. I do something, I
+show how it is done and let people learn from it and actually implement it.
+That’s fine in some contexts but it has been driving me to some level of
+frustration recently, as the size of the projects I take part in grow.</p>
+<p>An example of this is the RISC-V bootstrap on Guix. I spent a couple of years
+of my life working on it. We made a working bootstrap for live-bootstrap. But
+it’s not yet included in Guix because I delegated the final step. Now, even
+after the years I spent on that, all the sleepless nights and everything, it’s
+something I cannot enjoy fully2, and you cannot enjoy at all.</p>
+<p>This “my job here is done” mentality is not enough for me anymore.</p>
+<p>The kind of projects I do now deserve something else. I deserve better.</p>
+<p>In Mes I had like 300 commits in a branch, pretty ugly, doing, undoing and
+redoing some stuff over and over again. The whole codebase was upside down, the
+commit messages were sometimes good and sometimes lacking, I had fixup commits
+that fixed things that were changed so much the amount of conflicts the
+reordering produced was overwhelming… It was a mess. It was me trying new
+things, learning and cleaning things up as I went. My arborescent thought
+process at its fullest.</p>
+<p>In my usual way of doing things, I decided to promise NlNet a release,
+something I’ve never done before 3.</p>
+<p>Once the bytecode adventure was done, showing some good performance improvement
+was possible and that Janneke made me a co-maintainer, it was the only
+acceptable thing to do.4</p>
+<p>But, if I wanted to do it, I would need to slow down.</p>
+<p>In the last part of the bytecode adventures, you remember how we included
+Popsyntax, and we reworked the whole macro expansion game. That wasn’t me, but
+Tim Sample.</p>
+<p>I don’t remember very well how he joined my efforts here but I guess I bothered
+him with questions because he’s a long term Mes contributor and he’s also the
+author of Popsyntax, the Germ scheme implementation and many interesting things more.</p>
+<p>He decided to start over. Chose a Mes release and walked through my steps.
+Removed the macro expander from the internals and wrote one in Scheme. From
+there, the direction was set.</p>
+<p>I worked through the huge branch that I had, removing the stuff that turned out
+to be unnecessary, and he took over the git history, and made sure that every
+single commit was working.</p>
+<p>I cannot imagine how many conflicts the guy has been resolving. But damn this
+looks good now.</p>
+<p>This week, I released GNU Mes 0.28. The first release that I do as a GNU maintainer.</p>
+<p>Janneke has been guiding me through the whole process — including the part of
+publishing the website to GNU using CVS5. I’m sure I would’ve never
+been able to figure out everything on my own. What a ride it has been!</p>
+<p>But after more than a year of work, I’m very happy that most of the comments on
+the release have been positive, specially the ones from people that I worked
+with and I have a huge respect for.6</p>
+<p>But, what will you find in GNU Mes 0.28 that we didn’t mention in the blog yet?</p>
+<p>First of all, the main difference from the earlier blogpost is now Mes can be
+compiled with both M2-Planet and MesCC, and also with GCC as before.</p>
+<p>It’s a tricky process, because the error reporting is very limited (I’m being
+benevolent here), and I was being a very nasty boy with some gotos inside
+switch statements. After some wrestling with allowed C syntax, I figured it out.</p>
+<p>M2-Planet is limited, and we had to leave some things out. When Mes is compiled
+with M2-Planet it doesn’t have support for errors (aka exceptions) and those
+abort the interpreter, this is because M2-Planet’s C library doesn’t include
+setjmp. The stack operations had also to be rewritten as functions for
+M2-Planet, as the macros with array access were too complex for it. With that,
+Mes is a little bit slower when compiled with M2-Planet.</p>
+<p>None of those are a big deal because that’s only the starting point of the
+bootstrap process and Mes is rebuilt with MesCC right after it.</p>
+<p>The 0.28 release has been tested on real RISC-V hardware that I have access
+to,7 uncovering a few issues here and there in the Mes C Library.</p>
+<p>First, the assembly parts that take care of program initialization in RISC-V
+(written by myself a few years ago, when I was working on the bootstrap) were broken.</p>
+<p>setjmp and longjmp that we use for error handling in Mes, and were not used
+before, are also faulty. Because of this, the RISC-V version of Mes in the
+bootstrap, when built with MesCC that is, does not support errors until the
+issue is fixed.</p>
+<p>I also found some extra stuff because GCC 14 decided that implicit function
+declaration warnings should become errors, breaking the bootstrap
+that we didn’t test in a very long time in RISC-V, first, because hardware
+unavailability and, second, because Qemu is also faulty for RISC-V.</p>
+<p>There is still a known issue with M2-Planet-built Mes that explodes when it calls strcpy, this can be triggered running (procedure-disassemble map) in
+the REPL. We didn’t manage to fix this yet.</p>
+<p>Tim reworked the macro expansion and made a simple and understandable initial
+macro expander in Scheme.</p>
+<p>With that ready, many things started to fall off naturally.</p>
+<p>Most of our driving issues simply disappeared. The macro expander takes the
+steering wheel from the start, giving us zero garbage collection issues during boot.</p>
+<p>The earlier macro expander I wrote in C had to also drive execution, which
+could possibly call the garbage collector, killing all the C pointers that we
+had. The new macro expander does everything from Scheme, so no pointers are lost: gc_preserve and gc_release are gone. The boot-done! mark is gone, too.</p>
+<p>As Tim started from scratch, all the API is way cleaner, and our initial driver
+is as simple as:</p>
+<p>We can now use the stack for preservation, as it doesn’t happen that often, and
+the initial driver is a minimal loop that iterates through the few top-level
+expressions the initial boot file has (the macro expander). The rest of the
+program is run from Scheme.</p>
+<p>Continuing with macro expansion, even if in previous posts we talked about
+Popsyntax integration, we decided to leave that out the release for now. We
+focused on having a faster interpreter with a new VM.</p>
+<p>Keeping macro expansion simple, we are faster than ever.</p>
+<p>These are the updated numbers from the 0.28 release comparing with the previous
+0.27.2 bugfix release, released a week before.</p>
+<p>This is running in my Tuxedo laptop from 2020:</p>
+<p>You can see the times are similar to the nosyntax (it’s basically the same)
+branch we described in the previous post.</p>
+<p>Take in account the numbers are tricky because mescc-mes means Mes building
+itself running MesCC. From one version to the other Mes changed, making it a
+little bit larger (+200 LoC), which means it should take longer to compile. The
+new version overcomes that, and even achieves a 40% reduction on execution time.</p>
+<p>The fib benchmark is the most savage to me. There you can easily see how
+running has become way cheaper. On the other hand, mescc-hello shows how
+building a small hello-world program is more expensive, as Mes now needs to
+compile the whole MesCC to bytecode. When running MesCC for longer, like in a
+real program (mescc-mes), shows the startup time is compensated by far by the
+execution speed.</p>
+<p>In summary, we got exactly what we were aiming for: a change so big the
+benchmarks don’t need to be precise. An improvement you can just feel by
+running Mes.</p>
+<p>When I wrote the bytecode compiler I added a very annoying warning that
+complained about possibly unbound variables when you did something like:</p>
+<p>This was later removed because the amount of warnings it was producing was
+really overwhelming and they didn’t really give us any useful information.</p>
+<p>But! When I tested the bootstrapping process during development I realized they
+appeared twice. This led me to find the build scripts were compiling each file
+twice by accident.</p>
+<p>So now, we are not just x2 faster in Mes. The bootstrapping is also x2 faster
+thanks to the annoying warnings!</p>
+<p>Comparing to the code in the earlier post in the series, the released code has
+proper support for values and call-with-values that I thought I did right
+but I didn’t, really.</p>
+<p>According to R7RS standard, the values procedure returns its arguments as
+values to the current continuation. If the continuation only accepts one value,
+only the first value is sent to the continuation. That’s what a regular
+continuation would do. With call-with-values the producer is called in a
+continuation that accepts multiple values that go directly to the consumer procedure.</p>
+<p>If you take a look to the Guile case, that’s exactly how it works. Chibi takes
+the pragmatic approach not implementing the value discard and uses values
+just as a container. That’s what I implemented in the previous blogpost, but in
+the release I managed to do the standards compliant case, and make a REPL that
+now supports multiple return values, like Guile does:</p>
+<p>The tricky part of values is solved with a very primitive support for
+continuation marks.</p>
+<p>When call-with-values is called, the current frame is labeled with a mark,
+saying it accepts multiple values. When values is called, it checks the
+current mark in order to decide if it should keep or discard its arguments. It
+looks like this:</p>
+<p>This whole thing works very well thanks to proper tail-calls, which reuse the
+frames so the marks are right in the current frame all the time. It’s clean and simple.</p>
+<p>It also uses the simplest approach possible. The %values builtin wraps values
+in a list, adding an special car to it. core:cdr can be used to extract the
+list of values back from the wrapper.</p>
+<p>Of course, we could do this “better” just putting the values raw in the stack,
+but this is good enough for now. If Chibi can get away with doing less, we
+should be fine with this.</p>
+<p>I would never solve this issue if it wasn’t because some random research I did,
+encouraged by Tim and all the knowledge he has about Scheme implementations.</p>
+<p>I was looking at a few papers on delimited continuations, like “Final Shift for
+Call/cc: Direct Implementation of Shift and Reset” by Martin Gasbichler and
+Michael Sperber, when Tim told me about his approach in Germ using continuation marks.</p>
+<p>With that in mind, I made a very fast sketch on how would continuation marks
+look like and I realized that was more than enough for the values
+implementation I was struggling with when I saw the Mes tests (which I didn’t
+bother to run during the research time) started to fail for the value discard case.</p>
+<p>I ended up using only the most minimal thing for it, but I hope to take it a
+little bit further in the future and make a proper continuation marks based
+Delimited Continuation support for Mes.</p>
+<p>There are many things happening in this release. The diff is huge. But mostly
+you have been following the effort during the latest blogposts so there’s no
+need to go deeply in detail.</p>
+<p>You saw me re-write the garbage collector, the macro expander, the driver, the
+builtin implementation, vectors and structs, values, continuations … Some of
+the code is gone (gc, macro expander and driver, the first implementation of
+continuations) but the knowledge stays. I basically visited every single corner
+in this interpreter.</p>
+<p>I’m used to hop from one thing to the next. That’s the R&D me again. Now that I
+know this software the best, I don’t want to just go do anything else. Now I’m
+the best position to improve it further.</p>
+<p>My goal for the future is to improve Mes in all those areas that I found it
+could be improved but I couldn’t focus on.</p>
+<p>Delimited continuations are the best way to represent continuations in an
+stack based VM like the one I added to Mes. They are more lightweight, better
+for the GC, and they are composable, allowing for more sophisticated control.
+Guile supports them, so it would also help us get a step closer to Guile.</p>
+<p>Pointer tagging could be a huge deal for speed and reduced memory usage in
+contrast to the tagged union approach Mes has. To give you an example, in a 64
+bit machine each value is at least 24 bytes, including characters. This means
+if you (string->list "Hello") the result takes 24 bytes per cons cell, i.e
+per element, plus 24 bytes per character. Pointer tagging would put the bytes
+for the characters inside the pointers the cons cells have, reducing the total
+memory to just what the list needs (half of the previous case) and removing the
+need to access memory again to get the value of the characters.</p>
+<p>With some type punning we could also revisit a few data structures we had
+some trouble with (mostly frames and templates) and make them flat and easy for
+the CPU to cache and access with no indirection.</p>
+<p>In the case of the Scheme to bytecode compiler, just making it slightly
+better than the dumbest thing possible can make Scheme code fly: builtin
+inlining, avoiding boxing of non-mutated values… There are many things we can
+do while keeping complexity under control.</p>
+<p>Some GC improvement is also needed, maybe with a simple generational-style
+garbage collector (does that exist?), at least for a few things like symbols
+and globals that are never collected it could improve the performance. Even if
+it doesn’t, we could always use some cleanup in the GC, which is very error
+prone now.</p>
+<p>Those are low-hanging fruits that the new architecture made more accessible. If
+I just stop here they could be lost.</p>
+<p>On the mid term, with all this together and all the improvements Janneke is
+doing, we could bring MesCC to the next level as a C99 compiler written in
+Guile that can be incidentally run in Mes.</p>
+<p>On the long term, the GNU Mes project would become a very powerful
+bootstrapping toolchain for languages of any kind.</p>
+<p>The GNU Mes development repository is now hosted in Codeberg, under the
+Mes organization8:</p>
+<p>And we have opened an IRC channel at libera.chat: #mes</p>
+<p>I tend to listen to my heart, my curiosity, gut feeling, or whatever you want
+to call it. That has pushed me to do uncomfortable things.</p>
+<p>It is daunting, but it has been really rewarding.</p>
+<p>The same way Free Software has made me learn how to program, GNU Mes has been
+an amazing training camp for the skills I was lacking: reading CS papers,
+preparing a release, writing code from scratch…</p>
+<p>The project made me understand slowing down is sometimes the best way to go
+forward, and that I have to be more comfortable switching gears.</p>
+<p>This is not just programming advice, but a general approach to life that I’m
+starting to understand as I get older —and hopefully wiser.9</p>
+<p>Thankfully I’m surrounded by people I can learn from, and they bring the best
+version of me. All the crazy things that I attempt would have been impossible
+without the people I find in the process.</p>
+<p>In this specific case of Mes, I’m very happy with the team we have. They
+supported me throughout the whole process, but specially during the release,
+when I was more insecure. I’m sure the next time I’ll be more comfortable
+slowing down and doing things right.</p>
+<p>Thanks to them for the help, inspiration and support.</p>
+<p>Thanks to NlNet and NGI for the trust and the chance to work in important but
+not-very-popular projects. Without funding, none of this is possible.</p>
+<p>I hope we can continue to work all together for some time more.</p>
+<p>We closed this one well. There’s no reason to stop here, though.</p>
+<p>The “GNU Mes speedup effort” project
+has been funded through NGI Zero Core, a fund
+established by NLnet with financial support from the
+European Commission’s Next Generation Internet program.</p>
+<p>I have mixed feelings with it, really. From time to time I come back
+to it and I cannot figure out how to do it. Then something else comes and I
+have to leave it. It’s a shame. ↩</p>
+<p>Of something I’ve never did before (an optimization work) in
+something that I never worked before (a scheme interpreter). ↩</p>
+<p>The other possibility was to chicken out, give Janneke the branch and
+disappear. ↩</p>
+<p>Also, getting an email by RMS himself congratulating me for the release
+has made me a little bit emotional. Not gonna lie. I’m sure he does that
+for every release, but I’m a weak man. ↩</p>
+<p>Thanks to my friend Iban for the SSH access. Siuuuh! ↩</p>
+<p>My repository has been transferred to Mes. ↩</p>
+<p>I can’t wait to hear people say this post is written by AI because of
+the em-dashes. I’m putting them here and there just to mess with them. ↩</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://css-tricks.com/creating-web-widgets-using-the-document-picture-in-picture-api/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://ekaitz.elenq.tech/fasterMes10.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Optimize and deploy with Optimum-Intel and OpenVINO GenAI</title>
+    <title>How to Test Location-Aware APIs with FastAPI and PostGIS</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10854.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Optimize and deploy with Optimum-Intel and OpenVINO GenAI</h1>
+        <h1>How to Test Location-Aware APIs with FastAPI and PostGIS</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/deploy-with-openvino/openvino_genai_workflow.png" alt="Optimize and deploy with Optimum-Intel and OpenVINO GenAI" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_sitepoint_location_aware_api_cover_realistic_102ecb9804.png" alt="How to Test Location-Aware APIs with FastAPI and PostGIS" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/deploy-with-openvino/openvino_genai_workflow.png" alt="Optimize and deploy with Optimum-Intel and OpenVINO GenAI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_sitepoint_location_aware_api_cover_realistic_102ecb9804.png" alt="How to Test Location-Aware APIs with FastAPI and PostGIS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Deploying Transformers models at the edge or client-side requires careful consideration of performance and compatibility. Python, though powerful, is not always ideal for such deployments, especially in environments dominated by C++. This blog will guide you through optimizing and deploying Hugging Face Transformers models using Optimum-Intel and OpenVINO™ GenAI, ensuring efficient AI inference with minimal dependencies.</p>
-<p>OpenVINO™ was originally developed as a C++ AI inference solution, making it ideal for edge and client deployment where minimizing dependencies is crucial. With the introduction of the GenAI API, integrating large language models (LLMs) into C++ or Python applications has become even more straightforward, with features designed to simplify deployment and enhance performance.</p>
-<p>To start, ensure your environment is properly configured with both Python and C++. Install the necessary Python packages:</p>
-<p>Here are the specific packages used in this blog post:</p>
-<p>For GenAI C++ libraries installation follow the instruction here.</p>
-<p>Hugging Face and Intel's collaboration has led to the Optimum-Intel project. It is designed to optimize Transformers models for inference on Intel HW. Optimum-Intel supports OpenVINO as an inference backend and its API has wrappers for various model architectures built on top of OpenVINO inference API. All of these wrappers start from OV prefix, for example, OVModelForCausalLM. Otherwise, it is similar to the API of 🤗 Transformers library.</p>
-<p>To export Transformers models to OpenVINO Intermediate Representation (IR) one can use two options: This can be done using Python’s .from_pretrained() method or the Optimum command-line interface (CLI). Below are examples using both methods:</p>
-<p>The ./llama-3.1-8b-ov folder will contain .xml and bin IR model files and required configuration files that come from the source model. 🤗 tokenizer will be also converted to the format of openvino-tokenizers library and corresponding configuration files will be created in the same folder.</p>
-<p>When running LLMs on the resource constrained edge and client devices, model optimization is highly recommended step. Weight-only quantization is a mainstream approach that significantly reduces latency and model footprint. Optimum-Intel offers weight-only quantization through the Neural Network Compression Framework (NNCF), which has a variety of optimization techniques designed specifically for LLMs: from data-free INT8 and INT4 weight quantization to data-aware methods such as AWQ, GPTQ, quantization scale estimation, mixed-precision quantization.
-By default, weights of the models that are larger than one billion parameters are quantized to INT8 precision which is safe in terms of accuracy. It means that the export steps described above lead to the model with 8-bit weights. However, 4-bit integer weight-only quantization allows achieving a better accuracy-performance trade-off.</p>
-<p>For meta-llama/Meta-Llama-3.1-8B model we recommend stacking AWQ, quantization scale estimation along with mixed-precision INT4/INT8 quantization of weights using a calibration dataset that reflects a deployment use case. As in the case of export, there are two options on how to apply 4-bit weight-only quantization to LLM model:</p>
-<p>Note: The model optimization process can take time as it and applies several methods subsequently and uses model inference over the specified dataset.</p>
-<p>Model optimization with API is more flexible as it allows using custom datasets that can be passed as an iterable object, for example, and instance of Dataset object of 🤗 library or just a list of strings.</p>
-<p>Weight quantization usually introduces some degradation of the accuracy metric. To compare optimized and source models we report Word Perplexity metric measured on the Wikitext dataset with lm-evaluation-harness project which support both 🤗 Transformers and Optimum-Intel models out-of-the-box.</p>
-<p>After conversion and optimization, deploying the model using OpenVINO GenAI is straightforward. The LLMPipeline class in OpenVINO GenAI provides both Python and C++ APIs, supporting various text generation methods with minimal dependencies.</p>
-<p>To run this example you need minimum dependencies to be installed into the Python environment as OpenVINO GenAI is designed to provide a lightweight deployment. You can install OpenVINO GenAI package to the same Python environment or create a separate one to compare the application footprint:</p>
-<p>Let's see how to run the same pipeline with OpenVINO GenAI C++ API. The GenAI API is designed to be intuitive and provides a seamless migration from 🤗 Transformers API.</p>
-<p>Note: In the below example, any other available device in your environment can be specified for "device" variable. For example, if you are using an Intel CPU with integrated graphics, "GPU" is a good option to try with. To check the available devices, you can use ov::Core::get_available_devices method (refer to query-device-properties).</p>
-<p>LLMPipeline also allows specifying custom generation options by means of ov::genai::GenerationConfig:</p>
-<p>With the LLMPipieline, users can not only effortlessly leverage various decoding algorithms such as Beam Search but also construct an interactive chat scenario with a Streamer as in the below example. Moreover, one can take advantage of enhanced internal optimizations with LLMPipeline, such as reduced prompt processing time with utilization of KV cache of previous chat history with the chat methods : start_chat() and finish_chat() (refer to using-genai-in-chat-scenario).</p>
-<p>And finally let's see how to use LLMPipeline in the chat scenario:</p>
-<p>The combination of Optimum-Intel and OpenVINO™ GenAI offers a powerful, flexible solution for deploying Hugging Face models at the edge. By following these steps, you can achieve optimized, high-performance AI inference in environments where Python may not be ideal, ensuring your applications run smoothly across Intel hardware.</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>Catch coordinate-order bugs, distance mistakes, boundary cases, and bad spatial assumptions before they reach production.</p>
+<p>A location endpoint can return HTTP 200 and still be wrong by kilometers. That is the uncomfortable part of testing geospatial APIs: ordinary API checks tell you whether the request worked, not whether the geography is correct.</p>
+<p>Spatial bugs can look harmless in code review. Latitude and longitude get reversed. A radius value is treated as degrees instead of meters. A query works near one city but behaves differently elsewhere because the geometry column uses the wrong type. The JSON is valid, the tests are green, and the map is still wrong.</p>
+<p>In this tutorial, you will build a small FastAPI endpoint backed by PostGIS and then test the spatial behavior directly. The examples use deterministic fixtures positioned at known distances, so the tests verify geography rather than only response structure.</p>
+<p>The API exposes one endpoint: GET /places/nearby. A client sends longitude, latitude, and a radius in meters. The service returns nearby places as GeoJSON features, ordered by distance.</p>
+<p>The useful part is not the endpoint itself. The useful part is the test strategy. We will check coordinate validation, exact distance boundaries, GeoJSON coordinate order, and the database query that turns a radius into a spatial filter.</p>
+<p>Use a geography column when the API is answering human-scale distance questions in meters. PostGIS can then calculate on the ellipsoid instead of treating longitude and latitude as flat Cartesian coordinates.</p>
+<p>The endpoint below validates longitude, latitude, and radius with Pydantic, then sends a parameterized query to PostgreSQL. The SQL uses ST_DWithin to filter candidates and ST_Distance to return the measured distance.</p>
+<p>The API accepts lon and lat as separate named parameters. That removes ambiguity at the HTTP boundary. GeoJSON still uses [longitude, latitude] when the response is created.</p>
+<p>Hard-coding two real businesses and hoping their distance is approximately right makes a fragile test. A better approach is to create test points at exact distances from a fixed origin.</p>
+<p>PostGIS can generate those fixtures with ST_Project. In the test database, create one point 500 meters away, one 950 meters away, and one 1,500 meters away. Now a 1,000-meter query has an unambiguous expected result: the first two belong in the response and the third does not.</p>
+<p>This is the first test that actually proves something spatial. It is not checking that the endpoint returns a list. It is checking that the 1-kilometer contract means what the API says it means.</p>
+<p>GeoJSON coordinates are longitude first, latitude second. Many developers naturally think latitude first because that is how coordinates are commonly spoken. A validation layer can catch the most obvious reversal before the database ever sees it.</p>
+<p>Longitude must be between -180 and 180. Latitude must be between -90 and 90. That will not catch every reversal, because both numbers may sometimes fall inside both ranges, but it catches a large class of failures and gives clients a useful error instead of a misleading map.</p>
+<p>A response can be syntactically valid JSON and still violate the GeoJSON contract. Assert the geometry type and the coordinate order. For a known query point, longitude should appear in element zero and latitude in element one.</p>
+<p>Spatial boundaries deserve their own tests. A place at 999 meters should be included in a 1,000-meter search. A place at 1,001 meters should not. A place exactly at the boundary should behave consistently with the predicate you chose.</p>
+<p>ST_DWithin includes features whose distance is less than or equal to the supplied threshold, so document that behavior and test it explicitly.</p>
+<p>Unit tests are useful for request validation, but mocking the repository layer removes the most important part of this API: PostGIS itself. Keep a small integration-test database and run at least a few tests against the real extension.</p>
+<p>That catches mistakes that mocks cannot: geography versus geometry behavior, SRID mismatches, spatial indexes, units, and changes to SQL functions. A location API is one of the cases where a cheap database integration test buys a lot of confidence.</p>
+<p>Correctness is only half the story. A radius endpoint that scans every feature will work in development and become painful at production scale. Add a GiST index and inspect the query plan.</p>
+<p>The exact plan depends on your data and PostgreSQL version, but you should see the spatial index participating in candidate filtering. Treat an accidental sequential scan on a large production table as a regression worth investigating.</p>
+<p>For a real project, I would split the tests into two groups. Fast validation tests run on every commit. PostGIS integration tests run in CI with a temporary PostgreSQL/PostGIS service.</p>
+<p>The CI gate should cover invalid coordinates, zero or negative radius values, known-distance fixtures, boundary behavior, GeoJSON output, and at least one query-plan or performance sanity check for larger datasets.</p>
+<p>This is more work than asserting status_code == 200, but it tests the thing users actually care about: whether the API's answer is geographically true.</p>
+<p>Location APIs fail in ways ordinary web tests are not designed to notice. The response can have the right schema, the database call can succeed, and every field can look reasonable while the location itself is wrong.</p>
+<p>The fix is not a giant testing framework. Start with a few spatial invariants you can prove: known distances, valid coordinate ranges, correct GeoJSON order, deterministic boundary behavior, and real PostGIS integration tests. Those checks turn geography from an assumption into something your CI pipeline can verify.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/deploy-with-openvino" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-test-location-aware-apis-with-fastapi-and-postgis/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

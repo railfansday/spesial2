@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams</title>
+    <title>Google&#x27;s 2027 LSA Expansion Has an API Availability Problem</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9858.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,165 +15,75 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams</h1>
+        <h1>Google&#x27;s 2027 LSA Expansion Has an API Availability Problem</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
-            <img src="https://wiredream.com/banner.png" alt="11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/UtmXuhaZqkOQfufBcaDWTOH6gd93-7383bu9.png" alt="Google&#x27;s 2027 LSA Expansion Has an API Availability Problem" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://wiredream.com/banner.png" alt="11 nanoseconds per word: Ridiculously Over-Optimizing Anagrams" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/UtmXuhaZqkOQfufBcaDWTOH6gd93-7383bu9.png" alt="Google's 2027 LSA Expansion Has an API Availability Problem" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A friend recently pointed out a new Word Ladder game variant:
-Find a path of mutations from a start word to an end word,
-where mutations can be single letter changes, single letter
-deletions or additions, or anagramming the word. It annoyed me
-(the paths involving anagrams can be wickedly hard to spot),
-so, naturally, I wrote a solver for it. And when the solver
-took over a second to run, I of course had to optimize it. Along the way, I
-found a fun trick for anagram indexing—fitting a collision-free
-prime-product identifier for every word in the dictionary into a
-single 64-bit integer—that I hadn't seen before (though the history
-of computing is long and Knuth probably noticed it in 1965).</p>
-<p>For completeness, I should note that what I was interested in
-was finding all anagrams in a dictionary---if you just want
-to find anagrams of a specific word you can probably get away
-with a much simpler hash table design! We'll use all of the
-anagrams in the next post talking about solving the whole word
-ladder.</p>
-<p>The two usual tricks for finding anagrams are to use
-either a letter-sorted permutation or a letter-count vector
-as a
-unique identifier for the letters in the word in an
-order-independent way:</p>
-<p>and then run through the dictionary and insert items
-into a hash table based upon their letter count. In python-ish pseudocode:</p>
-<p>Because I'd been feeling a little, uh, rusty in my coding lately, I
-decided to implement this all myself in Rust instead of yelling at an LLM
-to do it (this is a leetcode-like problem so it would have done it trivially).
-That code looked like:</p>
-<p>Using the Scrabble(tm) dictionary pre-read into memory, this function
-produces the anagram dictionary in:</p>
-<p>That seems fine. Oh wait, just kidding, that's INSANELY SLOW. The
-dictionary has 178,690 entries in it, which means we're spending 173
-nanoseconds per word to build up this dictionary. In 173 nanoseconds
-you could execute roughly 4400 instructions on my Macbook Pro M1.
-Who has time to wait for that??</p>
-<p>When optimizing, one of the first places to be suspicious is
-allocations, and this one has them in droves. Every word results
-in either the allocation of a Vec or an append to a Vec, which
-sometimes needs an allocation. Practically, there are about
-161019 keys in the table, so that's 161k allocations (!!).
-Let's improve those by using a slightly more clever data structure,
-noting two things:</p>
-<p>So we'll do two things: We'll find a way to store singleton
-items without needing a dynamic-length data structure at all,
-and we'll implement the equivalent of a linked list for appending
-items to the lists, since they're append-only and we only scan them
-once at the end. To do this, we'll use a structure like this:</p>
-<p>Where heads is indexed by the anagram-identifying-key (e.g.,
-the character-sorted string). We'll overload that u32 by
-using the high bit (we only have 170k or so words) to let
-it represent
-either an actual data value (the index of
-an element in the list) OR an index into the next+word arrays.
-The next array is our linked list - it stores pointers to
-another entry in the next array. The word array stores the
-associated data. It looks like this:</p>
-<p>Much better, but we can do better yet. The time to sort
-that string and create a new string allocation is non-trivial
-and we're doing 178k of them. That's going to be another
-big chunk of nanoseconds.</p>
-<p>Let's try a letter count vector instead, and pack it tightly into an integer.
-With only 26 characters, if we assume that no word has more than 15
-repetitions of the same character, we could use 4 bits per character
-for 26 x 4=104 bits. That fits comfortably in a u128, and while
-that's not tiny, it's at least a nice fixed size 16 byte thing
-we can use as a fast hash table key.</p>
-<p>(Note that we've done something else here - we're only returning
-the list of anagrams, not a full dictionary containing all of the
-words that don't have anagrams.)</p>
-<p>Avoiding the string manipulation and sorting gives a big win:</p>
-<p>At this point, we might ask a question like "how much does
-the slow default Rust hash table cost us?"</p>
-<p>So we'll switch to the rustc_hash FxHashMap, which is much faster
-if you don't have to worry about adversarial inputs to your hash table.</p>
-<p>That seems much better. But are we done yet?</p>
-<p>Storing the letter count as a u128 is also a little slower
-than necessary, because it'll be split across two 64 bit
-registers and requires the compiler to carry that addition
-across them and do twice as much work for equality testing.
-But if we tried lettercounting in 64 bits, we would only be
-able to store 2 bits, and many words have more than 3 of
-the same letter ("MISSISSIPPI", for example, already has 4 S's).</p>
-<p>Instead, we'll use an approach based on
-Gödel numbering:
-we'll create a small
-table associating one distinct prime number with each letter, and identify
-each word by the product of the letter-primes. This guarantees a
-unique identifier for each mix of letters. Naively, one might
-assign "a -> 2, b -> 3, c -> 5" and so on. But this is a practical
-blog post, and we'd like to fit the result in 64 bits; if
-we use the naive assignment, we overflow at the 365th word in our
-dictionary, "ABORTIVENESSES". And that's only 14 characters long,
-we have 3157 15-character words as well!
-If we let it wrap,
-we'll have just implemented a hash function, and there's no guarantee
-that two words won't accidentally collide, so then we'd need to add
-some machinery to check that...</p>
-<p>So here's the trick: Find an optimized assignment of primes to
-letters in the alphabet such that none of the words in our
-Scrabble dictionary overflow a 64 bit number. I started out
-thinking about the standard English letter frequency
-(ETAOINSHRDLU, etc.), but that turns out to be a little
-wrong: We don't care much about words like "the", we care about
-words like "WRONGHEADEDNESS". So instead, we need to go
-based on the patterns found in the 3157 15-character words. In particular,
-while "E" remains assigned to 2, the common "T" is assigned 29,
-and we use 3 for "I". Our friend "J" is assigned 101, since
-the longest word with two or more J's in it is only 12 characters
-long: JEJUNENESSES. Looking at that, those E's and N's and S's better
-have low values, and they do: 2, 19, 17. We could handle 15 N's in
-a row in 64 bits still.</p>
-<p>To solve this, I had a small program start with the letter-frequency
-ordering (which does a lot better than alphabetical but isn't good enough),
-loop finding the first word that overflowed and switch out some of its primes
-for lower valued primes. This would have also been fun to throw at a
-solver.</p>
-<p>which doesn't overflow for any word in the Scrabble dictionary.
-We've found a collision-free canonical 64-bit identifier for the bag of letters in a
-(Scrabble) word, which looks like this in code:</p>
-<p>In this representation, the largest product word is</p>
-<p>which in log2 is 63.945; it's about 96.2% of the way through the 64 bit
-number space. Close, but it fits.</p>
-<p>Result: 4.1ms -> 2.6ms (14.7ns / word — 12x faster than baseline)</p>
-<p>And then there's a final optimization you can do: Instead of reading
-the dictionary into strings, read them into a packed u128 representation
-using 5 bits per character, and then add some instruction-level parallelism
-for our CPU (ILP) by doing the product accumulation using two independent
-accumulators. This u128 representation is useful for speeding up other
-parts of the word ladder solver later. That code looks like this:</p>
-<p>Result: 2.6ms -> 2.3ms (13 ns/word - 13x faster than baseline)</p>
-<p>This is looking pretty good. The only last optimization I have to add
-is to address some branch mispredictions in that rest != 0 loop. We
-can instead just treat all words as if they're 16 characters long and
-ignore the 0's at the end by mapping them to 1 in our primes table
-(i.e., they have no effect on the product). Using a fixed length of 16
-also permits more auto-vectorization by our friendly compiler.
-To support that, we also separate the computation of the prime product
-from the insertion into the hash table, allowing more ILP from our
-now-vectorized multiplication loop.</p>
-<p>Result: 2.3 ms -> 1.96ms (10.9ns/word, 15x faster than baseline)</p>
-<p>We're finally pretty close to what I think a single core on my machine
-can get without explicit vectorization. That 1.96ms is about 1.23ns per
-byte, which could theoretically be about 3.2 x 8 x 1.23 = 31 instructions
-(but realistically fewer), which doesn't leave a ton of
-room for optimization---though I could be wrong! There's some space
-in there for an even faster hash table implementation but I'd rather
-stick with common, off-the-shelf things there.</p>
-<p>In the next post I'll show how we solve the entire word ladder problem,
-using the anagrams we've found as a part of it.</p>
+                <p>Mayur Shah writes about Google Local Services Ads and review strategies for service businesses.</p>
+<p>Mayur Shah writes about Google Local Services Ads and review strategies for service businesses.</p>
+<p>Mayur Shah writes about Google Local Services Ads and review strategies for service businesses.</p>
+<p>Google's planned 2027 expansion of Local Services Ads (LSAs) creates an important technical question for agencies and software providers: will Google Ads API capabilities expand at the same pace as the advertiser migration?</p>
+<p>Google's migration roadmap says non-US accounts and remaining business categories will transition to Performance Max campaigns with pay-per-lead goals in 2027. Yet the current Google Ads API documentation still restricts the country_code field for these campaigns to US.</p>
+<p>This is not proof that international API support will arrive late. Google may update its API documentation and regional capabilities before the relevant migration phases begin. But it exposes an integration risk that agencies should address before international accounts move into the new campaign architecture.</p>
+<p>The issue is bigger than campaign creation. It affects account provisioning, location validation, campaign automation, conversion-goal configuration, reporting, and the ability to manage multiple markets through a single software layer.</p>
+<p>Google is moving LSAs into a specialized Performance Max campaign structure while retaining the pay-per-lead model and local placements on Search and Maps.</p>
+<p>Its published migration schedule has three broad phases:</p>
+<p>August 2026: selected US home and storefront services</p>
+<p>Late 2026: broader advertiser groups, including service-area businesses and professional services</p>
+<p>2027: non-US accounts and remaining supported categories</p>
+<p>The API documentation describes a more limited geographic capability at present. The Performance Max for pay-per-lead setup requires a two-letter country code in local_services_pmax_campaign_settings.country_code, and the documented supported value is US. The documentation also states that location criteria must belong to the campaign's home country.</p>
+<p>That creates a distinction between two forms of availability:</p>
+<p>These capabilities are related, but they are not interchangeable. A campaign becoming available in the Google Ads interface does not automatically establish that every API workflow, field, validation rule, or regional dependency is available too.</p>
+<p>Sources: Google Ads API: Performance Max for pay-per-lead goals and supported business verticals.</p>
+<p>Consider an agency managing campaigns for plumbing businesses in the United States, the United Kingdom, and Australia.</p>
+<p>A conventional campaign-management platform might represent each account using a shared configuration:</p>
+<p>This is a simplified internal representation, not a Google API request.</p>
+<p>The problem emerges when the provisioning service translates that configuration into Google's campaign resource. If the API validates the country code against the currently supported value of US, an international campaign cannot simply be created by substituting GB or AU.</p>
+<p>The integration must distinguish between a market supported by the advertising product and one supported by the API provisioning workflow.</p>
+<p>A robust system should therefore maintain a capability registry rather than assuming that every market supports every operation.</p>
+<p>The values above are illustrative. They should be populated from verified Google documentation and account-level eligibility checks, not treated as Google's published UK capability status.</p>
+<p>This registry becomes particularly important during phased rollouts. Different accounts may become eligible at different times, even when they operate in the same country or vertical.</p>
+<p>Google's API implementation has also evolved across versions.</p>
+<p>The Local Services campaign documentation distinguishes standalone campaigns using:</p>
+<p>from Local Services campaigns represented as specialized Performance Max campaigns:</p>
+<p>This distinction matters for integrations that identify campaigns by advertising channel type alone.</p>
+<p>This is part of a broader API transition problem in Google's LSA migration. As I discussed in The Hidden API Problem in Google's LSA-to-PMax Migration, changes to campaign architecture can create compatibility challenges for agencies that depend on programmatic account management. The 2027 international expansion adds another dimension: regional API availability.</p>
+<p>Google's documentation now describes Local Services Performance Max campaign creation and management through the API starting in version v26. Earlier API versions had more limited support, including update-only workflows for eligible campaigns created through the Google Ads interface.</p>
+<p>However, API version support and geographic eligibility are separate constraints. Supporting the required resource fields in v26 does not mean every country can use them.</p>
+<p>An integration can therefore pass its API-version checks and still fail during campaign creation because a required country, listing, location asset, or account prerequisite is unsupported.</p>
+<p>Source: Google Ads API: Local Services campaigns.</p>
+<p>Local Services Performance Max campaigns are not configured independently of business-location data.</p>
+<p>The API workflow requires a Google Business Profile listing ID through local_services_pmax_campaign_settings.listing_id. Google validates this listing during campaign creation against the associated location assets.</p>
+<p>An international rollout may require more than accepting a new country code. It may also require market-specific validation rules, supported location criteria, phone-number formats, language constraints, and business-verification workflows.</p>
+<p>For agencies, this means a campaign provisioning system should not treat a Google Business Profile listing ID as a globally interchangeable identifier. It must validate the relationship between the listing, the account, the market, and the campaign before submitting a mutation request.</p>
+<p>Local Services Performance Max campaigns use a constrained set of lead conversion categories.</p>
+<p>The current API documentation identifies:</p>
+<p>For non-coupon campaigns, phone-call leads are automatically configured as the required active goal. Message leads are created but disabled by default. Booking goals depend on an approved Reserve with Google partner being detected on the linked location.</p>
+<p>These rules matter because an agency cannot safely assume that a campaign's conversion configuration is identical across every market or account.</p>
+<p>A provisioning service should validate the goals returned by the API rather than assuming that a successful campaign creation request means every intended lead channel is active.</p>
+<p>It should also separate campaign configuration from actual lead availability. A goal being technically configurable does not guarantee that the underlying service or partner integration is available in a particular market.</p>
+<p>Source: Google's pay-per-lead API documentation.</p>
+<p>The practical response is to make campaign automation capability-aware.</p>
+<p>A single global provisioning workflow is attractive, but it can become fragile when product eligibility, API support, and verification requirements change independently.</p>
+<p>A more resilient architecture should include five components:</p>
+<p>Maintain a market-level record of supported campaign operations, API versions, verticals, conversion goals, and location requirements. Store the source and date of each capability check.</p>
+<p>Before creating a campaign, validate the account's market, business category, Google Business Profile listing, location assets, and required lead goals. Reject unsupported combinations before sending a mutation request.</p>
+<p>Keep Google API resource mapping separate from internal campaign models. This makes it easier to handle changes to resource fields, validation rules, and API versions without rewriting the entire agency platform.</p>
+<p>Use an internal provisioning state machine to prevent duplicate campaign creation when requests time out or return ambiguous errors. Record the Google resource name and mutation result before retrying.</p>
+<p>Track API errors by country, API version, operation, campaign type, and error code. A rise in INVALID_LOCAL_SERVICES_PERFORMANCE_MAX_LISTING_ID errors, for example, should be investigated separately from country-code validation failures.</p>
+<p>These controls also make it easier to identify whether a failure comes from account eligibility, API capability, location configuration, or a temporary service issue.</p>
+<p>Google's 2027 LSA expansion is a significant platform change, but the most important engineering challenge may be hidden from advertisers. Agencies that depend on API-driven reporting, campaign provisioning, and multi-market automation need to prepare for regional capability differences.</p>
+<p>The current documentation establishes a clear constraint: the documented pay-per-lead API workflow is US-specific, while Google's migration roadmap schedules non-US accounts for 2027. Whether those capabilities converge before international migration begins remains something agencies must monitor.</p>
+<p>The safest approach is not to build international automation around an assumed rollout date. It is to build systems that can detect regional capabilities, validate account eligibility, and adapt when Google releases new API support.</p>
+<p>A global advertising product needs more than a global migration announcement. It needs a globally consistent and documented integration surface.</p>
+<p>Google LSA Billing Is a Temporal Data Problem: Why Historical Configuration Matters</p>
+<p>Mayur Shah writes about Google Local Services Ads and review strategies for service businesses.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://wiredream.com/anagram-fun/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/googles-2027-lsa-expansion-has-an-api-availability-problem?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

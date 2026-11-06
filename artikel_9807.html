@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X-87 - DOS 256 bytes</title>
+    <title>OpenChoreo Kubernetes developer platform, open source</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9807.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>X-87 - DOS 256 bytes</h1>
+        <h1>OpenChoreo Kubernetes developer platform, open source</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fspan.observer%2Fwp-content%2Fuploads%2F2026%2F11%2Fopenchoreo-plateforme-developpeur-kubernetes-photo.webp" alt="OpenChoreo Kubernetes developer platform, open source" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fspan.observer%2Fwp-content%2Fuploads%2F2026%2F11%2Fopenchoreo-plateforme-developpeur-kubernetes-photo.webp" alt="OpenChoreo Kubernetes developer platform, open source" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p><a href="https://lobste.rs/s/q0ld7f/x_87_dos_256_bytes">Comments</a></p></p>
+                <p>Posted on Nov 6
+•
+Originally published at span.observer</p>
+<p>OpenChoreo Kubernetes developer platform: the openchoreo/openchoreo repository describes itself as « a complete, open-source developer platform for Kubernetes ». It targets teams that build an internal developer platform (IDP) by gluing together a portal, CI, GitOps and observability. The project is released under the Apache 2.0 licence and, according to its README, belongs to the CNCF Sandbox.</p>
+<p>The README states that WSO2 developed OpenChoreo from its experience with the Choreo SaaS platform, and that it is a complete rewrite, not a fork. For an SRE, the appeal comes down to one idea: logs, metrics and traces are surfaced « through the abstractions your developers already understand » (component, project, environment). What does the repository contain, how can it be tried, and what can be monitored?</p>
+<p>A note on honesty: span.observer has not installed or run OpenChoreo. The commands and files quoted here come from the README, the repository’s samples/ folder and the official documentation on openchoreo.dev, all read on 5 November 2026. The screenshots below reproduce those texts. The star count could not be re-read at the source that day, so it is not quoted.</p>
+<p>Another useful point: the documentation groups the ideas into four concept pages: developer abstractions, platform abstractions, runtime model and resource relationships.</p>
+<p>These steps follow the « on k3d locally » guide in the official documentation. They create a local Kubernetes cluster inside Docker: this is a trial, not a production install.</p>
+<p>The documentation asks for Docker v26 or later (with 8 GB of RAM and 4 CPUs), k3d v5.8 or later, kubectl v1.34 or later and Helm v3.12 or later. It suggests checking them with the four commands in the screenshot below.</p>
+<p>The script creates the cluster and installs all four planes. The --with-build option adds the workflow (CI) plane and --with-observability adds the observability plane.</p>
+<p>The guide also offers a step-by-step Helm installation to understand each component. A shorter alternative exists: the quick start launches a development container (ghcr.io/openchoreo/quick-start:v1.3.3), then runs ./install.sh --version v1.3.3 inside it; adding --with-build --with-observability works the same way.</p>
+<p>The Backstage portal is served at http://openchoreo.localhost:8080; the Observer answers at http://observer.openchoreo.localhost:11080, and deployed application traffic uses port 19080. The default trial credentials are listed in the documentation: never reuse them outside a local machine.</p>
+<p>The installation guide deploys the observability plane with several Helm charts: a logs module and a tracing module based on OpenSearch, a metrics module based on Prometheus, Fluent Bit to collect logs and an OpenTelemetry collector for Kubernetes events. The events are exported to an OpenSearch index named k8s-events.</p>
+<p>The plane is modular. The « tracing adapter API » page explains that the Observer queries an adapter to read traces, spans and span details; the backend is whatever the module provides. That page names no backend other than those in the installation, so do not assume any.</p>
+<p>According to the documentation, developers attach an alert rule to a component as a trait (observability-alert-rule). A condition has a window, an interval, an operator (gt, lt, gte, lte, eq) and a threshold. The source is a log pattern or a resource metric; the repository example names cpu_usage and memory_usage.</p>
+<p>This example fires a critical alert if more than five occurrences of the error appear within five minutes, evaluated every minute. It is exactly the reasoning of an error-rate SLI; to frame it, see our SLO and SLA learning path.</p>
+<p>Alerts leave through one channel per environment, either email (SMTP) or webhook. According to the documentation, the first channel created in an environment becomes the default. The next excerpt comes from the sample file; the webhook address is an example to replace.</p>
+<p>The repository also contains an RCA agent. According to its README, it receives an alert through a REST API, investigates with a ReAct loop through two MCP servers (observability, and OpenChoreo resources) and produces a structured report. Only a set of read-only tools is exposed to it. To judge this kind of agent in production, read the guardrails for AI agents and how to secure an MCP server.</p>
+<p>An internal platform is a service like any other: if the control plane goes down, nobody deploys. OpenChoreo’s documentation describes observability for the deployed workloads; for the platform, you still have to monitor the Kubernetes components that carry it. Here are common-sense pointers, not specific to the project:</p>
+<p>Next in the series: Jan, the open source ChatGPT alternative, another project read the same way.</p>
+<p>No: the README describes a « Backstage-powered » portal. OpenChoreo adds the abstractions, control plane, CI, GitOps and observability around that portal.</p>
+<p>It is optional according to the documentation: the --with-observability option adds it. You therefore need to enable it to get the logs, metrics and traces described above.</p>
+<p>The code is under Apache 2.0. The README states initial development by WSO2 and CNCF Sandbox status; read the repository’s governance page (GOVERNANCE.md) before an enterprise decision.</p>
+<p>OpenChoreo offers a complete developer platform for Kubernetes, with built-in observability and alerts declared in YAML. The project looks active, but the installation is heavy and several points remain to be checked in the documentation: application instrumentation and long-term operation. Try it locally, measure what it replaces in your toolchain, then decide.</p>
+<p>span.observer is an independent community blog, not affiliated with OpenChoreo, WSO2 or Dynatrace LLC. Brands mentioned belong to their owners. Tools change quickly: check commands and options in their official documentation.</p>
+<p>Originally published on span.observer. French version: https://span.observer/fr/openchoreo-plateforme-developpeur-kubernetes/.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.onirom.fr/wiki/codegolf/x-87/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/spanobserver/openchoreo-kubernetes-developer-platform-open-source-4lbp" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
