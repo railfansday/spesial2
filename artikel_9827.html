@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title># From Database Tables to Long-Term Memory with Hindsight</title>
+    <title>Asahi Linux 7.3 progress report</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9827.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,60 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1># From Database Tables to Long-Term Memory with Hindsight</h1>
+        <h1>Asahi Linux 7.3 progress report</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxsj55eyt1jqtqiljv6rx.png" alt="# From Database Tables to Long-Term Memory with Hindsight" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxsj55eyt1jqtqiljv6rx.png" alt="# From Database Tables to Long-Term Memory with Hindsight" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Most postmortems are write-only documents. An on-call engineer spends four hours debugging a cascading failure at 3:00 AM, writes up a detailed timeline, lists three things that failed before finding the fix that worked, and files the ticket away into an archive where nobody ever reads it again.</p>
-<p>Two months later, under similar traffic conditions, another engineer gets paged for the exact same symptom. And what do they do? They repeat the exact same failed fix that made things worse the first time around.</p>
-<p>When we set out to build RecallOps—an operational intelligence layer for Kartly, an e-commerce platform processing checkout transactions across six distributed microservices—we wanted to break this loop. We did not want another dashboard that dumps thousands of raw log lines onto an engineer’s screen. We wanted an AI incident response system that actually remembers what happened in previous outages: what alert fired, what recent deployment preceded it, what the on-call engineer tried that failed, and what finally restored service.</p>
-<p>To make this work, we had to solve a fundamental architectural challenge: relational databases are built for operational state, not episodic reasoning, while raw vector retrieval over unstructured logs produces noisy, ungrounded hallucinations.</p>
-<p>Here is how we designed a dual-tier architecture combining PostgreSQL with Hindsight on GitHub, how we structured operational memory, and what we learned about bridging relational data and long-term agent recall.</p>
-<p>At its core, RecallOps sits between our observability stack and our incident response workflow. The infrastructure runs six core microservices: checkout-api, payments-svc, inventory-svc, search-svc, notification-svc, and delivery-eta-svc.</p>
-<p>Our operational data pipeline separates concerns across two purpose-built storage engines:</p>
-<p>PostgreSQL (The Operational Source of Truth):
-Postgres maintains relational integrity: staff engineering ownership, 400 deployments over six months, threshold alerts, 110 incidents (INC-0001 to INC-0110), 3,500 raw log lines, and fix attempts strictly categorized as worked, failed, or partial.</p>
-<p>Hindsight (The Episodic Agent Memory Engine):
-Postgres cannot perform semantic reasoning over past human actions. If an alert fires for db_connection_pool_active_ratio > 0.90, querying Postgres for exact text matches fails when pod names or stack frames differ. We pipe distilled postmortems into Hindsight, a dedicated long-term memory engine for AI agents that organizes memories into managed banks with temporal reasoning and entity graphs.</p>
-<p>When engineers first experiment with LLMs for incident management, the standard approach is naive Retrieval-Augmented Generation (RAG): chunk your application logs, compute embeddings, store them in a vector database, and retrieve nearest chunks when an alert fires.</p>
-<p>In production SRE, this approach falls apart immediately:</p>
-<p>To fix this, we adopted the concepts outlined in what is agent memory. Our agent did not need a semantic search engine over raw logs; it needed an episodic memory bank containing causal relationships and negative feedback loops.</p>
-<p>Let's walk through how we implemented this in code.</p>
-<p>In our relational schema, we treat fix attempts as first-class entities with explicit outcome constraints. Here is the SQLAlchemy model definition from database/models.py:</p>
-<p>By constraining outcome directly in PostgreSQL, we guarantee that our operational dataset cleanly differentiates between remediations that succeeded and interventions that wasted critical minutes.</p>
-<p>Raw log lines remain in PostgreSQL. Under no circumstances do we stream raw log_lines to Hindsight. Instead, our extraction pipeline queries Postgres for the incident, its triggering alert, the most recent deployment preceding the outage, and all recorded fix attempts.</p>
-<p>We then synthesize this into a structured memory block using the formatter in data/seed_hindsight.py:</p>
-<p>Notice the explicit presence of the Failed fix block. In operations, knowing what not to do is often more critical than knowing what to do. If an engineer knows that restarting pods failed and wasted 15 minutes in past outages of this type, they avoid repeating that mistake.</p>
-<p>Once formatted, memories are retained into Hindsight using the official client SDK. We retain memories chronologically, attaching context tags and explicit document IDs to ensure idempotency:</p>
-<p>According to the Hindsight documentation, providing explicit timestamp parameters allows the memory engine to build a temporal graph of facts, while document_id ensures that re-running pipelines updates existing episodes rather than cluttering the bank with duplicates.</p>
-<p>To benchmark our agent honestly, we divided our 110 operational incidents into two strictly isolated sets:</p>
-<p>When an incident from the replay dataset occurs, the agent must diagnose it solely by recalling analogous historical incidents that share underlying root-cause families (such as db_pool, redis_eviction, or tls_expiry).</p>
-<p>To see the system in action, consider what happens when an alert fires for our primary checkout service.</p>
-<p>During a peak festival sale, an alert fires:</p>
-<p>The baseline assistant reviews recent logs showing JDBC timeout exceptions and suggests standard runbook steps:</p>
-<p>The on-call engineer restarts the pods. While pods terminate, active connections drop to zero. But as soon as eight new pods boot simultaneously, each opens its minimum pool connections at the exact same instant, creating a thundering herd on PostgreSQL. The database connection slots saturate completely (FATAL: sorry, too many clients already), and checkout goes down entirely. Triage time: 48 minutes.</p>
-<p>The agent queries Hindsight using the alert symptom and service context. Hindsight recalls historical incident INC-0014, which occurred under identical load patterns:</p>
-<p>The agent synthesizes this memory and outputs an evidence-backed recommendation:</p>
-<p>Hypothesis (Rank 1): HikariCP connection pool exhaustion triggered by unclosed database connections under surge traffic.
-Warning: Do NOT restart checkout-api pods. In INC-0014, restarting pods caused immediate re-exhaustion and prolonged downtime.
-Recommended Action:</p>
-<p>The engineer executes the targeted fix immediately. Active connection ratio normalizes within 4 minutes. Total triage time: under 8 minutes.</p>
-<p>Building and operating this system taught us several concrete lessons about AI-assisted infrastructure operations:</p>
-<p>Dumping raw logs into an agent's memory bank degrades recall quality. Logs contain ephemeral noise (pod IPs, request IDs, memory addresses) that dilute semantic meaning. Extracting the structured causal arc—symptom, prior change, failed action, root cause, working fix—into clean markdown units improved retrieval accuracy across all eight failure families.</p>
-<p>In production outages, engineers often jump to intuitive remedies: restart the service, clear the cache, or scale horizontal replicas. In distributed systems, these intuitive actions frequently trigger secondary failures (cache stampedes, connection storms, or replication lag). Recording failed fixes with explicit FAILED outcomes prevents agents from recommending disastrous shortcuts.</p>
-<p>We did not replace our relational database with an AI memory engine, nor did we try to force semantic reasoning into PostgreSQL. Postgres is unmatched at maintaining foreign key referential integrity, enforcing CHECK constraints, tracking ACID transactions, and storing high-volume log streams. Hindsight is unmatched at synthesizing historical human experience, managing temporal context, and retrieving relevant prior lessons. Using both in tandem gave us the best of both worlds.</p>
-<p>In any real-world data pipeline, ingestion jobs will be triggered multiple times. Without deterministic document identifiers (document_id=f"kartly-{inc['code'].lower()}"), re-running ingestion creates duplicate memory entities that fragment agent attention. Designing idempotency into the schema and the memory API from day one saved dozens of debugging hours.</p>
-<p>Engineering incident response is not a lack-of-data problem; it is a memory problem. The logs, alerts, and postmortems already exist in every modern engineering organization. By pairing a robust relational backbone with long-term episodic memory via Hindsight, we can ensure that when systems fail, our tools remember the lessons we already paid to learn.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>As such, we made the difficult decision to begin the process of
+	transitioning all of our repositories to the GNU General Public
+	License version 2 or later. Going forward all Asahi Linux code will
+	be licenced under strong copyleft licences only. Those who do not
+	learn from history are doomed to repeat it.</p>
+<p>Posted Nov 7, 2026 13:07 UTC (Sat)
+                               by jch (guest, #51929)
+                              [Link] (5 responses)</p>
+<p>Could somebody please explain in what ways that harms the project?  Sufficiently severely to justify changing the licence?</p>
+<p>The linked report says:
+
+We do all of this because we firmly believe in Free and Open Source Software, not just as a means to an end but as the end in and of itself.</p>
+<p>It is exactly the problem of free-riding: if the number of people that do not pay the ticket is sufficiently small then they do not harm you and in general all the people that pay their ticket since the loss is already compensated by earnings. However, without any punishment or limitation it would bring more and more people to stop contributing and instead free-riding the project. At the end less and less people are willing to contribute to the project, and instead monetize on someone's else work. 
+
+Like training a commercial LLM.</p>
+<p>I realize this is 2026 and the era of clickbait "stories" on antisocial media, of the death of numbers and of any sort of evidence, but I naively assumed LWN was one of the last exceptions...
+
+There are many projects with BSD/MIT licences that are successful and alive and some of them (like LLVM) have even significantly eroded their GPL competition. So as usual, I suspect one size does not fit all - unless you're after antisocial media clicks of course. Are LLMs affecting that? Maybe but it seems early to tell. So again: a little bit of evidence would make a licence rant look less empty - keeping in mind every project is different and lessons learned by Asahi do not automatically apply everywhere.</p>
+<p>There are many projects with BSD/MIT licences that are successful and alive and some of them (like LLVM) have even significantly eroded their GPL competition. So as usual, I suspect one size does not fit all - unless you're after antisocial media clicks of course. Are LLMs affecting that? Maybe but it seems early to tell. So again: a little bit of evidence would make a licence rant look less empty - keeping in mind every project is different and lessons learned by Asahi do not automatically apply everywhere.</p>
+<p>If this is your idea, then I can understand your pov about (L)GPL and free software in general.</p>
+<p>How so? MIT explicitly requires attribution.</p>
+<p>And if so, if the problem is that the 'bad people' are violating the MIT, then surely they would also violate the GPL?</p>
+<p>Sad to see Asahi out there burning bridges for no reason.. relicensing m1n1 and drivers under GPL2-or-later, seemingly without the consent of all prior contributors, under the guise of "defending against AI bad actors", seems entirely disingenuous and misguided.
+
+https://x.com/canadianbryan/status/2119165376764276869</p>
+<p>https://x.com/canadianbryan/status/2119165376764276869</p>
+<p>Copyright © 2026, Eklektix, Inc.
+            
+            Comments and public postings are copyrighted by their creators.
+            Linux  is a registered trademark of Linus Torvalds</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/karan_sai_afad14dca87898f/-from-database-tables-to-long-term-memory-with-hindsight-56c7" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://lwn.net/Articles/1105936/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

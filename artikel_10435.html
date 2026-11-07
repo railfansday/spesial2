@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Announcing New vLLM and SGLang Inference Engines on TPU</title>
+    <title>Combined OpenSSH and musl-libc flaws let anyone into Alpine Linux and other distros by typing anything over 256 characters as a password</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10435.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Announcing New vLLM and SGLang Inference Engines on TPU</h1>
+        <h1>Combined OpenSSH and musl-libc flaws let anyone into Alpine Linux and other distros by typing anything over 256 characters as a password</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/inferenceblog.2e16d0ba.fill-1200x600.jpg" alt="Announcing New vLLM and SGLang Inference Engines on TPU" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn.mos.cms.futurecdn.net/BptY8MpPGXGUqczAtupMHF-2048-80.jpg" alt="Combined OpenSSH and musl-libc flaws let anyone into Alpine Linux and other distros by typing anything over 256 characters as a password" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/inferenceblog.2e16d0ba.fill-1200x600.jpg" alt="Announcing New vLLM and SGLang Inference Engines on TPU" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn.mos.cms.futurecdn.net/BptY8MpPGXGUqczAtupMHF-2048-80.jpg" alt="Combined OpenSSH and musl-libc flaws let anyone into Alpine Linux and other distros by typing anything over 256 characters as a password" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>As part of our broader announcements for PyTorch today, we are excited to launch native PyTorch backends for vLLM (developed in partnership with Inferact) and SGLang (developed in partnership with RadixArk).</p>
-<p>For years, TPUs have powered large-scale AI workloads with high performance and efficiency. With the rise of agentic and multimodal workloads, serving efficiently is more important than ever. Both engines already run on TPU through JAX-based backends, but we kept hearing from developers that they wanted to customize and debug their serving stack in PyTorch.</p>
-<p>So we started in earnest on TorchTPU, which runs PyTorch natively on TPU. We then built new vLLM and SGLang engines on top of it.</p>
-<p>Our goal is for the PyTorch community to bring models to TPU and make them fast using the tools developers are already familiar with. The engines come with optimized, production-ready serving features and custom Pallas kernels.</p>
-<p>Serving at scale requires co-design across every layer of the technology stack, from silicon to compilers to orchestration. Today's launch of new inference engines is at the central part of an integrated, open TPU ecosystem.</p>
-<p>TorchTPU makes the TPU a native PyTorch device. Tensors are managed as standard PyTorch tensors on a tpu device with no wrapper types, code runs eagerly or compiles via torch.compile using XLA, and collectives go through torch.distributed.</p>
-<p>Because each device runs its own PyTorch process, both engines keep each framework’s worker model, scheduler, KV cache manager, API server and so forth, with TPU implementations underneath.</p>
-<p>Most models use the standard upstream PyTorch model definitions in both engines, with TPU-specific optimizations in kernels and layer implementations. Custom kernels written in Pallas are called directly from PyTorch as custom operators inside the compiled graph. This platform-plugin design reuses as much of each framework as possible while letting TPU optimizations move at their own pace.</p>
-<p>Both engines are built for the full range of production workloads.</p>
-<p>Agentic workloads in particular demand several of these features simultaneously. Because agents repeatedly resend expanding multi-turn conversations, serving them efficiently requires finding the cached prefix instead of recomputing it. Both engines keep reusable prefixes in HBM and, with host offload turned on, automatically move older prefixes to host memory as a second tier.</p>
-<p>Two of these features move the KV cache away from the device that computed it. Disaggregated serving runs prefill and decode on separate TPU hosts, so each request's KV cache has to travel from the prefill host to the decode host.Tiered KV offload moves the part of the KV cache that no longer fits in HBM to the host's DRAM and secondary storage with Google Cloud Managed Lustre, and brings it back when a later request reuses the prefix. Either way, the transfer has to overlap computation or it adds directly to latency.</p>
-<p>Both engines use TPU Sync for this. It is an open-source C++ library for KV cache transfer and management on TPU. It reads the device buffers behind PyTorch tensors directly, so a transfer needs no extra staging copy on the host, and it runs transfers on its own threads outside Python while prefill and decode continue. vLLM-TorchTPU exposes it through vLLM's KV connector interface. SGLang-TorchTPU uses it as a disaggregation transfer backend and as the I/O backend for HiCache.</p>
-<p>Both engines are already running at scale in production with preview customers. To provide transparent, reproducible proof of our performance, we benchmark in public through the community-standard SemiAnalysis InferenceX project.</p>
-<p>Building on our initial submission of Qwen 3.5 on Ironwood TPU (TPU 7x), our engineering teams have further optimized the stack, bringing the lowest cost per million tokens overall to an industry leading 2.01 cents. Alongside these improvements, we have also published new state-of-the-art (SOTA) performance results to AgentX, the project's dedicated track for evaluating agentic long-context and multi-turn workloads. Ironwood TPU leads across most of the Pareto frontier. We look forward to continuously updating our public performance profiles as we bring more models and configurations to the leaderboard.</p>
-<p>We did not build these backends in a vacuum. By embracing PyTorch and working directly with open-source project maintainers, we ensure these engines remain upstream-aligned and community-first:</p>
-<p>This partnership is bringing SGLang's stellar team to build for TPU, delivering an engine that is already running in production at Meta and battle-tested at scale across demanding real-world scenarios.</p>
-<p>Together, we integrated a high-performance Pallas megakernel for the 2.8T-parameter Kimi K3 model that runs the entire decode step as one kernel, serving more than 700 tokens per second to a single user on Ironwood TPU. Building on this work, Inferact recently led our first preliminary AgentX submission for Kimi K3 on the vLLM-TorchTPU stack. This initial milestone already demonstrates exceptional performance per TCO in ultra-high-interactivity workloads, and the rapid increase in the maturity of the vLLM and PyTorch ecosystem on TPU for doing new frontier OSS models bring-up, with follow-up submissions set to unlock even greater efficiency through larger scale prefill/decode disaggregation.</p>
-<p>To foster continuous open-source contribution, vLLM is also launching a first-of-its-kind community contribution TPU capacity pool to provide free TPU compute to developers who actively contribute to the vLLM engine.</p>
-<p>As the models get larger, we are evolving both engines to make large-scale TPU inference deployments performant and efficient. The major features for production-grade agentic workloads are already supported. More performance optimizations and advanced features are under way – open a Github issue to request collaboration on yours!</p>
-<p>Across the two engines, most of the popular open model families are supported, including Qwen, DeepSeek, GLM, Kimi, GPT-OSS, Gemma and more. The team is investing in making more models available to run natively on TPUs, including Day 0 support for new open models. We also want to give the community the tools and TPU capacity to tune performance for their own workloads and configurations.</p>
-<p>vLLM-JAX and SGLang-JAX remain important projects. Both will continue to be maintained, supported, and available for the community to use and adapt.</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
-<p>Fast, reliable A2UI, with swappable inference formats</p>
-<p>Smaller apps and faster GPU inference with LiteRT in Google Play services</p>
+                <p>Get started with free access to reviews, badges and discussions.</p>
+<p>Unlock exclusive tools and insights for enthusiasts who want more.</p>
+<p>Access Bench, Roadmaps, deep analysis and other exclusive tools.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Keep exploring and earning more as a member.</p>
+<p>Reviews, benchmarks, and updates on current GPUs.</p>
+<p>Join for quick access. Enter your email below and we'll send confirmation plus sign you up to our newsletter.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Unlock instant access to exclusive member features.</p>
+<p>Get full access to premium articles, exclusive features and a growing list of member rewards.</p>
+<p>Meanwhile, the parties involved are playing a game of hot potato with who's fault.</p>
+<p>When you purchase through links on our site, we may earn an affiliate commission. Here’s how it works.</p>
+<p>The internet is still reeling from the PHP engine vulnerability and all other security vulnerabilities found over the past few weeks, and we're not done. Today's special is quite spicy: you can get into Alpine, OpenWRT, and other Linux distros without needing a password, thanks to a combined bug with OpenSSH and musl libc. Just randomly type over 256 characters on the password prompt and you'll be let in through the SSHhole.</p>
+<p>It works if you set an empty password for system users, which is the default on multiple distros. The bug is present, though not necessarily enabled, across Buildroot, Yocto, and Void Linux. OpenWRT uses Dropbear for authentication by default, but users can install OpenSSH instead.</p>
+<p>The largest concern is by far Alpine, though, as it's pretty much the default choice for what could amount to millions of installs across Docker/Kubernetes/Proxmox containers and endless dependencies thereof, servers, cloud VMs, and embedded devices, among many others. Alpine comes with the requisite conditions set and password authentication enabled by default, which is why it needs immediate patching.</p>
+<p>Broadly speaking, the vulnerability combination is: OpenSSH, musl, password authentication not explicitly disabled, not using PAM, and the one arbitrary user with a password set, using a SHA-512/256 hash. Patch your systems immediately, as per the project's advisory note. Meanwhile, the easiest mitigation is explicitly setting "PasswordAuthentication" to "no" in your OpenSSH configuration file and restarting the service.</p>
+<p>While in practice the vast majority of Alpine and similar installs aren't reachable from the internet, any attacker inside a network, including but not limited to corporate setups, home labs, cloud networks, and VPNs, can let themselves in. Likewise, all it takes is one valid user account, not too hard to get in a large enough corporate environment, and then an attacker is inside the network. Scanning and testing the vulnerability is also trivial.</p>
+<p>OpenSSH has already published a fix and an advisory post, as did musl author Rich Felker. Both parties seem to believe the other is at fault, but looking from the outside, blame is shared.</p>
+<p>If you've ever looked in the /etc/passwd or /etc/shadow files, you may have noticed a single asterisk as a placeholder for the password hash for accounts with no password — meaning "no password should work." The SSHhole website has all the details, but the snafu happens both when musl's crypt() function returns "*" as an error condition instead of a null value as per usual conventions, and then OpenSSH uses it to compare to a password hash, when it shouldn't. An overly long input then triggers the chain of mistakes.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Follow Tom's Hardware on Google News, or add us as a preferred source, to get our latest news, analysis, & reviews in your feeds.</p>
+<p>Bruno Ferreira is a contributing writer for Tom's Hardware. He has decades of experience with PC hardware and assorted sundries, alongside a career as a developer. He's obsessed with detail and has a tendency to ramble on the topics he loves. When not doing that, he's usually playing games, or at live music shows and festivals.</p>
+<p>Tom's Hardware is part of Future US Inc, an international media group and leading digital publisher. Visit our corporate site.</p>
+<p>©
+Future US, Inc. Full 7th Floor, 130 West 42nd Street,
+New York,
+NY 10036.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/announcing-new-vllm-and-sglang-inference-engines-on-tpu/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.tomshardware.com/tech-industry/cyber-security/combined-flaws-let-anyone-into-alpine-linux-and-other-distros-by-typing-anything-over-256-characters-as-a-password-emergency-fixes-for-openssh-and-musl-libc-issued-for-millions-of-systems-patch-immediately" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

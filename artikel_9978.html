@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Libghostty 1.0</title>
+    <title>Hugging Face Models on Foundry Managed Compute</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9978.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,174 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Libghostty 1.0</h1>
+        <h1>Hugging Face Models on Foundry Managed Compute</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/688797c1629e0ef013c2556c/Dn2wmfWGM83ZhuQ-C5jPo.png" alt="Hugging Face Models on Foundry Managed Compute" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/688797c1629e0ef013c2556c/Dn2wmfWGM83ZhuQ-C5jPo.png" alt="Hugging Face Models on Foundry Managed Compute" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>libghostty-vt 1.0 is here. libghostty is a
-portable, high-performance C library for terminal emulation, extracted
-directly from the core of Ghostty. The 1.0 release means both the library
-itself and the C ABI are now stable.</p>
-<p>A little over a year ago, I wrote that
-libghostty is coming. At the time,
-the Zig module had just been merged, the C API didn't exist, and nobody
-but Ghostty was a consumer. Today, the C API is a complete terminal emulator,
-it runs in production for millions of people across hundreds of products,
-both free and commercial, and it has a real, enforced ABI stability policy.</p>
-<p>This post is about how we got here and what 1.0 actually means.1</p>
-<p>Since starting the Ghostty project in 2022, the most common question I've
-been asked is "why?". I already answered this in the
-libghostty is coming
-post, so feel free to read that if you wish. Today, I'd rather answer this
-by showing the broad industry impact libghostty has already had. I believe
-this strongly validates its existence.</p>
-<p>A year ago, I used a
-bug in JediTerm,
-the terminal emulator in JetBrains IDEs, as an example of why terminal
-emulation is hard to get right. A year later,
-the terminal in JetBrains IDEs now runs on libghostty.
-Every IntelliJ, PyCharm, GoLand, etc. user now has a libghostty-powered
-terminal. Based on a report by JetBrains, that's over 12.5 million
-active users.</p>
-<p>Neovim has an approved pull request
-replacing libvterm with libghostty-vt. Among other things, it closes a
-10-year-old issue
-about reflowing scrollback on resize. The maintainers are waiting on a
-tagged release before merging so that distributions can package the
-dependency separately, and the release today should enable that.</p>
-<p>KDE developers are
-experimenting with a Konsole replacement
-built on it. Vercel's Turborepo uses it
-to render task output in its TUI. devenv
-uses it to drive shells. Antithesis
-used it to fuzz TUI programs
-and found real bugs in btop and others. Ghostel
-brings it to Emacs. ghostty-web
-is the WASM build with an Xterm.js-compatible API. Commercial products
-like OrbStack embed it. And a whole wave of
-new terminals and "agentic" coding tools, such as
-herdr and
-cmux, have been built on it
-rather than writing yet another emulator.</p>
-<p>There are community bindings for Rust, Go, JavaScript, Swift, Python,
-.NET, Elixir, Dart, Java, and more, and the
-awesome-libghostty
-list tracks well over a hundred projects.</p>
-<p>More people today use a terminal powered by libghostty than use Ghostty
-the application, by a very large multiple. And libghostty is having
-a much larger impact than being "just" a terminal emulator.2</p>
-<p>1.0 means libghostty-vt follows semantic versioning and has strict
-ABI compatibility
-promises so that packagers across distributions and operating systems
-can be confident packaging libghostty-vt and program developers can be
-confident dynamically linking against it.</p>
-<p>Beyond providing useful features, I believe the hallmark of a high-quality
-and enduring C library is ABI stability. So from the start, I took inspiration
-from C libraries I enjoyed working with and designed the API to have
-a strong, stable ABI that allows for future additions.</p>
-<p>Every object is an opaque handle. The hundreds of values you might read or
-write go through a small set of enum-keyed getters and setters, so we
-can add new values easily without introducing a new symbol. Programs with
-newer headers linked against an older libghostty get GHOSTTY_UNSUPPORTED
-results instead of crashes or undefined behavior. The few non-opaque structs
-we have carry their size so that fields can be appended later, or contain
-reserved padding. Enums are pinned to int on every compiler, as much as
-the C standard allows.</p>
-<p>Our CI enforces our ABI policy. Every change is checked with
-libabigail against a committed baseline
-on Linux, and against golden type manifests on macOS and WebAssembly.</p>
-<p>On ELF platforms, every exported symbol is also versioned, so the dynamic
-loader refuses to load a mismatched library by name rather than failing in
-some mysterious way later.</p>
-<p>In addition to ABI stability, the 1.0 release brings along the proper
-build tooling, tarballs, dependency licensing manifests, documentation,
-and more to enable every major operating system and distribution to
-package libghostty-vt through standard official tooling.</p>
-<p>Libghostty has its own release cycle, separate from Ghostty the
-application. And it has its own tarballs with only the files and dependencies
-libghostty needs, resulting in smaller sizes and simpler licensing
-verification and compatibility.</p>
-<p>Each release publishes a signed source tarball along with a companion
-dependencies tarball containing every Zig package in Zig's own cache
-layout, so a distribution can build the library completely offline. The
-build installs the shared and static libraries with a proper SONAME,
-headers, pkg-config files, and a CMake package config, and it honors
---prefix, DESTDIR, and lib64. Debug info is kept by default so
-distros can split it out. All of this is documented in
-PACKAGING-LIBGHOSTTY.md,
-which ships with the tarball.</p>
-<p>libghostty-vt is MIT licensed. At runtime it needs nothing beyond
-libc, and it can be built fully freestanding if you don't want that
-either.3</p>
-<p>The library compiles in a small number of permissively licensed
-dependencies: simdutf and
-Google Highway for SIMD, a compact
-Unicode table for grapheme data, and
-Wuffs for image decoding in the
-Kitty graphics protocol. Both simdutf and Highway are built
-without libc++, so there is no C++
-standard library dependency.</p>
-<p>There is no copyleft code anywhere in the
-dependency tree. Every dependency is listed in a machine-readable
-manifest with its version, SPDX license, and hash, specifically so
-distros can fill in their bundled-library metadata more easily.</p>
-<p>If a distro would rather dynamically link the system simdutf or Highway,
-there's a build flag for that.</p>
-<p>libghostty-vt is highly portable. The table below lists all the platforms
-and architectures that we build and test (full unit tests plus running all
-examples) in CI:</p>
-<p>There is a second set of platforms we build in CI but do not run tests for.
-These systems all have known users; we just haven't set up the machinery
-for automated testing:</p>
-<p>Each of the tested platforms gets the artifacts it expects:</p>
-<p>Portability isn't just about the ability to build and run. It's also
-about resource usage and being able to work in a wide variety of
-resource environments.</p>
-<p>For resource usage, the library creates no threads, allocates only through
-an allocator you can customize, and uses minimal compute and memory.
-I've run 10,000 active terminals, each with a live shell producing output,
-on a Linux server with 4 cores and 8 GB of RAM. In this test, I had to use
-dash because bash used far more RAM than libghostty-vt and wouldn't fit
-into the 8 GB budget.</p>
-<p>You can now create a terminal in ~1,500 lines of C
-that has more features and better performance than just about any terminal
-that existed in 2025, and most today in 2026.5 And thanks to the rich
-ecosystem of language bindings, you can do this in every major programming
-language. You get this for free. For almost no effort. You can just do it.</p>
-<p>libghostty-vt is a generalized library, so we will focus on stability
-while implementing as many terminal protocols as exist
-(giving options to enable/disable them, of course) so that embedders
-have the luxury of choice.</p>
-<p>Every bug any libghostty-vt embedder reports makes everyone else in
-the ecosystem better. Every feature we ship in libghostty-vt becomes
-available to everyone quickly and safely. Terminals can move faster with
-less fragmentation.</p>
-<p>Thank you to everyone who contributed to the library, wrote bindings,
-filed bugs, and shipped something on top of it while the API was still
-experimental. As with all open source, this was the work of a large
-community.</p>
-<p>Docs, examples, and downloads are at lib.ghostty.org.</p>
-<p>As usual, I hate that I have to do this for every post, but I want to
-note this post was completely hand-written with no AI assistance. ↩</p>
-<p>The numbers are rough because most consumers don't report usage, but
-JetBrains alone reports
-12.5 million recurring active users,
-and that's before counting everything else on the list. ↩</p>
-<p>In the original post I wrote "not even libc!" The default build does
-link libc, because the SIMD paths use it and the default allocator is
-malloc. Turn off SIMD and the library is freestanding, which is
-how it runs on bare-metal RISC-V and ARM targets. ↩</p>
-<p>The feature flags aren't WASM-specific; they work on every target.
-They're likely useful for things like embedded devices too. ↩</p>
-<p>"Features" here means the set of terminal protocols and sequences
-understood, and "performance" means parsing throughput and memory
-usage, since those are the parts libghostty-vt provides. ↩</p>
+                <p>At Microsoft Build 2026, we announced Foundry Managed Compute and Hugging Face models on Foundry — a curated catalog of open-weight models from the Hugging Face ecosystem, refreshed weekly, deployable in one click onto Foundry Managed Compute. Weights are pre-staged in Azure, runtimes are built and scanned by Microsoft, and every model in the Collection ships with the same enterprise security, governance, observability, and billing that applies to every other model on Foundry.</p>
+<p>Microsoft Foundry is a platform for building and operating agentic AI applications. Foundry starts with the widest model selection on any cloud — models from Microsoft, OpenAI, Anthropic, Meta, Mistral, DeepSeek, Hugging Face, and others, spanning frontier, open-source, and custom weights — all accessible through a single endpoint and a single set of SDKs in Python, C#, JavaScript, and Java.</p>
+<p>On top of those models sits the Foundry Agent Service: multi-agent orchestration with built-in memory, knowledge grounding through Foundry IQ, and a catalog of connectable tools via agentic protocols, so agents can work with enterprise data. Once agents are running, Foundry provides end-to-end tracing, real-time monitoring, continuous evaluations, and a prompt optimizer that improves agent behavior based on eval results — observability and quality loops that are part of the platform.</p>
+<p>Alongside that, developers get access to:</p>
+<p>Alongside pay-per-token (lowest-friction path to get started) and provisioned throughput (predictable, high-performance production workloads on frontier models), Foundry Managed Compute is the third deployment option in Foundry: a managed GPU platform-as-a-service for open-source and custom models.</p>
+<p>You deploy a model instance described by the things that matter to your workload — parameter count, context length, and whether you want to optimize for latency or throughput — and Foundry handles the GPU topology underneath, whether the instance lands on one accelerator or several, so you think and plan in model terms.</p>
+<p>Microsoft takes care of the machine: container updates, runtime upgrades, and security patches happen automatically on the supported runtimes — vLLM, SGLang, TensorRT-LLM, NIM, TEI, llama.cpp — without redeploying your model, while model configuration, deployment behavior, and routing stay with you.</p>
+<p>That consistency carries through the developer surface — pay-per-token, provisioned throughput, and Managed Compute share:</p>
+<p>Open-source models integrate with Foundry Agents the same way frontier models do, so you can mix model types in a single agent without a separate integration path.</p>
+<p>Same code, same workflow. Quota is aligned to accelerator families, so a plan built on the H100 family today carries forward as new hardware generations come online.</p>
+<p>Hugging Face is the public square of open AI: 15 million builders, 400,000 organizations, and over 3 million open models published, with new frontier capabilities — agentic coding, video segmentation, speech, embeddings — landing weekly. It's the GitHub of open models, where the community publishes weights, writes model cards, compares evaluations, and pulls models for experimentation.</p>
+<p>Open models have closed the gap with proprietary models on benchmark after benchmark, and they unlock things proprietary endpoints can't:</p>
+<p>The catch has always been the operational layer: discovery, license review, security screening, runtime selection, GPU sizing, image building, CVE patching, and standing the model up behind an enterprise-grade endpoint. Hugging Face, by itself, is not an enterprise serving platform. Hugging Face models on Foundry is that operational layer, run by Microsoft.</p>
+<p>The Hugging Face Collection brings a curated subset of models directly into the Foundry Model Catalog:</p>
+<p>From your side, an open-weight model in the Hugging Face Collection looks and behaves like any other model in the Foundry Model Catalog, and every model in the Collection has been put through a multi-stage publishing pipeline before it ever shows up there.</p>
+<p>Hugging Face and Microsoft work together to bring the most popular open-weight models from the Hugging Face ecosystem to Microsoft Foundry — production-ready for enterprise environments — through a systematic curation process:</p>
+<p>Because weights are pre-staged in Azure storage and runtime images live in a Microsoft-managed registry, your deployments won't need outbound network access to Hugging Face Hub — you can deploy to production inside a private network.</p>
+<p>Hugging Face models on Foundry are powered by a versatile collection of community-built, open-source inference runtimes — each selected and tuned for Foundry Managed Compute, and matched to the model architectures it serves best. Across all runtimes, the systematic curation process means new versions and patches land on Foundry quickly, and existing model deployments are upgraded automatically — without requiring you to redeploy.</p>
+<p>vLLM — the default high-throughput serving engine for open large language models, tuned for production GPU workloads. Because Hugging Face is a direct contributor to vLLM, any model in the Transformers library can run on vLLM out of the box — so when a new model lands on Hugging Face, it can be served on Foundry the same day, with no waiting on a custom integration.</p>
+<p>SGLang — a serving engine for language and multi-modal models, with strong support for structured outputs (JSON, regex, grammar-constrained generation) that agentic and tool-using workloads depend on. Hugging Face and the SGLang team have built a Transformers backend integration for SGLang, so any model in the Transformers library runs on SGLang out of the box — and reaches Foundry the same day it lands on Hugging Face.</p>
+<p>Text Embeddings Inference (TEI) — the runtime for embedding, reranker, and sequence-classification models. Accelerator-specific images ship with kernels compiled for each GPU and CPU family Foundry supports, keeping the embedding hot path lean for RAG and semantic-search workloads.</p>
+<p>llama.cpp — the CPU and small-GPU path for GGUF-quantized models. Useful for cost-optimized deployments, smaller models, and CPU-only regions, with the same OpenAI-compatible API as vLLM and SGLang.</p>
+<p>TensorRT-LLM and NIM — used on NVIDIA hardware where NVIDIA's optimized kernels and Triton-based serving deliver meaningfully better latency or throughput for specific model families.</p>
+<p>hf-serve — Hugging Face's own multi-model inference server, used for model architectures outside the LLM and embedding fast paths (vision, audio, segmentation, and other Transformers-native pipelines) so the Collection can cover every modality with a consistent serving layer.</p>
+<p>The Hugging Face Collection in the Foundry Model Catalog is where you start, and deployment is five steps:</p>
+<p>A deployment template is the unit of choice in step 2: a named, versioned asset that pins the runtime, the accelerator family and count, the context length, and the runtime-specific tuning needed to serve the model well — so picking a template is the only knob you turn for "how do I want this model to run."</p>
+<p>qwen3-32b, for example, ships with four templates the deploy wizard exposes side by side:</p>
+<p>Each template arrives pre-tuned for the model — runtime settings, tool-call and reasoning parsers, scoring path, health probes, request concurrency, and any model-specific context-extension settings are all set by Microsoft, with any trade-offs called out inline in the template description. When you script the deploy, you reference the template and Foundry handles the rest.</p>
+<p>The deployment is reachable through the unified Foundry endpoint with the OpenAI SDK — the `model` field takes the deployment name you just created:</p>
+<p>A chat-completions model from the Collection slots into Foundry Agents as an admin-connected model and is callable through the Foundry Responses API with the same OpenAI SDK — same auth, same endpoint, same observability.</p>
+<p>Available now in preview: the Hugging Face Collection in the Microsoft Foundry Model Catalog — thousands of models across every modality, refreshed weekly, deployable onto Foundry Managed Compute with NVIDIA A100, NVIDIA H100, or AMD MI300X accelerators in Global and Data Zone scopes, behind a unified Foundry endpoint with Playground support, first-class Azure Monitor metrics, per-deployment billing tags, and curated runtime upgrades and CVE patching applied automatically to your deployments.</p>
+<p>On the roadmap: broader coverage of the Hugging Face ecosystem, additional accelerator families, and Bring Your Own Weights for fine-tuned and proprietary variants deployed through the same templates and governance as Collection models.</p>
+<p>Hugging Face is where open models are published and discovered. Microsoft Foundry is where enterprises operationalize them — on curated, license-screened, security-screened weights hosted in Azure; on community-built and CVE-scanned runtimes; behind a single endpoint with enterprise identity, networking, observability, and agent integration on top. The breadth of the open-source ecosystem, with the operational layer Microsoft runs underneath. For a deep dive on Foundry Managed Compute — pricing, accelerator SKUs, data residency, enterprise readiness, observability, and the full Responses API + memory pattern — see the Managed Compute launch blog.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://mitchellh.com/writing/libghostty-1-0" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/microsoft/foundry-managed-compute" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
