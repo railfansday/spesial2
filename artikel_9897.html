@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TorchNeuron: running HF models on AWS Trainium is easier than ever</title>
+    <title>The TechBeat: Shipaton Blogging Contest Winners Announced  🎉 (11/6/2026)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9897.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,60 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>TorchNeuron: running HF models on AWS Trainium is easier than ever</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>The TechBeat: Shipaton Blogging Contest Winners Announced  🎉 (11/6/2026)</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/hf-torchneuron/thumbnail.png" alt="TorchNeuron: running HF models on AWS Trainium is easier than ever" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_27_jrpip1ani4kpkh4xkj88l3ac.png" alt="The TechBeat: Shipaton Blogging Contest Winners Announced  🎉 (11/6/2026)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/hf-torchneuron/thumbnail.png" alt="TorchNeuron: running HF models on AWS Trainium is easier than ever" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_27_jrpip1ani4kpkh4xkj88l3ac.png" alt="The TechBeat: Shipaton Blogging Contest Winners Announced  🎉 (11/6/2026)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>TorchNeuron provides a new native backend for PyTorch on AWS Trainium. Transformers, Diffusers and Kernels natively support it, making it easier than ever to run models on Trainium and to share them on the HF hub.</p>
-<p>TorchNeuron is a PyTorch plugin that brings a new backend for Trainium enabling support for eager mode, torch.compile and native distributed APIs like FSDP and TP.
-Read the Pytorch blog to learn more about TorchNeuron.</p>
-<p>Starting Oct. 20, 2026, TorchNeuron will be available as a public beta. Researchers and developers will be able to install it with pip install torch-neuronx.</p>
-<p>To date, the Hugging Face experience on AWS Trainium and Inferentia — AI chips designed respectively for cost-effective training and inference at scale — has been delivered through optimum-neuron. This library relies on the torch-neuronx package, which is based on PyTorch XLA. It was the natural choice at the time, but it meant thinking like a compiler: lazy tensors instead of eager execution, static shapes only, a recompilation for every graph break. Optimum Neuron existed to hide that complexity, and maintained custom code (modeling classes, trainers, etc) to do so.</p>
-<p>TorchNeuron changes this. It integrates directly into PyTorch and exposes neuron as a native device, with eager execution, PyTorch's own distributed primitives (DTensor, FSDP2) and torch.compile.</p>
-<p>For the Hugging Face libraries, Trainium becomes a device like any other: Transformers, Diffusers, Accelerate, PEFT and TRL run on it directly, with the same classes and scripts you would use on any other accelerator. From now on, we recommend that Neuron users use these libraries directly instead of going through Optimum Neuron.</p>
-<p>Text generation is now natively supported in Transformers for a wide range of models. With TorchNeuron, 89% of the top 100 most-used text-generation model architectures are supported out of the box, compared to 46% with Optimum Neuron v0.4.5. You just need to pass the device_map=neuron argument in your code and your model will be moved to the Neuron devices.</p>
-<p>The following is an example of text-generation with tensor parallelism, which will enable to fully benefit from your Neuron instance. Note that it uses a static cache for generation as this is strongly recommended with Neuron to prevent frequent recompilations.</p>
-<p>Now that Neuron is a native PyTorch device, training on Trainium uses the same Hugging Face libraries as any other accelerator: Transformers, Accelerate, PEFT and TRL. You no longer need a dedicated trainer or a Neuron-specific fork of the model code. A standard TRL fine-tuning script runs on a Trainium instance with only a few Neuron-specific settings.</p>
-<p>Here is a supervised fine-tuning script built on TRL's SFTTrainer. If you have fine-tuned a model with TRL on GPUs before, it should look familiar.</p>
-<p>Parallelism is handled natively by Transformers. You put a DistributedConfig with the tensor-parallel (TP) and FSDP sizes in model_init_kwargs, SFTTrainer passes it to from_pretrained, and the model is sharded as its weights are loaded. The Trainer sees that the model is already distributed and does not wrap it again. You don't need an --fsdp flag or an Accelerate FSDP config.</p>
-<p>Nothing in the script is tied to Trainium: the same code runs on any hardware. A few things are worth knowing when you run it on Trainium:</p>
-<p>The command below launches training with torchrun, which starts one process per NeuronCore. TP_SIZE and FSDP_SIZE set the parallelism layout, and their product is the number of processes: here 4 x 8 = 32, matching --nproc_per_node. The 32 processes form a 4 x 8 grid. Tensor parallelism splits each layer across the 4 cores of a TP group, and FSDP shards the parameters, gradients and optimizer state across the 8 TP groups.</p>
-<p>We ran it on 8 Trainium2 chips (32 NeuronCores), which is half a trn2.48xlarge instance.</p>
-<p>Training runs to completion, and trainer.save_model writes a standard Transformers checkpoint. Nothing in it is tied to Neuron: you can push it to the Hugging Face Hub as is and load it on any other hardware.</p>
-<p>Many pipelines from the Diffusers library are compatible with TorchNeuron in eager and compiled mode. FLUX.1-dev, FLUX.2, Qwen-Image, Qwen-Image-2.1 and H3 are also compatible with tensor parallelism to make the most of your Neuron devices. The following is an example showing how you can use TP:</p>
-<p>You can run this piece of code with: NEURON_LOGICAL_NC_CONFIG=2 torchrun --nproc_per_node=8 run.py.</p>
-<p>More and more pipleines will be compatible with TP. If a pipeline you like is not, you can also add support for it following this guide.</p>
-<p>Make sure to check out the kernels from the Neuron team  as more and more Neuron kernels will become available on the Hub to speed up your models.
-Neuron kernels can be written using the Neuron Kernel Interface (NKI), which gives lower control to optimize operations. This way, users can run their own custom operations and share them on the hub.</p>
-<p>You can use for example this kernel to speed up your vision transformers with up to a x2.4 speedup on Trainium!</p>
-<p>Special thanks to the AWS team for their work on TorchNeuron and for their reactivity to our feedback to make the HF integration as good as possible.</p>
-<p>hi, which models are supported with this? is mobernbert and t5gemma2 on the list?</p>
-<p>Hi, we now have a space where you can chek if a model is supported: https://huggingface.co/spaces/aws-neuron/torch-neuronx-model-support</p>
+                <p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>How are you, hacker?
+🪐Want to know what's trending right now?:
+The Techbeat by HackerNoon  has got you covered with fresh content from our trending stories of the day! Set email preference here.</p>
+<p>By @thomascherickal [ 55 Min read ]
+Compare 8 AI coding platforms, explore 10 multi-agent workflows, and learn how local LLMs can eliminate API token fees. Read More.</p>
+<p>By @proofofusefulness [ 5 Min read ]
+The Proof of Usefulness Hackathon announces its final winners, awarding $118,000 in cash prizes and software credits across five categories. Read More.</p>
+<p>By @hackernooncontests [ 4 Min read ]
+Meet the 10 finalists and three winners of HackerNoon's $2,500 Shipaton 2026 Writing Contest, celebrating the stories behind new apps. Read More.</p>
+<p>By @linked_do [ 21 Min read ]
+Context runs the spectrum of semantics, state, and controls. Read More.</p>
+<p>By @zbruceli [ 13 Min read ]
+Theo de Raadt built OpenSSH and OpenBSD for a world he didn't trust. It cost him NetBSD, a DARPA grant and many friends. The world moved in anyway. Read More.</p>
+<p>By @progrockrec [ 4 Min read ]
+Jev is an AI model that decides instead of writing. See how a decision model could tag data in OpenMetadata, and why open-weights Laya fits the job. Read More.</p>
+<p>By @thomascherickal [ 20 Min read ]
+I asked Gemini 4 Argon for 10 Billion-Dollar Products that I could build with it. It Blew My Mind, the products are insane and solve huge problems! Read More.</p>
+<p>By @renanb [ 5 Min read ]
+Learn Spec-Driven Development: treat specifications as the source of truth, review AI-generated code, and stay in control of your software. Read More.</p>
+<p>By @aimodels44 [ 10 Min read ]
+Learn how Qwen3.8-27B Defiance works, including its uncensored weights, custom AI personas, GPU requirements, performance, and limitations. Read More.</p>
+<p>By @adityavithaldas [ 3 Min read ]
+AI is making creation easier. What happens to professional identity when expertise, creative judgment, focus, and audience trust become the differentiators? Read More.</p>
+<p>By @conglomerate [ 7 Min read ]
+Two original Slack employees blog the inside story of Salesforce's $27.7B buy: what broke, what's new, and ask was the acquisition worth the $27.7B? Read More.</p>
+<p>By @andriibondar [ 5 Min read ]
+Andrii Bondar on building mobile apps with AI coding tools as a product designer. DecentWealth as the example of a fintech app. Read More.</p>
+<p>By @nfrankel [ 10 Min read ]
+Why does Playwright get blocked while Chrome works? Read More.</p>
+<p>By @editingprotocol [ 6 Min read ]
+Learn how to use AI in writing without sacrificing originality, personality, or the human perspective behind your byline. Read More.</p>
+<p>By @hockeystick [ 31 Min read ]
+Anthropic's S-1: $16.3B in half-year revenue, ~900% NRR, an $80.7B mostly-paper loss, a blank compute bill and governance that keeps control with founders. Read More.</p>
+<p>By @jmstdy95 [ 5 Min read ]
+Want to make your SaaS AI-ready? Discover how to build, test, and deploy an MCP server that connects your app to AI agents. Read More.</p>
+<p>By @jemsberliner [ 11 Min read ]
+iPhone Duo for iOS developers: the new SDK and APIs, and what broke in a real app adapted on the simulator before the device went on sale. Read More.</p>
+<p>By @penworth [ 6 Min read ]
+The Global Blockchain Business Council (GBBC) has highlighted the connection between agentic AI and blockchain in its Global Standards Read More.</p>
+<p>The TechBeat: Agent Security & Identity (Part 1): Who Are You, Who's Your Agent, And What Should They Be Allowed? (11/5/2026)</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/hf-torchneuron" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/11-6-2026-techbeat?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4 money bugs that bite AI agents (and how I fixed them in PurseString)</title>
+    <title>Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9825.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,77 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>4 money bugs that bite AI agents (and how I fixed them in PurseString)</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6rgc0hj2va9btmeswsaa.jpg" alt="4 money bugs that bite AI agents (and how I fixed them in PurseString)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/HFlakj5EYZYhPovMPldW2KJJQ9G3-8983bp5.png" alt="Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6rgc0hj2va9btmeswsaa.jpg" alt="4 money bugs that bite AI agents (and how I fixed them in PurseString)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/HFlakj5EYZYhPovMPldW2KJJQ9G3-8983bp5.png" alt="Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I'm building PurseString, an open-source MCP server that lets AI agents spend money safely. A lot of it got built this week, because I'm in the middle of the PayPal AI Hackathon and building in public every day.</p>
-<p>Today I want to share something more technical. When you let an agent touch money, the scary bugs aren't the clever ones. They're the boring ones that every payments engineer already knows about, except now nobody's watching while they happen.</p>
-<p>Here are four of them, and what I did about each.</p>
-<p>Bug 1: The retry that pays twice 🔁
-This is the one that started the whole project. A checkout page hung for a few seconds. My agent decided the payment had failed and did the sensible thing: it tried again. Both charges went through.</p>
-<p>Agents retry by design. That's normally a good thing. With money it's a disaster.</p>
-<p>The fix: make the purchase idempotent, not just the API call. Every purchase intent gets a deterministic key built from who's asking and what for:</p>
-<p>SHA256(agent_id, task_id, vendor, amount)
-If the same agent asks to buy the same thing for the same task within 30 minutes, it gets back the same intent and the same card. Not a new one. The retry becomes harmless.</p>
-<p>On the PayPal side I went one step further. PayPal payouts carry an idempotency key all the way to PayPal, so even if PurseString crashes halfway through the call, the retry can't pay the vendor twice.</p>
-<p>Bug 2: 0.1 + 0.2 ≠ 0.3 🧮
-You've seen this meme. I didn't think it would bite me. It did.</p>
-<p>0.1 + 0.2            // 0.30000000000000004
-0.1 + 0.2 <= 0.30    // false 😬
-Picture an agent with a $0.30 daily budget. It spends $0.10, then $0.20. In plain floats that's over budget, so the second purchase gets refused. Flip it around, and rounding tricks can let something through that shouldn't.</p>
-<p>I was patching around it with tiny epsilons and toFixed(2). That's a smell.</p>
-<p>The fix: count money in whole minor units. You still write amount: 15.00 in policies.yaml and in tool calls. But every sum and comparison inside PurseString now runs on integers in the currency's smallest unit: cents for USD, yen for JPY, fils for KWD.</p>
-<p>$0.10 + $0.20  →  10 + 20 = 30 cents  →  fits a 30-cent budget exactly ✅
-And an amount that's finer than the currency allows, like $15.001, is refused, not quietly rounded. With money, silent rounding is just a bug you haven't found yet.</p>
-<p>Bug 3: The hold that isn't a charge 🏨
-This one surprised me most. When a card is "approved" at a hotel, a gas station or a lot of online stores, no money has actually moved yet. It's a hold (an authorization). Later the merchant captures some, all, or none of it.</p>
-<p>The hotel holds $200 and captures $150.
-The gas pump holds $100 and captures $43.
-A store drops the hold and places a new one.
-If you count every approval as spent money, budgets fill up with money that never left. Or worse, a merchant that re-authorizes gets refused for no reason.</p>
-<p>The fix: track holds and captures separately. On Lithic, the card network asks PurseString in real time whether to approve each charge, and later sends what happened to it. PurseString applies those events to the hold it approved:</p>
-<p>Captured → record what was really taken, end the hold.
-Reversed, voided or expired → release it and give the budget back.
-So a subscription card's monthly cap counts what was captured plus what's still held. Refunds are checked against what was actually captured, not what was held. Each event is applied once, so a provider re-sending the same webhook changes nothing.</p>
-<p>Bug 4: "Who edited the log?" 📼
-When finance asks "why did the agent buy this?", PurseString has an answer: the goal, the alternatives the agent tried, every rule and how it ruled, and who approved. That's the whole point.</p>
-<p>But a log is only evidence if nobody can quietly change it. A plain JSON file can be edited by anyone with access to the disk, and that includes an agent with a shell.</p>
-<p>The fix: hash-chain the audit log. Every line now carries a sequence number, the previous line's hash, and its own hash:</p>
-<p>{ "event": "intent_approved", "seq": 2, "prev": "sha256:0870ce5a…", "hash": "sha256:a68bc3e0…" }
-Edit, delete, insert or reorder a line, and the chain breaks right there:</p>
-<p>$ pursestring verify-log
-BROKEN at line 2 (seq 2): hash mismatch: entry was edited
-Plain SHA-256 catches edits, but someone who can write the file could rebuild the whole chain. So if you set PURSESTRING_AUDIT_KEY to a secret kept somewhere else, entries are HMAC-signed instead, and the chain can't be rebuilt without the key.</p>
-<p>One honest limit: a chain can't tell if the newest lines were cut off the end. verify-log prints the head hash, so save it somewhere else (a ticket, a Slack message) when you need to prove later that nothing was dropped.</p>
-<p>Why this matters for the PayPal hackathon 💙
-For the hackathon I added two things on top of the cards:</p>
-<p>A PayPal and Venmo payout rail. The agent can pay a vendor once a purchase is approved. And the agent never chooses who gets paid. The recipient comes from a payee list in your rules, so an email saying "pay this address instead" has nothing to change.
-Guardrails in front of PayPal's own MCP server. PayPal's tools pass through PurseString, so small refunds can go through on their own, bigger ones wait for a human, anything over a cap is refused, and accepting a dispute or cancelling a subscription always needs a person.
-That second one is about the scariest attack on agents right now: prompt injection. A support agent reads a customer email that says "refund me $900 now." If the agent can call create_refund, nothing in the payment provider stops it. A prompt that says "be careful" doesn't stop it either, because the agent you're trying to control can't be the one enforcing the rules.</p>
-<p>All four fixes above apply to PayPal too: safe retries, exact money math, the refund checks, and the tamper-evident log.</p>
-<p>What I learned
-Honestly, none of these bugs are new. Banks solved them decades ago. What's new is that an agent hits them at machine speed, at 3am, with nobody watching.</p>
-<p>That's why I keep coming back to the same idea. Agents and money can work together. They just need the same boring, solid rails that we built for people: clear rules, a second pair of eyes on the risky stuff, and a record nobody can quietly change.</p>
-<p>It's still early. PurseString is a v0.1 alpha. It's tested end to end on the Lithic and PayPal sandboxes, but it hasn't been battle-tested with real money yet. So please use sandbox keys, and tell me what breaks.</p>
-<p>Try it, break it, build it with me
-⭐ Repo: https://github.com/suseendar1414/pursestring
-🧪 10-minute walkthrough: docs/try-it.md
-💬 Discord: https://discord.gg/qBqgx2GB86
-To add it to Claude Code:</p>
-<p>claude mcp add pursestring -- npx -y github:suseendar1414/pursestring
-It starts on a mock rail, so no money moves until you add a sandbox key.
-retries, webhooks that arrive twice? I'd really love to hear it in the comments. It might end up as the next fix. 🙏</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>This is the third in my series on control plane architecture and design patterns. See the first article on a high-level overview of control planes here, and the second on the scaling component here.</p>
+<p>I ended my last piece on scaling with a promise to come back to hot partitions, i.e., the situation where a single piece of your system is hit with disproportionate traffic no matter how well the rest of your infrastructure is provisioned. That problem lives squarely in load balancing and routing, which is what I want to dig into here.</p>
+<p>The thing that surprised me most when I actually started building these systems is how little "load balancing" has to do with load balancers, once you get past the simplest cases. A load balancer is one tool for solving a routing problem. It's not the only one, and for a lot of distributed systems, it's not even the primary one.</p>
+<p>For a basic web application, load balancing is close to what most people picture:</p>
+<p>For stateless, interchangeable backends, this gets you most of the way there. Any healthy instance can serve any request, so the algorithm mostly just needs to avoid overloading any single one.</p>
+<p>This is also where most teams' mental model of "load balancing" stops. It's worth pushing past that, because the moment your backend isn't stateless and interchangeable, this model stops being sufficient.</p>
+<p>A distributed database doesn't have interchangeable backends. Each host owns specific partitions of data, and a request for a given key has to go to the host that actually holds it (or a replica of it). You can't round-robin your way out of that.  The routing decision is now coupled to where the data lives, which is a placement problem, not a traffic-distribution problem.</p>
+<p>This is where load balancing stops being about the request path and starts being about the partitioning and placement strategy decided when data is written, long before any request shows up.</p>
+<p>When a new table or dataset is created in a system like Cassandra, the control plane decides how its partitions get distributed and replicated across the fleet. Get that placement strategy wrong, and no amount of clever request routing fixes it later. You've already baked an imbalance into where the data lives.</p>
+<p>Good placement strategies generally try to:</p>
+<p>None of this touches the request path directly. It's load balancing that happens at write time, and it's arguably the more important half of the problem.</p>
+<p>Even a well-designed placement strategy runs into a specific failure mode: hot partitions. This happens when traffic to specific keys is wildly uneven, usually because of a poorly chosen partition key (a timestamp, a low-cardinality value, a celebrity user ID) that concentrates requests onto one partition regardless of how evenly the data was distributed.</p>
+<p>The uncomfortable part is that this isn't something you can fully prevent through upfront design. Traffic patterns shift, applications evolve, and a key that was fine at launch can become a hotspot a year later. Detecting and correcting for it has to be an ongoing, automated function of the control plane, not a one-time decision.</p>
+<p>Once a hot partition is identified, the fix is usually to split it and redistribute the pieces, but doing this against a partition serving live production traffic is one of the more delicate operations a control plane performs. A few things matter here:</p>
+<p>Systems like DynamoDB build this kind of adaptive re-partitioning directly into their control plane, specifically so that a single misbehaving key doesn't require manual intervention every time it happens.</p>
+<p>Databases are the clearest illustration of placement-time routing, but the same problem, and largely the same solutions, show up anywhere a system shards state across a fleet. Two examples worth knowing well, because they each stress the pattern in a different direction.</p>
+<p>A distributed cache like Redis Cluster or Memcached with consistent hashing looks superficially like the database case: keys are hashed to determine which shard owns them, and requests get routed accordingly. But caches diverge from databases in one important way that reshapes the whole routing problem - cache misses are cheap enough to tolerate, but hot keys are far more common and far more punishing.</p>
+<p>Because caches sit in front of a slower system of record, a single viral key (a trending post, a flash-sale product, a piece of session data for a suddenly-popular event) can spike orders of magnitude above normal traffic in seconds, not the gradual drift you'd see with a hot database partition. A few things follow from that:</p>
+<p>The routing decision for a cache miss is still a placement problem, i.e., determination of which shard owns this key. The operational fix for a hot key, however, usually lives one layer up from the routing logic itself, in how aggressively you can avoid sending duplicate requests downstream in the first place.</p>
+<p>Systems like Kafka consumer groups or Flink jobs route by partition, much like a sharded database. A message with a given key is deterministically assigned to a partition, and a specific consumer or task instance owns that partition for processing.</p>
+<p>But the load balancing constraint here is different in a way that matters: ordering guarantees typically require that all messages for a given key are processed by the same partition, in order, which means you can't rebalance a hot partition by simply splitting it the way you might with a database.</p>
+<p>This creates a distinct set of routing trade-offs:</p>
+<p>Stream processors push placement-time routing to its logical extreme: nearly all of the load balancing work happens at design time, because the ordering guarantees that make the system useful are exactly what make runtime rebalancing so constrained.</p>
+<p>Load balancing in a distributed system operates on two timelines that are easy to conflate:</p>
+<p>For stateless services, the first one is basically the whole problem. For anything stateful and partitioned, the second one dominates, and it's a control plane responsibility that runs continuously in the background rather than a configuration you set once and forget.</p>
+<p>Next in this series, I'll get into reliability guarantees - how control planes enforce promises (replication, TTL-based deletion, eventual consistency) that are genuinely hard to guarantee synchronously in the request path, and the auditing systems teams build to catch the gap between what a system promises and what it actually did.</p>
+<p>Control Planes, Part 2: When to Stop Configuring Autoscalers and Build Your Own</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/suseendaran_nair_88f71da1/4-money-bugs-that-bite-ai-agents-and-how-i-fixed-them-in-pursestring-2ofm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/load-balancing-starts-before-the-load-balancer-routing-patterns-for-distributed-systems?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

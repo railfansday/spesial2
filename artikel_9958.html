@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tokenizers v1: encode, decode and scaling, measured</title>
+    <title>Libghostty 1.0</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9958.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,174 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>tokenizers v1: encode, decode and scaling, measured</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>Libghostty 1.0</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The tokenizer has not historically been the bottleneck within ML workflows. Compute-wise, tokenization is light compared to the heavy modeling happening in the rest of the pipeline. Yet, in some cases, it has rapidly become key to accelerating (or slowing down) your machine learning work.</p>
-<p>As models become faster and workloads scale, that balance begins to shift. Training on massive datasets, serving many concurrent requests, or repeatedly processing long inputs can put enough pressure on the tokenizer that it starves the model of data.</p>
-<p>This is why we have chosen to heavily focus on performance for the upcoming version 1 of tokenizers. Tokenization should be light and should scale with your workflow. Your GPUs should never sit idle waiting for the CPU to complete its tokenization.</p>
-<p>In this article, we look at what makes v1 faster than v0.23, often by tens of times.</p>
-<p>This work was entirely possible thanks to the rest of the ecosystem. Tokenization is a very active area of open source work, and libraries such as gigatoken, tiktoken, kitoken, tokie, fastokens, wordchipper and ai-tokenizer, as well as many others, have each pushed on what a fast tokenizer can be. We read that work, and several of the ideas below reached us because another project showed they were worth trying.</p>
-<p>Before this refactor, tokenizers was nowhere near the performance it could have had, so contributing to it may not have seemed worth it. With this refactor, we hope to make clear that we intend tokenizers to be a library worth contributing to.</p>
-<p>We also thank IBM, NVIDIA, and the ExecuTorch team for contributing patches and helping us test across a wide range of hardware to broaden platform support.</p>
-<p>We showcase results for the release candidate of tokenizers v1 against other widely used alternatives. We go over single-threaded, multi-threaded, scaling across threads, per-model comparison, per-language comparison, latency, decoding throughput, memory heap, as well as crate size.</p>
-<p>We run this from the tokbench repository, and add a command to rerun the benchmarks on your hardware if you would like to do so.</p>
-<p>v1 will produce the same token IDs as v0.23. The goal was to preserve the output, the API, the vocabulary and the merge ranks, and improve everything that can be improved. That includes breadth. The library stays general across tokenizer families rather than specialising on BPE, so v1 loads everything v0.23 loaded.</p>
-<p>A tokenizer converts text into the list of integers a model reads. tokenizers runs that conversion in four stages. Normalization applies operations such as lowercasing or Unicode normalization to the raw text. Pre-tokenization splits the text into smaller pieces called pre-tokens. The model turns each pre-token into tokens and maps them to IDs in its vocabulary. Post-processing adds any special tokens the model expects.</p>
-<p>The model stage is where most of the work described here happens. Eight of the ten model families measured in this article use byte pair encoding, or BPE. BPE starts from the bytes of a pre-token and repeatedly joins the highest ranked adjacent pair until no ranked pair remains. The ranking is learned when the tokenizer is trained and ships with it, so the same text always produces the same IDs. A merge never crosses a pre-token boundary. The other two families use WordPiece and Unigram, the two other model types the library supports.</p>
-<p>The tokenization pipeline page documents the four stages. Tokenization algorithms documents BPE, WordPiece and Unigram.</p>
-<p>Each stage was worked on. These are the changes that mattered:</p>
-<p>BPE models use a regular expression to split the input text into smaller, easier to process chunks called pre-tokens. Merges happen inside a pre-token and never across the boundary between two of them, so this split decides what the rest of the pipeline sees.</p>
-<p>That regular expression is a fixed parameter of the model. It ships with the tokenizer and never changes at runtime, so there is no need for a general-purpose regex engine to interpret it on every encode. An equivalent splitting function can be written by hand, once, for the pattern a given model actually uses.</p>
-<p>A hand-written function can then use the SIMD instructions (single instruction, multiple data) of a modern CPU, which apply one operation to many bytes at once and suit UTF-8 text well. bitcannon views the input's bytes as parallel streams of bits, so boundaries fall out of boolean operations across whole registers instead of a scan that advances one character at a time. It decides 64 bytes per register operation. The same idea drives Parabix for text processing and simdjson for JSON.</p>
-<p>This depends on recognising the pattern. A handful of grammars cover most byte-level BPE models, and a tokenizer whose pattern is not among them keeps the regex path and none of this speed-up. That is why the gains above vary as much as they do.</p>
-<p>Real text contains many repeated words. Because BPE always produces the same token IDs for a given pre-token, v1 can save the result after processing it once. A thread-local cache maps each pre-token's bytes to its token IDs, allowing later occurrences to skip the merge process.</p>
-<p>Naturally, as the input grows, the number of unique words can grow more slowly than the total number of words. Repeated words then account for an increasing share of the input. New words still appear, which accounts for the occasional misses in the animation below.</p>
-<p>Caching works best when the input contains repeated pre-tokens. Input with few repeated pre-tokens can pay for lookups without receiving many hits.</p>
-<p>The next major cost comes from the BPE merge loop. For each pre-token, the loop repeatedly finds the highest-priority adjacent pair and merges it. The previous implementation allocated new memory for every call and built a new priority queue for every pre-token.</p>
-<p>v1 reuses a scratch buffer owned by the caller, removing those repeated allocations. It stores symbols in a flat array and links adjacent symbols by their positions in that array, which makes updates during merging cheaper. It also processes a batch of pre-tokens in a single model call.</p>
-<p>Each candidate pair is also packed into a single 64-bit value, with the merge rank in the high bits. Comparing two candidates is then just comparing two integers, and "no merge here" is the largest possible value, so the loop finds its next merge without a branch.</p>
-<p>Small differences in benchmark design can produce large differences in tokenizer performance. We used the following rules to keep the comparison consistent across engines.</p>
-<p>Repeatedly encoding one document can be faster than encoding a stream of distinct documents on the same build. The first approach measures performance when the entire document is already represented in the cache. The second measures performance on new input while allowing previously seen pre-tokens to remain cached.</p>
-<p>Both conditions are sometimes described as "warm," even though they measure different workloads. Our headline results use distinct documents, and the complete corpus is too large to fit in the cache. Tokenizer benchmarks should identify which workload they use because the choice can dominate the result.</p>
-<p>Across the ten model families v1's encode path covers, it encodes text 3 to 30 times faster than v0.23 with one thread on an Apple M4 Max. The low end is t5-base, the high end gpt2. It scales at 76% of linear across eight workers. Throughout these changes, v1 produces exactly the same token IDs as the released library.</p>
-<p>The overall improvement comes from several changes working together: a hand-written splitter in place of a regex engine, a cache that answers a repeated word without merging it again, a merge loop that never touches the allocator, and one model call per batch of pre-tokens instead of one per pre-token. Each reduces the work done at a different point in the pipeline.</p>
-<p>The next priority is support for more model families. We will move additional models onto the new merge loop before 1.0.0. Once the release candidates stabilize, the next step will be bringing about the improvements within the transformers library and the rest of the ecosystem which depend on the tokenizers library.</p>
-<p>This post is generated from tokbench results and will be updated as support expands.</p>
-<p>A release candidate for v1 is on crates.io. The API you call is the one you already call, so the only thing that changes is which build you install.</p>
-<p>Training is behind a default-on feature that pulls a C++ dependency with it. If you only need to encode, turn it off to exclude the training implementation:</p>
-<p>Encoding is unchanged: same call, same ids.</p>
-<p>Every figure in this post was measured against this crate. The Python bindings wrap the same code and are built from bindings/python, but they add per-call overhead that none of these measurements include.</p>
-<p>The benchmarks in this post cover the completed release-candidate work listed first. The remaining sections show what is still required for 1.0.0 and what we plan to explore afterward.</p>
-<p>This work is in the Rust pre-release on crates.io:</p>
-<p>Will have to try it out. Data seems real good.</p>
+                <p>libghostty-vt 1.0 is here. libghostty is a
+portable, high-performance C library for terminal emulation, extracted
+directly from the core of Ghostty. The 1.0 release means both the library
+itself and the C ABI are now stable.</p>
+<p>A little over a year ago, I wrote that
+libghostty is coming. At the time,
+the Zig module had just been merged, the C API didn't exist, and nobody
+but Ghostty was a consumer. Today, the C API is a complete terminal emulator,
+it runs in production for millions of people across hundreds of products,
+both free and commercial, and it has a real, enforced ABI stability policy.</p>
+<p>This post is about how we got here and what 1.0 actually means.1</p>
+<p>Since starting the Ghostty project in 2022, the most common question I've
+been asked is "why?". I already answered this in the
+libghostty is coming
+post, so feel free to read that if you wish. Today, I'd rather answer this
+by showing the broad industry impact libghostty has already had. I believe
+this strongly validates its existence.</p>
+<p>A year ago, I used a
+bug in JediTerm,
+the terminal emulator in JetBrains IDEs, as an example of why terminal
+emulation is hard to get right. A year later,
+the terminal in JetBrains IDEs now runs on libghostty.
+Every IntelliJ, PyCharm, GoLand, etc. user now has a libghostty-powered
+terminal. Based on a report by JetBrains, that's over 12.5 million
+active users.</p>
+<p>Neovim has an approved pull request
+replacing libvterm with libghostty-vt. Among other things, it closes a
+10-year-old issue
+about reflowing scrollback on resize. The maintainers are waiting on a
+tagged release before merging so that distributions can package the
+dependency separately, and the release today should enable that.</p>
+<p>KDE developers are
+experimenting with a Konsole replacement
+built on it. Vercel's Turborepo uses it
+to render task output in its TUI. devenv
+uses it to drive shells. Antithesis
+used it to fuzz TUI programs
+and found real bugs in btop and others. Ghostel
+brings it to Emacs. ghostty-web
+is the WASM build with an Xterm.js-compatible API. Commercial products
+like OrbStack embed it. And a whole wave of
+new terminals and "agentic" coding tools, such as
+herdr and
+cmux, have been built on it
+rather than writing yet another emulator.</p>
+<p>There are community bindings for Rust, Go, JavaScript, Swift, Python,
+.NET, Elixir, Dart, Java, and more, and the
+awesome-libghostty
+list tracks well over a hundred projects.</p>
+<p>More people today use a terminal powered by libghostty than use Ghostty
+the application, by a very large multiple. And libghostty is having
+a much larger impact than being "just" a terminal emulator.2</p>
+<p>1.0 means libghostty-vt follows semantic versioning and has strict
+ABI compatibility
+promises so that packagers across distributions and operating systems
+can be confident packaging libghostty-vt and program developers can be
+confident dynamically linking against it.</p>
+<p>Beyond providing useful features, I believe the hallmark of a high-quality
+and enduring C library is ABI stability. So from the start, I took inspiration
+from C libraries I enjoyed working with and designed the API to have
+a strong, stable ABI that allows for future additions.</p>
+<p>Every object is an opaque handle. The hundreds of values you might read or
+write go through a small set of enum-keyed getters and setters, so we
+can add new values easily without introducing a new symbol. Programs with
+newer headers linked against an older libghostty get GHOSTTY_UNSUPPORTED
+results instead of crashes or undefined behavior. The few non-opaque structs
+we have carry their size so that fields can be appended later, or contain
+reserved padding. Enums are pinned to int on every compiler, as much as
+the C standard allows.</p>
+<p>Our CI enforces our ABI policy. Every change is checked with
+libabigail against a committed baseline
+on Linux, and against golden type manifests on macOS and WebAssembly.</p>
+<p>On ELF platforms, every exported symbol is also versioned, so the dynamic
+loader refuses to load a mismatched library by name rather than failing in
+some mysterious way later.</p>
+<p>In addition to ABI stability, the 1.0 release brings along the proper
+build tooling, tarballs, dependency licensing manifests, documentation,
+and more to enable every major operating system and distribution to
+package libghostty-vt through standard official tooling.</p>
+<p>Libghostty has its own release cycle, separate from Ghostty the
+application. And it has its own tarballs with only the files and dependencies
+libghostty needs, resulting in smaller sizes and simpler licensing
+verification and compatibility.</p>
+<p>Each release publishes a signed source tarball along with a companion
+dependencies tarball containing every Zig package in Zig's own cache
+layout, so a distribution can build the library completely offline. The
+build installs the shared and static libraries with a proper SONAME,
+headers, pkg-config files, and a CMake package config, and it honors
+--prefix, DESTDIR, and lib64. Debug info is kept by default so
+distros can split it out. All of this is documented in
+PACKAGING-LIBGHOSTTY.md,
+which ships with the tarball.</p>
+<p>libghostty-vt is MIT licensed. At runtime it needs nothing beyond
+libc, and it can be built fully freestanding if you don't want that
+either.3</p>
+<p>The library compiles in a small number of permissively licensed
+dependencies: simdutf and
+Google Highway for SIMD, a compact
+Unicode table for grapheme data, and
+Wuffs for image decoding in the
+Kitty graphics protocol. Both simdutf and Highway are built
+without libc++, so there is no C++
+standard library dependency.</p>
+<p>There is no copyleft code anywhere in the
+dependency tree. Every dependency is listed in a machine-readable
+manifest with its version, SPDX license, and hash, specifically so
+distros can fill in their bundled-library metadata more easily.</p>
+<p>If a distro would rather dynamically link the system simdutf or Highway,
+there's a build flag for that.</p>
+<p>libghostty-vt is highly portable. The table below lists all the platforms
+and architectures that we build and test (full unit tests plus running all
+examples) in CI:</p>
+<p>There is a second set of platforms we build in CI but do not run tests for.
+These systems all have known users; we just haven't set up the machinery
+for automated testing:</p>
+<p>Each of the tested platforms gets the artifacts it expects:</p>
+<p>Portability isn't just about the ability to build and run. It's also
+about resource usage and being able to work in a wide variety of
+resource environments.</p>
+<p>For resource usage, the library creates no threads, allocates only through
+an allocator you can customize, and uses minimal compute and memory.
+I've run 10,000 active terminals, each with a live shell producing output,
+on a Linux server with 4 cores and 8 GB of RAM. In this test, I had to use
+dash because bash used far more RAM than libghostty-vt and wouldn't fit
+into the 8 GB budget.</p>
+<p>You can now create a terminal in ~1,500 lines of C
+that has more features and better performance than just about any terminal
+that existed in 2025, and most today in 2026.5 And thanks to the rich
+ecosystem of language bindings, you can do this in every major programming
+language. You get this for free. For almost no effort. You can just do it.</p>
+<p>libghostty-vt is a generalized library, so we will focus on stability
+while implementing as many terminal protocols as exist
+(giving options to enable/disable them, of course) so that embedders
+have the luxury of choice.</p>
+<p>Every bug any libghostty-vt embedder reports makes everyone else in
+the ecosystem better. Every feature we ship in libghostty-vt becomes
+available to everyone quickly and safely. Terminals can move faster with
+less fragmentation.</p>
+<p>Thank you to everyone who contributed to the library, wrote bindings,
+filed bugs, and shipped something on top of it while the API was still
+experimental. As with all open source, this was the work of a large
+community.</p>
+<p>Docs, examples, and downloads are at lib.ghostty.org.</p>
+<p>As usual, I hate that I have to do this for every post, but I want to
+note this post was completely hand-written with no AI assistance. ↩</p>
+<p>The numbers are rough because most consumers don't report usage, but
+JetBrains alone reports
+12.5 million recurring active users,
+and that's before counting everything else on the list. ↩</p>
+<p>In the original post I wrote "not even libc!" The default build does
+link libc, because the SIMD paths use it and the default allocator is
+malloc. Turn off SIMD and the library is freestanding, which is
+how it runs on bare-metal RISC-V and ARM targets. ↩</p>
+<p>The feature flags aren't WASM-specific; they work on every target.
+They're likely useful for things like embedded devices too. ↩</p>
+<p>"Features" here means the set of terminal protocols and sequences
+understood, and "performance" means parsing throughput and memory
+usage, since those are the parts libghostty-vt provides. ↩</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/tokenizers-v1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://mitchellh.com/writing/libghostty-1-0" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

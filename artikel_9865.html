@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers Model Integration Contracts</title>
+    <title>Ginger VS Grammarly: Which Grammar Checker is Better in (2022) ?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9865.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,142 +15,21 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers Model Integration Contracts</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>Ginger VS Grammarly: Which Grammar Checker is Better in (2022) ?</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
-(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
-During training, it could peek at the answer it was supposed to predict.
-Nothing crashed, and the bug stayed in main for almost two months.</p>
-<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
-it on every one of them. This post is about that model and the tests built
-around it.</p>
-<p>Transformers supports over 750
-model types, and its test suite is big: 88,000+ CPU tests on main, plus
-200,000+ GPU tests in a daily run. Model tests are only part of it: we also
-test pipelines, training, distributed execution, quantization and attention
-kernels.</p>
-<p>The integration tests load real checkpoints and exercise the model's API on
-real hardware. Running all of that on every PR would mean keeping a lot of GPUs
-busy all day long, which isn't practical. By the time a scheduled run finds a
-regression, it may already be in main.</p>
-<p>Our approach is to shrink the model instead. We build a fixture: a small
-model made from the real checkpoint's configuration, with fewer and narrower
-layers but every kind of layer it has, and its tokenizer and processor files
-unchanged. It is published once, then reused. We run "fast integration tests"
-against it on a cheap CPU runner. In our
-CPU study,
-the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
-is 1,227 MB.</p>
-<p>This also covers very large models: some don't fit on our standard GPU
-runners, but their fixtures run on CPU.</p>
-<p>Model integrators already build tiny test models (Transformers' tiny-random-*
-checkpoints). We wanted a common recipe, and
-checks that go beyond loading the model and running a forward pass. The UMT5
-bug would have passed a forward pass just fine.</p>
-<p>Fixtures won't replace full integration tests, but on PRs they give us a
-chance to catch bugs before they reach main.</p>
-<p>transformers-mic is a proposed
-standard for packaging these tests. A Model Integration Contract (MIC) has
-three parts:</p>
-<p>The contract holds if running the usage path on the fixture still produces the
-baselines.</p>
-<p>A contract covers an architecture and a usage path, not a single checkpoint:
-compatible checkpoints can share a fixture, while each keeps its own expected
-results. We publish them in huggingface-mic.</p>
-<p>For example, the SmolLM contract generates from prompts such as "The capital
-of France is" and compares its token IDs with a recorded answer. After loading
-the model and tokenizer, the generation code is, simplified to one prompt:</p>
-<p>It also compares training loss, checks that gradients are finite and verifies
-that an optimizer step changes the weights. See the full
-usage.md.</p>
-<p>A fleet dataset
-on the Hub pins each MIC to a frozen revision, along with the package versions
-used to record its baselines. Each CI run records the fleet revision it
-used, so we can reproduce it later.</p>
-<p>On a PR, we pick MICs based on the files the patch changes.</p>
-<p>We replayed frozen MICs over five months of Transformers commits. The small
-UMT5 fixture flagged the regression from its introduction on July 30, 2026
-until its fix on September 28.
-Label log-probabilities differed from the reviewed baseline by 1.22 and training
-loss by about 0.20.</p>
-<p>One detail mattered: the contract used SDPA, the default attention path.
-Running only the eager attention variant missed the bug. A fixture only
-helps if it goes through the same code as the real checkpoint.</p>
-<p>We then reverted the fix on a proof branch in Transformers' CI. The check
-failed with the same differences, and the selected T5 contract's runner step
-took 13.4 seconds on CPU, excluding setup.</p>
-<p>The replay results
-and the CI demo
-have the measurements and reproduction details.</p>
-<p>The first recipe was simple: make the dimensions smaller and keep fewer
-layers. That wasn't enough for mixed architectures. Keeping two layers is no
-use if both use sliding attention and the full-attention layers disappear.</p>
-<p>We also keep the original weights file format. Otherwise we would skip the
-conversion code that runs when a user loads the real checkpoint.
-The full recipe
-has more detail.</p>
-<p>The Llama 4 Scout shrink report
-shows what this looks like on a big model. 108.6 billion parameters become 44.7
-million. The vision stack goes from 34 layers to 2 and the language stack from
-48 to 4, keeping the checked layer kinds and MoE routing style.</p>
-<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
-model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
-the candidate baselines. The LLM drafts; it doesn't approve. Changed
-expectations require human review.</p>
-<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
-<p>It drafts the contract, builds the fixture and records its baselines on your
-machine, asking you to review each step, and stops before uploading anything.
-For a new model, the draft comes from an LLM through Inference Providers, billed
-to your own account (--bill-to ''). The
-CLI docs
-cover the individual steps.</p>
-<p>We used agents to build MICs across model families. When they hit an edge
-case, we fixed the recipe itself rather than the one fixture, with help from
-model experts. The published models and remaining gaps are in the
-coverage space.</p>
-<p>With random weights, our Whisper fixture barely responded to changes in
-the audio. It ran, but that made it a poor test of the audio path.</p>
-<p>So we trained it on a few tones paired with words such as "red" and "green".
-We weren't teaching it speech recognition, just making audio changes visible
-in its outputs. In our weight-initialization study,
-the random Whisper fixtures caught 18 of 24 injected faults. The overfit
-fixtures caught all 24.</p>
-<p>That gives us two ways to build the weights:</p>
-<p>The Whisper result doesn't settle which is better. Those were synthetic
-faults, and we haven't found a real regression caught only by the overfit
-version. Both versions missed an assisted-decoding bug that the real Whisper
-checkpoint exposed.</p>
-<p>So we keep random weights when they pass the checks, and overfit when we need
-better sensitivity or readable answers. Training takes seconds, but it is one
-more step that can fail to converge, and one more thing to maintain. The comparison
-has the results for both.</p>
-<p>As of November 1, 2026, the MIC job in Transformers CI
-reports failures without blocking PRs. Whether it should block depends on
-things we haven't measured yet:</p>
-<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
-show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
-<p>Coverage is still partial, across model families and the APIs people use.
-When a regression slips through, we can add the missing usage path and replay
-it on the broken and fixed versions. We'll keep existing tests until their
-coverage is accounted for.</p>
-<p>Finally, we'd like to link original Hub model pages to their MICs, so a
-developer or an agent using a checkpoint could start from an example tested on
-that checkpoint, its environment and its expected outputs.</p>
-<p>Want to help? Pick an uncovered model from the
-coverage space, try
-the tmic workflow,
-and contribute a usage path or review a generated contract.</p>
-<p>MIC contract coverage of Transformers model types</p>
-<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
-<p>MIC contract coverage of Transformers model types</p>
+                <p><div class="separator" style="clear: both; text-align: center;"><a href="https://blogger.googleusercontent.com/img/a/AVvXsEiw55GbmTyuJuYD43yqA61hrsY7bBgb5BwMzkO1sOgHcRFh3PK4ApQtQgGeXfZWLhT-2zxAxo_RB16tyEXwqBx4h__IKoEb9OIpWD9NqRI-9DU1uhH47E3QMQqFx0uSAjjk-aRD0hEZJkahQCdC_uQIZEVJUnVkyQfeqg8nJZxtgLCxZcLX0af06pu5WQ=s1920" style="margin-left: 1em; margin-right: 1em;"><span style="font-family: Comfortaa;"><img alt="Grammarly vs Ginger" border="0" height="360" src="https://blogger.googleusercontent.com/img/a/AVvXsEiw55GbmTyuJuYD43yqA61hrsY7bBgb5BwMzkO1sOgHcRFh3PK4ApQtQgGeXfZWLhT-2zxAxo_RB16tyEXwqBx4h__IKoEb9OIpWD9NqRI-9DU1uhH47E3QMQqFx0uSAjjk-aRD0hEZJkahQCdC_uQIZEVJUnVkyQfeqg8nJZxtgLCxZcLX0af06pu5WQ=w640-h360" title="Grammrly Vs Ginger" width="640" /></span></a></div><p><span style="font-family: Comfortaa;"><br /></span></p><p><span style="font-family: Comfortaa;"><b>Ginger VS Grammarly:</b> When it comes to grammar checkers, Ginger and Grammarly are two of the most popular choices on the market. This article aims to highlight the specifics of each one so that you can make a more informed decision about the one you'll use.</span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">What is Grammarly?</span></h3><p><span style="font-family: Comfortaa;">If you are a writer, you must have heard of&nbsp; Grammarly before. Grammarly has over 10M users across the globe, it's probably the most popular AI writing enhancement tool, without a doubt. That's why there's a high chance that you already know about Grammarly.</span></p><p><span style="font-family: Comfortaa;">But today we are going to do a comparison between Ginger and Grammarly, So let's define Grammarly here. Like Ginger, Grammarly is an AI writing assistant that checks for grammatical errors, spellings, and punctuation. The free version covers the basics like identifying grammar and spelling mistakes</span></p><p><span style="font-family: Comfortaa;">While the Premium version offers a lot more functionality, it detects plagiarism in your content, suggests word choice, or adds fluency to it.</span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Features of Grammarly</span></h3><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Grammarly detects basic to advance grammatical errors and also help you why this is an error and suggest to you how you can improve it</span></li><li><span style="font-weight: normal;"><span style="font-family: Comfortaa;">Create a personal dictionary&nbsp;</span></span></li><li><span style="font-family: Comfortaa;">Check to spell for American, British, Canadian, and Australian English.</span></li><li><span style="font-family: Comfortaa;">Understand inconsistencies.&nbsp;</span></li><li><span style="font-family: Comfortaa;">Detect unclear structure.&nbsp;</span></li><li><span style="font-family: Comfortaa;">Detect Plagiarism.</span></li><li><span style="font-family: Comfortaa;">Explore overuse of words and wordiness.&nbsp;</span></li><li><span style="font-family: Comfortaa;">Get to know about the improper tones.&nbsp;</span></li><li><span style="font-family: Comfortaa;">Discover the insensitive language aligns with your intent, audience, style, emotion, and more.</span></li></ul><p></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">What is Ginger</span></h3><p><span style="font-family: Comfortaa;">&nbsp;Ginger is a writing enhancement tool that not only catches typos and grammatical mistakes but also suggests content improvements. As you type, it picks up on errors then shows you what’s wrong, and suggests a fix. It also provides you with synonyms and definitions of words and allows you to translate your text into dozens of languages.</span></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger Software: Features &amp; Benefits</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Ginger's software helps you identify and correct common grammatical mistakes, such as consecutive nouns, or contextual spelling correction.</span></li><li><span style="font-family: Comfortaa;">The sentence rephrasing feature can help you convey your meaning perfectly.</span></li><li><span style="font-family: Comfortaa;">Ginger acts like a personal coach that helps you practice certain exercises based on your mistakes.</span></li><li><span style="font-family: Comfortaa;">The dictionary feature helps users understand the meanings of words.</span></li></ul><p></p><p><span style="font-family: Comfortaa;">In addition, the program provides a text reader, so you can gauge your writing’s conversational tone.</span></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger vs Grammarly</span></h3><p><span style="font-family: Comfortaa;">Grammarly and Ginger are two popular grammar checker software brands that help you to become a better writer. But if you’re undecided about which software to use, consider these differences:</span></p><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Grammarly only supports the English language while Ginger supports 40+ languages.</span></li><li><span style="font-family: Comfortaa;">Grammarly offers a wordiness feature while Ginger lacks a Wordiness feature.</span></li><li><span style="font-family: Comfortaa;">Grammarly shows an accuracy score while Ginger lacks an accuracy score feature.</span></li><li><span style="font-family: Comfortaa;">Grammarly has a plagiarism checker while ginger doesn't have such a feature.</span></li><li><span style="font-family: Comfortaa;">Grammarly can recognize an incorrect use of numbers while Ginger can’t recognize an incorrect use of numbers.</span></li><li><span style="font-family: Comfortaa;">Grammarly and Ginger both have mobile apps.</span></li><li><span style="font-family: Comfortaa;">Ginger and Grammarly offer monthly, quarterly, and annual plans.</span></li><li><span style="font-family: Comfortaa;">Grammarly allows you to check uploaded documents. while Ginger doesn't check uploaded documents.</span></li><li><span style="font-family: Comfortaa;">Grammarly Offers a tone suggestion feature while Ginger doesn't offer a tone suggestion feature.</span></li><li><span style="font-family: Comfortaa;">Ginger helps to translate documents into 40+ languages while Grammarly doesn't have a translation feature.</span></li><li><span style="font-family: Comfortaa;">Ginger Offers text to speech features while Grammarly doesn't have such features.</span></li></ul><p></p><p><span style="font-family: Comfortaa;"><br /></span></p><p><b><span style="font-family: Comfortaa;">Grammarly Score: 7/10</span></b></p><p><b><span style="font-family: Comfortaa;">Ginger:4/10</span></b></p><p><b><span style="font-family: Comfortaa;">So Grammarly&nbsp; wins here.</span></b></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger VS Grammarly: Pricing Difference</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Ginger offers a Premium subscription for 13.99$/month. it comes at $11.19/month for quarterly and $7.49/month for an annual subscription with 40$ off.</span></li><li><span style="font-family: Comfortaa;">On the other hand,&nbsp; Grammarly offers a Premium subscription for $30/month for a monthly plan&nbsp; $20/month for quarterly, and $12/month for an annual subscription.</span></li></ul><p></p><p><span style="font-family: Comfortaa;">For companies with three or more employees, the Business plan costs $12.50/month for each member of your team.&nbsp;</span></p><p><b><span style="font-family: Comfortaa;">Ginger Wins Here</span></b></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger vs Grammarly – Pros and Cons</span></h3><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Grammarly Pros</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Offers&nbsp; free version</span></li><li><span style="font-family: Comfortaa;">All-in-one tool (grammar checker + spell checker + punctuation checker)</span></li><li><span style="font-family: Comfortaa;">Allows you to edit a document without affecting the formatting.</span></li><li><span style="font-family: Comfortaa;">Style checker (paid version)</span></li>
+
+  <div id="atContainer-291a91492f7bcf13f252654de362127b"></div>
+<span style="font-family: Comfortaa;"><br />
+</span><li><span style="font-family: Comfortaa;">Active and passive voice checker</span></li><li><span style="font-family: Comfortaa;">Personal dictionary&nbsp;</span></li><li><span style="font-family: Comfortaa;">Plagiarism checker (paid version)</span></li><li><span style="font-family: Comfortaa;">Available on all major devices and platforms</span></li><li><span style="font-family: Comfortaa;">Free mobile apps&nbsp;</span></li><li><span style="font-family: Comfortaa;">User-friendly interface</span></li><li><span style="font-family: Comfortaa;">Browser extensions and MS word add-ons</span></li><li><span style="font-family: Comfortaa;">Can upload and download documents</span></li></ul><p></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Grammarly Cons</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Supports only English&nbsp;</span></li><li><span style="font-family: Comfortaa;">Customer support only via email</span></li><li><span style="font-family: Comfortaa;">Limits to 150,000 words</span></li><li><span style="font-family: Comfortaa;">Subscription plans can be a bit pricey&nbsp;</span></li><li><span style="font-family: Comfortaa;">Doesn’t offer a free trial</span></li><li><span style="font-family: Comfortaa;">No refund policy</span></li></ul><p></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger Pros</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Offers free version</span></li><li><span style="font-family: Comfortaa;">All-in-one tool (grammar checker + spell checker + punctuation checker)</span></li><li><span style="font-family: Comfortaa;">Affordable Subscription plans (Additionals discounts are available)</span></li><li><span style="font-family: Comfortaa;">Active and passive voice changer</span></li><li><span style="font-family: Comfortaa;">Translates documents in 40+ languages&nbsp;</span></li><li><span style="font-family: Comfortaa;">Personal dictionary</span></li><li><span style="font-family: Comfortaa;">Browser extension available&nbsp;</span></li><li><span style="font-family: Comfortaa;">&nbsp;Personal trainers help clients develop their knowledge of grammar.</span></li><li><span style="font-family: Comfortaa;">Text-to-speech feature reads work out loud</span></li><li><span style="font-family: Comfortaa;">Get a full refund within 7 days</span></li></ul><p></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><span style="font-family: Comfortaa;">Ginger Cons</span></h3><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Mobile apps aren't free</span></li><li><span style="font-family: Comfortaa;">Limited monthly corrections for free users</span></li><li><span style="font-family: Comfortaa;">No style checker</span></li><li><span style="font-family: Comfortaa;">No plagiarism checker</span></li><li><span style="font-family: Comfortaa;">Not as user-friendly as Grammarly</span></li><li><span style="font-family: Comfortaa;">You are unable to upload or download documents; however, you may copy and paste files as needed.</span></li><li><span style="font-family: Comfortaa;">Doesn't offer a free trial</span></li></ul><p></p><p><span style="font-family: Comfortaa;"><br /></span></p><h3 style="text-align: left;"><b><span style="font-family: Comfortaa;">Summarizing the Ginger VS Grammarly: My Recommendation</span></b></h3><p><span style="font-family: Comfortaa;">While both writing assistants are fantastic in their ways, you need to choose the one you want.&nbsp;</span></p><p><span style="font-family: Comfortaa;">For example, go for Grammarly if you want a plagiarism tool included.&nbsp;</span></p><p><span style="font-family: Comfortaa;">Choose Ginger if you want to write in languages other than English. I will to the differences for you in order to make the distinctions clearer.</span></p><p></p><ul style="text-align: left;"><li><span style="font-family: Comfortaa;">Grammarly offers a plagiarism checking tool</span></li><li><span style="font-family: Comfortaa;">Ginger provides text to speech tool</span></li><li><span style="font-family: Comfortaa;">Grammarly helps you check uploaded documents</span></li><li><span style="font-family: Comfortaa;">Ginger supports over 40 languages</span></li><li><span style="font-family: Comfortaa;">Grammarly has a more friendly UI/UX</span></li></ul><div style="text-align: left;"><span style="font-weight: normal;"><span style="font-family: Comfortaa;">Both Ginger and Grammarly are awesome writing tools, without a doubt. Depending on your needs, you might want to use Ginger over Grammarly. As per my experience, I found Grammarly easier to use than Ginger.</span></span></div><p></p><p><span style="font-family: Comfortaa;">Which one you like let me know in the comments section also give your opinions in the comments section below.</span></p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://techncruncher.blogspot.com/2022/02/ginger-vs-grammarly-which-grammar.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

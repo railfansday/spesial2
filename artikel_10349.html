@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluating AI agents: moving past the vibe check</title>
+    <title>How to Learn Java with AI: A Practical Guide for Beginners</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10349.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Evaluating AI agents: moving past the vibe check</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>How to Learn Java with AI: A Practical Guide for Beginners</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/evaluating-ai-agents-banner-1600x.2e16d0ba.fill-1200x600.png" alt="Evaluating AI agents: moving past the vibe check" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_with_ai_blog_cover_f95e93b52a.png" alt="How to Learn Java with AI: A Practical Guide for Beginners" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/evaluating-ai-agents-banner-1600x.2e16d0ba.fill-1200x600.png" alt="Evaluating AI agents: moving past the vibe check" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_with_ai_blog_cover_f95e93b52a.png" alt="How to Learn Java with AI: A Practical Guide for Beginners" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Your agent can loop, burn tokens, or give a completely hallucinated answer and still look fine. A vibe check won't catch that. This post is the playbook behind our AI Agent Clinic episode How to Actually Evaluate (Any) AI Agent: Beyond the Vibe Check, where we build an eval pipeline for a LangGraph agent in 60 minutes. Here's what's inside:</p>
-<p>When teams start building an AI agent, testing usually looks the same. You wire up a model, hand it a few tools, run three or four prompts in a terminal, and eyeball the output. If the answer looks reasonable, you ship it.</p>
-<p>In practice, this breaks down fast. You tweak a system prompt to fix an edge case in one workflow, and suddenly the agent stops calling a required tool in another.</p>
-<p>Worse, agents fail differently than standard software. An agent can get stuck in a retry loop, fire off multiple tool calls, yet still return a polite, plausible-sounding final answer.</p>
-<p>In production, that hidden failure is costly:</p>
-<p>Integrating a reliable evaluation suite into your development lifecycle can seem like extra overhead during initial prototyping, right up until modifying your system prompt causes unexpected breaking changes. The key is recognizing that evaluation is a progressive journey: any repeatable evaluation system (no matter how simple) is better than relying on ad-hoc spot checks or no system at all. You don't need an elaborate automated grading architecture on Day 0. Instead, start with simple, repeatable checks and evolve your evaluation into a more complex, automated framework as your agent's capabilities and production demands grow.</p>
-<p>Establishing a repeatable evaluation system is made substantially easier by integrating these decisions into an evaluation framework. Transitioning beyond simple subjective checks relies on two core pillars: human oversight and targeted tools. In this article, we explore how to set up an evaluation framework using the open-source agent-eval toolkit. We'll demonstrate how combining manually reviewed traces with automated verification helps detect silent regressions early in development and scales seamlessly as your agent transitions to production.</p>
-<p>Before writing test code, you need a shared vision of what a good outcome actually looks like. Anchor your tests in critical user journeys (CUJs) rather than abstract benchmarks.</p>
-<p>A CUJ defines what a user expects the system to achieve, structured around their persona, goals, constraints, and verification conditions:</p>
-<p>Every clause in that statement becomes an evaluation point: Did the agent resolve the correct transaction ID? Did it check the ledger before drafting? Did it map internal IDs back to the external nomenclature?</p>
-<p>Defining these expectations upfront forces product stakeholders, downstream users, and engineers to agree on defining how “success” is measured.</p>
-<p>You do not need six months of production logs to build your initial golden dataset. Instead, break each CUJ down into concrete scenarios (both happy paths and edge cases) and feed them into a user simulator LLM (we like ADK user simulations). Primed with a persona and behavioral constraints (for example, an impatient analyst giving incomplete ticket numbers, or a developer asking a multi-part debugging question), the simulator mirrors the messy phrasing, typos, and multi-turn complexity of real users.</p>
-<p>By testing your agent against a synthetic user and realistic scenarios, you can record comprehensive execution traces (including tool logs) prior to user interaction. This enables you to pinpoint and resolve any performance gaps against your release standards. As live traffic begins to flow, you can progressively replace these synthetic setups with real production traces.</p>
-<p>A single top-line score will never tell you why an agent failed. To isolate root causes, layer four types of checks: unit tests, deterministic metrics, LLM-as-a-judge rubrics, and integration tests.</p>
-<p>Setting up evaluation metrics involves trial and error, and it is tempting to delete a noisy test or swap out sample queries between runs. Every time you add or remove a test, though, you invalidate your baseline: you cannot tell if a score changed because the agent got better or because the test suite moved. Keep your golden dataset frozen while you tune a feature, change one variable at a time, and only retire a test when you are certain the underlying requirement has changed.</p>
-<p>LLMs are notoriously inconsistent at grading qualitative 1-to-5 scales; the boundary between a "3" and a "4" is fuzzy and often shifts from run to run.</p>
-<p>Whenever possible, turn your judge rubrics into boolean (pass/fail) questions rather than open-ended rating scales. Rather than asking "How helpful was this answer from 1 to 5?", ask "Did the agent verify the account ID before calling the refund tool? (Yes/No)". (We like Adaptive Rubrics)</p>
-<p>A response that passes every quality check is still a production failure if it took 40 seconds, made twelve redundant tool calls, and cost sixty cents per query.</p>
-<p>Always evaluate the whole system rather than just the final text. Track latency, token consumption (prompt, reasoning, and completion tokens), API cost, and tool-call counts right alongside answer quality.</p>
-<p>Switching orchestration frameworks often forces teams to scrap and rewrite their entire testing suite. While most frameworks emit OpenTelemetry traces, they don’t use the same semantic conventions for tool calls, steps, and tokens. Standardizing your traces around open specifications like OpenInference solves this by decoupling evaluation from your orchestration framework. Tools like the agent-eval toolkit support this natively, with minimal setup.</p>
-<p>You do not need to build an observability platform from scratch. You can stand up the evaluation pipeline in a couple of hours using open-source utilities like the agent-eval toolkit which pairs OpenTelemetry trace capture with the Agent Evaluation service on the Gemini platform (formerly Vertex AI Evaluation). But building your actual evaluation strategy requires more thought.</p>
-<p>Start small and stay close to the raw data:</p>
-<p>Why the red pen matters: Manually reading twenty traces feels slow compared to auto-generating a chart, but it saves days of wasted effort. Instead of guessing at hypothetical failure modes and writing generic rubrics that miss the mark, an hour with a red pen shows you how your system actually breaks in reality. Aggregating those notes gives you a high-signal list of the exact deterministic assertions and boolean judge checks you need to build next.</p>
-<p>Once you have that initial list of checks, tools like agent-eval toolkit takes over the heavy lifting and standardizes execution. Helping you with things like:</p>
-<p>Establish a regular cadence of runs with your eval pipeline:</p>
-<p>Once your Day 1 framework is active, optimization becomes a disciplined, mechanical loop:</p>
-<p>In a real deployment, reaching production quality often takes 50 to 60 small iterations. You are not rewriting the entire system prompt every morning; you are gradually turning individual knobs. One tweak clarifies a tool parameter description. The next adds a negative constraint. The next adjusts the JSON output schema.</p>
-<p>For instance, upon completion of each evaluation run, the agent-eval framework constructs an interactive, all-in-one HTML report. This report aligns pass/fail boolean metrics alongside key operational metrics, including latency, token usage, API expenditure, cache utilization, and detailed tool-call execution paths. Additionally, it incorporates automated Gemini root-cause analyses for failed conversational turns, pinpointing the exact prompt directive or parameter setting that triggered the failure to guide your next adjustment.</p>
-<p>That data replaces hunches. A prompt change might feel much smarter in manual spot-checking, only for the test battery to reveal that latency doubled and tool-call hallucinations ticked up by 15%.</p>
-<p>The lesson for teams building agents: small, measured changes beat big rewrites every time.</p>
-<p>Once you trust the signal coming out of your eval pipeline, turn it into a permanent regression safety net:</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>Running three or four prompts in a terminal only shows you the final text response. An agent can loop on retries, hallucinate tool parameters, burn token budgets, or trigger duplicate side effects while still returning a polite answer. Automated trace evaluation checks intermediate tool calls, state transitions, latency percentiles, and API cost alongside answer quality so silent regressions don't ship.</p>
-<p>Treat evaluation as a progressive rollout from Day 0 to Day 2 rather than an all-or-nothing jump. On Day 0, break your critical user journeys (CUJs) into a handful of test scenarios and run them through ADK user simulations. Read those first 5 to 20 execution traces with a "red pen" to see where the agent hesitates, picks the wrong tool, or rambles.</p>
-<p>On Day 1, turn those red-pen notes into automated checks so you can tune one variable at a time. Once your pass rates stabilize, lock those checks into Day 2 CI/CD pull request gates.</p>
-<p>LLM judges don't grade 1-to-5 scales consistently because the boundary between a "3" and a "4" shifts from run to run. With Adaptive Rubrics, you split broad quality goals into strict Yes/No questions like "Did the agent verify the account ID before refunding?" Pair those boolean rubrics with deterministic computation metrics for tool parameters and reference checks, plus trace assertions for latency and token budgets.</p>
-<p>Yes, if you decouple your evaluation pipeline from your agent framework by standardizing OpenTelemetry traces on OpenInference semantic conventions. The open-source agent-eval toolkit routes those traces straight to the Agent Evaluation service on the Gemini platform (formerly Vertex AI Evaluation). You don't have to rewrite grading code when switching orchestration frameworks.</p>
-<p>Once your Day 2 pipeline exports traces and scorecards to BigQuery or Cloud Storage, you can compare live traffic against your pre-production baseline. When users hit edge cases your initial scenarios missed, ambient quality agents like The Outer Loop help you diagnose those failing production traces. You can then promote those real traces straight into your Day 0 golden dataset so your test suite evolves with live usage.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Integrating TorchTPU into TorchTitan and Optimizing Models for TPU</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>Java has been one of the most in-demand programming languages for over two decades. It powers Android apps, banking systems, enterprise software, and huge backend platforms. The good news: learning it has never been easier. With AI tools like Claude, ChatGPT, and GitHub Copilot, you now have a patient tutor available at any hour.</p>
+<p>The catch is that AI can help you learn faster or help you avoid learning at all. This guide shows you how to use it the right way.</p>
+<p>Traditionally, learning Java meant reading a textbook, watching videos, and getting stuck on a compiler error for two hours with nobody to ask. AI removes much of that friction:</p>
+<p>Instant explanations. Ask "what is the difference between an abstract class and an interface?" and get an answer pitched at your level.</p>
+<p>Personalized pace. Ask for the same concept explained three different ways until it clicks.</p>
+<p>Error decoding. Paste a confusing stack trace and get a plain-English explanation of what went wrong.</p>
+<p>Unlimited practice. Generate fresh exercises on any topic, any time.</p>
+<p>But AI is a tutor, not a replacement for practice. You still have to write the code yourself.</p>
+<p>Before writing code, you need the JDK (Java Development Kit) and an IDE such as IntelliJ IDEA, Eclipse, or VS Code.</p>
+<p>"I'm a complete beginner on Windows. Walk me through installing the JDK and IntelliJ IDEA, and help me run my first Hello World program."</p>
+<p>If something goes wrong (and it often does with PATH variables), paste the exact error message and ask what it means.</p>
+<p>Use AI to build understanding with analogies and examples.</p>
+<p>"Explain Java loops like I'm a beginner. Give me one real-world analogy, then three short examples that get progressively harder."</p>
+<p>Then close the chat and write your own loop from memory. That second step is where learning actually happens.</p>
+<p>OOP is where many beginners struggle, and where AI shines as a tutor. Concepts like classes, objects, inheritance, polymorphism, encapsulation, and abstraction are easier to grasp when you can ask follow-up questions.</p>
+<p>"Teach me inheritance in Java using a Vehicle, Car, and Bike example. Then quiz me with 5 questions, one at a time, and wait for my answer before giving feedback."</p>
+<p>Asking the AI to quiz you, rather than just explain, turns passive reading into active recall.</p>
+<p>Once you've written a program, ask AI to review it. This is one of the most valuable habits you can build.</p>
+<p>"Review my Java code. Point out bugs, style issues, and anything that isn't idiomatic. Explain why each suggestion matters, but don't rewrite the whole thing for me."</p>
+<p>That last sentence is important. You want feedback and understanding, not a finished solution you copy and paste.</p>
+<p>When your code throws a NullPointerException or ArrayIndexOutOfBoundsException, resist the urge to say "fix this." Instead, try:</p>
+<p>"Here's my code and the error. Don't give me the answer yet. Ask me guiding questions so I can find the bug myself."</p>
+<p>Debugging is a core professional skill. Using AI as a Socratic coach builds that skill instead of bypassing it.</p>
+<p>Tutorials only take you so far. Projects are where Java sticks. Ask AI to suggest projects matched to your level:</p>
+<p>Beginner: Number guessing game, to-do list in the console, simple calculator</p>
+<p>Intermediate: Library management system, bank account simulator, student record manager</p>
+<p>Advanced: REST API with Spring Boot, inventory system with a database, a chat application</p>
+<p>"I know Java basics and OOP. Suggest a project I can finish in a weekend, break it into milestones, and don't write the code for me."</p>
+<p>Copy-pasting without understanding. If you can't explain a line of code, you haven't learned it. Ask the AI to explain it line by line.</p>
+<p>Trusting AI blindly. AI can produce code that looks right but is wrong, outdated, or insecure. Always run it, test it, and verify against official documentation.</p>
+<p>Skipping the struggle. A little frustration is productive. Try for 15 to 20 minutes before asking for help.</p>
+<p>Never writing code from scratch. Regularly practice without AI so you know what you can actually do on your own, especially before job interviews.</p>
+<p>AI is a fantastic assistant, but it can't tell you what you don't know you need to learn. A structured course gives you a proven roadmap, so you cover the right topics in the right order, while AI fills in the gaps, answers your questions, and keeps you moving.</p>
+<p>The best way to learn Java with AI is to treat it like a good mentor: ask it to explain, challenge, and review, but do the typing yourself. Learners who combine consistent practice with smart AI use progress faster than ever before.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/evaluating-ai-agents-moving-past-the-vibe-check/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-learn-java-with-ai-a-practical-guide-for-beginners/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

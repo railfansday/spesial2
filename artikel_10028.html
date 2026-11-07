@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introducing OlmoEarth embeddings: Custom embedding exports from OlmoEarth Studio for downstream analysis</title>
+    <title>Nondeterminism in Futhark</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10028.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,46 +15,180 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Introducing OlmoEarth embeddings: Custom embedding exports from OlmoEarth Studio for downstream analysis</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>Nondeterminism in Futhark</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/u9KR_QjSYF7mJIbRE3Ni8.jpeg" alt="Introducing OlmoEarth embeddings: Custom embedding exports from OlmoEarth Studio for downstream analysis" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/u9KR_QjSYF7mJIbRE3Ni8.jpeg" alt="Introducing OlmoEarth embeddings: Custom embedding exports from OlmoEarth Studio for downstream analysis" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>📄 Tech Report: https://allenai.org/papers/olmoearth | 📊 Documentation: https://docs.olmoearth.allenai.org/embeddings | 💻 Learn more about OlmoEarth: https://allenai.org/olmoearth</p>
-<p>OlmoEarth Studio, our platform for building Earth observation models, now lets you compute and export embedding vectors—compact numerical representations of Earth-observation data produced by our open source OlmoEarth foundation models. The source code and model weights are publicly available alongside the research paper, so the community can inspect exactly how these embeddings are generated.</p>
-<p>Embeddings are a fast, cost-effective entry point for leveraging OlmoEarth: they support a wide range of downstream tasks, from similarity search to segmentation to unsupervised exploration. Locations with similar surface characteristics end up with similar vectors; locations that differ land far apart. OlmoEarth embeddings have shown strong performance in our own benchmarking and in independent evaluations. The exported Cloud-Optimized GeoTIFFs (COGs) are lightweight and easy to share. Choose your area of interest, time range, encoder variant, resolution, and imagery sources via the Studio UI or API, and get back a COG you can use however you like. If your application requires higher performance, Studio also supports supervised fine-tuning (SFT).</p>
-<p>Custom-computed embeddings are now available for users of OlmoEarth Studio. Reach out if you're interested in gaining access. Instructions for using the publicly available OlmoEarth models to compute your own embeddings are available here.</p>
-<p>Global structure in OlmoEarth embeddings from seasonal Sentinel-2 imagery across 1.1M samples. Colors indicate 15 k-means clusters in a PCA-reduced embedding space.</p>
-<p>Computing embeddings follows the same workflow as any other prediction in Studio. First configure a model and run it, and then download the results. Several parameters tailor the output:</p>
-<p>Different visualization options applied to the same embedding raster.</p>
-<p>Studio delivers a COG with one band per embedding dimension. Vectors are stored as signed 8-bit integers (int8). Values range from -127 to +127, with -128 reserved for nodata. To recover floating-point vectors, see dequantize_embeddings in olmoearth_pretrain.</p>
-<p>Because everything is computed on demand rather than pulled from a pre-computed global archive, your embeddings reflect exactly the conditions you care about. You can generate monthly embeddings to capture seasonal dynamics, not just annual snapshots.</p>
-<p>The examples below all use OlmoEarth-v1-Tiny (192-dim) embeddings at 40-meter resolution with Sentinel-2 L2A composites (annual for most examples; monthly for change detection). Tiny is a lightweight encoder but still highly performant; for your own applications, you can swap it for a larger variant at the cost of higher compute and storage.</p>
-<p>Pick a query pixel, extract its embedding, and compute cosine similarity against every other pixel. The result is a heatmap showing where the landscape looks most and least like your query pixel.</p>
-<p>This query sits near the Merced urban center in California. Urban fabric and road corridors light up coherently while agricultural parcels stay dark. The model distinguishes built-up surfaces from cropland without any labels.</p>
-<p>Switching the query to a small agricultural window, we define the query vector as the mean of the embedding vectors over that window, then pull Sentinel-2 imagery at the highest- and lowest-similarity locations to see what the model treats as similar and dissimilar.</p>
-<p>The most similar patches (0.89 and above) are all agricultural parcels with irrigated fields. The least similar (around zero) are an airport with surrounding bare ground, a reservoir with dry terrain, and arid rangeland. No training data, no labels, just a dot product in embedding space.</p>
-<p>Similarity search tells you "where is it like this?" but sometimes you need discrete labels across a region. Because the representations are already rich, a simple linear classifier can produce a wall-to-wall land-cover map from very few labeled pixels.</p>
-<p>To test this, we labeled just 60 pixels (20 per class) over Ca Mau, Vietnam, a coastal mangrove region. Using ESA WorldCover 2021 as the label source for three classes (mangrove, water, other), we randomly sampled 20 pixels per class, trained a logistic regression with per-feature standardization, and predicted every pixel in the region.</p>
-<p>From 60 labeled pixels, the classifier produces a coherent map with weighted F1 = 0.84. Mangrove stands, tidal channels, and open water are delineated across the entire region. The classifier saturates quickly: increasing from 30 to 300 labels barely changes accuracy, because the embeddings are doing most of the heavy lifting.</p>
-<p>The core of the analysis is a few lines of Python:</p>
-<p>This is a linear probe, a standard evaluation for foundation models. The fact that a logistic regression over 192 dimensions recovers land-cover boundaries from so few labels means the Tiny encoder has organized these ecological distinctions during pretraining. Larger variants (Base, 768-dim) encode even richer representations.</p>
-<p>If you have ground-truth polygons, field survey points, or a coarse existing map, you can train a similar classifier and produce a wall-to-wall map for your own region of interest.</p>
-<p>Because Studio can generate embeddings at any temporal resolution (monthly through annual), you can compare two time periods directly to identify where surface conditions have changed. Below, we computed monthly Sentinel-2 embeddings for the same region in September 2023 and September 2024 and measured per-pixel cosine distance. The Park Fire (July-September 2024) burn scar in Butte County, California lights up immediately.</p>
-<p>No labels or training required—just two embedding COGs and a few lines of Python.</p>
-<p>Sometimes you have no query location or reference labels. You just want to understand what structure exists in the embeddings. Principal Component Analysis (PCA) is a clean way to do this: reduce to three dimensions, map to R/G/B, and display as a false-color image. Similar embeddings get similar colors automatically.</p>
-<p>Flevoland, in the Netherlands, is a reclaimed polder landscape with a regular grid of agricultural parcels. The PCA false-color image reproduces those boundaries with high fidelity. Different crop types, water bodies, and urban areas each get distinct hues. The embedding has internalized landscape structure without ever being told what a parcel or crop is.</p>
-<p>This kind of unsupervised view is a quick way to see what structure the model has picked up across your area of interest.</p>
-<p>Similarity search, few-shot segmentation, change detection, and PCA exploration are simple operations on standard raster data that run in seconds. The power comes from the embeddings: learned representations that compress earth observation data into vectors capturing rich information about each location from many sensors and millions of training examples.</p>
-<p>Custom embedding exports are available now. Create a project, configure an embeddings model, and compute your embeddings. The exported GeoTIFF works with any geospatial tool: QGIS, GDAL, rasterio, or your own scripts. For end-to-end code reproducing the examples in this post, see the embeddings tutorial, which includes working code for similarity search, few-shot segmentation, change detection, and PCA visualization. To get hands-on without any local setup, try the Colab notebook.</p>
-<p>The examples in this post all use frozen embeddings with no task-specific training. Embeddings are a great entry point for leveraging OlmoEarth: they enable fast, cost-effective generation of results, work well in resource-constrained environments, and are easy to share. For applications that require higher performance, OlmoEarth Studio also supports SFT, training a task-specific model head on your own labels, which typically outperforms linear probes on frozen features.</p>
-<p>While we are always working to improve our pretraining approaches, it's important to check the quality of the embeddings for your use case using some of the techniques described above. Performance also depends on the quality of the input imagery—persistent cloud cover, atmospheric artifacts, or missing observations in the composite period can affect the resulting vectors.</p>
-<p>Sentinel-2 L2A imagery from the European Space Agency, accessed via Microsoft Planetary Computer. ESA WorldCover 2021 v200 for mangrove reference. The global clustering visualization uses OlmoEarth-v1-Base (768-dim) with seasonal Sentinel-2 composites at patch size 8, instance-level embeddings over 1.1M pretraining samples.</p>
+                <p>Last week I attended IFL2026, which was
+probably one of the best conference experiences I have ever had. One of the many
+good presentations was by Michael Haddon, who
+presented The Replay
+Lattice, which is a type
+system for floating-point reproducibility. The type system was presented for a
+demonstration language called Lane, but it inspired me to think more carefully
+about nondeterminism in Futhark (there is some), and what it might cost to get
+rid of it.</p>
+<p>I often use the terms âdeterminismâ or âdeterministicâ when explaining why I
+think data parallel programming is such a good paradigm, so perhaps it is
+surprising to see me write a blog post about nondeterminism in Futhark. But as
+is so often the case with such bold promises, they often tend to get a little
+weaker once you look closely enough. Michael Haddonâs work defines some
+nomenclature that is helpful for this discussion:</p>
+<p>Exact means that the computation produces the same result every time,
+guaranteed. (Michael describes this as matching the âserial referenceâ, which
+I think is not the best way of looking at it, but thatâs a question of
+perspective)</p>
+<p>Replay means that if you rerun the computation with the same âscheduleâ
+(in some sense âmachineâ), you will get the same result, but other machines
+may give different results.</p>
+<p>Approx means potentially nondeterministic results.</p>
+<p>The kind of nondeterminism we are talking about here is not the kind of
+free-form nondeterminism that arises from classic shared-state concurrent
+programming. Indeed, both Lane and Futhark are pretty much exclusively concerned
+with the kind of nondeterminism that arises from floating-point rounding errors.
+The simplest example is the non-associativity of addition:</p>
+<p>If we have an array of numbers we need to sum, then the result depends on the
+order in which you sum them. When parallelising a summation, you often do things
+like split the numbers into blocks, sum each block on a separate processor, then
+combine the partial results. This changes the order of addition, and hence the
+result. Now, an important point is that there is no reason to think that the
+parallelised result is numerically worse than a serial left-to-right
+summation, but it will be different. Further, an efficient implementation will
+likely choose a number of chunks somewhat proportional to the number of
+processors on the machine, which means the result may also be different on other
+machines (but again, not necessarily worse). This corresponds to the âReplayâ
+class of nondeterminism. Finally, the partial results may be combined using
+atomic instructions, which may be
+resolved in a different order when the program is rerun on the same machine.
+This is then âApproxâ.</p>
+<p>Even in this simple example of summing a bunch of numbers, we encounter both
+classes of nondeterminism. Note that none of them are ârace conditionsâ in the
+usual sense of the program sometimes just malfunctioning: the point is that
+the result changes, but given that the result is in some sense already âwrongâ
+(due to roundoff error), the main issue is that there are cases where we care
+about getting the same âwrongâ result every time.</p>
+<p>So in Futhark, ostensibly a deterministic language, where does the
+nondeterminism come from? There are a few sources. Some of them come when
+programmers violate mandated constraints (but which are unchecked for various
+reasons), and others are basically down to floating-point roundoff error.</p>
+<p>Let us start by considering language abuse. The worst but also least interesting
+case is using the #[unsafe] attribute
+to disable safety checks, after which you can do arbitrary memory reads and
+writes. This can be avoided by passing
+--safe to the compiler, or perhaps by just not doing this kind of cowboy
+coding in the first place. If you are a good enough programmer that your code
+does not need any safety checks, why not just go and write in C? Those folks
+never make mistakes.</p>
+<p>Another more insidious problem is related to the scatter construct. The
+semantics of an expression scatter d is vs are simple enough, and can be
+expressed with this imperative pseudocode:</p>
+<p>That is, scatter d is vs pairs the indexes in is with the corresponding
+values in vs and writes each value to the corresponding index. It is a
+parallel random-access write. To ensure that the writes can indeed be written in
+parallel, Futhark requires that is contains no duplicates, or in a slight
+weakening, that if is contains duplicates, then the corresponding values are
+also identical. This is not checked dynamically, and a program can get in an
+awful lot of trouble by violating this property. Which write âwinsâ is
+unpredictable - in the worst case, you can even get a âtornâ write that combines
+two different values.</p>
+<p>This behaviour of scatter is thorny, and even experienced Futhark programmers
+sometimes make this mistake. The reason it has no safety checks is twofold:</p>
+<p>scatter is a fundamental
+construct used in
+most sophisticated parallel algorithms, and so its performance is paramount.</p>
+<p>Iâm not sure how to detect duplicate writes in a way that does not violate
+the cost model (although
+scatter is already a bit iffy in that
+regard). Basically, the
+cost of scatter must be proportional to the number of elements written, not
+to the total size of the target array, and that makes it difficult to
+construct appropriate auxiliary structures for safety checks.</p>
+<p>And yes, I do realise the irony of insisting on an unsafe scatter after making
+fun of C programmers for using an unsafe language.</p>
+<p>Anyway, letâs move on to reduce. Parallel reductions, just like parallel
+scans, histograms, and so on, work only if the provided operator is
+associative and in some
+cases also commutative. This is documented but unchecked - in Futhark you can
+do a reduce with an arbitrary operator of the right type, and it just might
+give you nonsensical or nondeterministic results. It is a common error among new
+Futhark programmers to treat reduce as a general fold and use operators that
+are not associative, but it seems not to show up so much among more experienced
+programmers. The reason we do not check for associativity is that it is
+impossible, and even when it is
+possible it remains hard - well beyond what a practical type checker is capable
+of. It is not too hard to empirically test
+associativity and other properties, and so it seems
+that this source of nondeterminism is not so problematic in practice.</p>
+<p>That actually concludes the list of âtrueâ nondeterminism in Futhark, and in
+both cases we can wash our hands and blame the programmer. Of course, there is
+one rather important caveat hereâ¦</p>
+<p>Strictly speaking, floating-point addition is not associative, and so we could
+just declare that reduce (+) 0 on floating-point numbers is simply wrong.
+However, Futhark is not mainly intended as a framework for explaining why the
+program you wrote is wrong, but rather as a practical tool for parallel
+programming, and clearly people want to sum floating-point numbers. Indeed,
+summing and multiplying floating-point numbers is worth trillions of currency
+units these days!</p>
+<p>As such, Futharkâs reduce (and similar functions) do not say that the result
+you get back is completely arbitrary in case the provided operator is
+nonassociative. Instead, they say that the result you get back is some
+arbitrary ordering of applying the operator to the input elements. The precise
+ordering is unspecified (weâll return to this), but it will be some order, and
+if the function is associative, it just so happens that the order does not
+matter for the final result.</p>
+<p>The application order chosen by Futhark depends on the backend and the hardware.
+With the c backend, it will be a straightforward left-to-right loop across the
+input array. With the GPU backend, it will split the input into chunks, sum them
+separately, and combine the partial results. The number of chunks depends on
+runtime queries of the GPU hardware topology, and can also be configured by the
+user via tuning parameters. Since the chunking
+strategy (the âscheduleâ) depends on the hardware and the input size, repeatedly
+re-running the same reduction on the same system will consistently give the same
+result - the âReplayâ case in Michael Haddonâs terminology. This is not a
+language guarantee, but it is how it is implemented right now.</p>
+<p>A reasonable question is whether we could implement summation in a different way
+that will always give the same result, no matter the input. Indeed, this is
+possible. Consider for simplicity that the input array is a power of two. We can
+then implement reduction by repeatedly splitting the array in half, combining
+the two halves using the provided operator, and continuing until only a single
+element is left:</p>
+<p>We can generalise this to arbitrary operators (even non-commutative ones) and
+non-power-of-two sizes with a bit more complexity. Note that this implementation
+does not use any Futhark constructs that are nondeterministic, hence by
+construction it is also fully deterministic. Will it produce the same result as
+a sequential foldl (+) 0? No, because the order of application is different,
+but if you compile sum_tree with the c backend then it will produce
+exactly the same results as if you compile with the cuda backend. This is
+the âExactâ case.</p>
+<p>There is a reason we donât implement reduce like that, of course. In a quick
+experiment for summing 100 million numbers, I observe that using reduce (+) 0
+is almost 3x faster than sum_tree on an MI100 GPU. The gap can be narrowed
+by using blocking to reduce the number of GPU kernels necessary, but ultimately
+the fastest way to perform a reduction does depend on fine details of the
+hardware, and when your operator is not truly associative, that will result in
+observable differences.</p>
+<p>The same situation arises with Futharkâs other basic building blocks. I suspect
+reduce is actually the best case, in the sense that a hand-written version
+can approach the performance of the built-in one. For scan, I know that the
+compilerâs fancy decoupled
+lookback
+is much faster than anything that can be written in Futhark itself, and for
+reduce_by_index a fully deterministic implementation involves a sort and a
+segmented
+reduction, which
+is wildly slower than the code produced by the compiler, which makes careful
+use of atomic instructions.</p>
+<p>This does make me wonder if one could write a Futhark library that replaces all
+the SOAC implementations with guaranteed deterministic implementations, and what
+the performance of that might be across the benchmark
+suite, but that will have to
+wait for a future post.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/allenai/olmoearth-embeddings" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://futhark-lang.org/blog/2026-11-04-nondeterminism.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Powering the Agent Development Lifecycle with any framework, from ADK to LangChain and beyond</title>
+    <title>WordPress PHP-Only Block Registration</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10261.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,84 +15,134 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Powering the Agent Development Lifecycle with any framework, from ADK to LangChain and beyond</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>WordPress PHP-Only Block Registration</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_2.2e16d0ba.fill-1200x600.png" alt="Powering the Agent Development Lifecycle with any framework, from ADK to LangChain and beyond" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/06/wordpress-blocks-php.jpg" alt="WordPress PHP-Only Block Registration" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_2.2e16d0ba.fill-1200x600.png" alt="Powering the Agent Development Lifecycle with any framework, from ADK to LangChain and beyond" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/06/wordpress-blocks-php.jpg" alt="WordPress PHP-Only Block Registration" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>End to end walkthrough of the new Agents CLI Extension System, with a worked LangChain example and a custom deploy policy</p>
-<p>When we launched Agents CLI at Google Cloud Next '26, we built it around one strong opinion: going from an idea to a production agent on Google Cloud should take a single unified command surface. For teams building with Agent Development Kit (ADK), that opinionated path has worked. You run agents-cli create, write the agent logic, and ship to Cloud Run with observability and evals wired up, in about thirty minutes.</p>
-<p>The agent framework landscape has grown more diverse in the months since. In addition to ADK, developers today pick between LangChain and LangGraph, specialized newcomers like Deep Agents, or in-house frameworks tailored to a specific business domain. Different teams prefer different frameworks, and the right choice for a greenfield prototype is rarely the right choice for a production migration. Enterprise admins may also have governance policies they want to enforce across the ADLC for all of their development teams, such as: a compliance scan, an SSO gate, a Model Risk Management hop.</p>
-<p>Can a team benefit from the deployment, evaluation, and observability work in Agents CLI without being forced to adopt ADK, or without being forced to accept the default behavior of every command? Starting with version 1.5.0, the answer is yes. Agents CLI now ships with an Extension System that lets developers override or add commands without forking the tool. Version 1.8.0 ships the first-party LangChain extension, which replaces the framework-coupled commands with their LangChain equivalents and leaves the rest of the lifecycle untouched.</p>
-<p>We will walk through two journeys below. First, to show you the ADLC with LangChain agents, we'll show you how you can scaffold, run, deploy, and evaluate a LangChain agent through the Agents CLI lifecycle using the first-party extension. Then we build our own small extension that wraps the deploy command with a Software Bill of Materials (SBOM) scan, demonstrating the pattern enterprise platform teams can use to enforce their own policies across every project. Both journeys use the same mechanism.</p>
-<p>Most agent development toolchains available today share a limitation: they are opinionated about one specific framework, and the surrounding capabilities (deployment targets, CI/CD pipelines, evaluation harnesses, observability wiring) assume the developer has adopted that framework. When your framework matches the tool's assumption, the opinionated path works. When it does not, you're left with three bad options.</p>
-<p>The first is to fork the CLI, maintaining a divergent copy and re-syncing it on every upstream release. You pay a permanent maintenance tax, and every upstream improvement has to be hand-merged into the fork. The second is to wrap the CLI behind custom scripts, building a parallel command surface that invokes the underlying tool. The problem is that developers (and their coding assistants) forget about the wrapper and call the underlying tool directly, bypassing the intended abstraction. The third is to walk away and build everything from scratch, which can consume several engineer-months of work that the team had not planned for, and which rarely produces tooling as polished as the upstream project.</p>
-<p>The problem shows up in two scenarios. One is enterprise customers adopting Agents CLI: in regulated industries, a central platform team often requires that every deploy invocation be wrapped with a compliance check, that login route through corporate single sign-on, or that evaluations flow through a Model Risk Management pipeline. Each of these requirements, implemented today, means either forking the CLI or building a wrapper layer. The other is teams that use ADK most of the time but need to run a non-ADK framework on a specific project. Within the Agents CLI command surface, six commands assume the ADK runtime: playground, run, and four eval subcommands. The other eighteen or so (scaffold, infra, deploy, publish, login, and friends) are framework-agnostic. Without extensions, choosing a non-ADK framework for a single project meant losing access to all twenty-four.</p>
-<p>The Extension System handles both with one mechanism.</p>
-<p>An Agents CLI extension is a directory in a Git repository that contains a single file called agents-cli-extension.yaml. The file declares which built-in commands the extension overrides and which new commands it adds. From the official documentation:</p>
-<p>Extensions take two shapes, described in the Using Extensions page. A command override replaces the behavior of a built-in like playground, deploy, or eval generate. The overridden command receives the user's arguments verbatim, so the user experience stays consistent with the native command. A new command exposes a workflow the CLI does not currently provide as agents-cli <your-command>. Both shapes can coexist in the same extension, and most non-trivial extensions use a combination of the two.</p>
-<p>Extensions are distributed through Git repositories rather than through a dedicated package registry. The design draws from the extension model used by the gemini-cli project. There is no central index to publish to, no package format to maintain, and no ownership roster to apply for. Any directory inside any Git repository can serve as an extension, and Git handles the versioning, pinning, and distribution. For enterprise platform teams, this means creating an internal platform-extensions repository and pointing their developers at it, with no external registry to coordinate with.</p>
-<p>An extension can be referenced in several ways, depending on where it lives and how the developer wants to use it:</p>
-<p>The #<name> syntax lets a single Git repository hold multiple extensions, with the fragment identifier selecting one of them. Enterprise platform repositories often bundle together a family of related extensions (one for deploy, one for login, one for scaffold create) under a single repo with shared ownership and release cadence.</p>
-<p>Extensions install at two scopes. The default is the project scope, where the extension and its lockfile entry are committed to the project's own repository. Teammates and CI pipelines pick it up on checkout. The alternative is the user scope, enabled via the --global flag, where the extension is stored in the user's home configuration directory and applies to every project on the machine. The user scope is the one you reach for when an extension needs to be available before any project exists, such as a framework bootstrap extension that configures agents-cli create itself.</p>
-<p>When both scopes define the same command, the project scope wins, and agents-cli info surfaces the source of each active command. Scoping is deliberately explicit: the Extension System will not silently merge or override extensions, and any conflict surfaces to the developer at install time or in the extension list output.</p>
-<p>The Extension System follows the discipline of package managers like uv or npm: it resolves a Git reference to an exact commit SHA at install time, records the resolved SHA in a lockfile, and uses the lockfile to re-materialize the exact reviewed code on every fresh checkout. The agents-cli install command restores the vendored working copy from the pinned SHA without advancing the pin, which guarantees that CI and local development run bit-for-bit identical code. To advance a pin to the latest commit on the tracked reference, the developer runs agents-cli extension update, which re-resolves the reference and re-prompts for third-party trust. The complete lifecycle is in the Using Extensions → Lifecycle section.</p>
-<p>The Extension System is marked experimental in v1.8.0. The manifest schema and the command surface may still change in breaking ways before the system is finalized, so teams depending on it should pin their Agents CLI version.</p>
-<p>The LangChain first-party extension is a project template: one command scaffolds a working LangChain agent wired into the Agents CLI lifecycle. The resulting project has zero google-adk dependency and deploys to Cloud Run through the same code path an ADK project uses. The template's own description reads:</p>
-<p>In modern LangChain (version 1.0 and later), the state management layer is provided by LangGraph, so the three frameworks share a common graph representation. The template serves all three communities with the same code.</p>
-<p>A Google Cloud project with billing enabled is also required. If you do not have one yet, it can be created at console.cloud.google.com.</p>
-<p>If Agents CLI is not already installed on the development machine, it can be installed in a single command:</p>
-<p>Finally, we authenticate with Google Cloud and enable the APIs the agent will depend on at runtime:</p>
-<p>Scaffolding and extension installation are the same operation. Rather than installing an extension first and then scaffolding a project, we point agents-cli create directly at the extension's template, pinned to a specific release tag:</p>
-<p>The output confirms the scaffold succeeded:</p>
-<p>The scaffolded project already contains an agents-cli-extension.yaml at its root, which is auto-loaded at project scope the next time any command is invoked. There is nothing to install manually, because the project itself is the extension's installation. A developer scaffolding a LangChain project does not need to know the Extension System exists. The command looks and feels like a native agents-cli create invocation that happens to produce a LangChain project instead of an ADK one.</p>
-<p>The structure looks similar to an ADK project: same app/, same tests/, same Terraform under deployment/, same manifest at the root. The two differences are the agents-cli-extension.yaml at the top (which carries the LangChain overrides) and the langgraph.json file (which configures the LangGraph dev server used by the local playground).</p>
-<p>The main agent definition lives in app/agent.py:</p>
-<p>The agent is created with the langchain.agents.create_agent helper, which compiles into a LangGraph CompiledStateGraph. The type annotation on root_agent makes this explicit. Modern LangChain uses LangGraph as its state management layer, which is why the template is positioned as supporting LangChain agents, LangGraph graphs, and Deep Agents through the same lifecycle: all three compile to the same underlying graph.</p>
-<p>The scaffolded project contains no dependency on the Agent Development Kit. We can verify this directly:</p>
-<p>The grep returns no matches, and the exit code of 1 confirms the absence of ADK references. The google-* packages that do appear in pyproject.toml are the ones any Google Cloud Python project would include: google-cloud-aiplatform[evaluation], google-cloud-logging, langchain-google-genai, and the OpenTelemetry Google Cloud exporters.</p>
-<p>Behind the scenes, Gemini-3.8-flash on Vertex AI has invoked the compiled graph in-process, called get_weather("San Francisco"), received the simulated foggy response, and reasoned the final sentence back to the user. The warning line tells us which extension commands are active, with one entry per overridden command. The warning is deliberate: an override quietly changes native behavior, so the loader always announces which commands are being intercepted and by whom.</p>
-<p>For a local inspector, agents-cli playground boots LangGraph Studio on port 8080, replacing the ADK web UI that would otherwise appear.</p>
-<p>To confirm which commands the extension has modified, we can inspect the help output:</p>
-<p>The [↑ langchain] suffix is the Extension System's way of signalling that a command has been overridden, together with the name of the extension responsible. Both human developers and coding assistants reading the terminal can tell at a glance which commands behave differently in this project.</p>
-<p>For a complete inventory, agents-cli info lists every active extension together with the exact command vector it executes:</p>
-<p>Six overrides total, falling into three categories: four framework-coupled replacements (playground, run, eval.generate, and publish.gemini-enterprise), two explicit refusals (eval.dataset and eval.optimize need an ADK agent object to introspect, so the LangChain project refuses them cleanly rather than producing invalid results), and the publish.gemini-enterprise override additionally refuses only on the Agent Runtime deployment target while delegating to the native command on Cloud Run and GKE. The First-party frameworks page has the official breakdown.</p>
-<p>The deploy command is not overridden by the LangChain extension. Deploying a LangChain project to Cloud Run uses exactly the same code path as deploying an ADK project:</p>
-<p>The underlying mechanism shells out to gcloud run deploy --source . against the project's Dockerfile, which includes:</p>
-<p>That CMD is identical to the one in an ADK project's Dockerfile. The LangChain template serves A2A (Agent-to-Agent) protocol traffic over FastAPI, exposing the application under app.fast_api_app:app. The deployment path does not need to know which framework is powering the agent, because uvicorn and gcloud run deploy operate on the FastAPI contract.</p>
-<p>The same holds for infra, scaffold enhance, scaffold upgrade, install, info, setup, lint, and login. All unchanged in a LangChain project. A year of Agents CLI work on these commands lands in LangChain projects for free, with no divergence to maintain between the ADK and LangChain code paths.</p>
-<p>Evaluations in a LangChain project follow the familiar pattern from the ADK walkthrough, with one difference: the eval generate step is overridden to drive the LangChain graph, while the subsequent evaluation steps use the native commands:</p>
-<p>The overridden eval generate command produces output in the standard EvaluationDataset format, which the native eval grade, eval compare, and eval analyze commands know how to consume. The evaluation service and the grading rubrics are framework-agnostic.</p>
-<p>If a developer invokes one of the refused eval subcommands, the extension responds with a clear explanation rather than failing silently:</p>
-<p>A clear refusal is more useful than a silent failure, especially when a coding assistant is driving the terminal and would otherwise retry a broken command multiple times before giving up.</p>
-<p>The LangChain template is the first-party demonstration of the Extension System, but the same mechanism is open to any team that wants to customize the Agents CLI command surface. Enterprise platform teams can author and distribute extensions internally, encoding their policies as code and shipping them through the Git infrastructure they already use for everything else. Every developer on the team then follows the same checks by default.</p>
-<p>To illustrate the pattern, we will build a small extension called sbom-deploy that wraps the deploy command with a Software Bill of Materials (SBOM) scan, refusing to deploy if any critical vulnerabilities are found. The authoritative reference for the manifest schema is the Authoring Extensions page.</p>
-<p>We begin by creating a directory for our extension and adding the manifest file at its root:</p>
-<p>The manifest contains five top-level keys, and no others are allowed. The schema uses strict validation, so a typo like reqires: fails install with a did-you-mean suggestion rather than silently dropping the override.</p>
-<p>The schema field identifies the manifest schema version. The name field is a single path component (slashes and parent-directory references are rejected) and becomes the directory under extensions/ where the vendored copy is stored. The requires block declares which versions of Agents CLI the extension supports, together with a policy (warn or error) that controls behavior on a version mismatch. The commands block is where the actual overrides and additions live.</p>
-<p>The Rules that matter section of the authoring docs enumerates additional constraints worth knowing about. Two in particular: you can override a specific subcommand (such as eval.generate) but not a top-level command group (such as eval as a whole), and run: is a command vector, not a shell command, so any chaining of commands has to happen inside a wrapper script rather than inside the manifest.</p>
-<p>Because run: is a command vector executed without a shell, chaining multiple operations means writing a wrapper script that sequences them explicitly:</p>
-<p>AGENTS_CLI_DISABLE_OVERRIDES=1 is what makes this work. Agents CLI sets it in the environment of any script invoked through an override. When our wrapper calls agents-cli deploy recursively, the call lands in the native deploy command rather than looping back to our own override. No special syntax, no recursion.</p>
-<p>We can verify this directly. For demonstration, we swap the SBOM scan for a few echo statements that confirm the environment and arguments:</p>
-<p>The --project foo flag passed through to the wrapper verbatim, and the environment variable was set by the loader before our script began executing. The wrapper has everything it needs to delegate to the native command.</p>
-<p>With the manifest and wrapper in place, we can install the extension. During development, point at the local path:</p>
-<p>Once the extension has been pushed to a Git repository, the same syntax works with a remote reference:</p>
-<p>After installation, we verify the extension is active by listing the installed extensions and inspecting the help output:</p>
-<p>The [↑ sbom-deploy] tag next to each overridden command is the Extension System's user-facing signal that the behavior has been modified.</p>
-<p>Behind the scenes, extension add resolved our Git reference to an exact commit SHA and recorded the resolution in a lockfile at the project root:</p>
-<p>Both the lockfile and the vendored working copy under extensions/ should be committed. On a fresh checkout, agents-cli install re-materializes the exact reviewed code from the pinned SHA, the way uv sync or npm install restore pinned dependencies. The install command never advances the pin, so an extension cannot change its behavior between two deployments of the same commit.</p>
-<p>To advance the pin to the latest commit on the tracked reference (branch, tag, or SHA), the developer runs agents-cli extension update sbom-deploy. To switch to a different tag or branch, re-run agents-cli extension add with a new --ref. The complete lifecycle is detailed in the Using Extensions → Lifecycle section.</p>
-<p>Agents CLI began life as an opinionated path to shipping ADK agents on Google Cloud. With the Extension System in place, those opinions are now yours to override, replace, or augment.</p>
-<p>Install Agents CLI and scaffold a LangChain agent in two commands:</p>
-<p>Then explore the official documentation: the Extensions overview, Using extensions, Authoring extensions, and First-party extensions. The full source code of Agents CLI, including the first-party templates, is at github.com/google/agents-cli.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
-<p>Hill-Climbing Agent Quality with Agents CLI Evaluation</p>
+                <p>You want to build a custom WordPress block. But you don’t want to learn React, manage a build pipeline, or deal with NPM packages.</p>
+<p>Seven and half years after blocks arrived in Core, WordPress introduces a way to build blocks without any of these things. All you need is PHP.</p>
+<p>A traditional WordPress block needs to be registered twice. Once in PHP, and once in JavaScript.</p>
+<p>But WordPress 7.0 introduces a new and streamlined approach, allowing you to register a block using only PHP.</p>
+<p>Let’s use this feature to build a Hello World Block:</p>
+<p>The block is fully functional in the block editor, and fits right in with all the other blocks:</p>
+<p>The key addition is the 'autoRegister' => true flag in the supports section. When set, WordPress automatically generates the required JavaScript for your block based on the PHP registration. This includes the client-side registration, and the editor preview.</p>
+<p>Attributes let users customize the block’s appearance and behavior. In traditional block development you not only need to define the attributes, but also build out the corresponding controls in the editor interface.</p>
+<p>With PHP-only registration, all that is needed is the attributes definition during block registration:</p>
+<p>This code registers a greeting attribute as a string, with a default value. WordPress generates the corresponding input control in the block’s Settings sidebar.</p>
+<p>At first sight, there is a lot to like about PHP-only registered blocks. For any WordPress developer, it feels like the good old times when programming was simpler.</p>
+<p>You might be tempted to delay learning JavaScript block development indefinitely. But the PHP-only approach has important limitations worth understanding.</p>
+<p>The editor displays the HTML as returned by the block’s render_callback PHP function. When the block is first displayed or when the user interacts with one of its controls, the editor component requests a new PHP render from a REST API endpoint.</p>
+<p>While blocks rendered this way integrate seamlessly into the editor, they are not part of the single page JavaScript application that powers the entire editor experience.</p>
+<p>First, you cannot add any controls within the block preview. This means you are limited to the auto-generated controls in the Settings sidebar.</p>
+<p>The default interaction mode with blocks is the block preview itself. Imagine that you need a testimonial block. With a JavaScript rendered block, you would build out the testimonial design, and allow editing in place.</p>
+<p>With a PHP-rendered block you can only use the sidebar. And even here you are limited, as currently there’s no support for image uploads or multiline text.</p>
+<p>With JavaScript, you can allow editing in the block, as well as in the sidebar. Additionally you have access to all the controls that WordPress Core uses, and can even implement your own.</p>
+<p>But without JavaScript, you’ll always be limited to the options WordPress provides based on the registered attributes of your PHP-only block.</p>
+<p>Secondly you cannot attach any JavaScript to markup in the block preview. Imagine you want to develop a block that pulls five related posts, and which displays them in a slider. For that you would output the markup, and then pass a DOM node to the JavaScript library which then transforms the raw markup into the desired slider interface.</p>
+<p>This reliance on finding and manipulating DOM elements is typical for traditional JavaScript development. But with PHP-only registered blocks in the block editor, the markup is fetched asynchronously and replaced on every re-render. This makes interacting with the DOM of the block preview unreliable or impossible.</p>
+<p>While the front end render works fine with JavaScript libraries, the editor authoring experience will not work correctly. Even if you manage to attach any event listeners on first load, these will be disconnected the moment the preview re-renders.</p>
+<p>These limitations are caused by the architecture of this feature, and they will not change in the future.</p>
+<p>On the initial load of the block editor, WordPress loads the post data from the database into a client-side store managed by JavaScript. Any changes that you make in the editor update this data store on the client side. But the database isn’t updated until you save the post.</p>
+<p>PHP-only registered blocks bypass this client-side store. When a block renders, it queries the database directly. But the database might contain stale data compared to what’s currently in the editor. Even worse, the PHP-rendered block isn’t notified of changes in the client side data, so it can’t refresh when data changes.</p>
+<p>Let’s take a practical example: Imagine you are building a block that displays a header element with the post title. When the user changes the title in the editor, your block will still show the value from the database. You would need to save the post and reload the editor for the changed title to show up in the PHP-only block.</p>
+<p>This makes PHP-only blocks unsuitable for any block that displays data that the user can change in the editor like title, content, excerpt, features images, or attached terms.</p>
+<p>PHP-only registered blocks render through a REST API endpoint. So the same code renders the editor preview and the front end. But there is a critical difference: the global state.</p>
+<p>On the front end, blocks render within The Loop, which sets key global variables like $post. Template tags like the_title() or the_content() rely on these globals to know which post is displayed.</p>
+<p>But REST APIs are stateless, and don’t rely on global state. The endpoint that renders the block editor preview accepts a post ID parameter, but the editor component does not pass it through. This means that your render callback has no way to know which post is edited.</p>
+<p>This limits the functions that you can use in the block editor preview. Template tags or functions like get_post_meta() need to know about the post context.</p>
+<p>This is a significant architectural limitation as of WordPress 7.0. This could be addressed by passing the post ID to the endpoint, but there are no concrete plans to change this at the time of this writing.</p>
+<p>WordPress 7.0 supports only three attribute types: strings, numbers, and booleans. These map to four basic editor controls: text inputs, number inputs, checkboxes, and a dropdown.</p>
+<p>This screenshot shows a block that uses all available user interface elements:</p>
+<p>The dropdown element is the only advanced control, but it has a significant limitation: it does not support keyed arrays. This makes it impossible to have a label that differs from the stored value.</p>
+<p>Let’s take the example of a related posts block where users can select a category. You want to display the category names in the dropdown, but store the category IDs. This isn’t possible.</p>
+<p>Instead, you must choose between displaying names or slugs, which both are user-editable, and store that value:</p>
+<p>Using slugs not only doesn’t look good in the interface, but this implementation will also break when renaming a category. All existing blocks referencing the old slug will not be able to pull the related posts. IDs are stabler, and would only be invalid when the category is deleted.</p>
+<p>Beyond dropdowns, essential controls — like image uploads, rich text editors, or date pickers — are absent. This might change in future releases, but again, there are no plans for it as of yet.</p>
+<p>It’s easy to get discouraged looking at these limitations. It is true that PHP-only registered blocks are a poor choice for building new blocks from scratch.</p>
+<p>But I consider them to still be very valuable because there is one use case where these limitations do not matter: migrating legacy PHP code into block themes. This WordPress 7.0 feature is a real game changer when it comes to developers adopting block themes, which is still a barrier of sorts for many theme authors.</p>
+<p>In my experience, block themes are more performant, easier to maintain, and faster to build than legacy themes. Yet many developers are still relying on classic themes. And that is not by choice, but because of existing PHP-based features.</p>
+<p>Until now, migrating these features came up against nearly insurmountable barriers. First, the need to learn JavaScript block development, and set up an entirely new development workflow with dependency management and build pipelines. Second, the time needed to rewrite all this code in JavaScript.</p>
+<p>PHP-only registered blocks remove both these obstacles.</p>
+<p>In 2022, I wanted to migrate a classic theme to a block theme.</p>
+<p>The content area and the footer were straightforward to rebuild with blocks. But the header was more complex, especially with the more limited block building features of the time.</p>
+<p>So, rather than spending time rebuilding the header, I took the existing PHP-header, and wrapped it in a server-side rendered block.</p>
+<p>That said, we need to be realistic. This header block was far from perfect. The block preview was not responsive, dropdowns didn’t work in the editor, and you could not edit anything.</p>
+<p>Did it matter? Not at all. The block rendered perfectly on the front end, and the editor preview was good enough. And because of this approach, I could migrate the theme in hours instead of days.</p>
+<p>Before PHP-only registration, building such blocks still required a solid JavaScript proficiency and build tooling. But now any PHP developer can use this migration path using the skills they already have.</p>
+<p>PHP-only registered blocks are ideal for converting:</p>
+<p>The blocks you create do not need to be perfect in the editor. What counts is that they render correctly on the front end. By using existing PHP code, adaptations to block themes will be minimal.</p>
+<p>Here are a few things I’ve learned along the way as I’ve been playing with blocks registered with PHP.</p>
+<p>There might be cases in which you want to have a different block rendering depending on whether the block is displayed in the admin, or on the front end.</p>
+<p>Using the is_admin() function for this use case does not work, as it does not evaluate to true when the REST API endpoint generates the markup for the block editor preview.</p>
+<p>But there is another function that we can use: wp_is_rest_endpoint(). If it returns true, it means that WordPress is generating a REST API endpoint request. But this could be any endpoint rendering posts, so we need to ensure that we’re dealing with the Block Renderer endpoint.</p>
+<p>This shows different text and styling depending on whether the block is rendered in the editor or on the front end:</p>
+<p>We’ve seen that WordPress out of the box does not give you access to the ID of the edited post in PHP-only registered blocks. There is a workaround though.</p>
+<p>WordPress registers blocks in the init hook. This hook also runs on every admin page. When you edit a post, the ID of the edited post is passed as a GET argument in the URL, for example: https://css-tricks.com/wp-admin/post.php?post=5\&action=edit</p>
+<p>This means that at the moment of the block registration, we can retrieve this ID. To pass it to the block, we use an attribute. But we do not want WordPress to add an interface element, so we set the source of the attribute to local.</p>
+<p>This only works when editing an existing post. When a new post is created, there is no post ID passed through the URL. WordPress will create one when the post is first saved, and update the URL.</p>
+<p>But this is done through JavaScript without triggering a new page load from the server. Meaning that the PHP won’t have an opportunity to access the post ID until a full page reload is done.</p>
+<p>So, yeah, not the greatest approach. But it’s good enough to unblock you until WordPress Core adds a proper implementation to pass post data to PHP-only registered blocks.</p>
+<p>There are situations in which it is difficult to achieve a decent preview in the editor. In certain situations, it’s even impossible.</p>
+<p>Think, for example, of a newsletter form provided as a snippet of HTML and JavaScript. Due to the limitations we’ve seen, the editor preview will always look broken.</p>
+<p>In a situation like this, you can implement a placeholder in the editor. This is a strategy that WordPress Core uses as well, as we can see for the Post Content block:</p>
+<p>Users do not expect an exact preview in every case. Choose the best compromise between the time needed to achieve a proper block editor preview and the expected UX gain.</p>
+<p>You can use WordPress optimized stylesheet enqueuing, which only enqueues stylesheets on the front end for the blocks present on that specific page.</p>
+<p>The register_block_type function offers two arguments:</p>
+<p>To add a CSS stylesheet, register it using wp_register_style() Then use the handle during block registration:</p>
+<p>WordPress auto-generates a .wp-block-{namespace}-{block-name} class and adds it to the wrapper container of your block as part of get_block_wrapper_attributes().</p>
+<p>If you need to add additional classes or styles, you can pass these to get_block_wrapper_attributes() in the render callback function.</p>
+<p>It’s the best practice to use this class as the common root class for writing targeted styles. I prefer to use the Block, Element, Modifier (BEM) approach for writing block styles. It prevents my styles from clashing with styles provided by WordPress Core or other code.</p>
+<p>A common scenario is that you will have existing CSS, and restructuring this code and the markup using BEM would be too much work. In that case I recommend using a unique prefix for these legacy classes.</p>
+<p>If you are dealing with a website that uses a front-end framework like Bootstrap, avoid enqueuing any framework stylesheets. You need to only migrate the CSS instructions that the block needs, applying unique prefixes as described above.</p>
+<p>There are two ways for WordPress to integrate the post editor into the admin:</p>
+<p>WordPress started with the first approach but quickly realized that it made styling the block editor very difficult. Without an iframe, any admin styles can interfere with that styles of the block editor, including your custom blocks.</p>
+<p>In practice, this means that your blocks can look different in the editor than they do on the front end. For simplicity you want to use the same styles across both the front end and the editor preview with minimal adjustment. And the iframed post editor allows you to do that.</p>
+<p>As of WordPress 7.0, the post editor is iframed if all blocks in the post are Version 3 or higher. WordPress 7.1 will enforce the iframe approach independently of the blocks.</p>
+<p>So, to simplify building blocks and prepare for the next release, I think it’s best to ensure that all blocks on your sites use the Block API Version 3.</p>
+<p>JavaScript support for PHP-only registered blocks is limited to the front end. To add a script, you can register it, and then pass the handle to the view_script during registration:</p>
+<p>WordPress will only enqueue this script when the block is present on the current page.</p>
+<p>PHP-only registered blocks can use the Block Supports API, which allows opt-in to core features. Depending on the feature, the block editor will expose additional interface elements to the user. It will also add attributes to the block to store the user’s choices.</p>
+<p>There are features that will work independently of the theme. Others need to be enabled by the theme through its theme.json file.</p>
+<p>Here is an example enabling color customization for the text and background color:</p>
+<p>WordPress will take care of the outputting the corresponding CSS classes and inline styles using get_block_wrapper_attributes().</p>
+<p>Allowing users to customize the appearance is a good demonstration, but not something that you are likely to often use. So, let’s have a look at three useful options for PHP-only registered blocks.</p>
+<p>All register blocks appear in the inserter by default. But this does not make sense for every block. Imagine, for example, that you use a block to migrate a legacy PHP feature only used in a single template.</p>
+<p>In this scenario, you could set inserter to false to hide the block from the inserter. Hidden blocks stay fully functional.</p>
+<p>Setting multiple to false allows the block to only be inserted once into each post. An example is the core More block.</p>
+<p>Once a non-multiple block is inserted, the block’s icon is disabled in the inserter to prevent inserting a second instance.</p>
+<p>Setting align to true enables all available alignment options:</p>
+<p>The text alignments like left, center, and right are always available. Wide and full-width alignment are only enabled if the theme supports it.</p>
+<p>WordPress handles outputting the necessary classes for the block’s design to reflect the desired alignment.</p>
+<p>If you want to selectively enable alignments, you can specify them. The available options are left, center, right, wide, and full.</p>
+<p>With these tips you should be able to make the most out of PHP-only registered blocks, even with the limitations in WordPress 7.0.</p>
+<p>Remember the opening question: Was it worth waiting seven-and-a-half years for this?</p>
+<p>For building new, feature-rich blocks, the answer is no. You need JavaScript to deliver the kinds of interactive and native-feeling editing experiences that WordPress users expect. PHP-only block registration won’t replace JavaScript-powered blocks, and nor should it.</p>
+<p>Because it’s not what this feature is for.</p>
+<p>PHP-only registered blocks are the solution for thousands of WordPress sites stuck with classic themes because of the high learning curve and high cost of rebuilding with JavaScript.</p>
+<p>You can now take shortcodes, widgets, and template parts and port them to the block editor with the PHP skills you already have. No JavaScript. No build pipeline. No code duplication.</p>
+<p>And these blocks that you build do not need to be perfect. As long as you can insert them into block content, and they render correctly on the front end, that is all that is needed.</p>
+<p>That is the killer use case for this feature. And for that, the wait was worth it.</p>
+<p>But beyond this feature, PHP-only registered blocks signal an important shift: WordPress Core is finally prioritizing developer experience. Even as someone who builds JavaScript-powered blocks regularly, I’ll admit that the process involves too much boilerplate code, and too much coordination between block.json, the PHP code, and the JavaScript. Which is not to mention that time spent setting up and maintaining the build pipeline.</p>
+<p>Anything that we can do to make this process easier, or avoid it entirely, is more than welcome.</p>
+<p>So if you have projects with legacy PHP code preventing a migration to a block theme, then WordPress 7.0 has removed your biggest obstacle.</p>
+<p>Migrate these legacy features to blocks and unlock everything modern WordPress has to offer.</p>
+<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>I measured the migration speed of legacy code to modern themes using PHP-only blocks and found it to be around 30% faster than rewriting everything in JavaScript. What I’m curious about is the trade-off in performance—have you noticed any significant impact on runtime speed?</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Coming back November 10! See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/powering-the-agent-development-lifecycle-with-any-framework-from-adk-to-langchain-and-beyond/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/wordpress-php-block-registration/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

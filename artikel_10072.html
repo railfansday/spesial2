@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Quick Guide to Go&#x27;s Assembler</title>
+    <title>Tesla to Wind Down Cybertruck Production</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10072.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,1065 +15,202 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>A Quick Guide to Go&#x27;s Assembler</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-06</p>
+        <h1>Tesla to Wind Down Cybertruck Production</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
+            <img src="https://a.fsdn.com/sd/topics/transportation_64.png" alt="Tesla to Wind Down Cybertruck Production" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/transportation_64.png" alt="Tesla to Wind Down Cybertruck Production" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stories about how and why companies use Go</p>
-<p>How Go can help keep you secure by default</p>
-<p>A complete introduction to building software with Go</p>
-<p>Reference documentation for Go's standard library</p>
-<p>Tips for writing clear, performant, and idiomatic Go code</p>
-<p>Learn and network with Go developers from around the world</p>
-<p>This document is a quick outline of the unusual form of assembly language used by the gc Go compiler.
-The document is not comprehensive.</p>
-<p>The assembler is based on the input style of the Plan 9 assemblers, which is documented in detail
-elsewhere.
-If you plan to write assembly language, you should read that document although much of it is Plan 9-specific.
-The current document provides a summary of the syntax and the differences with
-what is explained in that document, and
-describes the peculiarities that apply when writing assembly code to interact with Go.</p>
-<p>The most important thing to know about Go's assembler is that it is not a direct representation of the underlying machine.
-Some of the details map precisely to the machine, but some do not.
-This is because the compiler suite (see
-this description)
-needs no assembler pass in the usual pipeline.
-Instead, the compiler operates on a kind of semi-abstract instruction set,
-and instruction selection occurs partly after code generation.
-The assembler works on the semi-abstract form, so
-when you see an instruction like MOV
-what the toolchain actually generates for that operation might
-not be a move instruction at all, perhaps a clear or load.
-Or it might correspond exactly to the machine instruction with that name.
-In general, machine-specific operations tend to appear as themselves, while more general concepts like
-memory move and subroutine call and return are more abstract.
-The details vary with architecture, and we apologize for the imprecision; the situation is not well-defined.</p>
-<p>The assembler program is a way to parse a description of that
-semi-abstract instruction set and turn it into instructions to be
-input to the linker.
-If you want to see what the instructions look like in assembly for a given architecture, say amd64, there
-are many examples in the sources of the standard library, in packages such as
-runtime and
-math/big.
-You can also examine what the compiler emits as assembly code
-(the actual output may differ from what you see here):</p>
-<p>The FUNCDATA and PCDATA directives contain information
-for use by the garbage collector; they are introduced by the compiler.</p>
-<p>To see what gets put in the binary after linking, use go tool objdump:</p>
-<p>Although the assembler takes its guidance from the Plan 9 assemblers,
-it is a distinct program, so there are some differences.
-One is in constant evaluation.
-Constant expressions in the assembler are parsed using Go's operator
-precedence, not the C-like precedence of the original.
-Thus 3&1<<2 is 4, not 0—it parses as (3&1)<<2
-not 3&(1<<2).
-Also, constants are always evaluated as 64-bit unsigned integers.
-Thus -2 is not the integer value minus two,
-but the unsigned 64-bit integer with the same bit pattern.
-The distinction rarely matters but
-to avoid ambiguity, division or right shift where the right operand's
-high bit is set is rejected.</p>
-<p>Some symbols, such as R1 or LR,
-are predefined and refer to registers.
-The exact set depends on the architecture.</p>
-<p>There are four predeclared symbols that refer to pseudo-registers.
-These are not real registers, but rather virtual registers maintained by
-the toolchain, such as a frame pointer.
-The set of pseudo-registers is the same for all architectures:</p>
-<p>All user-defined symbols are written as offsets to the pseudo-registers
-FP (arguments and locals) and SB (globals).</p>
-<p>The SB pseudo-register can be thought of as the origin of memory, so the symbol foo(SB)
-is the name foo as an address in memory.
-This form is used to name global functions and data.
-Adding <> to the name, as in foo<>(SB), makes the name
-visible only in the current source file, like a top-level static declaration in a C file.
-Adding an offset to the name refers to that offset from the symbol's address, so
-foo+4(SB) is four bytes past the start of foo.</p>
-<p>The FP pseudo-register is a virtual frame pointer
-used to refer to function arguments.
-The compilers maintain a virtual frame pointer and refer to the arguments on the stack as offsets from that pseudo-register.
-Thus 0(FP) is the first argument to the function,
-8(FP) is the second (on a 64-bit machine), and so on.
-However, when referring to a function argument this way, it is necessary to place a name
-at the beginning, as in first_arg+0(FP) and second_arg+8(FP).
-(The meaning of the offset—offset from the frame pointer—distinct
-from its use with SB, where it is an offset from the symbol.)
-The assembler enforces this convention, rejecting plain 0(FP) and 8(FP).
-The actual name is semantically irrelevant but should be used to document
-the argument's name.
-It is worth stressing that FP is always a
-pseudo-register, not a hardware
-register, even on architectures with a hardware frame pointer.</p>
-<p>For assembly functions with Go prototypes, go vet will check that the argument names
-and offsets match.
-On 32-bit systems, the low and high 32 bits of a 64-bit value are distinguished by adding
-a _lo or _hi suffix to the name, as in arg_lo+0(FP) or arg_hi+4(FP).
-If a Go prototype does not name its result, the expected assembly name is ret.</p>
-<p>The SP pseudo-register is a virtual stack pointer
-used to refer to frame-local variables and the arguments being
-prepared for function calls.
-It points to the highest address within the local stack frame, so references should use negative offsets
-in the range [−framesize, 0):
-x-8(SP), y-4(SP), and so on.</p>
-<p>On architectures with a hardware register named SP,
-the name prefix distinguishes
-references to the virtual stack pointer from references to the architectural
-SP register.
-That is, x-8(SP) and -8(SP)
-are different memory locations:
-the first refers to the virtual stack pointer pseudo-register,
-while the second refers to the
-hardware's SP register.</p>
-<p>On machines where SP and PC are
-traditionally aliases for a physical, numbered register,
-in the Go assembler the names SP and PC
-are still treated specially;
-for instance, references to SP require a symbol,
-much like FP.
-To access the actual hardware register use the true R name.
-For example, on the ARM architecture the hardware
-SP and PC are accessible as
-R13 and R15.</p>
-<p>Branches and direct jumps are always written as offsets to the PC, or as
-jumps to labels:</p>
-<p>Each label is visible only within the function in which it is defined.
-It is therefore permitted for multiple functions in a file to define
-and use the same label names.
-Direct jumps and call instructions can target text symbols,
-such as name(SB), but not offsets from symbols,
-such as name+4(SB).</p>
-<p>Instructions, registers, and assembler directives are always in UPPER CASE to remind you
-that assembly programming is a fraught endeavor.
-(Exception: the g register renaming on ARM.)</p>
-<p>In Go object files and binaries, the full name of a symbol is the
-package path followed by a period and the symbol name:
-fmt.Printf or math/rand.Int.
-Because the assembler's parser treats period and slash as punctuation,
-those strings cannot be used directly as identifier names.
-Instead, the assembler allows the middle dot character U+00B7
-and the division slash U+2215 in identifiers and rewrites them to
-plain period and slash.
-Within an assembler source file, the symbols above are written as
-fmt·Printf and math∕rand·Int.
-The assembly listings generated by the compilers when using the -S flag
-show the period and slash directly instead of the Unicode replacements
-required by the assemblers.</p>
-<p>Most hand-written assembly files do not include the full package path
-in symbol names, because the linker inserts the package path of the current
-object file at the beginning of any name starting with a period:
-in an assembly source file within the math/rand package implementation,
-the package's Int function can be referred to as ·Int.
-This convention avoids the need to hard-code a package's import path in its
-own source code, making it easier to move the code from one location to another.</p>
-<p>The assembler uses various directives to bind text and data to symbol names.
-For example, here is a simple complete function definition. The TEXT
-directive declares the symbol runtime·profileloop and the instructions
-that follow form the body of the function.
-The last instruction in a TEXT block must be some sort of jump, usually a RET (pseudo-)instruction.
-(If it's not, the linker will append a jump-to-itself instruction; there is no fallthrough in TEXTs.)
-After the symbol, the arguments are flags (see below)
-and the frame size, a constant (but see below):</p>
-<p>In the general case, the frame size is followed by an argument size, separated by a minus sign.
-(It's not a subtraction, just idiosyncratic syntax.)
-The frame size $24-8 states that the function has a 24-byte frame
-and is called with 8 bytes of argument, which live on the caller's frame.
-If NOSPLIT is not specified for the TEXT,
-the argument size must be provided.
-For assembly functions with Go prototypes, go vet will check that the
-argument size is correct.</p>
-<p>Note that the symbol name uses a middle dot to separate the components and is specified as an offset from the
-static base pseudo-register SB.
-This function would be called from Go source for package runtime using the
-simple name profileloop.</p>
-<p>Global data symbols are defined by a sequence of initializing
-DATA directives followed by a GLOBL directive.
-Each DATA directive initializes a section of the
-corresponding memory.
-The memory not explicitly initialized is zeroed.
-The general form of the DATA directive is
-
-
-DATA	symbol+offset(SB)/width, value
-
-
-which initializes the symbol memory at the given offset and width with the given value.
-The DATA directives for a given symbol must be written with increasing offsets.
-
-
-The GLOBL directive declares a symbol to be global.
-The arguments are optional flags and the size of the data being declared as a global,
-which will have initial value all zeros unless a DATA directive
-has initialized it.
-The GLOBL directive must follow any corresponding DATA directives.
-
-
-For example,
-
-
-DATA divtab<>+0x00(SB)/4, $0xf4f8fcff
-DATA divtab<>+0x04(SB)/4, $0xe6eaedf0
-...
-DATA divtab<>+0x3c(SB)/4, $0x81828384
-GLOBL divtab<>(SB), RODATA, $64
-
-GLOBL runtime·tlsoffset(SB), NOPTR, $4
-
-
-declares and initializes divtab<>, a read-only 64-byte table of 4-byte integer values,
-and declares runtime·tlsoffset, a 4-byte, implicitly zeroed variable that
-contains no pointers.
-
-
-There may be one or two arguments to the directives.
-If there are two, the first is a bit mask of flags,
-which can be written as numeric expressions, added or or-ed together,
-or can be set symbolically for easier absorption by a human.
-Their values, defined in the standard #include  file textflag.h, are:
-
-
-
-NOPROF = 1
-
-(For TEXT items.)
-Don't profile the marked function.  This flag is deprecated.
-
-
-DUPOK = 2
-
-It is legal to have multiple instances of this symbol in a single binary.
-The linker will choose one of the duplicates to use.
-
-
-NOSPLIT = 4
-
-(For TEXT items.)
-Don't insert the preamble to check if the stack must be split.
-The frame for the routine, plus anything it calls, must fit in the
-spare space remaining in the current stack segment.
-Used to protect routines such as the stack splitting code itself.
-
-
-RODATA = 8
-
-(For DATA and GLOBL items.)
-Put this data in a read-only section.
-
-
-NOPTR = 16
-
-(For DATA and GLOBL items.)
-This data contains no pointers and therefore does not need to be
-scanned by the garbage collector.
-
-
-WRAPPER = 32
-
-(For TEXT items.)
-This is a wrapper function and should not count as disabling recover.
-
-
-NEEDCTXT = 64
-
-(For TEXT items.)
-This function is a closure so it uses its incoming context register.
-
-
-LOCAL = 128
-
-This symbol is local to the dynamic shared object.
-
-
-TLSBSS = 256
-
-(For DATA and GLOBL items.)
-Put this data in thread local storage.
-
-
-NOFRAME = 512
-
-(For TEXT items.)
-Do not insert instructions to allocate a stack frame and save/restore the return
-address, even if this is not a leaf function.
-Only valid on functions that declare a frame size of 0.
-
-
-TOPFRAME = 2048
-
-(For TEXT items.)
-Function is the outermost frame of the call stack. Traceback should stop at this function.
-
-
-Special instructions
-
-The PCALIGN pseudo-instruction is used to indicate that the next instruction should be aligned
-to a specified boundary by padding with no-op instructions.
-
-
-It is currently supported on arm64, amd64, ppc64, loong64 and riscv64.
-
-For example, the start of the MOVD instruction below is aligned to 32 bytes:
-
-PCALIGN $32
-MOVD $2, R0
-
-
-Interacting with Go types and constants
-
-If a package has any .s files, then go build will direct
-the compiler to emit a special header called go_asm.h,
-which the .s files can then #include.
-The file contains symbolic #define constants for the
-offsets of Go struct fields, the sizes of Go struct types, and most
-Go const declarations defined in the current package.
-Go assembly should avoid making assumptions about the layout of Go
-types and instead use these constants.
-This improves the readability of assembly code, and keeps it robust to
-changes in data layout either in the Go type definitions or in the
-layout rules used by the Go compiler.
-
-
-Constants are of the form const_name.
-For example, given the Go declaration const bufSize =
-1024, assembly code can refer to the value of this constant
-as const_bufSize.
-
-
-Field offsets are of the form type_field.
-Struct sizes are of the form type__size.
-For example, consider the following Go definition:
-
-
-type reader struct {
-	buf [bufSize]byte
-	r   int
-}
-
-
-Assembly can refer to the size of this struct
-as reader__size and the offsets of the two fields
-as reader_buf and reader_r.
-Hence, if register R1 contains a pointer to
-a reader, assembly can reference the r field
-as reader_r(R1).
-
-
-If any of these #define names are ambiguous (for example,
-a struct with a _size field), #include
-"go_asm.h" will fail with a "redefinition of macro" error.
-
-Runtime Coordination
-
-For garbage collection to run correctly, the runtime must know the
-location of pointers in all global data and in most stack frames.
-The Go compiler emits this information when compiling Go source files,
-but assembly programs must define it explicitly.
-
-
-A data symbol marked with the NOPTR flag (see above)
-is treated as containing no pointers to runtime-allocated data.
-A data symbol with the RODATA flag
-is allocated in read-only memory and is therefore treated
-as implicitly marked NOPTR.
-A data symbol with a total size smaller than a pointer
-is also treated as implicitly marked NOPTR.
-It is not possible to define a symbol containing pointers in an assembly source file;
-such a symbol must be defined in a Go source file instead.
-Assembly source can still refer to the symbol by name
-even without DATA and GLOBL directives.
-A good general rule of thumb is to define all non-RODATA
-symbols in Go instead of in assembly.
-
-
-Each function also needs annotations giving the location of
-live pointers in its arguments, results, and local stack frame.
-For an assembly function with no pointer results and
-either no local stack frame or no function calls,
-the only requirement is to define a Go prototype for the function
-in a Go source file in the same package. The name of the assembly
-function must not contain the package name component (for example,
-function Syscall in package syscall should
-use the name ·Syscall instead of the equivalent name
-syscall·Syscall in its TEXT directive).
-For more complex situations, explicit annotation is needed.
-These annotations use pseudo-instructions defined in the standard
-#include file funcdata.h.
-
-
-If a function has no arguments and no results,
-the pointer information can be omitted.
-This is indicated by an argument size annotation of $n-0
-on the TEXT instruction.
-Otherwise, pointer information must be provided by
-a Go prototype for the function in a Go source file,
-even for assembly functions not called directly from Go.
-(The prototype will also let go vet check the argument references.)
-At the start of the function, the arguments are assumed
-to be initialized but the results are assumed uninitialized.
-If the results will hold live pointers during a call instruction,
-the function should start by zeroing the results and then
-executing the pseudo-instruction GO_RESULTS_INITIALIZED.
-This instruction records that the results are now initialized
-and should be scanned during stack movement and garbage collection.
-It is typically easier to arrange that assembly functions do not
-return pointers or do not contain call instructions;
-no assembly functions in the standard library use
-GO_RESULTS_INITIALIZED.
-
-
-If a function has no local stack frame,
-the pointer information can be omitted.
-This is indicated by a local frame size annotation of $0-n
-on the TEXT instruction.
-The pointer information can also be omitted if the
-function contains no call instructions.
-Otherwise, the local stack frame must not contain pointers,
-and the assembly must confirm this fact by executing the
-pseudo-instruction NO_LOCAL_POINTERS.
-Because stack resizing is implemented by moving the stack,
-the stack pointer may change during any function call:
-even pointers to stack data must not be kept in local variables.
-
-
-Assembly functions should always be given Go prototypes,
-both to provide pointer information for the arguments and results
-and to let go vet check that
-the offsets being used to access them are correct.
-
-Architecture-specific details
-
-It is impractical to list all the instructions and other details for each machine.
-To see what instructions are defined for a given machine, say ARM,
-look in the source for the obj support library for
-that architecture, located in the directory src/cmd/internal/obj/arm.
-In that directory is a file a.out.go; it contains
-a long list of constants starting with A, like this:
-
-
-const (
-	AAND = obj.ABaseARM + obj.A_ARCHSPECIFIC + iota
-	AEOR
-	ASUB
-	ARSB
-	AADD
-	...
-
-
-This is the list of instructions and their spellings as known to the assembler and linker for that architecture.
-Each instruction begins with an initial capital A in this list, so AAND
-represents the bitwise and instruction,
-AND (without the leading A),
-and is written in assembly source as AND.
-The enumeration is mostly in alphabetical order.
-(The architecture-independent AXXX, defined in the
-cmd/internal/obj package,
-represents an invalid instruction).
-The sequence of the A names has nothing to do with the actual
-encoding of the machine instructions.
-The cmd/internal/obj package takes care of that detail.
-
-
-The instructions for both the 386 and AMD64 architectures are listed in
-cmd/internal/obj/x86/a.out.go.
-
-
-The architectures share syntax for common addressing modes such as
-(R1) (register indirect),
-4(R1) (register indirect with offset), and
-$foo(SB) (absolute address).
-The assembler also supports some (not necessarily all) addressing modes
-specific to each architecture.
-The sections below list these.
-
-
-One detail evident in the examples from the previous sections is that data in the instructions flows from left to right:
-MOVQ $0, CX clears CX.
-This rule applies even on architectures where the conventional notation uses the opposite direction.
-
-
-Here follow some descriptions of key Go-specific details for the supported architectures.
-
-32-bit Intel 386
-
-The runtime pointer to the g structure is maintained
-through the value of an otherwise unused (as far as Go is concerned) register in the MMU.
-In the runtime package, assembly code can include go_tls.h, which defines
-an OS- and architecture-dependent macro get_tls for accessing this register.
-The get_tls macro takes one argument, which is the register to load the
-g pointer into.
-
-
-For example, the sequence to load g and m
-using CX looks like this:
-
-
-#include "go_tls.h"
-#include "go_asm.h"
-...
-get_tls(CX)
-MOVL	g(CX), AX     // Move g into AX.
-MOVL	g_m(AX), BX   // Move g.m into BX.
-
-
-The get_tls macro is also defined on amd64.
-
-
-Addressing modes:
-
-
-
-(DI)(BX*2): The location at address DI plus BX*2.
-
-
-64(DI)(BX*2): The location at address DI plus BX*2 plus 64.
-These modes accept only 1, 2, 4, and 8 as scale factors.
-
-
-
-When using the compiler and assembler's
--dynlink or -shared modes,
-any load or store of a fixed memory location such as a global variable
-must be assumed to overwrite CX.
-Therefore, to be safe for use with these modes,
-assembly sources should typically avoid CX except between memory references.
-
-64-bit Intel 386 (a.k.a. amd64)
-
-The two architectures behave largely the same at the assembler level.
-Assembly code to access the m and g
-pointers on the 64-bit version is the same as on the 32-bit 386,
-except it uses MOVQ rather than MOVL:
-
-
-get_tls(CX)
-MOVQ	g(CX), AX     // Move g into AX.
-MOVQ	g_m(AX), BX   // Move g.m into BX.
-
-
-Register BP is callee-save.
-The assembler automatically inserts BP save/restore when frame size is larger than zero.
-Using BP as a general purpose register is allowed,
-however it can interfere with sampling-based profiling.
-
-ARM
-
-The registers R10 and R11
-are reserved by the compiler and linker.
-
-
-R10 points to the g (goroutine) structure.
-Within assembler source code, this pointer must be referred to as g;
-the name R10 is not recognized.
-
-
-To make it easier for people and compilers to write assembly, the ARM linker
-allows general addressing forms and pseudo-operations like DIV or MOD
-that may not be expressible using a single hardware instruction.
-It implements these forms as multiple instructions, often using the R11 register
-to hold temporary values.
-Hand-written assembly can use R11, but doing so requires
-being sure that the linker is not also using it to implement any of the other
-instructions in the function.
-
-
-When defining a TEXT, specifying frame size $-4
-tells the linker that this is a leaf function that does not need to save LR on entry.
-
-
-The name SP always refers to the virtual stack pointer described earlier.
-For the hardware register, use R13.
-
-
-Condition code syntax is to append a period and the one- or two-letter code to the instruction,
-as in MOVW.EQ.
-Multiple codes may be appended: MOVM.IA.W.
-The order of the code modifiers is irrelevant.
-
-
-Addressing modes:
-
-
-
-R0->16
-
-R0>>16
-
-R0<<16
-
-R0@>16:
-For <<, left shift R0 by 16 bits.
-The other codes are -> (arithmetic right shift),
->> (logical right shift), and
-@> (rotate right).
-
-
-R0->R1
-
-R0>>R1
-
-R0<<R1
-
-R0@>R1:
-For <<, left shift R0 by the count in R1.
-The other codes are -> (arithmetic right shift),
->> (logical right shift), and
-@> (rotate right).
-
-
-
-[R0,g,R12-R15]: For multi-register instructions, the set comprising
-R0, g, and R12 through R15 inclusive.
-
-
-(R5, R6): Destination register pair.
-
-
-ARM64
-
-R18 is the "platform register", reserved on the Apple platform.
-To prevent accidental misuse, the register is named R18_PLATFORM.
-R27 and R28 are reserved by the compiler and linker.
-R29 is the frame pointer.
-R30 is the link register.
-
-
-Instruction modifiers are appended to the instruction following a period.
-The only modifiers are P (postincrement) and W
-(preincrement):
-MOVW.P, MOVW.W
-
-
-Addressing modes:
-
-
-
-R0->16
-
-R0>>16
-
-R0<<16
-
-R0@>16:
-These are the same as on the 32-bit ARM.
-
-
-$(8<<12):
-Left shift the immediate value 8 by 12 bits.
-
-
-8(R0):
-Add the value of R0 and 8.
-
-
-(R2)(R0):
-The location at R0 plus R2.
-
-
-R0.UXTB
-
-R0.UXTB<<imm:
-UXTB: extract an 8-bit value from the low-order bits of R0 and zero-extend it to the size of R0.
-R0.UXTB<<imm: left shift the result of R0.UXTB by imm bits.
-The imm value can be 0, 1, 2, 3, or 4.
-The other extensions include UXTH (16-bit), UXTW (32-bit), and UXTX (64-bit).
-
-
-R0.SXTB
-
-R0.SXTB<<imm:
-SXTB: extract an 8-bit value from the low-order bits of R0 and sign-extend it to the size of R0.
-R0.SXTB<<imm: left shift the result of R0.SXTB by imm bits.
-The imm value can be 0, 1, 2, 3, or 4.
-The other extensions include SXTH (16-bit), SXTW (32-bit), and SXTX (64-bit).
-
-
-(R5, R6): Register pair for LDAXP/LDP/LDXP/STLXP/STP/STP.
-
-
-
-Reference: Go ARM64 Assembly Instructions Reference Manual
-
-PPC64
-
-This assembler is used by GOARCH values ppc64 and ppc64le.
-
-
-Reference: Go PPC64 Assembly Instructions Reference Manual
-
-IBM z/Architecture, a.k.a. s390x
-
-The registers R10 and R11 are reserved.
-The assembler uses them to hold temporary values when assembling some instructions.
-
-
-R13 points to the g (goroutine) structure.
-This register must be referred to as g; the name R13 is not recognized.
-
-
-R15 points to the stack frame and should typically only be accessed using the
-virtual registers SP and FP.
-
-
-Load- and store-multiple instructions operate on a range of registers.
-The range of registers is specified by a start register and an end register.
-For example, LMG (R9), R5, R7 would load
-R5, R6 and R7 with the 64-bit values at
-0(R9), 8(R9) and 16(R9) respectively.
-
-
-Storage-and-storage instructions such as MVC and XC are written
-with the length as the first argument.
-For example, XC $8, (R9), (R9) would clear
-eight bytes at the address specified in R9.
-
-
-If a vector instruction takes a length or an index as an argument then it will be the
-first argument.
-For example, VLEIF $1, $16, V2 will load
-the value sixteen into index one of V2.
-Care should be taken when using vector instructions to ensure that they are available at
-runtime.
-To use vector instructions a machine must have both the vector facility (bit 129 in the
-facility list) and kernel support.
-Without kernel support a vector instruction will have no effect (it will be equivalent
-to a NOP instruction).
-
-
-Addressing modes:
-
-
-
-(R5)(R6*1): The location at R5 plus R6.
-It is a scaled mode as on the x86, but the only scale allowed is 1.
-
-
-MIPS, MIPS64
-
-General purpose registers are named R0 through R31,
-floating point registers are F0 through F31.
-
-
-R30 is reserved to point to g.
-R23 is used as a temporary register.
-
-
-In a TEXT directive, the frame size $-4 for MIPS or
-$-8 for MIPS64 instructs the linker not to save LR.
-
-
-SP refers to the virtual stack pointer.
-For the hardware register, use R29.
-
-
-Addressing modes:
-
-
-
-16(R1): The location at R1 plus 16.
-
-
-(R1): Alias for 0(R1).
-
-
-
-The value of GOMIPS environment variable (hardfloat or
-softfloat) is made available to assembly code by predefining either
-GOMIPS_hardfloat or GOMIPS_softfloat.
-
-
-The value of GOMIPS64 environment variable (hardfloat or
-softfloat) is made available to assembly code by predefining either
-GOMIPS64_hardfloat or GOMIPS64_softfloat.
-
-RISCV64
-
-Reference: Go RISCV64 Assembly Instructions Reference Manual
-
-Unsupported opcodes
-
-The assemblers are designed to support the compiler so not all hardware instructions
-are defined for all architectures: if the compiler doesn't generate it, it might not be there.
-If you need to use a missing instruction, there are two ways to proceed.
-One is to update the assembler to support that instruction, which is straightforward
-but only worthwhile if it's likely the instruction will be used again.
-Instead, for simple one-off cases, it's possible to use the BYTE
-and WORD directives
-to lay down explicit data into the instruction stream within a TEXT.
-Here's how the 386 runtime defines the 64-bit atomic load function.
-
-
-// uint64 atomicload64(uint64 volatile* addr);
-// so actually
-// void atomicload64(uint64 *res, uint64 volatile *addr);
-TEXT runtime·atomicload64(SB), NOSPLIT, $0-12
-	MOVL	ptr+0(FP), AX
-	TESTL	$7, AX
-	JZ	2(PC)
-	MOVL	0, AX // crash with nil ptr deref
-	LEAL	ret_lo+4(FP), BX
-	// MOVQ (%EAX), %MM0
-	BYTE $0x0f; BYTE $0x6f; BYTE $0x00
-	// MOVQ %MM0, 0(%EBX)
-	BYTE $0x0f; BYTE $0x7f; BYTE $0x03
-	// EMMS
-	BYTE $0x0F; BYTE $0x77
-	RET</p>
-<p>which initializes the symbol memory at the given offset and width with the given value.
-The DATA directives for a given symbol must be written with increasing offsets.</p>
-<p>The GLOBL directive declares a symbol to be global.
-The arguments are optional flags and the size of the data being declared as a global,
-which will have initial value all zeros unless a DATA directive
-has initialized it.
-The GLOBL directive must follow any corresponding DATA directives.</p>
-<p>declares and initializes divtab<>, a read-only 64-byte table of 4-byte integer values,
-and declares runtime·tlsoffset, a 4-byte, implicitly zeroed variable that
-contains no pointers.</p>
-<p>There may be one or two arguments to the directives.
-If there are two, the first is a bit mask of flags,
-which can be written as numeric expressions, added or or-ed together,
-or can be set symbolically for easier absorption by a human.
-Their values, defined in the standard #include  file textflag.h, are:</p>
-<p>The PCALIGN pseudo-instruction is used to indicate that the next instruction should be aligned
-to a specified boundary by padding with no-op instructions.</p>
-<p>It is currently supported on arm64, amd64, ppc64, loong64 and riscv64.
-
-For example, the start of the MOVD instruction below is aligned to 32 bytes:
-
-PCALIGN $32
-MOVD $2, R0</p>
-<p>If a package has any .s files, then go build will direct
-the compiler to emit a special header called go_asm.h,
-which the .s files can then #include.
-The file contains symbolic #define constants for the
-offsets of Go struct fields, the sizes of Go struct types, and most
-Go const declarations defined in the current package.
-Go assembly should avoid making assumptions about the layout of Go
-types and instead use these constants.
-This improves the readability of assembly code, and keeps it robust to
-changes in data layout either in the Go type definitions or in the
-layout rules used by the Go compiler.</p>
-<p>Constants are of the form const_name.
-For example, given the Go declaration const bufSize =
-1024, assembly code can refer to the value of this constant
-as const_bufSize.</p>
-<p>Field offsets are of the form type_field.
-Struct sizes are of the form type__size.
-For example, consider the following Go definition:</p>
-<p>Assembly can refer to the size of this struct
-as reader__size and the offsets of the two fields
-as reader_buf and reader_r.
-Hence, if register R1 contains a pointer to
-a reader, assembly can reference the r field
-as reader_r(R1).</p>
-<p>If any of these #define names are ambiguous (for example,
-a struct with a _size field), #include
-"go_asm.h" will fail with a "redefinition of macro" error.</p>
-<p>For garbage collection to run correctly, the runtime must know the
-location of pointers in all global data and in most stack frames.
-The Go compiler emits this information when compiling Go source files,
-but assembly programs must define it explicitly.</p>
-<p>A data symbol marked with the NOPTR flag (see above)
-is treated as containing no pointers to runtime-allocated data.
-A data symbol with the RODATA flag
-is allocated in read-only memory and is therefore treated
-as implicitly marked NOPTR.
-A data symbol with a total size smaller than a pointer
-is also treated as implicitly marked NOPTR.
-It is not possible to define a symbol containing pointers in an assembly source file;
-such a symbol must be defined in a Go source file instead.
-Assembly source can still refer to the symbol by name
-even without DATA and GLOBL directives.
-A good general rule of thumb is to define all non-RODATA
-symbols in Go instead of in assembly.</p>
-<p>Each function also needs annotations giving the location of
-live pointers in its arguments, results, and local stack frame.
-For an assembly function with no pointer results and
-either no local stack frame or no function calls,
-the only requirement is to define a Go prototype for the function
-in a Go source file in the same package. The name of the assembly
-function must not contain the package name component (for example,
-function Syscall in package syscall should
-use the name ·Syscall instead of the equivalent name
-syscall·Syscall in its TEXT directive).
-For more complex situations, explicit annotation is needed.
-These annotations use pseudo-instructions defined in the standard
-#include file funcdata.h.</p>
-<p>If a function has no arguments and no results,
-the pointer information can be omitted.
-This is indicated by an argument size annotation of $n-0
-on the TEXT instruction.
-Otherwise, pointer information must be provided by
-a Go prototype for the function in a Go source file,
-even for assembly functions not called directly from Go.
-(The prototype will also let go vet check the argument references.)
-At the start of the function, the arguments are assumed
-to be initialized but the results are assumed uninitialized.
-If the results will hold live pointers during a call instruction,
-the function should start by zeroing the results and then
-executing the pseudo-instruction GO_RESULTS_INITIALIZED.
-This instruction records that the results are now initialized
-and should be scanned during stack movement and garbage collection.
-It is typically easier to arrange that assembly functions do not
-return pointers or do not contain call instructions;
-no assembly functions in the standard library use
-GO_RESULTS_INITIALIZED.</p>
-<p>If a function has no local stack frame,
-the pointer information can be omitted.
-This is indicated by a local frame size annotation of $0-n
-on the TEXT instruction.
-The pointer information can also be omitted if the
-function contains no call instructions.
-Otherwise, the local stack frame must not contain pointers,
-and the assembly must confirm this fact by executing the
-pseudo-instruction NO_LOCAL_POINTERS.
-Because stack resizing is implemented by moving the stack,
-the stack pointer may change during any function call:
-even pointers to stack data must not be kept in local variables.</p>
-<p>Assembly functions should always be given Go prototypes,
-both to provide pointer information for the arguments and results
-and to let go vet check that
-the offsets being used to access them are correct.</p>
-<p>It is impractical to list all the instructions and other details for each machine.
-To see what instructions are defined for a given machine, say ARM,
-look in the source for the obj support library for
-that architecture, located in the directory src/cmd/internal/obj/arm.
-In that directory is a file a.out.go; it contains
-a long list of constants starting with A, like this:</p>
-<p>This is the list of instructions and their spellings as known to the assembler and linker for that architecture.
-Each instruction begins with an initial capital A in this list, so AAND
-represents the bitwise and instruction,
-AND (without the leading A),
-and is written in assembly source as AND.
-The enumeration is mostly in alphabetical order.
-(The architecture-independent AXXX, defined in the
-cmd/internal/obj package,
-represents an invalid instruction).
-The sequence of the A names has nothing to do with the actual
-encoding of the machine instructions.
-The cmd/internal/obj package takes care of that detail.</p>
-<p>The instructions for both the 386 and AMD64 architectures are listed in
-cmd/internal/obj/x86/a.out.go.</p>
-<p>The architectures share syntax for common addressing modes such as
-(R1) (register indirect),
-4(R1) (register indirect with offset), and
-$foo(SB) (absolute address).
-The assembler also supports some (not necessarily all) addressing modes
-specific to each architecture.
-The sections below list these.</p>
-<p>One detail evident in the examples from the previous sections is that data in the instructions flows from left to right:
-MOVQ $0, CX clears CX.
-This rule applies even on architectures where the conventional notation uses the opposite direction.</p>
-<p>Here follow some descriptions of key Go-specific details for the supported architectures.</p>
-<p>The runtime pointer to the g structure is maintained
-through the value of an otherwise unused (as far as Go is concerned) register in the MMU.
-In the runtime package, assembly code can include go_tls.h, which defines
-an OS- and architecture-dependent macro get_tls for accessing this register.
-The get_tls macro takes one argument, which is the register to load the
-g pointer into.</p>
-<p>For example, the sequence to load g and m
-using CX looks like this:</p>
-<p>The get_tls macro is also defined on amd64.</p>
-<p>When using the compiler and assembler's
--dynlink or -shared modes,
-any load or store of a fixed memory location such as a global variable
-must be assumed to overwrite CX.
-Therefore, to be safe for use with these modes,
-assembly sources should typically avoid CX except between memory references.</p>
-<p>The two architectures behave largely the same at the assembler level.
-Assembly code to access the m and g
-pointers on the 64-bit version is the same as on the 32-bit 386,
-except it uses MOVQ rather than MOVL:</p>
-<p>Register BP is callee-save.
-The assembler automatically inserts BP save/restore when frame size is larger than zero.
-Using BP as a general purpose register is allowed,
-however it can interfere with sampling-based profiling.</p>
-<p>The registers R10 and R11
-are reserved by the compiler and linker.</p>
-<p>R10 points to the g (goroutine) structure.
-Within assembler source code, this pointer must be referred to as g;
-the name R10 is not recognized.</p>
-<p>To make it easier for people and compilers to write assembly, the ARM linker
-allows general addressing forms and pseudo-operations like DIV or MOD
-that may not be expressible using a single hardware instruction.
-It implements these forms as multiple instructions, often using the R11 register
-to hold temporary values.
-Hand-written assembly can use R11, but doing so requires
-being sure that the linker is not also using it to implement any of the other
-instructions in the function.</p>
-<p>When defining a TEXT, specifying frame size $-4
-tells the linker that this is a leaf function that does not need to save LR on entry.</p>
-<p>The name SP always refers to the virtual stack pointer described earlier.
-For the hardware register, use R13.</p>
-<p>Condition code syntax is to append a period and the one- or two-letter code to the instruction,
-as in MOVW.EQ.
-Multiple codes may be appended: MOVM.IA.W.
-The order of the code modifiers is irrelevant.</p>
-<p>R18 is the "platform register", reserved on the Apple platform.
-To prevent accidental misuse, the register is named R18_PLATFORM.
-R27 and R28 are reserved by the compiler and linker.
-R29 is the frame pointer.
-R30 is the link register.</p>
-<p>Instruction modifiers are appended to the instruction following a period.
-The only modifiers are P (postincrement) and W
-(preincrement):
-MOVW.P, MOVW.W</p>
-<p>Reference: Go ARM64 Assembly Instructions Reference Manual</p>
-<p>This assembler is used by GOARCH values ppc64 and ppc64le.</p>
-<p>Reference: Go PPC64 Assembly Instructions Reference Manual</p>
-<p>The registers R10 and R11 are reserved.
-The assembler uses them to hold temporary values when assembling some instructions.</p>
-<p>R13 points to the g (goroutine) structure.
-This register must be referred to as g; the name R13 is not recognized.</p>
-<p>R15 points to the stack frame and should typically only be accessed using the
-virtual registers SP and FP.</p>
-<p>Load- and store-multiple instructions operate on a range of registers.
-The range of registers is specified by a start register and an end register.
-For example, LMG (R9), R5, R7 would load
-R5, R6 and R7 with the 64-bit values at
-0(R9), 8(R9) and 16(R9) respectively.</p>
-<p>Storage-and-storage instructions such as MVC and XC are written
-with the length as the first argument.
-For example, XC $8, (R9), (R9) would clear
-eight bytes at the address specified in R9.</p>
-<p>If a vector instruction takes a length or an index as an argument then it will be the
-first argument.
-For example, VLEIF $1, $16, V2 will load
-the value sixteen into index one of V2.
-Care should be taken when using vector instructions to ensure that they are available at
-runtime.
-To use vector instructions a machine must have both the vector facility (bit 129 in the
-facility list) and kernel support.
-Without kernel support a vector instruction will have no effect (it will be equivalent
-to a NOP instruction).</p>
-<p>General purpose registers are named R0 through R31,
-floating point registers are F0 through F31.</p>
-<p>R30 is reserved to point to g.
-R23 is used as a temporary register.</p>
-<p>In a TEXT directive, the frame size $-4 for MIPS or
-$-8 for MIPS64 instructs the linker not to save LR.</p>
-<p>SP refers to the virtual stack pointer.
-For the hardware register, use R29.</p>
-<p>The value of GOMIPS environment variable (hardfloat or
-softfloat) is made available to assembly code by predefining either
-GOMIPS_hardfloat or GOMIPS_softfloat.</p>
-<p>The value of GOMIPS64 environment variable (hardfloat or
-softfloat) is made available to assembly code by predefining either
-GOMIPS64_hardfloat or GOMIPS64_softfloat.</p>
-<p>Reference: Go RISCV64 Assembly Instructions Reference Manual</p>
-<p>The assemblers are designed to support the compiler so not all hardware instructions
-are defined for all architectures: if the compiler doesn't generate it, it might not be there.
-If you need to use a missing instruction, there are two ways to proceed.
-One is to update the assembler to support that instruction, which is straightforward
-but only worthwhile if it's likely the instruction will be used again.
-Instead, for simple one-off cases, it's possible to use the BYTE
-and WORD directives
-to lay down explicit data into the instruction stream within a TEXT.
-Here's how the 386 runtime defines the 64-bit atomic load function.</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>They seems popular enough. It's not something I would buy but there's like five in my neighborhood alone.Just because there's a cluster in your neighborhood does not mean it is selling nationally. They only sold around 20,000 total in all of 2025. The design is Elon Musk's dream about what a truck should be rather than what customers actually want. And many claims Elon made about what the truck is and what it can do were outright lies.  The truck market is huge and incredibly competitive. It's not a market where Tesla can win and entering it was a strategic error. But, there does not appear to be anyone on the Tesla board who will tell Elon 'no'.</p>
+<p>They seems popular enough. It's not something I would buy but there's like five in my neighborhood alone.</p>
+<p>Just because there's a cluster in your neighborhood does not mean it is selling nationally. They only sold around 20,000 total in all of 2025. The design is Elon Musk's dream about what a truck should be rather than what customers actually want. And many claims Elon made about what the truck is and what it can do were outright lies.  The truck market is huge and incredibly competitive. It's not a market where Tesla can win and entering it was a strategic error. But, there does not appear to be anyone on the Tesla board who will tell Elon 'no'.</p>
+<p>Funny news but funnier if it's the beginning of the end of Elon's string of lucky throws. Oh wait. I forgot about his wagers on a certain recent election.</p>
+<p>For whatever it's worth, many local Tesla owners have become so embarrassed by Musk's antics that they have pulled the logos off the hoods of their cars. Never been a lot of them around here, but they are distinctive enough to spot coming as I'm walking around, but now I have to look quick to try to check the back of the car to confirm what it was.</p>
+<p>And I've never seen a Cybertruck in real life. Recently I've started noticing increasing numbers of that Chinese electric brand...</p>
+<p>There was plenty of interest in the beginning**, and the electric truck market really doesn't have good competition for a given price point.  The problems were:</p>
+<p>1) The price shot up heavily2) The stats and capabilities went down3) Musk went hard-right, and rightly or wrongly the Cybertruck became seen as a symbol of being MAGA.</p>
+<p>These things together pushed away ~90% of prospective buyers.  Combined with the fact that the Cybertruck's production line was unique, as well as being a generation back, and it made it hard for Tesla to justify owning it.</p>
+<p>** - Including from me. Beyond the stats-for-the-price point as introduced, I liked the engineering behind the design. If you want to make it rugged, that implies a thick skin. So make it an exoskeleton to bear the internal loads. Want to maximize strength while minimizing the mass?  Resist torsional loads with a braced cantilever design (the triangular rear).  Which, with a retracting tonneau, creates a very long, gradual rear taper, allowing detached air (from the angles necessitated by an exoskeleton) ample time to retract and minimizing the drawn wake.  On and on - from an engineering perspective, there was a lot of great stuff that appealed to me. But little of that ended up staying. The final design hangs the (thinner) exterior metal onto a frame just as dead mass. The big raft of changes led to mass growth, cost growth, and range decline (despite advancing battery tech and pricing). And of course, I'm not super eager for Elon to end up with any of my money these days.  Another family member had also been interested, and also cancelled.</p>
+<p>3) Musk went hard-right, and rightly or wrongly the Cybertruck became seen as a symbol of being MAGA.I was driving in Palo Alto recently and spotted a Cybertruck with a perfectly applied bumper sticker saying "Shut The Fuck Up Elon".   I couldn't get my phone out of my pocket fast enough to get a picture and it disappeared in traffic.
+
+It was good to see something like that after all the internet images with Cybertrucks in a gaudy MAGA/Trump wrap which is where that reputation came from.</p>
+<p>3) Musk went hard-right, and rightly or wrongly the Cybertruck became seen as a symbol of being MAGA.</p>
+<p>I was driving in Palo Alto recently and spotted a Cybertruck with a perfectly applied bumper sticker saying "Shut The Fuck Up Elon".   I couldn't get my phone out of my pocket fast enough to get a picture and it disappeared in traffic.</p>
+<p>It was good to see something like that after all the internet images with Cybertrucks in a gaudy MAGA/Trump wrap which is where that reputation came from.</p>
+<p>The rep came from Leon supporting Trump, not for any other reason whatsoever.</p>
+<p>I would buy a car from Lex Luther.  At least when he was President, he put all his businesses in a trust before going to the White House.</p>
+<p>I would buy a car from Lex Luther. At least when he was President, he put all his businesses in a trust before going to the White House.Nonsense. Lex Luthor is too intelligent and not corrupt enough to get MAGA votes.</p>
+<p>I would buy a car from Lex Luther. At least when he was President, he put all his businesses in a trust before going to the White House.</p>
+<p>Nonsense. Lex Luthor is too intelligent and not corrupt enough to get MAGA votes.</p>
+<p>Interestingly, right after the Cybertruck was announced I predicted that it would be the greatest embarrassment in the history of automobiles.</p>
+<p>You see, you fell for the lies, I did not.  The Cybertruck was always going to be failure, starting with the fact that its cost and range were predicated on Musk actually believing that 4680 cells would have 5x the energy density of 2170 when they are merely 5 times the size and offer worse performance.  The evidence of Musk's ignorance has been there all along, peopl</p>
+<p>I took one look at it and knew it would be a short-lived load of shit. It was a clumsy behemoth that wouldn't fit in 90% of the garages out there. Seriously, there was no fuckin way it would ever succeed.</p>
+<p>It takes up the same space as a half-ton.  I will say the odd shape is off-putting.</p>
+<p>It should have been more like the Slate or a Wrangler where one could add a back part and use it like a truck or a SUV.</p>
+<p>predicted that it would be the greatest embarrassment in the history of automobiles.</p>
+<p>Said about every single Tesla model and non-vehicle product, and about the company as a whole, every time, by millions of people, for its entire history.  That's hardly a badge to pin on yourself unless you were also saying that the Roadster, Model S, Model X, Model 3, and Model Y, and grid batteries would be massive successes.</p>
+<p>Also, don't confuse "putting down a refundable $100 reservation" with "prognosticating about the f</p>
+<p>Yeah, the stainless steel is kind of a joke given the move from an exoskeleton to a body on mega-casting.</p>
+<p>The political impact is similarly a huge failure.</p>
+<p>I think the specs and the engineering are related.</p>
+<p>It was supposed to be a new way to make light stiff cars.</p>
+<p>It ended up being a unibody with wedges glued on. The look was a product of the engineering originally.</p>
+<p>In the end it was a weirder looking Ridgeline.</p>
+<p>An electric truck market should exist, but US automakers have to pay too much for batteries for there to be one here.</p>
+<p>What would sell to people doing actual work who actually need pickups is basic trucks with big batteries that get good range while towing and can also provide power. But we can't make any EV with a big battery which isn't very expensive, and US automakers are addicted to selling products with high profit ratios.</p>
+<p>Tevo disagrees with you.  Tevo promises big range, huge towing, lots of power and $45K.</p>
+<p>LMK when they deliver. I hope they succeed.</p>
+<p>Do you mean Telo  [telotrucks.com]? I hope so because that looks amazing. I love cab forward design. It's weird driving something where you sit super far forwards, but it is possible to get used to it. I'm very glad I got to drive a Sprinter enough to get really in tune with it (I absolutely whipped it up on the top of CA-1, including one late night passing within about two to three feet of an Elk standing in the ditch and chewing on something placidly) before driving a conventional</p>
+<p>They had tons of hi-visibility production problems because of all the dipshit decisions they made; I seriously doubt the full retail cost of 70K of those even grossed the development costs, let alone came close to breaking even overall.</p>
+<p>It was the Crystal Pepsi of vehicles. Battlefield Earth in truck form.</p>
+<p>The design was one he picked from several presented. The original intent was for a monocoque (stressed skin) design, and the funny shape was necessary for that design.</p>
+<p>Somewhere along the line they figured they needed to go back to a standard design to make it, and they should have killed it right there. But they didn't.</p>
+<p>Of course, if they had killed it, the EDS crowd would be screaming "MUSK LIED reeeeeee!"</p>
+<p>But at least it introduced total 48V, gigabit rings for communications, and true steer by wire.</p>
+<p>He means Elon Dicksucking Syndrome which he suffers from because he loves Nazis</p>
+<p>He means Elon Dicksucking Syndrome which he suffers from because he loves NazisThere you go again, throwing obscenities at a poster who made some relevant points. And yet you can't see why people dislike you.Maybe you and Elon have more in common than you'd like to think.  He fires off a lot of pointless insulting tweets without thinking. Are you on X?</p>
+<p>He means Elon Dicksucking Syndrome which he suffers from because he loves Nazis</p>
+<p>There you go again, throwing obscenities at a poster who made some relevant points. And yet you can't see why people dislike you.Maybe you and Elon have more in common than you'd like to think.  He fires off a lot of pointless insulting tweets without thinking. Are you on X?</p>
+<p>But at least it introduced total 48V, gigabit rings for communications, and true steer by wire.Yes, I can't count how many trips to the supermarket left me wishing that I had "gigabit rings for communications" and "true steer by wire" in my car. All my neighbors have it, even the poor ones!</p>
+<p>But at least it introduced total 48V, gigabit rings for communications, and true steer by wire.</p>
+<p>Yes, I can't count how many trips to the supermarket left me wishing that I had "gigabit rings for communications" and "true steer by wire" in my car. All my neighbors have it, even the poor ones!</p>
+<p>I'm guessing "highly noticeable" isn't the same as "popular". According to responses on his post:- Factory built to manufacture 125k a year- 70k sold over 3 years- $2 billion in R&D, $100 million in gross sales</p>
+<p>Couldn't have happened to a nicer fellow.</p>
+<p>- 70k sold over 3 years- $2 billion in R&D, $100 million in gross sales$100,000,000 gross / 70,000 vehicles = $1428.57 each?I don't particularly care for the look of the cybertruck, but if I had known they cost less than $1.5k each, I might've bought one.</p>
+<p>- 70k sold over 3 years- $2 billion in R&D, $100 million in gross sales</p>
+<p>$100,000,000 gross / 70,000 vehicles = $1428.57 each?</p>
+<p>I don't particularly care for the look of the cybertruck, but if I had known they cost less than $1.5k each, I might've bought one.</p>
+<p>Pretty sure the $100MM is gross margin, not gross sales.</p>
+<p>- 70k sold over 3 yearsDoes that number include the 1300 Cybertrucks that Elon got SpaceX to buy from Tesla so he could make his Q4 numbers last year look better?</p>
+<p>Does that number include the 1300 Cybertrucks that Elon got SpaceX to buy from Tesla so he could make his Q4 numbers last year look better?</p>
+<p>This is probably main part of the problem.</p>
+<p>"It looks cool and seems popular, but it's not something I would buy" is likely the most popular opinion on that thing. And that doesn't generate sales needed to justify the cost vs alternatives.</p>
+<p>(In before Elon haters and Elon fanboys ripping and tearing into each other.)</p>
+<p>It looks cool if you think slapping gold veneer on everything is also tasteful.</p>
+<p>Yeah the first thing I want to do with my brand new $100K+ car is buy a $2500 wrap for it to hide the stainless steel body that was one of its main selling points.</p>
+<p>He didn't say they had gold veneer. He said they appealed to the same people who think gold veneer is tasteful.</p>
+<p>I think I just threw up in my mouth... ;-)</p>
+<p>"It looks cool and seems popular, but it's not something I would buy" is likely the most popular opinion on that thing. And that doesn't generate sales needed to justify the cost vs alternatives.I believe the most popular opinion on that thing is "it looks like a dumpster on wheels, but at least it's fabulously expensive". There are several in my neighborhood, and I'm always shocked when I see them. Who would buy these bizarre artistic statements? Picasso might have enjoyed them.</p>
+<p>"It looks cool and seems popular, but it's not something I would buy" is likely the most popular opinion on that thing. And that doesn't generate sales needed to justify the cost vs alternatives.</p>
+<p>I believe the most popular opinion on that thing is "it looks like a dumpster on wheels, but at least it's fabulously expensive". There are several in my neighborhood, and I'm always shocked when I see them. Who would buy these bizarre artistic statements? Picasso might have enjoyed them.</p>
+<p>I asked my neighbor who has one a polite version of "Why did you buy it?". He said it makes him feel like a superhero. He volunteered that the suspension is software controlled so you can dial in the kind of handling you like.But I can't really answer your question, being far from the target market.</p>
+<p>The cybertruck is quite different from both the usual car and truck design. If you want a vehicle that stands out and you don't want to buy a two seater hypercar, it's pretty much your only choice.</p>
+<p>I asked my neighbor who has one a polite version of "Why did you buy it?". He said it makes him feel like a superhero.Your neighbor is so shallow that he probably disappears when he turns sideways. He undoubtedly fantasizes about saving a hot chick from some evil bad guys with the help of his manly Cybertruck.</p>
+<p>I asked my neighbor who has one a polite version of "Why did you buy it?". He said it makes him feel like a superhero.</p>
+<p>Your neighbor is so shallow that he probably disappears when he turns sideways. He undoubtedly fantasizes about saving a hot chick from some evil bad guys with the help of his manly Cybertruck.</p>
+<p>I've seen them in RL, and I have to agree with the sibling post who says the kind of person who'd think they look cool would be the same that thinks putting gold veneer on everything makes looks elegant.  They're just... gaudy with no redeeming qualities in terms of design, the kind of thing a 9 year old would draw as his concept of what a really cool car looks like. It's just weird, angular, and large. It looks as cool as a skip. Which not coincidentally its compared to on a regular basis.</p>
+<p>The good news is between Ford and Slate, the options for something that does what the Cybertruck says, but has a utilitarian design, looks decent, and is actually affordable, are coming. Whether there's a market is another issue given the disproportionately high number of pick-up drivers who are likely swayed by culture war crap. But they're coming for those who want the advantages of EVs without having to drive a sedan.</p>
+<p>Thankfully, though, she does not make the family's car purchasing decisions.</p>
+<p>I gotta say - with regards to the Cybertruck, "It looks cool and seems popular" is not a sentiment I've seen or heard anywhere but on this site.</p>
+<p>What I DO hear, quite often, is variations on the following theme: "That thing is butt-ugly!"</p>
+<p>They aren't. Leon had to have SpaceX buy a bunch of them to bail out Tesla.</p>
+<p>me too. Still reminds me of the Warthog in Halo, which I think is pretty cool.</p>
+<p>I didn't have one, but I like the stainless steel, drive by wire, and four wheel steering and vehicle to grid.  all cool features.</p>
+<p>But full size electric pickups just haven't gotten much uptake in general.   IDK if Tesla ever made money on them, but Ford, Chevy, and rivian certainly haven't.</p>
+<p>Most one the ones I see have a vinyl wrap advertising a business. One fake redneck bar has a wrap to make it look wooden. https://maps.app.goo.gl/JRtd4F... [app.goo.gl]</p>
+<p>Nothing says "country" like a stainless steel electric truck designed by the worlds richest man.</p>
+<p>Most one the ones I see have a vinyl wrap advertising a business. One fake redneck bar has a wrap to make it look wooden. https://maps.app.goo.gl/JRtd4F... [app.goo.gl] Nothing says "country" like a stainless steel electric truck designed by the worlds richest man.Still chuckling as I write this. If you're ever looking to update your sig, you could do far worse than the last sentence of your comment.</p>
+<p>Most one the ones I see have a vinyl wrap advertising a business. One fake redneck bar has a wrap to make it look wooden. https://maps.app.goo.gl/JRtd4F... [app.goo.gl]</p>
+<p>Nothing says "country" like a stainless steel electric truck designed by the worlds richest man.</p>
+<p>Still chuckling as I write this. If you're ever looking to update your sig, you could do far worse than the last sentence of your comment.</p>
+<p>Most one the ones I see have a vinyl wrap advertising a business.I absolutely love when businesses advertise on these pieces of shit. It makes it incredibly easy to know who not to give my money too.</p>
+<p>Most one the ones I see have a vinyl wrap advertising a business.</p>
+<p>I absolutely love when businesses advertise on these pieces of shit. It makes it incredibly easy to know who not to give my money too.</p>
+<p>It isn't. Leon had to have SpaceX buy a bunch of them to bail out Tesla.</p>
+<p>I posted this comment already but it got modded down, so I'm posting it again to troll the trolls with facts.</p>
+<p>I've seen two or three in my neighbourhood but:</p>
+<p>1. The neighbourhood is heavily MAGA (Florida, East Coast but North of Palm Beach)2. When you think of all the cars you see, you're going to notice the Cybertruck because of what it is, but it's not like I'm seeing them every day. There's a very good chance I've seen more than 50% of the Cybertrucks in the area, making up some relatively small percentage of the population here as a whole.</p>
+<p>To put it another way, if the area I live in has 20-40,000 people in it, a</p>
+<p>You: It sure is surprising they're stopping production of these popular vehicles</p>
+<p>"Trucks have been the same for a very long time," Musk saidThere's a reason for that. People have figured out what works and what does not. And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.</p>
+<p>"Trucks have been the same for a very long time," Musk said</p>
+<p>There's a reason for that. People have figured out what works and what does not. And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.</p>
+<p>"Trucks have been the same for a very long time," Musk saidThere's a reason for that. People have figured out what works and what does not. And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.The problem with the Cybertruck isn't its design.  The problem is its cost.  It costs almost twice as much as an F350, with half to two-thirds of the bed capacity, half the towing capacity, and as little as half the range.If CyberTruck sold for $35,000, people would buy it, because it would be competing head-to-head with the F150.If Elon had shipped the battery extender that was originally promised, had made long bed versions so that you'd still have actual bed capacity remaining after installing it, and had doubled the towing capacity, people would buy it.But instead, he delivered something that was a fraction of what was promised, at a quarter of the value per dollar of the competition, and then wondered why his little "I'm a far-right winger" stunts failed to attract sales from the rural South.  It was never about his politics.  It was always about value for the money.  All his stunts really did was cost the company sales in California.</p>
+<p>"Trucks have been the same for a very long time," Musk saidThere's a reason for that. People have figured out what works and what does not. And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.</p>
+<p>"Trucks have been the same for a very long time," Musk said</p>
+<p>There's a reason for that. People have figured out what works and what does not. And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.</p>
+<p>The problem with the Cybertruck isn't its design.  The problem is its cost.  It costs almost twice as much as an F350, with half to two-thirds of the bed capacity, half the towing capacity, and as little as half the range.</p>
+<p>If CyberTruck sold for $35,000, people would buy it, because it would be competing head-to-head with the F150.</p>
+<p>If Elon had shipped the battery extender that was originally promised, had made long bed versions so that you'd still have actual bed capacity remaining after installing it, and had doubled the towing capacity, people would buy it.</p>
+<p>But instead, he delivered something that was a fraction of what was promised, at a quarter of the value per dollar of the competition, and then wondered why his little "I'm a far-right winger" stunts failed to attract sales from the rural South.  It was never about his politics.  It was always about value for the money.  All his stunts really did was cost the company sales in California.</p>
+<p>Right, plus the design sucked.  Let's not forget the recalls for the gas pedal that got stuck depressed under a floor mat or a front trunk actuator that broke fingers or the fact that you can't take a Cybertruck through a car wash without permanently disabling it.</p>
+<p>And the cybertruck didn't merely fail to deliver on promises, those promised were based on Elon Musk's unbelievable ignorance.  The low cost and 500 mile range were based on Elon thinking his new batteries were 5x denser when they were in fact 5x L</p>
+<p>And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.If you look at modern trucks, they are very much fashion statements. 30 years ago trucks were basically sedans with the rear converted for maximum transport capacity. In the meantime they have grown massively in size (without adding much utility), and look like kinder garden kid's dream.</p>
+<p>And, until recently, being a fashion statement wasn't high on most truck buyers lists. Elon would have been wise to do a bit more market research.</p>
+<p>If you look at modern trucks, they are very much fashion statements. 30 years ago trucks were basically sedans with the rear converted for maximum transport capacity. In the meantime they have grown massively in size (without adding much utility), and look like kinder garden kid's dream.</p>
+<p>And, until recently, being a fashion statement wasn't high on most truck buyers lists.</p>
+<p>Bullshit. There are some people who buy trucks because they need a vehicle that carries lots of cargo. Farmers, contractors, etc. There are more people (in the US) who buy a truck because they like trucks.</p>
+<p>Surely you cannot actually believe that “until recently, being a fashion statement wasn't high on most truck buyers lists”?</p>
+<p>Lift kits, absurdly large wheels, ever more aggressive styling, rolling coal, bull bars, exaggerated air intakes, enormous grilles, brush guards, armoured bumpers, wide stances, protruding wheels, deep dish wheels, blacked out everything, roof mounted light bars, and on and on and on this is fashion for men who belive they’re immune to fashion, because they’re dumb as a rock.</p>
+<p>Usually the engineers and project managers that work at Tesla take Musk's ideas and either make them work or convince him that there is so little chance of it working that it isn't even worth trying.   That didn't happen for Cybertruck.</p>
+<p>Of course it remains popular to snicker and jeer when Musk fails, which is fine if that is what gets you through the day.  The side effect is it suppresses what the original project directives were.</p>
+<p>I recall Musk talking about the Cybertruck early on, which was supposed to be a low cost offering for its class.  In the range of $30,000.   His idea was to create a truck with material that was sourced by SpaceX to build rockets (stainless steel), and build an exoskeleton with simple and cheap cut-and-fold operations and minimal welding and no paint.  The guts and drivetrain of the truck would sit inside the exoskeleton.    Going by the back-of-the-napkin design it sounded achievable.   He also made it clear he knew that not everyone would like the dtesign but he wanted to put forth a radical new look.  That part worked, at least.</p>
+<p>"Sounding" achievable isn't the same as actually achievable and Musk should have done more homework up front.   The engineers had to do one modification after another to the original idea in order to make things street legal and soon you ended up with what you now see in the parking lot.   They should have chopped the project off after they knew that the original cost goals would be blown through but for whatever reason they didn't.</p>
+<p>They should have had something like the Slate Truck.   Instead they ended up building the Queen Mary.</p>
+<p>That didn't happen for Cybertruck. The engineers and project managers wanted to keep getting a paycheck? Elon has tended to fire people who tell him no.</p>
+<p>The engineers and project managers wanted to keep getting a paycheck? Elon has tended to fire people who tell him no.</p>
+<p>OTOH and entirely tangentially, the Slate seems like a decent mini truck.  Anemic range and AFAIK didn't *quite* hit the price point (how many things conceptualized in 2022 still hit their price points in 2026?) but it really is a clever idea.  If they can sell well, there might be some interest from larger automakers who might apply some scaling benefits as well....</p>
+<p>It's a terrible idea.  The core Slate idea is to make an undesirable product that buyers will have to modify, then get ongoing profits on upsells later.  There is absolutely NO evidence that the Slate is actually a good truck, it is certainly the ugliest since the Cybertruck with even a worse interior.  The Slate isn't even painted, it has plastic panels that don't even have a texture to hide road rash.  The Slate is designed to create a problem for buyers that requires additional expense.  And who wants to</p>
+<p>It was only ever street legal in the US and a couple of other places. Everywhere else, it was recognised as extremely dangerous for vulnerable road users, not least due to those angles you mention.</p>
+<p>I actually thought the design looked so cool at the time. It was outrageous. My opinion soured on the look when, like you said, it turned into an overpriced pile of junk and it was being bought by the most obnoxious rich assholes.</p>
+<p>Keep lying to yourself, sooner or later Elon Musk will prove himself to be a genius again.</p>
+<p>""Sounding" achievable isn't the same as actually achievable and Musk should have done more homework up front. "</p>
+<p>LOL Elon Musk does homework up front for one reason only, to plan on his next fraud scheme.  Elon Musk thought 4680 cells offered 5x the energy density of 2170 cells, no amount of homework would fix that stupidity.</p>
+<p>What aspects of the design make it so hostile?</p>
+<p>Where is the door handle you pull in an emergency to get a door open?  There's a hundred years of experience on how to do that, that's why Tesla's don't.</p>
+<p>Musk fundamentally believes that everyone else is incompetent and everything the industry does is bad.  That's why Tesla has to gratuitously change EVERYTHING and why, because of absurd Tesla valuations, the auto industry has regressed so much recently.  Sure, rescuing people trapped in a Tesla is much harder, but Elon says you shouldn't even use a brake pedal.  Why?  Because Tesla can't blend braking and regen.</p>
+<p>It is hard to find a single thing a Tesla does well beyond the basic fundamentals of the electric</p>
+<p>Yes, it's useless as a truck and the design sucks, but there is a lot of great tech inside like the 48V wiring and control system</p>
+<p>Elon didn't invent 48V, it is well established in cars.  Elon deleted the 12V, then claimed his innovation was what others were already doing.</p>
+<p>Not one buyer should give a shit about 48V, the fanboys love to regurgitate it though.  If you want to install your own electrical gear, 48V is not your friend.</p>
+<p>I give at least one half of one shit about 48V. It's not going to make me buy a DumpsterTruck, but I do think it's inevitable eventually and is also a good idea in general. You will have to use some sense when installing equipment, and not just splice into circuits you don't belong in... but that was really true anyway. There's few right ways and many wrong ways to make modifications and additions to automotive electrical systems.</p>
+<p>> Which begs the question -- why are US safety laws so lax?</p>
+<p>It's more different priorities. The US (and Canada) has safety laws (and indeed a whole policy on roads) oriented towards protecting the driver and passengers. While the rest of the world tends to consider the lives of those outside of a car to be more important.</p>
+<p>Of course, some times those policies will mesh and vehicles can be made that match both priorities. Other times, they won't. And other times, there's no reason why a vehicle can't be built that considers both priorities to be important, but for whatever reason, the designer decides to focus on one market at the expense of the others.</p>
+<p>The Cybertruck is probably not the only design that can't be exported to Europe for the same reasons, and there are reasons why most car manufacturers have "US" and "non-US" portfolios so different they'll slap the same name onto two entirely different vehicle designs knowing that there's no confusion because one is intended for Americans, and the other not.</p>
+<p>Cybertruck due its weight is not feasible to quality for the B license. 300-350kg away from weight cap just with driver, and even worse with the bigger battery?Aside from the FUD, by this point we are starting to see Silverados being sold as new BEV vehicles in EU, which is a very apples to apples vehicle. And its being sold as C1 license, due weight. Same with F150 models. Both F150 and Silverado are being sold for the same reason some companies bought 3's or NV200's as company vehicles: Fuel cost is impor</p>
+<p>While the rest of the world tends to consider the lives of those outside of a car to be more important.No it's not "more" important, it's just "in addition to". It's not like European cars are more dangerous for the occupants than American ones, but it is absolutely correct to say they aren't designed to inflict as much damage as possible to pedestrians.Banning angular sharp edges on the outside of a car doesn't mean you don't care about the car's occupants (though you may not care about the size of the driver's micro-penis as much as they want you to).</p>
+<p>While the rest of the world tends to consider the lives of those outside of a car to be more important.</p>
+<p>No it's not "more" important, it's just "in addition to". It's not like European cars are more dangerous for the occupants than American ones, but it is absolutely correct to say they aren't designed to inflict as much damage as possible to pedestrians.</p>
+<p>Banning angular sharp edges on the outside of a car doesn't mean you don't care about the car's occupants (though you may not care about the size of the driver's micro-penis as much as they want you to).</p>
+<p>It doesn't, that's not what that means. It does suggest it, though.The answer is that corporations won here. They own everything and are working on owning everyone. And slavery is literally in the Constitution in this country.That must be why I only got a 3/5ths vote in the last election. I wondered about that.</p>
+<p>It doesn't, that's not what that means. It does suggest it, though.</p>
+<p>The answer is that corporations won here. They own everything and are working on owning everyone. And slavery is literally in the Constitution in this country.</p>
+<p>That must be why I only got a 3/5ths vote in the last election. I wondered about that.</p>
+<p>Not since the 13th Amendment [congress.gov], unless you mean that the Constitution explicitly mentions that slavery is not allowed?You linked it, but you didn't read it.
+  Please read it. You only even have to read one sentence!</p>
+<p>Not since the 13th Amendment [congress.gov], unless you mean that the Constitution explicitly mentions that slavery is not allowed?</p>
+<p>You linked it, but you didn't read it.
+  Please read it. You only even have to read one sentence!</p>
+<p>The issue is not your safety but the safety of everyone else, especially pedestrians. You don't or at least shouldn't get to decide screw other people I want to drive a dangerous vehicle on public roads.</p>
+<p>I was referring to my safety. Pedestrian safety here is pretty much a lost cause. Even the smallest vehicle will slaughter anyone who steps into traffic with nose in phone. Because our state says pedestrians have the absolute right of way and no responsibility. So, go ahead and step out, dude. And make sure you make a note of that personal injury lawyer's phone number before you pass out. It's on the side of any bus likely to hit you.</p>
+<p>"It looks like the final tank you encounter in the original Battlezone video game"</p>
+<p>I had the exact same thought the first time I saw one.</p>
+<p>Everything else aside, the cybertruck is the worst looking vehicle ever made. It makes the PT cruiser look like art that should be hung in a gallery. It looks like what a 9 year old with Lego thinks a spaceship should look like. It's like they forgot every last bit of nuanced aesthetics learned in the last hundred years. WTF.</p>
+<p>I'm looking forward to test-driving a Ford Fathom as soon as they're available.</p>
+<p>Exactly. The large truck market is owned by the big 3. The country wants something smaller but the chicken tax [realtruck.com](no joke) won't permit its importation.</p>
+<p>I suspect a better result if Tesla had made a truck the size of the 1995 Toyota pickup.</p>
+<p>Buy one at the most bargain-basement price you can, then drain any fluids, disconnect everything, and properly mothball it. Maybe even buy two, because in 10 years the number of Cybertrucks still in daily use in any form will be in the double digits at best.</p>
+<p>So, in 10 years (maybe sooner) you'd be able to sell a "mint condition Cybertruck w/ zero miles" to some nutball collector with more brains than money for 5 or 10 times what you paid. Maybe even more, there are some seriously rich crazies out there and t</p>
+<p>True it was designed under the direction of Nazi's. The nazi's developed jet technology too and many other things. Do you avoid modern commercial flight too?</p>
+<p>It was developed to be an affordable and practical car. And it was an affordable and practical car especially in the post war economies. The beetle was popular despite the Nazi connection, and was produced for decades afterwards, in the millions. There is no connection whatsoever with being a Nazi and driving a beetle.</p>
+<p>The cybertruck was not designed as an affordable and practical car. And it isn't one. And unlike the Beetle, which pretty much nobody legitimately associates ownership with support for the Nazi's who were long defeated before all but a handful were built. The Cybertruck and its owners live in the still ever present shadow of Elon Musk.</p>
+<p>No, it *was* a Nazi car. But a little lesson in history:</p>
+<p>In the late 1930s, the Nazis took their Germany Uber Alles nonsense to its logical conclusion and started invading other countries. So there was a big war, and in the end, because fascism is essentially a con-game at a governmental level, Germany collapsed and the rest of the world took over. Hitler shot himself.</p>
+<p>So at that point, Nazism in Germany was essentially dead, and while there may have been quite a few people in Germany who still believed this</p>
+<p>All electric vehicles are political in the US.</p>
+<p>That's a function of your extreme right.  Here it's only Tesla that's political, because of Musk's public behaviour and actions... and we still don't care that much about Teslas.</p>
+<p>I had a deposit on one, back in my days of viewing Elon as a tech visionary instead of just another shitty billionaire.  Did a couple test drives when they had "invite-only" unveiling events.</p>
+<p>Then came all the bullshit, the lies about "FSD next year!  NYC to LA, no controls touched!", the ever-delayed Roadster, the announced-and-canceled Model 2, the "driving your Cybertruck through a car wash voids the warranty," pieces falling off the early models on the freeway, announcing "We'll never profit from chargin</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Nvidia CEO Jensen Huang Summoned By Congress Over Chinese Espionage Concerns</p>
+<p>Britain to Make Salary Disclosure In Job Ads Mandatory</p>
+<p>I must have slipped a disk -- my pack hurts!</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://go.dev/doc/asm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://tech.slashdot.org/story/26/11/06/1736259/tesla-to-wind-down-cybertruck-production?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
