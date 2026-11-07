@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers now runs llama.cpp quants</title>
+    <title>Holo4: powering generalist computer-use agents</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9975.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,47 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers now runs llama.cpp quants</h1>
+        <h1>Holo4: powering generalist computer-use agents</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/69fc7e49052f11ab9931b672/yzjxvlmlZKtjASwAYu6bN.jpeg" alt="Holo4: powering generalist computer-use agents" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/69fc7e49052f11ab9931b672/yzjxvlmlZKtjASwAYu6bN.jpeg" alt="Holo4: powering generalist computer-use agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We're adding support for running GGUF models efficiently in transformers, so you can use checkpoints sized for your laptop's memory through the familiar transformers APIs. Pick a GGUF from the Hub, load it with from_pretrained, and start generating on your own machine.</p>
-<p>Running AI models on your laptop has become much easier, and llama.cpp has been a big part of that. Its inference engine powers local AI tools such as Ollama, LM Studio, and Jan. Alongside projects like MLX, it has helped make local inference a practical option for everyday use.</p>
-<p>A recent example of what local AI can feel like:</p>
-<p>This is where we are right now. And i’m not gonna lie it feels pretty magical 🧙‍♀️Qwen3.6 27B running inside of Pi coding agent via Llama.cpp on the MacBook ProFor non-trivial tasks on the @huggingface codebases, this feels very, very close to hitting the latest Opus in Claude… pic.twitter.com/lsIxLoUneU</p>
-<p>GGUF, developed by the llama.cpp team, is a widely used format for local inference. The team also shares quantized checkpoints under ggml-org on the Hub. Publishers such as Unsloth, LM Studio Community, and bartowski also provide ready-to-use GGUF checkpoints in a range of quantizations, so users can pick the version that fits their machine. GGUF models have been downloaded millions of times.</p>
-<p>We want to make it easier to run these models locally with transformers, too. Compatibility is only useful if the model is pleasant to run. To bring performance close to llama.cpp, we're reusing its underlying ggml kernels through the kernels library, and reducing overhead in generate. Our initial focus is local inference on Apple Silicon, starting with the Qwen3.5 architecture.</p>
-<p>GGUF packages model weights and metadata, including tokenizer information and an optional chat template, in one file. It supports different quantization levels, letting you trade some precision for a smaller memory footprint. Variants such as Q4_K_M mix tensor precisions, using mostly 4-bit weights while keeping sensitive tensors at higher precision.</p>
-<p>Here's how quantization changes the file size of Unsloth's Qwen3.5-4B:</p>
-<p>We suggest starting with Q4_K_M, then trying Q5_K_M or Q6_K if you have more memory available. More aggressive quantization can help larger models fit, but the quality tradeoff depends on the model and the task. Evaluate it on the work you actually want the model to do. The Hub's GGUF documentation describes the available quantization types.</p>
-<p>To load a GGUF model, pass its Hub model_id and filename as gguf_file to from_pretrained.</p>
-<p>No extra configuration is needed: when the weights stay packed on Metal, transformers automatically loads the compatible ggml/Metal layer kernels and uses ggml-org/ggml-attn as the attention implementation. If that kernel cannot be fetched, the model falls back to "sdpa" with a warning, and you can always force "sdpa" by passing attn_implementation="sdpa" explicitly. See the GGUF documentation for more loading options.</p>
-<p>That is the only GGUF-specific step. Everything after it is the standard transformers API:</p>
-<p>Without a compatible quantization kernel, the loader falls back to dequantizing the model and uses more memory.</p>
-<p>You can also use the same checkpoint with transformers serve, which exposes an OpenAI-compatible API:</p>
-<p>The model argument uses <model_id>:<filename>.gguf: before the colon is the Hub repository (unsloth/Qwen3.5-4B-GGUF), and after it is the file to load (Qwen3.5-4B-Q4_K_M.gguf). This selects a specific quantization from a repository that may contain several.</p>
-<p>For models whose chat template supports thinking, add --reasoning off to skip it or --reasoning on to enable it. The default, --reasoning auto, follows the chat template’s default. See the reasoning options for details.</p>
-<p>You can connect a client such as Jan or Pi by adding a custom OpenAI-compatible provider with these settings:</p>
-<p>transformers runs the model on your Mac, while the client provides the conversation interface. The same endpoint can be used by other clients that support this API.</p>
-<p>Our reference for local inference performance is llama.cpp. The comparison below focuses on three GGUF checkpoints: a small dense model, a larger dense model, and a mixture-of-experts model.</p>
-<p>The llama.cpp column comes from the llama-bench tool (build 5f55650a7, release b10200, Metal backend from ggml 0.18.0), run as llama-bench -m <file> -p 0 -n 128 -r 3, which reports tg128: the token-generation rate over 128 decoded tokens, averaged across three repetitions, with prompt processing excluded. The transformers column is generate producing the same 128 tokens from a 12-token prompt, best of three warmed runs, and it includes prefill.</p>
-<p>Measured on a MacBook Pro M2 Max, 32 GB unified memory, macOS 26.6, PyTorch 2.12.1, kernels 0.17.0,
-plugged in.</p>
-<p>Transformers is close to llama.cpp across all three checkpoints. The chart uses the same measurements described above; it does not imply identical benchmark conditions, since the Transformers measurement includes prefill while llama-bench reports decode-only throughput.</p>
-<p>When GGML and llama.cpp joined Hugging Face, we described their complementary roles: llama.cpp provides a foundation for local inference, while transformers provides a foundation for model definition. GGUF support brings those two closer together.</p>
-<p>llama.cpp remains our recommended engine when your priority is efficient local inference. Its dedicated runtime, memory management, and broad hardware support are built around that goal. This integration gives developers a convenient way to work with the same GGUF checkpoints inside transformers:</p>
-<p>For that last case, use GgufConfig(dequantize=True):</p>
-<p>The bigger opportunity is bringing ggml's performance to models that llama.cpp does not support.</p>
-<p>transformers already provides the PyTorch implementations of these architectures. With ggml kernels and quantization schemes available in PyTorch, we can work toward accelerating their supported operations without first implementing the entire model in llama.cpp. This is especially useful for new architectures, research models, and custom variants that may never receive a dedicated llama.cpp implementation.</p>
-<p>That opportunity extends beyond the GGUF format itself. A kernel operates on tensors; it does not require the whole model to come from a GGUF file. The same building blocks can be integrated into other transformers models and loading workflows. This also opens a path to other modalities: computer vision models, audio models, and multimodal models could reuse compatible attention, normalization, and matrix multiplication kernels without first having a full implementation in llama.cpp. Each architecture still needs integration and validation; the initial GGUF examples here cover text generation.</p>
-<p>We also wanted to show how far we can get while keeping the model and generation loop in Python. With the right kernels and an efficient generation loop, Python and PyTorch can deliver strong local inference performance. The kernels handle the heavy computation, while the generation loop keeps the GPU busy by avoiding unnecessary synchronization.</p>
-<p>Our focus was to make eager execution fast without requiring torch.compile. For interactive use, we wanted a quick start and a steady stream of tokens, without compilation pauses or recompilation when input shapes change. The two main pieces of that work are the kernels and generate itself.</p>
-<p>A kernel is a small program that performs an operation on the GPU. PyTorch supplies general-purpose implementations; a specialized kernel can do less work, combine several operations, or read quantized weights directly in their stored format.</p>
-<p>The kernels library lets us distribute compatible builds of ggml's Metal kernels on the Hub and call them from transformers. That brings ggml's work into the PyTorch model without replacing the model with a separate inference runtime.</p>
-<p>The first four packages build on ggml's kernels; the top-k kernel addresses a separate bottleneck in MoE routing. Together they reduce the GPU work needed for each generated token.</p>
-<p>To show the contribution of the layer kernels, we compare the same packed GGUF checkpoints with and without them. The quantization kernel stays enabled in both configurations: disabling it would also change how weights are represented and would measure a different tradeoff.</p>
-<p>Faster kernels only help if the GPU has work to do. During generation, the CPU schedules GPU operations and controls the loop that produces the next token. Reading a result back from the GPU can force the CPU to wait until queued operations finish. Repeating even a small wait for every token can noticeably reduce throughput.</p>
-<p>Two changes address this in generate, which results in improvements for all transformers models (not just when running GGUF files):</p>
-<p>These changes improve the generation loop around the model, so their usefulness extends beyond GGUF. They complement the kernel work: kernels reduce the cost of an operation, while fewer synchronization points let CPU scheduling and GPU execution overlap.</p>
-<p>These measurements keep all layer kernels enabled; the bars isolate the changes to the generation loop.</p>
-<p>The initial target is a single interactive conversation on Apple Silicon. There are a few boundaries to keep in mind:</p>
-<p>If you have a GGUF model you would like to use in transformers, open an issue with the checkpoint and your use case. That will help us prioritize support for the models people are running locally.</p>
-<p>We would like to thank Arthur Zucker for initiating this work and reviewing all of my PRs, and Cyril Vallez for the generate PRs. We are grateful to Sayak Paul, the llama.cpp team, and Bertrand Chevalier for their help integrating the kernels. We also thank Aritra Roy Gosthipaty and Pedro Cuenca for reviewing this blog post, and Lysandre Debut for overseeing the project.</p>
+                <p>Holo4 is our new series of agentic models. It comes in two sizes: 27B dense and 35B-A3B Mixture of Experts. Both are available on the H Models API. We are also releasing an updated version of Holotron 3: Holotron4 Nano.</p>
+<p>Holo4 builds on our previous model and interacts with software through any available interface: GUIs, code, MCP and APIs. It scores well on academic benchmarks, but we built it for real business workflows. It was trained through supervised and reinforcement learning on a large set of environments and tasks, including those generated by our Agentic Task Factory.</p>
+<p>Holo4 clicks and types on a screen, writes and runs its own code, and calls MCP or API tools. It uses whichever fits the task. Most agentic models are trained for one interface only: GUI-focused models are blind without a screen, while models that prefer tool calling are stuck in front of an application that has no API. Real work is not siloed that way, and a single business task can require combining these different approaches.</p>
+<p>Holo4 runs on desktops, on the web, on Android, in a code sandbox and against business APIs. It is the same model in each case and it is called the same way. You do not need to select a different model for each platform.</p>
+<p>Holo4 models improve significantly over their Qwen base. Holo4 trails only the strongest closed models on long workflows: on OSWorld 2.0, Holo4 27B scores 61.7% against 81.8% for Opus 5.5, and Holo4 35B-A3B reaches 30.9%. However, it does so with orders of magnitude fewer parameters and at a much lower cost. We open-source every trajectory behind our scores on public benchmarks: replay each step at trajectories.hcompany.ai or download them from Hugging Face.</p>
+<p>On the hardest academic benchmarks for desktop control (OSWorld 2.0) and API use (AutomationBench), Holo4 competes with frontier models at a much lower cost per task.</p>
+<p>OSWorld 2.0. Costs are estimated from the input and output tokens of each agentic run. Holo4 is priced at H Models API rates (single run). Qwen3.8 27B: model card score, cost from the tokens of our run at Alibaba Cloud list prices. Qwen3.6 35B-A3B: single run in our harness, at Alibaba Cloud list prices with cache hits at 20% of the input price. OpenAI launch data supplies the GPT and Opus effort sweeps; other closed and open-weight points use the official OSWorld 2.0 leaderboard. Releases, harnesses and task subsets differ. The line connects non-dominated score and cost pairs among the closed models; Holo4 is excluded.</p>
+<p>AutomationBench. Holo4, Qwen3.8 27B and Qwen3.6 35B-A3B: AutomationBench v1.0.6, scores and costs measured in our internal harness. Other models: public-set scores from the AutomationBench README, cost per task from the official leaderboard, which runs on the private set. We will report Holo4 on the private set once it is evaluated.</p>
+<p>Trained on environments and tasks from our Agentic Task Factory, Holo4 models excel on professional software. The examples below show Holo4 27B alongside Qwen3.8 27B, its base model. Same prompt and harness for both models.</p>
+<p>Build a 3D model of the Eiffel Tower in FreeCAD, at a scale of 1 mm to 1 metre, centred on the origin and aligned to the X and Y axes. Work to this design.</p>
+<p>The tower is square in plan at every height, never round. Its half-width, measured from the central axis out to the corner, is 62.5 mm at ground level, 32.5 mm at height 57, 17.5 mm at height 115, and 9.35 mm at height 276. Between those heights the half-width follows a smooth curve that falls steeply near the ground and gently higher up, never a straight line.</p>
+<p>Four identical legs, one per quadrant, each a square column whose outer corner follows that profile. Each leg is 14 mm across at the ground and tapers to 4 mm at height 276. The legs stand apart from the ground up to the first platform, and converge as they rise. Nothing fills the space between them: the tower is open, and you can see straight through it from every side.</p>
+<p>Three platforms, each a solid square slab centred on the axis: 72 mm across and 4 mm thick at height 57; 40 mm across and 3 mm thick at height 115; 22 mm across and 3 mm thick at height 276.</p>
+<p>A mast from height 276 to 324, square, 8 mm across at its base tapering to 2 mm at the tip.</p>
+<p>Every part must be a closed solid with non-zero volume, and no part may fill the space between the legs.</p>
+<p>Build a 3D model in FreeCAD of the H company logo: a solid filled disc beside a blocky sans-serif capital letter H, both extruded to the same thickness, the two shapes of similar height and set apart so they do not overlap, with the centre of the disc level with the middle of the H. Colour both shapes black.</p>
+<p>Build a Pac-Man-style game in Godot and leave it running.</p>
+<p>A rectangular maze of walls laid out on a grid, with pellets filling every open corridor. A player marker moves continuously along the corridors, eating each pellet it passes over and scoring a point for it. Three ghosts move through the same corridors and chase the player. If a ghost catches the player, the player loses a life and everything resets to its starting position. Score and lives are drawn on screen.</p>
+<p>No one is going to play this. The player drives itself with a simple heuristic: at each junction it heads toward the nearest pellet, unless a ghost is close, in which case it moves away from the ghost. The game must run unattended and indefinitely, with no keyboard input at all.</p>
+<p>When it works, start the game and leave it playing.</p>
+<p>Holo4 27B (68 calls, 2.4M tokens, 268 lines)</p>
+<p>Qwen3.8 27B (197 calls, 11.4M tokens, 327 lines)</p>
+<p>Our internal set of agentic pipelines builds interactive environments and verifiable tasks from documentation alone, such as screenshots of real websites or open-source software. So far it has produced about 10,000 tasks across web apps, MCP servers and desktop environments, including hybrid environments that expose the same state through a GUI and MCP.</p>
+<p>Alongside training, we rebuilt our harness, the loop that executes the model's actions and manages its context over hundreds of steps, using feedback from agentic performance on OSWorld 2.0. Agents tagged why each task failed and engineers reviewed their fixes. The largest changes were giving the agent a reliable memory that can keep track of hundreds of steps, and a shell on the desktop machine itself.</p>
+<p>Opus 5 (70.2%) and GPT-5.6 Sol (66.2%) use max-effort partial rewards on the v2026.08.08 offline set from OpenAI's launch chart, as in the cost-performance plot. Other reference scores come from model cards and the official leaderboard. Task releases, subsets and harnesses vary.</p>
+<p>Our post-training stack is designed to adapt to new foundation models and produce agents that generalize across interfaces and environments. As a member of the NVIDIA Nemotron Coalition, we applied our latest stack to the Nemotron 3 Nano Omni model as a follow-up to Holotron 3.</p>
+<p>The same recipe turns Nemotron 3 Nano Omni into Holotron4 Nano, a generalist agentic model that significantly improves over the base model on GUI workflows and in environments exposing MCP, APIs or coding sandboxes.</p>
+<p>Gains are absolute percentage-point improvements over Nemotron 3 Nano Omni.</p>
+<p>These gains show that our recipe transfers well and can turn a generalist model into an agentic expert. Nothing in it is size-specific.</p>
+<p>Both sizes are available today on the H Models API. Weights are on Hugging Face in BF16, FP8, NVFP4 and 4-bit GGUF, next to our small model, Holotron4 Nano.</p>
+<p>We will release optimized DSpark drafter checkpoints in the coming days to further accelerate inference.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-llama-cpp-quants" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/Hcompany/holo4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

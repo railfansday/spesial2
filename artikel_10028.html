@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nondeterminism in Futhark</title>
+    <title>GhostAction Hacking Wave Fizzles, but Attackers Lurk on in GitHub</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10028.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,180 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Nondeterminism in Futhark</h1>
+        <h1>GhostAction Hacking Wave Fizzles, but Attackers Lurk on in GitHub</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
         
         <div class="article-body">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltb1d9be3de2e89da6/6ae252ca6c2fe31e558a43e9/Ghosts-GrafikLab-GettyImages-2173220193.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="GhostAction Hacking Wave Fizzles, but Attackers Lurk on in GitHub" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltb1d9be3de2e89da6/6ae252ca6c2fe31e558a43e9/Ghosts-GrafikLab-GettyImages-2173220193.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="GhostAction Hacking Wave Fizzles, but Attackers Lurk on in GitHub" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Last week I attended IFL2026, which was
-probably one of the best conference experiences I have ever had. One of the many
-good presentations was by Michael Haddon, who
-presented The Replay
-Lattice, which is a type
-system for floating-point reproducibility. The type system was presented for a
-demonstration language called Lane, but it inspired me to think more carefully
-about nondeterminism in Futhark (there is some), and what it might cost to get
-rid of it.</p>
-<p>I often use the terms âdeterminismâ or âdeterministicâ when explaining why I
-think data parallel programming is such a good paradigm, so perhaps it is
-surprising to see me write a blog post about nondeterminism in Futhark. But as
-is so often the case with such bold promises, they often tend to get a little
-weaker once you look closely enough. Michael Haddonâs work defines some
-nomenclature that is helpful for this discussion:</p>
-<p>Exact means that the computation produces the same result every time,
-guaranteed. (Michael describes this as matching the âserial referenceâ, which
-I think is not the best way of looking at it, but thatâs a question of
-perspective)</p>
-<p>Replay means that if you rerun the computation with the same âscheduleâ
-(in some sense âmachineâ), you will get the same result, but other machines
-may give different results.</p>
-<p>Approx means potentially nondeterministic results.</p>
-<p>The kind of nondeterminism we are talking about here is not the kind of
-free-form nondeterminism that arises from classic shared-state concurrent
-programming. Indeed, both Lane and Futhark are pretty much exclusively concerned
-with the kind of nondeterminism that arises from floating-point rounding errors.
-The simplest example is the non-associativity of addition:</p>
-<p>If we have an array of numbers we need to sum, then the result depends on the
-order in which you sum them. When parallelising a summation, you often do things
-like split the numbers into blocks, sum each block on a separate processor, then
-combine the partial results. This changes the order of addition, and hence the
-result. Now, an important point is that there is no reason to think that the
-parallelised result is numerically worse than a serial left-to-right
-summation, but it will be different. Further, an efficient implementation will
-likely choose a number of chunks somewhat proportional to the number of
-processors on the machine, which means the result may also be different on other
-machines (but again, not necessarily worse). This corresponds to the âReplayâ
-class of nondeterminism. Finally, the partial results may be combined using
-atomic instructions, which may be
-resolved in a different order when the program is rerun on the same machine.
-This is then âApproxâ.</p>
-<p>Even in this simple example of summing a bunch of numbers, we encounter both
-classes of nondeterminism. Note that none of them are ârace conditionsâ in the
-usual sense of the program sometimes just malfunctioning: the point is that
-the result changes, but given that the result is in some sense already âwrongâ
-(due to roundoff error), the main issue is that there are cases where we care
-about getting the same âwrongâ result every time.</p>
-<p>So in Futhark, ostensibly a deterministic language, where does the
-nondeterminism come from? There are a few sources. Some of them come when
-programmers violate mandated constraints (but which are unchecked for various
-reasons), and others are basically down to floating-point roundoff error.</p>
-<p>Let us start by considering language abuse. The worst but also least interesting
-case is using the #[unsafe] attribute
-to disable safety checks, after which you can do arbitrary memory reads and
-writes. This can be avoided by passing
---safe to the compiler, or perhaps by just not doing this kind of cowboy
-coding in the first place. If you are a good enough programmer that your code
-does not need any safety checks, why not just go and write in C? Those folks
-never make mistakes.</p>
-<p>Another more insidious problem is related to the scatter construct. The
-semantics of an expression scatter d is vs are simple enough, and can be
-expressed with this imperative pseudocode:</p>
-<p>That is, scatter d is vs pairs the indexes in is with the corresponding
-values in vs and writes each value to the corresponding index. It is a
-parallel random-access write. To ensure that the writes can indeed be written in
-parallel, Futhark requires that is contains no duplicates, or in a slight
-weakening, that if is contains duplicates, then the corresponding values are
-also identical. This is not checked dynamically, and a program can get in an
-awful lot of trouble by violating this property. Which write âwinsâ is
-unpredictable - in the worst case, you can even get a âtornâ write that combines
-two different values.</p>
-<p>This behaviour of scatter is thorny, and even experienced Futhark programmers
-sometimes make this mistake. The reason it has no safety checks is twofold:</p>
-<p>scatter is a fundamental
-construct used in
-most sophisticated parallel algorithms, and so its performance is paramount.</p>
-<p>Iâm not sure how to detect duplicate writes in a way that does not violate
-the cost model (although
-scatter is already a bit iffy in that
-regard). Basically, the
-cost of scatter must be proportional to the number of elements written, not
-to the total size of the target array, and that makes it difficult to
-construct appropriate auxiliary structures for safety checks.</p>
-<p>And yes, I do realise the irony of insisting on an unsafe scatter after making
-fun of C programmers for using an unsafe language.</p>
-<p>Anyway, letâs move on to reduce. Parallel reductions, just like parallel
-scans, histograms, and so on, work only if the provided operator is
-associative and in some
-cases also commutative. This is documented but unchecked - in Futhark you can
-do a reduce with an arbitrary operator of the right type, and it just might
-give you nonsensical or nondeterministic results. It is a common error among new
-Futhark programmers to treat reduce as a general fold and use operators that
-are not associative, but it seems not to show up so much among more experienced
-programmers. The reason we do not check for associativity is that it is
-impossible, and even when it is
-possible it remains hard - well beyond what a practical type checker is capable
-of. It is not too hard to empirically test
-associativity and other properties, and so it seems
-that this source of nondeterminism is not so problematic in practice.</p>
-<p>That actually concludes the list of âtrueâ nondeterminism in Futhark, and in
-both cases we can wash our hands and blame the programmer. Of course, there is
-one rather important caveat hereâ¦</p>
-<p>Strictly speaking, floating-point addition is not associative, and so we could
-just declare that reduce (+) 0 on floating-point numbers is simply wrong.
-However, Futhark is not mainly intended as a framework for explaining why the
-program you wrote is wrong, but rather as a practical tool for parallel
-programming, and clearly people want to sum floating-point numbers. Indeed,
-summing and multiplying floating-point numbers is worth trillions of currency
-units these days!</p>
-<p>As such, Futharkâs reduce (and similar functions) do not say that the result
-you get back is completely arbitrary in case the provided operator is
-nonassociative. Instead, they say that the result you get back is some
-arbitrary ordering of applying the operator to the input elements. The precise
-ordering is unspecified (weâll return to this), but it will be some order, and
-if the function is associative, it just so happens that the order does not
-matter for the final result.</p>
-<p>The application order chosen by Futhark depends on the backend and the hardware.
-With the c backend, it will be a straightforward left-to-right loop across the
-input array. With the GPU backend, it will split the input into chunks, sum them
-separately, and combine the partial results. The number of chunks depends on
-runtime queries of the GPU hardware topology, and can also be configured by the
-user via tuning parameters. Since the chunking
-strategy (the âscheduleâ) depends on the hardware and the input size, repeatedly
-re-running the same reduction on the same system will consistently give the same
-result - the âReplayâ case in Michael Haddonâs terminology. This is not a
-language guarantee, but it is how it is implemented right now.</p>
-<p>A reasonable question is whether we could implement summation in a different way
-that will always give the same result, no matter the input. Indeed, this is
-possible. Consider for simplicity that the input array is a power of two. We can
-then implement reduction by repeatedly splitting the array in half, combining
-the two halves using the provided operator, and continuing until only a single
-element is left:</p>
-<p>We can generalise this to arbitrary operators (even non-commutative ones) and
-non-power-of-two sizes with a bit more complexity. Note that this implementation
-does not use any Futhark constructs that are nondeterministic, hence by
-construction it is also fully deterministic. Will it produce the same result as
-a sequential foldl (+) 0? No, because the order of application is different,
-but if you compile sum_tree with the c backend then it will produce
-exactly the same results as if you compile with the cuda backend. This is
-the âExactâ case.</p>
-<p>There is a reason we donât implement reduce like that, of course. In a quick
-experiment for summing 100 million numbers, I observe that using reduce (+) 0
-is almost 3x faster than sum_tree on an MI100 GPU. The gap can be narrowed
-by using blocking to reduce the number of GPU kernels necessary, but ultimately
-the fastest way to perform a reduction does depend on fine details of the
-hardware, and when your operator is not truly associative, that will result in
-observable differences.</p>
-<p>The same situation arises with Futharkâs other basic building blocks. I suspect
-reduce is actually the best case, in the sense that a hand-written version
-can approach the performance of the built-in one. For scan, I know that the
-compilerâs fancy decoupled
-lookback
-is much faster than anything that can be written in Futhark itself, and for
-reduce_by_index a fully deterministic implementation involves a sort and a
-segmented
-reduction, which
-is wildly slower than the code produced by the compiler, which makes careful
-use of atomic instructions.</p>
-<p>This does make me wonder if one could write a Futhark library that replaces all
-the SOAC implementations with guaranteed deterministic implementations, and what
-the performance of that might be across the benchmark
-suite, but that will have to
-wait for a future post.</p>
+                <p>The supply chain attack campaign's shift toward developer endpoints and cloud access signals what could be next for the cybercrime outfit.</p>
+<p>A new wave of GhostAction attacks has largely failed, but this supply chain campaign operator is well-positioned to cause more chaos down the line.</p>
+<p>GhostAction, an ongoing campaign in which attackers target GitHub by compromising developer accounts and injecting GitHub Actions workflow files into repositories.</p>
+<p>Workflows tell GitHub Actions what code to execute when events occur (such as when a commit is pushed or a pull request is opened); these malicious workflows rely on GitHub's high trust in these files (by design), seizing repository secrets, package publishing tokens, GitHub personal access tokens, credentials embedded in source code, and much more.</p>
+<p>The idea is that an initial compromise could be leveraged into more compromises and access points across repositories, CI/CD systems, and cloud environments, not unlike many supply chain worms observed in the wild lately, albeit functioning differently.</p>
+<p>Related:Critical Rails Bug Threatens to Derail Vulnerable Servers</p>
+<p>The campaign was first documented last year, and attackers continue to deploy GhostAction against organizations. What has changed is an apparent escalation of the technique beginning this month. During an earlier Oct. 8-12 wave, attackers pushed the security-audit.yml workflow into roughly 30,000 repositories, using compromised accounts to distribute credential-stealing code at scale. But GitGuardian on Oct. 27 published research highlighting further escalation. GitGuardian's Gaetan Ferry wrote that between Oct. 13 and 21, GhostAction's operator "pushed 72,000 commits to 23,000 public repositories," noting that 8,000 of them were new targets.</p>
+<p>During this latest wave of the campaign, GitGuardian observed that once a developer account is compromised, the operator would deploy different payloads depending on which runner the repositories were hosted on. Runners are the systems that execute GitHub Actions workflows. Many organizations use GitHub-hosted runners, while others configure self-hosted runners that run inside their own environments.</p>
+<p>These payloads include one called "seven workflows," which searches GitHub runner repositories and wikis for credentials including AI-provider API keys; the "Security-audit.yml" file seen in earlier GhostAction attacks that searches GitHub-hosted source code and Git history for credentials; self-hosted runner payloads targeting self-hosted CI runners; a payload targeting GitHub runners and AWS-requesting GitHub OIDC tokens (in order to assume AWS roles and achieve cloud account access); and the font stealer payload, which is the most notable workflow payload seen in recent attacks, due to its provenance.</p>
+<p>Related:Undead Software Projects Continue to Raise Security Risks</p>
+<p>The font stealer family installs a Node.js credential stealer on local developer machines, disguised as a VS Code task. The technique appears to be copied from PolinRider, a campaign that hides obfuscated loaders in developer repositories to steal credentials and has been associated with North Korea. The attacker also added PolinRider loaders between Oct. 22 and 26 to repositories already impacted by GhostAction. Ferry says that out of the five payloads, only the PolinRider-styled local stealer had a chance to successfully run, but GitGuardian has no evidence that any run actually occurred.</p>
+<p>GitGuardian could not assess whether there was overlap between GhostAction and PolinRider, but hypothesized that GhostAction's operator possibly copied a public PolinRider launcher in order to target an overlapping set of victims.</p>
+<p>Jenn Gile, cofounder of OpenSourceMalware (which previously covered the GhostAction attacks this month and detected signs of the PolinRider copycat a few weeks ago), tells Dark Reading that the PolinRider clone illustrates some of the inner workings of the GhostAction group.</p>
+<p>"What we're seeing looks like imitation, not evolution. The fake-font technique in GhostAction is a copy of what DPRK's PolinRider campaign has been using nearly all of 2026," she says in an email. "The multiple payloads are real, but they're variations on a theme (five workflow versions over about ten days in one repo we examined), not a new capability. Historically, we might have called this evolution because it took real skill to figure out. But this looks a lot like an LLM helping the threat actor test different variants."</p>
+<p>Related:Claude Model Builds Exploits Across Major Browsers & OSes</p>
+<p>All of that said, GitHub identified and prevented execution of the malicious workflows, GitGuardian noted. However, importantly, the attackers still demonstrated persistent access to nearly 1,800 compromised accounts, many of which had already been used in earlier GhostAction activity; "1,382 of the 1,792 compromised accounts had already been used on Oct. 8, so the same stolen tokens keep working," according to Ferry.</p>
+<p>Ferry tells Dark Reading that the campaign has been "highly ineffective on the malicious workflows side." But even if there's no sign this wave succeeded, the nature of the payloads (such as the one aimed at gaining cloud access) also shows where the attackers may intend to pivot next, toward internal networks where there are fewer platform-level protections that could thwart their efforts.</p>
+<p>"We expect new waves to appear in the near future, with revised payloads," he explains. "This 'fail early and adapt fast' strategy has already been observed for this threat actor."</p>
+<p>Given that targeted accounts or repositories remain compromised, repo owners should look for and delete the files that GitGuardian lists in the IoC section of the blog, on every branch. And, if signs of compromise are detected, users should revoke the account's tokens across the board and rotate every credential committed in the affected repository or its history, as well as every Actions secret and wiki credential.</p>
+<p>Alex is an award-winning writer, journalist, and podcast host based in Boston. After cutting his teeth writing for independent gaming publications as a teenager, he graduated from Emerson College in 2016 with a Bachelor of Science in journalism. He has previously been published on VentureFizz, Search Security, Nintendo World Report, and elsewhere.</p>
+<p>At Dark Reading, he covers a variety of cybersecurity topics, including the cybercrime ecosystem, open source security, and the intersection between AI and threat actors. In his spare time, Alex hosts the weekly Nintendo podcast, "Talk Nintendo Podcast," and works on personal writing projects, including two previously self-published science fiction novels.</p>
+<p>He has received numerous awards, including TechTarget's Writer of the Year in 2022 as well as more than 10 Azbee awards for his reporting between 2022 and today.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://futhark-lang.org/blog/2026-11-04-nondeterminism.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/application-security/ghostaction-hacking-wave-fizzles-attackers-github" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
