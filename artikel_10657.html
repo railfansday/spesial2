@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Handle Styled Unicode Text in JavaScript</title>
+    <title>Arc Virtual Cell Challenge: A Primer</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10657.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,140 +15,109 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Handle Styled Unicode Text in JavaScript</h1>
+        <h1>Arc Virtual Cell Challenge: A Primer</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_styled_unicode_text_javascript_normalization_a6c7a53758.jfif" alt="How to Handle Styled Unicode Text in JavaScript" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/virtual-cell-challenge/thumbnail.png" alt="Arc Virtual Cell Challenge: A Primer" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_styled_unicode_text_javascript_normalization_a6c7a53758.jfif" alt="How to Handle Styled Unicode Text in JavaScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/virtual-cell-challenge/thumbnail.png" alt="Arc Virtual Cell Challenge: A Primer" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Your validation behaves differently than expected.</p>
-<p>Your duplicate-name check says it is a completely different value.</p>
-<p>And if you normalize it too aggressively, the styling the user deliberately chose disappears.</p>
-<p>I ran into this problem while working with browser-based Unicode text tools. At first, it looks like a typography issue. It is really a text-processing issue.</p>
-<p>What users call a “fancy font” is often not a font at all. The text may contain Unicode characters from blocks such as Mathematical Alphanumeric Symbols.</p>
-<p>That distinction matters anywhere your application searches, validates, sorts, stores, compares, truncates, or assigns meaning to user-entered text.</p>
-<p>The solution is not simply “normalize everything”.</p>
-<p>You need to decide which representation to preserve, which representation to search, and which representation is safe to use as an identifier.</p>
-<p>They look closely related to a person, but JavaScript sees different code points.</p>
-<p>The styled letters are not ordinary Latin h, e, l, l, and o with a CSS font applied to them.</p>
-<p>That means changing the CSS will not turn one string into the other.</p>
-<p>It also means a simple search such as this fails:</p>
-<p>The two strings genuinely contain different characters.</p>
-<p>The mistake is assuming visual similarity means string equality.</p>
-<p>Styled Unicode text regularly appears in:</p>
-<p>The important part for developers is that text which looks visually familiar may contain completely different Unicode code points underneath.</p>
-<p>You can test this with any sample containing mathematical bold, italic, script, or other compatibility characters. Copy a styled version of a simple word such as hello, pass it through your application, and inspect the actual characters:</p>
-<p>If some Unicode characters render as empty squares or replacement symbols during testing, that is a separate glyph-support problem rather than a JavaScript string problem. This guide to Unicode boxes and missing glyphs explains why those missing-character boxes appear across fonts and devices.</p>
-<p>What looks like ordinary styled text in the interface may therefore be completely different data underneath.</p>
-<p>That is why this problem belongs in your text-processing layer, not your typography layer.</p>
-<p>The API supports four Unicode normalization forms:</p>
-<p>The important distinction is between canonical equivalence and compatibility equivalence..</p>
-<p>They can render identically while using different Unicode sequences.</p>
-<p>For ordinary text consistency, that can be exactly what you want.</p>
-<p>Styled Unicode creates a different problem.</p>
-<p>Compatibility normalization goes further.</p>
-<p>you may reasonably want a result containing:</p>
-<p>But it does not mean you should replace the user's original text with the NFKC result.</p>
-<p>Suppose a user deliberately saves this display name:</p>
-<p>If you run NFKC and overwrite the original value:</p>
-<p>you have changed what the user submitted.</p>
-<p>That might be acceptable for an account identifier.</p>
-<p>It is probably not acceptable for a profile's display text.</p>
-<p>This distinction is the heart of a reliable Unicode strategy:</p>
-<p>Preserve the original representation for display, but derive another representation for matching when necessary.</p>
-<p>For applications with persistent data, I prefer a dual-representation approach.</p>
-<p>You preserve the user's original formatting while making search behavior much more predictable.</p>
-<p>It also moves normalization work to the write path rather than repeating the same transformation across every record during every search.</p>
-<p>For a small browser-only application, normalizing at query time may be perfectly fine.</p>
-<p>For a database-backed application with a growing dataset, generating searchable text when content is created or updated is often easier to scale.</p>
-<p>Just remember that both fields must be regenerated when the original value changes.</p>
-<p>Do not build one universal cleanText() function and use it everywhere.</p>
-<p>Search, display, authentication, sorting, and identifiers have different requirements.</p>
-<p>For example, a marketplace search might deliberately remove distinctions that a profile editor needs to preserve.</p>
-<p>Whether you also remove punctuation, accents, or symbols depends on your product.</p>
-<p>Do not silently add transformations simply because they make matching easier.</p>
-<p>Every transformation changes what your application considers equivalent.</p>
-<p>It is reasonable only if your rule genuinely means:</p>
-<p>Allow ASCII Latin letters and nothing else.</p>
-<p>Modern JavaScript supports Unicode property escapes.</p>
-<p>That is useful for international text, but it introduces another important distinction.</p>
-<p>Is this character classified as a letter or number?</p>
-<p>Is this character safe for my username, domain-like identifier, account name, or security-sensitive token?</p>
-<p>Imagine a platform that wants usernames to contain plain Latin letters and digits.</p>
-<p>If your rule is really about semantic plain-text identifiers, one approach is to normalize before validating:</p>
-<p>Do not automatically apply the same behavior to comments, posts, biographies, or display names.</p>
-<p>Those are general text fields, not identifiers.</p>
-<p>Normalization does not solve every look-alike character problem.</p>
-<p>and a visually similar string containing characters from another writing system.</p>
-<p>A human may struggle to distinguish them even though software sees different code points.</p>
-<p>The Unicode Consortium maintains separate guidance for detecting and restricting confusable identifiers.</p>
-<p>That should tell us something important: Unicode security is not equivalent to string normalization.</p>
-<p>For ordinary prose, allowing international scripts is essential.</p>
-<p>For a unique account identifier, you may need a much stricter policy.</p>
-<p>Avoid solving both with the same regular expression.</p>
-<p>Another easy mistake is treating normalization as a complete Unicode solution.</p>
-<p>Normalization determines how equivalent Unicode sequences should be represented.</p>
-<p>Character counting asks how text should be segmented.</p>
-<p>NFC or NFKC does not magically make that emoji one JavaScript code unit.</p>
-<p>For user-perceived character counting, JavaScript's Intl.Segmenter is the more relevant API.</p>
-<p>I covered that problem separately in Your JavaScript Character Counter Is Probably Wrong: Unicode Explained.</p>
-<p>The important architectural lesson is that your application may need several different text operations:</p>
-<p>Trying to collapse all of these into one cleanup function usually creates bugs.</p>
-<p>Styled mathematical characters also expose an older JavaScript mistake.</p>
-<p>Some Unicode characters require surrogate pairs in UTF-16.</p>
-<p>Splitting the string by empty text works at the code-unit level and can separate those pairs.</p>
-<p>For grapheme clusters, use Intl.Segmenter.</p>
-<p>These three operations answer different questions:</p>
-<p>Knowing which one you need is more important than memorizing which one is “best”.</p>
-<p>That can make an accent-insensitive search useful in some products.</p>
-<p>But stripping marks is not a neutral transformation across every language.</p>
-<p>Do it because your search requirements call for it, not because a generic SEO tutorial says all text should be “cleaned”.</p>
-<p>Internationalization gets much easier when transformations are explicit and field-specific.</p>
-<p>Instead of treating user input as one string that gets repeatedly mutated, think of processing as stages.</p>
-<p>Now the application can make intentional choices:</p>
-<p>You might not need all three representations.</p>
-<p>The point is to stop pretending every part of your application needs the same representation of the text.</p>
-<p>Most teams test text fields with strings like:</p>
-<p>The point is not that every field must accept every string.</p>
-<p>The point is that your application should reject, normalize, preserve, or transform them intentionally.</p>
-<p>Characters such as mathematical bold letters are part of the string itself. Removing a CSS font does not turn them back into ASCII.</p>
-<p>NFKC intentionally removes some compatibility distinctions. That is useful for matching but can destroy display choices.</p>
-<p>ASCII-only matching is fine when ASCII-only input is the actual requirement. It is not an international letter matcher.</p>
-<p>\p{Letter} understands character categories. It does not protect against visually confusable identifiers.</p>
-<p>If formatting is meaningful to the user, preserve the submitted string and create a derived value for search.</p>
-<p>Normalization and text segmentation solve different problems.</p>
-<p>Many Unicode bugs stay invisible until a user enters accented text, emoji, combining marks, mathematical symbols, or another writing system.</p>
-<p>Styled Unicode text uses separate Unicode characters that visually resemble bold, italic, script, monospace, or other letter styles.</p>
-<p>Unlike CSS typography, the appearance is encoded partly in the characters themselves.</p>
-<p>Because visually similar strings may contain different Unicode code points.</p>
-<p>Plain hello and mathematical bold 𝗵𝗲𝗹𝗹𝗼 are not equal strings.</p>
-<p>Compatibility normalization such as NFKC can make them easier to match when that behavior fits your application.</p>
-<p>No, NFKC can intentionally change compatibility characters.</p>
-<p>It is often useful for search, matching, or certain identifiers, but it may be destructive for text that should preserve the user's original appearance.</p>
-<p>For display content, preserve the original.</p>
-<p>If your application needs normalized search or matching, consider storing or generating a separate searchable representation.</p>
-<p>They are better when your requirement is genuinely Unicode-aware.</p>
-<p>For example, \p{Letter} can match letters from many writing systems.</p>
-<p>That does not mean every matched character should automatically be allowed in security-sensitive identifiers.</p>
-<p>Normalization can collapse some equivalent or compatibility forms, but visually confusable characters across scripts require separate identifier and security policies.</p>
-<p>The biggest Unicode mistake is not using the wrong JavaScript method.</p>
-<p>It is giving every string in your application the same rules.</p>
-<p>A search index is not the original content.</p>
-<p>A character counter is not a storage limit.</p>
-<p>Once you separate those responsibilities, styled Unicode becomes much easier to handle.</p>
-<p>Normalize what the system needs to match.</p>
-<p>Restrict what must function as a secure identifier.</p>
-<p>Segment what the interface needs to count.</p>
-<p>And before shipping, paste something stranger than “Hello world” into the form.</p>
-<p>That small habit catches an surprising number of text bugs before your users do.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Arc Institute recently unveiled the Virtual Cell Challenge. Participants are required to train a model capable of predicting the effect of silencing a gene in a (partially) unseen cell type, a task they term context generalization.
+For ML engineers with little to no biology background, the jargon and required context can seem quite daunting. To encourage participation, we recapitulate the challenge in a form better suited to engineers from other disciplines.</p>
+<p>Goal Train a model to predict the effect on a cell of silencing a gene using CRISPR.</p>
+<p>Doing things in the world of atoms is expensive, laborious and error prone. What if we could test thousands of drug candidates without ever touching a petri dish?
+This is the goal of the virtual cell challenge — a model (most likely a neural network) that can simulate exactly what happens
+to a cell when we change some parameter. Given that tightening your feedback loop is often the best way to speed up progress,
+a model capable of doing this accurately would have significant impact.</p>
+<p>To train this neural network, we will need data. For the challenge, Arc has curated a dataset of ~300k single-cell RNA sequencing profiles. It may be worthwhile to revisit the Central Dogma before continuing. This essay will build off of this to provide the ~minimum biology knowledge you'll need for the challenge.</p>
+<p>The training set consists of a sparse matrix and some associated metadata. More specifically, we have 220k cells, and
+for each cell we have a transcriptome. This transcriptome is a sparse row vector, where each
+entry is the raw count of RNA molecules (transcripts) that the corresponding gene (our column) encodes for. Of the 220k cells,
+~38k are unperturbed, meaning no gene has been silenced using CRISPR. These control cells are crucial as we will see shortly.</p>
+<p>To understand the dataset more concretely, let's select a gene, TMSB4X (the most frequently silenced gene in the dataset) and compare the number of RNA molecules detected for a control cell and a
+perturbed cell.</p>
+<p>We can see that the cell with TMSB4X silenced has a greatly reduced number of transcripts compared with the control
+cells.</p>
+<p>The astute among you may be wondering why you don't just measure the count of the RNA molecules before and after
+silencing the gene — why do we need the control cells at all? Unfortunately, reading the transcriptome destroys the cell, which is a problem reminiscent of the observer effect.</p>
+<p>This inability to measure the cell state before and after introduces many issues, as we are forced to use a population of basal
+(a.k.a control, unperturbed) cells as a reference point. The control cells and perturbed cells are not entirely
+homogeneous even prior to the perturbation. This means that we have to now separate out our true signal, the perturbation, from
+noise induced by the heterogeneity.</p>
+<p>More formally, we can model observed gene expression in perturbed cells as:</p>
+<p>X^p∼T^p(Dbasal)+H(Dbasal)+ε,ε∼Pε
+\hat{X}_p \sim \hat{T}_p(\mathcal{D}_{\text{basal}}) + H(\mathcal{D}_{\text{basal}}) + \varepsilon, \quad \varepsilon \sim P_\varepsilon 
+X^p​∼T^p​(Dbasal​)+H(Dbasal​)+ε,ε∼Pε​</p>
+<p>Prior to the Virtual Cell Challenge, Arc released STATE, their own attempt to solve the challenge
+using a pair of transformer based models. This serves as a strong baseline for participants to start with, so we will
+explore it in detail.</p>
+<p>STATE consists of two models, the State Transition Model (ST) and the State Embedding Model (SE). SE is designed to produce rich semantic embeddings of cells in an effort to improve cross cell type generalization. ST is the "cell simulator", that takes in either a transcriptome of a control cell, or an embedding of a cell produced by SE, along with a one hot encoded vector representing the perturbation of interest, and outputs the perturbed transcriptome.</p>
+<p>The State Transition Model is a relatively simple transformer with a Llama backbone that operates upon the following:</p>
+<p>Using a covariate matched set of control cells with paired target cells should assist the model in discerning the
+actual effect of our intended perturbation. Both the control set tensor and the perturbation tensor are fed through independent encoders, which are simply 4 layer MLPs with GELU activations.
+If working directly in gene expression space (i.e producing a full transcriptome), they pass the output through a learned
+decoder.</p>
+<p>ST is trained using Maximum Mean Discrepancy. Put simply, the model learns to minimize the difference between the two probability distributions.</p>
+<p>The State Embedding Model is a BERT-like autoencoder. To understand this more deeply, first we have to
+take a little detour for some more biological grounding.</p>
+<p>A gene consists of exons (protein coding sections) and introns (non-protein coding sections). DNA is first transcribed into pre-mRNA, as shown above. The cell then performs Alternative Splicing. This is basically "pick and choose exons", cut out all introns. You can think of the gene as an IKEA manual for making a table. One could also construct a 3 legged table, perhaps an odd bookshelf with some effort, by leaving out some parts. These different objects are analogous to protein isoforms, proteins coded for by the same gene.</p>
+<p>With this basic understanding, we can move on to how the SE model works. Remember, our core goal for SE is to create meaningful
+cell embeddings. To do this, we must first create meaningful gene embeddings.</p>
+<p>To produce a single gene embedding, we first obtain the amino acid sequence (e.g SDKPDMAEI\texttt{SDKPDMAEI}SDKPDMAEI... for TMSB4X) of all the different protein isoforms encoded for by the gene in question. We then feed these sequences to ESM2, a 15B parameter Protein Language Model from FAIR. ESM produces an embedding per amino acid, and we mean pool them together to obtain a "transcript" (a.k.a protein isoform) embedding.</p>
+<p>Now we have all of these protein isoform embeddings, we then just mean pool those to get the gene embedding. Next, we project these gene embeddings to our model dimension using a learned encoder as follows:</p>
+<p>g~j=SiLU(LayerNorm(gjWg+bg))
+\tilde{g}_j = \text{SiLU}(\text{LayerNorm}(g_j \mathbf{W}_g + \mathbf{b}_g))
+g~​j​=SiLU(LayerNorm(gj​Wg​+bg​))</p>
+<p>We've now obtained a gene embedding, but what we really want is a cell embedding. To do this, Arc represents each cell
+as the top 2048 genes ranked by log fold expression level.</p>
+<p>We then construct a "cell sentence" from our 2048 gene embeddings as follows:
+c~(i)=[zcls,g~1(i),g~2(i),…,g~L(i),zds]∈R(L+2)×h
+\tilde{\mathbf{c}}^{(i)} = \left[\mathbf{z}_{\text{cls}}, \tilde{\mathbf{g}}_1^{(i)}, \tilde{\mathbf{g}}_2^{(i)}, \ldots, \tilde{\mathbf{g}}_L^{(i)}, \mathbf{z}_{\text{ds}}\right] \in \mathbb{R}^{(L+2) \times h}
+c~(i)=[zcls​,g~​1(i)​,g~​2(i)​,…,g~​L(i)​,zds​]∈R(L+2)×h</p>
+<p>We add a [CLS]\texttt{[CLS]}[CLS] token and [DS]\texttt{[DS]}[DS] token to our sentence. The [CLS]\texttt{[CLS]}[CLS] token ends up being used as our "cell embedding" (very BERT-like)
+and the [DS]\texttt{[DS]}[DS] token is used to "disentangle dataset-specific effects". Although the genes are sorted by log fold
+expression level, Arc further enforces the magnitude of each genes expression by incorporating the transcriptome in a
+fashion analogous to positional embeddings. Through an odd "soft binning" algorithm and 2 MLPs, they create some
+"expression encodings" which they then add to each gene embedding. This should modulate the magnitude of each gene
+embedding by how intensely it is expressed in the transcriptome.</p>
+<p>To train the model, they mask 1280 genes per cell, and the model is tasked with predicting them. The 1280 genes are
+selected such that they have a wide range of expression intensities. For the graphically inclined, the below
+demonstrates the construction of the cell sentence.</p>
+<p>Understanding how your submission will be evaluated is key to success. The 3 evaluation metrics chosen by Arc are Perturbation Discrimination, Differential Expression and Mean Average Error. Given that Mean Average Error is simple and exactly as it sounds, we will omit it from our analysis.</p>
+<p>Perturbation Discrimination intends to evaluate how well your model can uncover relative differences between
+perturbations. To do this, we compute the Manhattan distances for all the measured perturbed transcriptomes in the test set (the ground
+truth we are trying to predict, yty_tyt​ and all other perturbed transcriptomes, ypny_p^nypn​) to our predicted transcriptome y^t\hat{y}_ty^​t​. We then rank where the
+ground truth lands with respect to all transcriptomes as follows:</p>
+<p>rt=∑p≠t1{d(y^t,yp)<d(y^t,yt)}
+r_t = \sum_{p \neq t} \mathbf{1}\{d(\hat{y}_t, y_p) < d(\hat{y}_t, y_t)\}
+rt​=p=t∑​1{d(y^​t​,yp​)<d(y^​t​,yt​)}</p>
+<p>After, we normalize by the total number of transcriptomes:</p>
+<p>PDisct=rtT
+\text{PDisc}_t = \frac{r_t}{T}
+PDisct​=Trt​​</p>
+<p>Where 000 would be a perfect match. The overall score for your predictions is the mean of all $$\text{PDisc}_t$$. This is then normalized to:</p>
+<p>PDiscNorm=1−2PDisc
+\text{PDiscNorm} = 1 - 2\text{PDisc}
+PDiscNorm=1−2PDisc</p>
+<p>We multiply by 2 as for a random prediction, ~half of the results would be closer and half would be further away.</p>
+<p>Differential Expression intends to evaluate what fraction of the truly affected genes did you correctly identify as significantly affected. Firstly, for each gene compute a ppp-value using a Wilcoxon rank-sum test with tie correction. We do this for both our predicted perturbation distribution and the ground truth perturbation distribution.</p>
+<p>Next, we apply the Benjamini-Hochberg procedure, basically some stats to modulate the ppp-values, as with 20,00020,00020,000 genes and a ppp-value threshold of 0.050.050.05, you'd expect 1,0001,0001,000 false positives. We denote our set of predicted differentially expressed genes Gp,predG_{p,pred}Gp,pred​, and the ground truth set of differentially expressed genes Gp,trueG_{p,true}Gp,true​.</p>
+<p>If the size of our set is less than the ground truth set size, take the intersection of the sets, and divide by the true number of differentially expressed genes as follows:</p>
+<p>DEp=Gp,pred∩Gp,truenp,true
+DE_p = \frac{G_{p,pred} \cap G_{p,true}}{n_{p,true}}
+DEp​=np,true​Gp,pred​∩Gp,true​​</p>
+<p>If the size of our set is greater than the ground truth set size, select the subset we predict are most differentially expressed (our "most confident" predictions, denoted G~p,pred\tilde{G}_{p,pred}G~p,pred​), take the intersection with the ground truth set, and then divide by the true number.</p>
+<p>DEp=G~p,pred∩Gp,truenp,true
+DE_p = \frac{\tilde{G}_{p,pred} \cap G_{p,true}}{n_{p,true}}
+DEp​=np,true​G~p,pred​∩Gp,true​​</p>
+<p>Do this for all predicted perturbations and take the mean to obtain the final score.</p>
+<p>If this challenge has piqued your interest, how can one get started? Fortunately, Arc has provided a Colab notebook that walks through the entire process of training their STATE model. Furthermore, STATE will be hitting transformers
+very soon, so starting with their pretrained models will be as simple as:</p>
+<p>This is a fantastic primer, especially for engineers coming from outside the bio world. The framing around the challenge of separating true signal from population noise is so well articulated. It reminded me of how easily that complexity translates into real-world healthcare tools, where even basic outcome tracking can be skewed by heterogeneity in patient populations.</p>
+<p>In this project, openforge.io/mobile-measures-case-study ,  a PT outcomes platform, we saw how embedding even simple real-time insights into mobile interfaces can transform provider decisions. So it’s exciting to imagine how something like this could evolve into usable tools for clinicians or researchers down the line. Curious if anyone here has explored clinical applications for models like STATE?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-handle-styled-unicode-text-in-javascript/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/virtual-cell-challenge" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

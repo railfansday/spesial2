@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Give Your Coding Agents a Memory You Own</title>
+    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9876.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,126 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Give Your Coding Agents a Memory You Own</h1>
+        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/funes/thumbnail.jpg" alt="Give Your Coding Agents a Memory You Own" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/funes/thumbnail.jpg" alt="Give Your Coding Agents a Memory You Own" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I work across several machines, and I switch coding agents depending on the task.
-Every one of them meets my projects as a stranger. The reasoning from “last Tuesday”
-disappears when the session ends. Each new agent, on each new host, starts from zero.</p>
-<p>Earlier this year, Software Forgets: Agent Traces Are the
-Memory made the case
-that coding agents already produce the record we keep losing. As they search a
-codebase, try approaches, hit errors, read documentation, and change direction, they
-leave behind a dense account of not just what changed, but why.</p>
-<p>While the diagnosis is correct, traces are only potential memory. The session logs of
-an agent are still just an archive. You cannot grep your way to “why did we move
-off the streaming parser?” across ten thousand turns. For an agent to use those traces
-while it works, they need indexing, retrieval, ranking, and exact provenance.</p>
-<p>That is what funes provides. It is a durable
-memory layer for your agents (Claude Code, Codex, pi, and Hermes). It is built from the
-sessions already on your machine. It works locally and becomes part of your agent's
-normal workflow with one command. When you want it to, it can also travel to a Hugging
-Face dataset you own, private by default.</p>
-<p>funes is a single binary. Its default inference backend has no ML runtime dependency,
-and embedding and reranking happen on your machine. Install it:</p>
-<p>That one add command builds the first index, gives the agent recall and get
-tools, and installs the automation that indexes each completed turn. Indexing is
-incremental, with new runs adding new turns rather than embedding the whole history
- again. The older and deeper content can backfill in bounded steps.</p>
-<p>From there, you just work. When a task touches a past decision, rationale, or finding,
-the agent can reach for recall itself. You do not need to remember the old session or
-paste its context into the new one.</p>
-<p>With funes added, recall happens inside the conversation. The agent reaches for its
-memory on its own and names the session behind its answer.</p>
-<p>recall returns the original text, not a summary, and shows exactly where it came from
-(the agent, timestamp, session, and turn). Each result includes a get command that
-opens the full turn and its surrounding context.</p>
-<p>Underneath, one deterministic pipeline parses every supported trace into the same
-turn-and-block shape, chunks it, embeds it with a pinned local model, and writes it to
-a local Lance dataset. A query combines vector and BM25 search, fuses their
-rankings, reranks the candidates with a cross-encoder, reweights them by recency, and
-attaches neighboring chunks.</p>
-<p>That design gives funes three important properties:</p>
-<p>The agent as a stranger problem is already solved on one machine. But memory gets
-more useful when the next agent is running somewhere else.</p>
-<p>To make a memory follow your work, bind one when you add funes to an agent:</p>
-<p>The bind publishes your current memory there. funes then keeps it current, indexing
-each turn locally and publishing at session boundaries. The agent recalls from it
-throughout. Run the same command on another machine and the memory follows you there.</p>
-<p>Underneath, the local memory is a Lance dataset, and the shared memory is a Hugging
-Face dataset (private by default) you own.</p>
-<p>Before anything reaches the Hub, credentials have already been redacted during
-indexing. Publishing then scans every chunk again and withholds anything that still
-looks like a secret. The scanner behind this is documented in
-SECURITY.md, including
-what it does and doesn't cover.</p>
-<p>When an agent reads a remote memory, funes caches the dataset files locally, so warm
-queries return to local speed. The Hub supplies the ownership, access control,
-versioning, and distribution it already supplies for other datasets. Your memory does
-not become an account in a separate memory service, and you do not rent it back
-through an API.</p>
-<p>recall is shaped for agents. When you want to put a question to a memory yourself,
-use ask. It reads your local memory by default:</p>
-<p>Or point it at a shared memory. We published a
-memory of funes development,
-so you can ask why funes works the way it does without creating a memory of your own:</p>
-<p>funes ask is the read-only, one-question sibling of funes add. It recalls the
-passages, hands them to a coding agent, and returns a grounded answer that names its
-sources. It does not install an integration or change the agent's persistent setup.</p>
-<p>A retrieval miss is not papered over. If the passages do not support an answer, the
-agent says so. You can rephrase the question or add funes to the agent so it can search
-the memory iteratively during normal work.</p>
-<p>A shared memory is not tied to the agent or model that created it. Start a task in
-Claude Code, continue it in Codex next week, and the second agent can recall the first
-agent's reasoning. Use pi with a local model or one served through the Hugging Face
-router, then return to Claude.</p>
-<p>Claude makes a decision; a hook indexes it; Codex recalls it in another session. The
-older hits in the demo are earlier recordings of the same experiment: an append-only
-memory remembered the rehearsals too.</p>
-<p>Published memories carry a dataset card and the funes tag, making them recognizable
-and discoverable on the Hub. The Hub
-already hosts open weights and datasets. funes adds open working memory. It holds
-the decisions, failed approaches, and rationale behind a project, queryable by another
-agent and traceable to the sessions that produced them.</p>
-<p>A long investigation bloats a session until each turn costs more to carry the context
-than to do the work. The usual answers are to let the agent compact and carry on, or to
-write a handoff and start fresh. Recall is a third, so we measured them against each
-other on the handoff-vs-recall
-benchmark:
-two tasks whose answer cannot be reconstructed without the session prior knowledge.</p>
-<p>Compaction is what most agents do by default, and it was the only one of the three whose
-result divided: it arrived on one task and never arrived on the other. Where it failed,
-its summary had flattened the findings that mattered. Recall returns the passages
-themselves, so a finding does not have to survive summarization.</p>
-<p>Recall was the cheapest of the three on both tasks, 8x cheaper than a written handoff on
-one and 4x on the other.</p>
-<p>The lighter segment of each bar is the one-time charge for preparing the channel, the
-handoff or the compaction, paid before the first question is asked and counted once. A
-cross marks a channel that never arrives, and so has no cost per success.</p>
-<p>“To think is to forget differences, generalize, make abstractions.”
-— Jorge Luis Borges, Funes the Memorious</p>
-<p>Your agents already wrote the record. funes lives at
-github.com/huggingface/funes, one command away
-from turning that record into a memory the next agent can read, on whichever machine you
-happen to be on.</p>
-<p>funes invents little of this. It leans on open-source embedding models good enough to
-run locally, on Lance's append-only datasets with
-cheap incremental writes, and on the Hub's caching and content-dedup for datasets. The
-work is in fitting them into a memory an agent can actually use.</p>
-<p>funes is open source too. Open an issue
-for anything from an install snag to a recall that missed, or an agent you'd like
-supported.</p>
-<p>Ran funes 1.3.0 on a machine with 19,195 coding-agent sessions already on disk (LongMemEval laid down in the real ~/.claude and ~/.codex layouts), 100 questions whose answer sits in exactly one session, scored by whether that session comes back. Disclosure: I maintain deja-vu, one of the tools in the same table.</p>
-<p>Full index: 2h03m on an M4 pro laptop (308k chunks), 6.3s per query. With defaults: hit@1 9/100, hit@5 39, found@50 71. With --half-life 0: 19/46/71 — the 30-day recency half-life halves rank-1 on history older than a month, which is most of what's on a real disk; worth a mention in the docs. Once recency is off, the vector+rerank stack is clearly the best ranker in the table at rank five. The documented one-minute first pass leaves 218 of the 19k sessions indexed (0/100 answered), so the "about a minute" framing is really "about a minute until the embedding job starts".</p>
-<p>For comparison on the same corpus, deja-vu (plain BM25 over 24 agents' files) indexes in 29s and answers in 24ms at hit@1 18/100, hit@5 35. Corpus, drivers and every row: vshulcz.github.io/deja-vu/guide/day-zero.html - happy to be corrected if a setting I missed changes the numbers.</p>
-<p>longmemeval does not really need semantic search: BM25 already gives the same ratio you mentioned IIRC, so for this use case this is pretty much expected that it is not worth paying the cost of evaluating the embeddings (this extra cost you see at indexing and recall time). funes shines when the information is actually difficult to find.</p>
+                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
+<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
+<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
+<p>This guide has two halves that run in different places:</p>
+<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
+<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
+<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
+<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
+<p>Then we start the base-model server with the following command:</p>
+<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
+<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
+<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
+<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
+<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
+<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
+<p>This trains ~6M parameters, about 1.66% of the model.</p>
+<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
+<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
+<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
+<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
+<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
+<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
+<p>Then we serve the merged model with the following command:</p>
+<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
+<p>Comparing the two runs on the identical serving stack:</p>
+<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
+<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
+<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/funes" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

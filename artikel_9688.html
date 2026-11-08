@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>348 Blog Posts To Learn About Psychology</title>
+    <title>Three Tauri bugs I found by not trusting a green build</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9688.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,50 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>348 Blog Posts To Learn About Psychology</h1>
+        <h1>Three Tauri bugs I found by not trusting a green build</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/github/psychology-4.png" alt="348 Blog Posts To Learn About Psychology" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fuk7nit5001vkkj0bylff.png" alt="Three Tauri bugs I found by not trusting a green build" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/github/psychology-4.png" alt="348 Blog Posts To Learn About Psychology" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fuk7nit5001vkkj0bylff.png" alt="Three Tauri bugs I found by not trusting a green build" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
-<p>Groom your mind to be your greatest asset; All Great Inventions starts from here</p>
-<p>Time and Free Will: An Essay on the Immediate Data of Consciousness, by Henri Bergson, is part of HackerNoon’s Book Blog Post series.</p>
-<p>Visit the /Learn Repo to find the most read blog posts about any technology.</p>
-<p>500 Blog Posts To Learn About Project Gutenberg</p>
-<p>Lets geek out. The HackerNoon library is now ranked by reading time created. Start learning by what others read most.</p>
+                <p>TL;DR 🧵 Last week I wrote about one Tauri bug. Someone in the comments told me to check the updater manifest, not just the files it points at. That one nudge turned one bug into three, and my pipeline into something I actually trust. Short version: a green build tells you the toolchain didn't crash. That's it. That's the whole lesson.</p>
+<p>I maintain StackerPulse, a small Rust + Tauri v2 desktop app for Stacker News. If you build for macOS universal, bug 1 will find you eventually.</p>
+<p>My app crate has two binaries: the app, and a little secret scanner I ship as a CLI.</p>
+<p>Windows: fine. Linux: fine. macOS universal: the build dies at the bundling step.</p>
+<p>Here's my favourite part. Both halves are doing exactly what they should.</p>
+<p>Three correct behaviours, one broken build. The second binary is compiled for both architectures, never merged into the universal output directory, and then politely requested by name.</p>
+<p>💡 Bug density tip: if Windows and Linux are green, this class of bug can hide in your repo for a long time. I only found it because I ship on three platforms from one workflow.</p>
+<p>So I fixed the workflow. Ran it again. Green. 🟢</p>
+<p>The draft release had CLI archives, checksums, provenance attestations... and not a single installer. Not one. Zero.</p>
+<p>tauri-action skips the upload when the release id it got is empty, and exits 0 while doing it. No warning, no red step, no "hey, I uploaded nothing". Just a green check and an empty release.</p>
+<p>Two lines. Not a Tauri bug in the strict sense, more of a missing alarm on a door that opens silently.</p>
+<p>This is the one I'm actually proud of, and it exists because someone in the comments told me to check the manifest. So I did. I compared latest.json against the files that were really attached.</p>
+<p>Notice the problem? I build two MSIs, one per language:</p>
+<p>Two MSIs walk in. The manifest has one key per architecture. One MSI walks out. The Russian build overwrote the English one, and windows-x86_64 still points at English, so now two keys for the same architecture disagree about which language they serve.</p>
+<p>Every installer is present. Every one is signed. Every asset check passes. And a Russian user on an MSI install gets an English app after the update, and probably never mentions it.</p>
+<p>Nothing is broken and the result is still wrong. That's the failure mode that actually kills you.</p>
+<p>Each component does something reasonable alone. lipo merges a binary. The action uploads assets. The bundler writes one entry per artifact type.</p>
+<p>The bug lives in the handover. In what one side assumes the other produced.</p>
+<p>Which means "did the build succeed" is not a useful question. It's an answer to a question nobody asked.</p>
+<p>None of these checks looks at build status.</p>
+<p>The real version in the repo also checks that every download link is pinned to the tag. Draft releases hand out untagged-... URLs that die the instant you publish.</p>
+<p>A patch for bug 1 appeared before I wrote mine. Reviewing it turned up something neither of us thought about:</p>
+<p>Cargo gets both feature lists. get_binaries() filters on one. Enable a binary through build.features in tauri.conf.json and the merged set is smaller than what the bundler will ask for. Their patch fixes my repro and misses the next one. Classic.</p>
+<p>And my own near-miss: my first plan was to rename the main binary inside the lipo loop, to honour main_binary_name. Then I read rename_app() and discovered it already renames it after lipo. My version would have made fs::rename hunt for a file that no longer existed. Ten minutes of reading the function I was about to duplicate. One broken release avoided.</p>
+<p>tauri#16488 merges every binary from get_binaries(), config features merged in first, so both sides finally see the same list.</p>
+<p>I don't own a Mac. So the check runs in CI, on a real runner, against two refs of tauri-cli:</p>
+<p>A build that "passes" proves nothing. A build that fails without the patch and passes with it proves the patch does what it claims. Everything else is a wish.</p>
+<p>A green build tells you the toolchain didn't crash. It says nothing about whether the artifact is correct, complete, or the thing you meant to ship.</p>
+<p>The cheap version of catching that is seven lines of jq and gh release view. The expensive version is finding out from a user whose update quietly installed the wrong language, three months later, assuming they bother to tell you at all.</p>
+<p>StackerPulse is a small Rust and Tauri app for Stacker News, MIT licensed. If you ship Tauri and build macOS universal, go count your binaries.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/348-blog-posts-to-learn-about-psychology?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/ubrodev/three-tauri-bugs-i-found-by-not-trusting-a-green-build-1fc9" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

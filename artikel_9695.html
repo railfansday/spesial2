@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How I made &quot;jump to message&quot; work in ChatGPT, Claude and Gemini</title>
+    <title>The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9695.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How I made &quot;jump to message&quot; work in ChatGPT, Claude and Gemini</h1>
+        <h1>The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Femt1784q9z5nudxtsuw9.png" alt="How I made &quot;jump to message&quot; work in ChatGPT, Claude and Gemini" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.spring.org.uk/images/work-6.jpg" alt="The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Femt1784q9z5nudxtsuw9.png" alt="How I made "jump to message" work in ChatGPT, Claude and Gemini" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.spring.org.uk/images/work-6.jpg" alt="The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I'm a third-year student, and a lot of my studying and project work happens in AI chats. The chats get long. The useful answer is always somewhere around message 78, and finding it again means a lot of scrolling.</p>
-<p>So I built DogEar, a Chrome extension that adds a ☆ under every answer in ChatGPT, Claude, Gemini, Perplexity and Grok. You star an answer, and later you click it in a list and the chat scrolls straight back to it.</p>
-<p>That last part sounded like one line of code:</p>
-<p>It took most of the project. This post is about why, and how the jump finally became reliable.</p>
-<p>1. The message often isn't on the page.
-Claude virtualises its chat: it only keeps the messages near your screen in the DOM and swaps them in and out as you scroll. So if you saved message 78 and you're now at message 400, document.querySelector won't find it, even though it still exists. "Not found" doesn't mean "gone".</p>
-<p>2. Older messages load lazily, and every load moves everything.
-ChatGPT, Gemini and Claude don't load a long chat all at once. Older messages arrive in batches as you scroll up. Each batch is inserted above everything else, so every position on the page shifts down.</p>
-<p>3. The sites change constantly.
-Five sites, each with its own markup, each redesigning every few months, none with a public API for this.</p>
-<p>When you star an answer, DogEar saves a few ways to recognise it later:</p>
-<p>The hash is a small FNV-1a, which is plenty for telling answers apart in one chat:</p>
-<p>Finding the message is then a short chain. If an item was saved with a message ID, only that ID counts. Text matching could land on a similar-looking answer, and a wrong jump is worse than no jump:</p>
-<p>This works when the message is on the page. The hard part is when it isn't.</p>
-<p>My first version saved the answer's position as a fraction of the chat: "this answer is 40% of the way down". On a lazy-loading site, that breaks. When you saved it, maybe only the last 100 messages were loaded. When you jump later, the site loads older batches at the top, the chat gets taller, and 40% now points somewhere else entirely.</p>
-<p>The fix was to measure from the other end. Older messages only ever load at the top, so the distance from an answer to the bottom of the chat doesn't change:</p>
-<p>To jump, DogEar computes the target from the current height of the chat:</p>
-<p>If target is negative, the chat isn't long enough yet, which means the older messages haven't loaded. So it stays at the top and lets the site load batch after batch until the chat is tall enough, then scrolls straight to the spot.</p>
-<p>This one took a while to find. Sitting at the top of a Claude chat and waiting doesn't load anything. Claude only loads the next batch while the chat is scrolling.</p>
-<p>I found this by having the extension write a log of every jump to a file in my Downloads folder (much easier than copying things out of DevTools), and comparing the logs from jumps that worked with ones that hung.</p>
-<p>The fix is a small nudge: if nothing new has loaded for half a second, scroll down 150 px and back to the top on the next frame. To Claude, that looks like someone scrolling:</p>
-<p>It also watches whether the chat is still growing. As long as new batches keep arriving, it keeps waiting (up to 45 s for very long chats). If nothing has loaded for 2.5 s, it stops waiting and starts searching.</p>
-<p>Even after landing in the right area, jumps would sometimes drift. Browsers have scroll anchoring: when content above the screen changes size, the browser adjusts the scroll position so what you're looking at stays put. That's great for reading, but here, as the site filled in taller messages above, anchoring kept pushing the page back down and undid the scroll.</p>
-<p>The fix is one line while the search runs, restored afterwards:</p>
-<p>Sites estimate the height of off-screen messages, and new messages added after saving push the answer further up. So landing at fromEnd gets close, but not always exactly there. If the answer isn't right there:</p>
-<p>After about 15 seconds (longer while a long chat is still loading), it stops and shows a small "Couldn't find this message" note instead of scrolling forever. Every new jump also cancels the previous one with a simple token counter, so clicking twice quickly never leaves two searches fighting over the scroll position.</p>
-<p>When it does find the answer, it highlights it with a gold glow for a few seconds. That's a Web Animation rather than a CSS one, because Claude switches off CSS animations on its page.</p>
-<p>Sometimes the answer is in another chat. A content script can't scroll a page that isn't open yet, so DogEar saves a small "pending jump" (which item, which URL, the time), then opens the chat. When the new page loads, it checks: is there a pending jump for this URL, less than 60 seconds old? If so, it runs the same search, then clears it.</p>
-<p>All the site-specific knowledge lives in one file, adapters.js. Each site is one object: where the answers are, where its button row is, how to get a message ID, whether an answer is still being written:</p>
-<p>Several selectors per list are tried in order, so when a site changes, the older ones still work as backups.</p>
-<p>The rest of the extension never knows which site it's on. When a site redesigns, the fix is usually one selector in one file. Two rules helped a lot:</p>
-<p>Before calling it done, I logged about 70 test jumps across all five sites: near and far, same chat and other chats, short and very long. The logs showed things I wouldn't have guessed, like ChatGPT reusing old message elements when you switch chats, so the same DOM node can belong to a different message. Now an answer only counts as "the same" if it's the same element and has the same message ID.</p>
-<p>DogEar is free and open source (MIT), with plain JavaScript, no frameworks, no build step and no server. Everything stays in your browser.</p>
-<p>If you've dealt with virtualised lists or lazy-loaded feeds from the outside, I'd love to hear how you handled it.</p>
-<p>I built DogEar with Claude Code as my pair programmer, and this article was drafted with AI help and edited by me.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Thousands of workers tested different break schedules. One stood out for all the right reasons.</p>
+<p>Thousands of workers tested different break schedules. One stood out for all the right reasons.</p>
+<p>• Read members-only articles
+• Adverts removed
+• Cancel at any time
+• 14 day money-back guarantee for new members</p>
+<p>Psychologist, Jeremy Dean, PhD is the founder and author of PsyBlog. He holds a doctorate in psychology from University College London and two other advanced degrees in psychology. He has been writing about scientific research on PsyBlog since 2004.			
+				View all posts by Dr Jeremy Dean</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/rishit_sharma_4bb94fecd6f/how-i-made-jump-to-message-work-in-chatgpt-claude-and-gemini-2po7" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.spring.org.uk/2026/10/workday-change.php" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One disarm override per pattern, not per key</title>
+    <title>Moatly</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9675.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>One disarm override per pattern, not per key</h1>
+        <h1>Moatly</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fva7tiqkl1ruk5cn576mn.png" alt="One disarm override per pattern, not per key" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fva7tiqkl1ruk5cn576mn.png" alt="One disarm override per pattern, not per key" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 8
-•
-Originally published at polycratia.com</p>
-<p>gitdisarm reads the git configuration that arrived with a repository, and for every key that would make git run a program it prints the invocation that neutralizes it. The obvious store for those invocations is a map from key name to override string, and that map fails on the very first key worth reporting: the keys worth reporting are patterns, a pager for one command, a filter driver, a credential helper for one URL. So there is no finished override to keep around. Only a template, plus the entry that fills it.</p>
-<p>The second half of the job is quieter and it bit me later: once the templates are filled, the results are not interchangeable. A -c pair goes to any git command. An option like --no-ext-diff belongs to git diff alone. Put both on one command line and git rejects it, which is about the worst thing that can happen to a tool whose whole output is a command you are supposed to paste. The code is in gitdisarm; what follows is the reasoning behind the two halves.</p>
-<p>Each row in the catalog is a Rule. It carries the family it belongs to, the earliest git version that reads the key, and a Disarm string written against the row's Pattern. Inside that string, <name> stands for whichever part of the key varies. Filling it takes three lines:</p>
-<p>The condition is the interesting line. A row that does not pin a key matches on the section alone, so what varies between two matching entries is the key itself: pager.<name> covers pager.log and pager.diff, and <name> is the entry's Key. A row that does pin a key (clean, program, helper) is matching a family of drivers, so the subsection is what varies, and <name> is the entry's Subsection.</p>
-<p>One field decides the direction, and the row already needed that field in order to match at all. That is the part I would defend: the fill rule comes out of the match rule instead of being configured beside it, so a row cannot match one way and fill another.</p>
-<p>Matching is also where the value gets a vote, since some of these keys are dangerous only depending on what they hold:</p>
-<p>A core.fsmonitor that git reads as a boolean selects either the monitor built into git or none; anything else is a hook command. An alias.<name> is a program only when its expansion begins with !. Both rows answer inert, and an inert row fills no template: Classify sets Finding.Disarm only when the row's Class is Executes.</p>
-<p>Clearing the key is frequently not enough, and the template is where that gets said, because the extra pair belongs to the row and not to the entry. Three cases in the catalog carry two overrides inside one string. The table-driven tests show the filled results directly, which is also how I keep the templates honest:</p>
-<p>A scoped credential helper does not displace the unscoped one, so emptying credential.https://example.com.helper leaves credential.helper standing, and the template clears both. The gpg rows do not empty the key at all: they name false as the program and add -c log.showSignature=false, so git is neither pointed at a program of the repository's choosing nor asked for the signature check to begin with. The filter rows carry a second pair of their own, -c filter.<name>.required=false, because a cleared filter that is still marked required changes which way the command fails.</p>
-<p>All of it sits in one string per row. I considered modelling it as a list of pairs and decided against it, for a reason I still like: a row's override is text a human reads, pastes and checks against git's own documentation. Keep it as the literal text that gets printed, and the test above compares exactly what you will see, with no assembly step between the catalog and the screen to get wrong.</p>
-<p>Keys the catalog has no row for still get a filled override when they sit inside a family whose drivers are nothing but the programs their keys name:</p>
-<p>That is the template-free path: no pattern to fill, so the override gets built from the entry's own full name. A new filter.<driver>.* key invented by some future git gets an override anyway, instead of quietly being called safe.</p>
-<p>diff.external and diff.<name>.command are neutralized by --no-ext-diff, and diff.<name>.textconv by --no-textconv. Those are options of git diff, not of git. They cannot go where the -c pairs go. So the report sorts each filled override as it arrives, on the one distinction that matters for placement:</p>
-<p>Two decisions worth naming here. The deduplication is a linear scan over a slice rather than a map, because the order is part of the output contract: each override appears once, in the order it was first found, which is the order the keys were declared in the file. A set would make the invocation unstable between runs on the same input, and an unstable invocation is one you cannot diff or paste into a review. Second, both lists are append-only and never sorted, so the printed command reads in the same sequence as the findings above it.</p>
-<p>Then the summary prints each list as the thing you do with it:</p>
-<p>One invocation to run, one short list to place by hand. printFinding still shows each entry's own filled Disarm line next to the key that caused it, because the two have different readers: the per-finding line answers "what does this one key do and how do I stop it", and the aggregate answers "what do I type before I touch this tree".</p>
-<p>Neither one is a claim of safety, which is why the summary ends with catalog.NotCovered: include.path, core.gitProxy, a template directory, the executables already sitting in .git/hooks. A short list of findings must not read as a clean repository, and an exit status of 0 says only that no covered key named a program.</p>
-<p><name> is a single placeholder and strings.ReplaceAll fills every occurrence with the same string. For every row in the catalog today that is correct, because no row varies in two independent places. The first row that does will be filled wrongly, and quietly. A check that a row's Pattern and its Disarm agree on how many distinct names they mention would turn that into a test failure instead of a bad override.</p>
-<p>The other soft spot is the split itself. addDisarm decides placement from the "-c " prefix of a string the catalog wrote. It works because one author writes both sides, and it is the kind of agreement that holds right up until someone adds a row whose override begins with something else and lands in the wrong list with no test noticing. The honest representation is probably a field on Rule saying which list the override belongs to, with the prefix becoming a consequence rather than the source of truth.</p>
-<p>Those two are the same mistake in two sizes: structure derived from text after the fact, when the structure was known at the moment the row was written. The template idea itself holds up, since a pattern cannot produce a per-key answer, it has to produce a filled one. Where I cut corners was in letting the filled string stand in for facts the row already had...</p>
-<p>Originally published on polycratia.com — where I write about payment systems, crypto rails and marketplace backends.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Measures your product's moat and the threats testing it
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/moatly-2?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1305393?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/polycratia/one-disarm-override-per-pattern-not-per-key-2gpj" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/moatly-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

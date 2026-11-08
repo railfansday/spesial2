@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Agent Aced the Task. Will It Do It Again?</title>
+    <title>A bit about email</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9851.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,268 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Your Agent Aced the Task. Will It Do It Again?</h1>
+        <h1>A bit about email</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Your agent works in rehearsal, but during the live demo, it takes a different path and fails the same task.</p>
-<p>That is embarrassing onstage. In production, it is a reliability problem: a workflow that succeeded once may fail the next time a user makes the same request. For mission-critical work, such as reconciling a financial transaction or checking a contract for an obligation, that can be a showstopper.</p>
-<p>Most benchmarks hide this variability behind an average. On AppWorld, a ReAct agent using GPT-4.1 succeeded on 77.4% of runs across five repetitions. But it succeeded in all five runs for only 53.0% of tasks — a 24.4-point consistency gap.</p>
-<p>Most benchmarks report the first number. We built a way to measure the second — and improve it.</p>
-<p>In an earlier post, we introduced ALTK-Evolve — a system that turns an agent's own past trajectories into reusable guidelines, distilled automatically and injected back at inference time. It measurably improves task success, but those results only asked the average-case question too.  This post introduces consistency guidelines, a new guideline type in altk-evolve built on top of a diagnostic tool we call the Consistency Analyzer, that targets this gap directly.</p>
-<p>Standard agent evaluation reports Mean@k: run a benchmark k times, average the pass rate. Often k=3, sometimes just 1. It's the number on every leaderboard, and it's what "77% accurate" means in practice.</p>
-<p>Mean@k answers "how good is this agent, on average?" It does not answer the question a real user cares about: will it still be good if I ask this exact question again? For that you need Pass^k: the fraction of tasks where the agent succeeds on all k runs.</p>
-<p>⚠️ Pass^k is not Pass@k. The familiar Pass@k is optimistic — it asks whether at least one of k attempts succeeded, the right question when you can verify and retry. Pass^k is its pessimistic mirror image: every attempt must succeed. Same letters, opposite question. Pass^k ≤ Mean@k ≤ Pass@k, always.</p>
-<p>A ReAct agent backed by GPT-4.1 posts a Mean@5 of 77.4% — genuinely strong. But Pass^5 is only 53.0%. Nearly a quarter of the benchmark consists of tasks the agent can sometimes solve and sometimes can't, with nothing about the task changing between runs. We call this gap — Mean@k minus Pass^k — the consistency gap.</p>
-<p>This isn't a capability problem you fix with a bigger model. It's an orthogonal axis: an agent can be capable and inconsistent at the same time.</p>
-<p>Every time an LLM agent decides something — which API to call, what argument to pass, whether to retry — that decision comes out of a probability distribution over next tokens. What matters is the shape of that distribution. A sharp one puts most of its mass on a single token: the runners-up are far behind, and the same choice comes out run after run. A flat one spreads comparable mass across several near-tied tokens, and which one wins is close to a coin flip.</p>
-<p>The shape decides how much noise it takes to change the outcome. Sharp distributions are resilient — GPU floating-point non-associativity, request batching, and other platform-side effects nudge the numbers slightly, but nowhere near enough to reorder a clear winner. Flat distributions are vulnerable to exactly that nudge: near-ties may reorder under small perturbations. And because a trajectory chains dozens of decisions, a small per-step chance of flipping compounds into a large chance that some run goes differently. That's where a 24-point gap comes from.</p>
-<p>This is also why the problem survives your decoding settings. Greedy decoding and a fixed seed both govern how a distribution gets turned into a token — they say nothing about the distribution itself. On a hosted endpoint the probabilities shift slightly from run to run, so the same prompt to the same model at temperature zero can still resolve a near-tie one way today and the other way tomorrow.</p>
-<p>Our setup: the ReAct agent runs at temperature 0.0, so none of the variance above is ordinary sampling.</p>
-<p>Which turns the problem into a search: which steps in a given trajectory were the flat ones — and what do you do about them once you know?</p>
-<p>Consistency guidelines come out of a two-stage pipeline that plugs into ALTK-Evolve's existing machinery — with a new source signal driving what gets written.</p>
-<p>1. Detect — the Consistency Analyzer. 
-Given one recorded trajectory, the analyzer replays each decision step through controlled resampling, measuring how much the model's output actually varies at that point. Concretely, that's one additional model call per decision step, done once offline — issued with the sampling parameter set to draw k completions at once (k=5 by default) — replayed against the already-recorded context, not new tool calls, not new environment interactions, and not a second end-to-end rollout of the task. This yields a consistency score per decision step that is written into a scorecard to pinpoint exactly which decisions are at risk of flipping on the next run. Detection is fully black-box — no logits, no model internals, no instrumentation beyond the trace you already have.</p>
-<p>2. Generate — targeted guidelines.  Every flagged step becomes a candidate consistency guideline in the standard ALTK-Evolve format, so it slots into the existing storage and retrieval pipeline. Here's a real example, generated by GPT-4.1 from a trajectory of the AppWorld task "How many activities are done in my bucket list as per my SimpleNote note?":</p>
-<p>[Guideline 1] When counting checkbox-style markers in note content, use a line-anchored regex match rather than a plain substring count — note titles often repeat the marker symbol in a legend line.</p>
-<p>[Guideline 2] Always verify search results for note queries by checking for multiple matches and confirming the correct note before proceeding.</p>
-<p>Nothing here is task-specific trivia. String-counting bugs and unverified search results are decision points that show up with high uncertainty across many AppWorld tasks. That's the point: the analyzer targets instability, not failure — so it catches steps the agent happened to get right this time but could easily get wrong next time.</p>
-<p>Watch the 2-minute demo — five parallel runs of the agent split 3-2 on this task because of agent uncertainty about the counting strategy, then run again after these guidelines in context: all five agree.</p>
-<p>We evaluated on AppWorld test_normal (168 tasks) with a ReAct agent on GPT-4.1, generating consistency guidelines from a single baseline trajectory per task and testing them on 5 fresh runs.</p>
-<p>Mean@5 (%), aggregate — same scale as Pass^5 above.</p>
-<p>The consistency gap is cut roughly in half. Aggregate Pass^5 rises 53.0% → 69.0% while Mean@5 rises 77.4% → 81.0%, narrowing the gap between "looks capable" and "can be counted on" from 24.4pp to 12.0pp. Nearly a third of previously-inconsistent tasks become tasks the agent passes on every single run.</p>
-<p>The middle and hard tiers gain most. Medium +22.9pp (+44% relative), Hard +14.3pp (+45% relative) — effectively tied in relative terms, with Medium ahead absolutely. Easy gains +12.2pp, having had the least room. This is consistency guidelines doing what they're designed to do: finding and stabilizing the specific decision points where an agent's own uncertainty was leaking into the outcome.</p>
-<p>Mean@5 never drops. Preserving average accuracy was a hard requirement, not a nice-to-have: a system that boosts Pass^5 by trading away Mean@5 would just be shifting unreliability around, not fixing it. Mean accuracy holds or improves at every difficulty level.</p>
-<p>Applied to a different but related task in the same AppWorld scenario — another variant of the scenario the guidelines were mined from — consistency guidelines still lift Pass^5 by +13.0pp, only 3 points below the same-task number. A guideline derived from one run isn't just patching that run; it's capturing something that transfers.</p>
-<p>The sharper evidence comes from a weaker model, gpt-oss-120b. Same-task Pass^5 rose +6.0pp from a much lower baseline (10.1% → 16.1%) — and, interestingly, the similar-task generalization number (+8.7 pp) actually exceeded the same-task gain, suggesting the guidelines were capturing genuinely reusable failure patterns rather than memorizing one trajectory's specifics.</p>
-<p>Try the ALTK-Evolve — the open-source repo now includes the Consistency Analyzer and consistency-guideline generation used in these experiments — or read the technical report on arXiv for the complete methodology.</p>
-<p>If accuracy numbers you can't reproduce on your own tasks sound familiar, we'd like to hear about it — concrete examples of flip-prone behavior in your own agents are exactly the kind of feedback that shapes what we build next. Open an issue or a discussion.</p>
-<p>Great perspective on agent reliability. Measuring consistency alongside accuracy seems especially important as AI agents move into workflows where reproducibility matters. The Consistency Analyzer approach is a fascinating way to identify unstable decisions without requiring full task replays.</p>
-<p>The useful split is the one most dashboards still refuse to print: Mean@k answers “how good is this agent on average?” Pass^k answers “will the same request still succeed if I ask again?”</p>
-<p>Once you’ve watched a trajectory chain dozens of near-tied tool choices, a strong average with a wide consistency gap is exactly the demo that fails live. Capability and consistency are orthogonal — buying a bigger model can lift Mean without closing the gap.</p>
-<p>What I want teams to take from the Consistency Analyzer framing is operational, not the guideline machinery itself: treat flip-prone decision steps as first-class eval targets. One offline resample pass over a recorded trace is a cheaper reliability signal than another end-to-end leaderboard screenshot.</p>
-<p>Practical ask for anyone shipping agents from this: do you report Pass^k (even k=3) next to Mean@k in the release gate, and do you refuse the “stable” label when the consistency gap is still large on your hard tier?</p>
-<p>Reproducible reliability will not remove disagreement about which guidelines to inject. It will make the disagreement about the right metric.</p>
-<p>Thanks, and you've landed on exactly the operational takeaway we hoped for: flip-prone decision steps should be eval targets in their own right. Beyond that, knowing where they are also turns the eval into a diagnostic: a consistency gap tells you that an agent is unreliable, while the flip-prone steps tell you where and why.</p>
-<p>On your release-gate question: we'd strongly encourage it, and k=3 is a sensible default. A few things we'd suggest to anyone adopting Pass^k as a gate:</p>
-<p>I'd like to understand your closing point better. In our experiments, we didn't choose among individual guidelines: for each new task, we injected the guidelines derived from the most similar task. I'm curious where you see the disagreement about which guidelines to inject arising.</p>
-<p>https://huggingface.co/spaces/observantdistressed/minimax-h3</p>
-<p>Loved your space, any plan to set it up again in near future?</p>
+                <p>First, some terminology;
+A typical email will past through many different components on it's way to the recipient:</p>
+<p>(These aren't all necessarily different machines or even different programs, but it is helpful to give a name for each step.)</p>
+<p>The mail user agent (MUA) runs on the user's computer and is what they use to send or read messages.
+Let's say they send something:
+that message will be uploaded to to the submission agent (MSA) which checks the user's password before handing off to the mail transfer agent (MTA).</p>
+<p>The transfer agent's job is to talk to the other mail servers and get the message to the receiving side's MTA.
+Once received, it's given to the local delivery agent (LDA) to be stored until the recipient checks their email.
+The name "LDA" is non-standard, but I use it to avoid having four different abbreviations differing by a single letter.</p>
+<p>The reason for this structure is that when the system was being designed (around 1980),
+most organizations could only afford a single server.
+Maintenance was a full time job and updates often required multiple days of downtime. 
+A well-connected computer might have dedicated single-digits megabit/second link that worked half the time.</p>
+<p>This forced the MTA and MUA distinction:
+if the recipient's server isn't up when the email is set, the sending MTA will save the message and re-attempt delivery later.
+This way, short outages don't cause bounced mail.
+Since the mail client is an interactive program the user runs, a separate message store is needed to keep the email until it can be read.</p>
+<p>Most MTAs are configured to continue retrying a message for five days, usually with exponential backoff:
+mine will wait 5 minutes after the first failure, and increase the interval to one hour during prolonged outages.</p>
+<p>The MSA and LDA have always existed in some capacity, but have gotten a lot more complicated
+when people started accessing email from their own computers instead or remotely logging onto the server.</p>
+<p>Most communication happens over the Simple Mail Transfer Protocol, including MTA-MTA delivery.
+To narrow it down a bit, I'll pretend do be an MTA sending email to blog@maurycyz.com.</p>
+<p>The first step is to look up the receiving MTA for that domain:</p>
+<p>Email is old enough to have it's own dedicated DNS record instead of using subdomain hacks or TXT abuse.
+The number is a priority (smaller is higher), which is used if multiple hosts are specified:
+a big email provider will have multiple servers to ensure timely delivery.</p>
+<p>SMTP is a relatively straightforward text based protocol.
+The one catch is that most mail servers will require a CRLF as a data terminator.
+This can often be sent with ctrl-m, but using a tool that automatically inserts cartridge-return bytes is easier:</p>
+<p>Each line sent is a command, to which the remote server responds with a three digit number followed by human readable text.
+200 responses mean it worked,
+300 is "carry on...",
+400 is temporary errors which tell the sender to try again later,
+500 permanent errors mean the email should be returned as un-deliverable.</p>
+<p>(If this seems similar to HTTP, that's no coincidence. A lot of the web, including its header syntax was lifted from SMTP)</p>
+<p>The first command is always HELO (or EHLO), followed the sending MTA's hostname.
+This is usually not the same hostname as used in email addresses, but many provider require it to match the sender's IP address.
+Mine doesn't, so if you want to try this, put something random that's not a resolvable domain.
+. 
+The next two, MAIL FROM and RCPT TO specify the address to deliver to, and address to forward any bounce notifications to.
+Bounce messages are usually generated one step up from where the error occurred:
+in most cases the receiving MTA has a problem and sends an error code to the sending MTA, but by that time MSA has already, forcing a un-delivered mail notification.
+Those notification themselves use an empty MAIL FROM to avoid infinite loops.</p>
+<p>Once the address has been specified and accepted, a DATA command is sent, followed by the actual email message.
+This at a minimum, contains the "From" and "To" headers along with some text.
+The message is terminated with a lone period to which the server indicates that the message is handed off.</p>
+<p>Final hop MTA's should forward the email to the LDA before sending back a status code.
+This ensures that they never accept a message which they can't deliver which would result in a error notification.
+This "backscatter" message interacts badly with spammers that forge MAIL FROM:
+it turns their obviously bogus message into one that is likely to be delivered and cause annoyance.</p>
+<p>There is no requirement for the addresses inside the email to match the ones in MAIL FROM and RCPT TO (also known as the envelope).
+The most common cause of this is a mail that has been forwarded.
+For example, a mailing list will set the envelope destination to match each member's email, but keep the original "From" header intact so that replies work correctly.
+The envelope from address will usually be changed to point to somewhere the list administrator will check for error notifications.</p>
+<p>Now, it's not that intermediate systems don't modify the headers:
+Most stages will add a "received" header to record where they got the message.</p>
+<p>While required for MTA to MTA communication, SMTP is used throughout the whole system.
+The mail client submits email using a different port, but over the same protocol.
+Communication between internal components (i.e. MTA to LDA) often uses the closely related Local Mail Transfer Protocol:
+the main difference is the assumption that the receiver doesn't have a message queue and will either deliver the mail immediately or return an error.</p>
+<p>Submission usually uses TLS connection to port 465, with the addition of a password (in base64):</p>
+<p>AUTH PLAIN
+334
+AGh1bnRlcgBodW50ZXIy
+235 2.7.0 Authentication successful</p>
+<p>The one thing that's significantly different is the MUA's fetch, which operates on a "pull" basis.
+I won't go into the syntax here, but it's not terribly complicated.</p>
+<p>... but if you actually try sending an email to, say, gmail, based on what I've said so far, it won't work.
+Some of that is due to them enforcing things like the Message-Id header:
+a unique identifier used to de-duplicate mail in cases where the receiving MTA accepts an email but the connection drops before the sender is informed about this.
+This will cause the sender to try again later, which duplicating the message.</p>
+<p>Base SMTP trusts that every sender is be well behaved:
+anyone can send email as anyone else. 
+In fact, many hosts were configured to accept and relay mail from anyone as a conveyance for when someone's usual server was down.</p>
+<p>The original solution to bad behavior was to get the culprit kicked off the internet...
+but that fell apart quickly once the network grew and companies began getting involved:
+the first documented case of spam email was sent in 1978 and sold 13 million dollars in computers.
+While authentication doesn't prevent spam, it makes it possible to filter out unwanted senders.</p>
+<p>Verifying sender addresses is not possible using the MX record, since there is no guarantee the same host is used for receiving and sending mail.
+The simplest solution is to publish the sending address in a DNS record:</p>
+<p>@ TXT v=spf1 ip4:65.109.172.162 ip6:2a01:4f9:c011:841a:b01d::1 -all
+; Roughly:
+;   allow from 65.109.172.162
+;   allow from 2a01:4f9:c011:841a:b01d::1
+;   deny otherwise</p>
+<p>However, that's not quite enough for the email empire.
+Big-tech also wants the email body to be signed with a cryptographic key published via a DKIM DNS record.
+This requires adding a step to sending mails, usually as a plugin for the MTA.</p>
+<p>I rag on big-tech a lot, but this is actually a sensible policy:
+SPF can only verify the MAIL FROM, since forwarding the email will chance the source IP address. 
+DKIM signatures are attached to the message and can be used to verify the original sender (the "From" address) of a message.</p>
+<p>However, both of these don't actually prevent spam, because spammers can just set up a few TXT records.
+Big-tech requires the sender's HELO hostname to be consistent with their IP address, via both forward and reverse DNS.
+This helps prevent compromised devices from spewing out junk:
+a smart TV is unlikely to have a meaningful PTR record, and if it does, that hostname won't resolve back to it's address.</p>
+<p>... unfortunately this policy also makes it impossible to directly send mail from most residential internet connections unless you own the address block.
+Of course, the solution is to pay a big-tech company money to relay your emails.
+If you don't like the, find a mail provider with more permissive rules:
+the only reason big-tech is able to keep the racket running that five or so companies control 99% of communications.</p>
+<p>This is where SMTP stops being so simple.
+The message format is a mess of historical baggage, but first,
+let's look at the simplest possible email once it's been delivered:</p>
+<p>Return-Path: <alex@there>
+Delivered-To: bob@here
+Received: from here
+        by here with LMTP
+        id bs05E10S7Go4VQMAHrglgg
+        (envelope-from <alex@there>)
+        for <bob@here>; Thu, 05 Nov 2026 05:21:33 +0000
+DKIM-Filter: OpenDKIM Filter v2.11.0 here B05E67CD18
+Received-SPF: None (mailfrom) identity=mailfrom; client-ip=313.33.33.337;
+        helo=there; envelope-from=alex@there; receiver=here
+Received: from there (unknown [313.33.333.337])
+        by here (Postfix) with SMTP id B05E67CD18
+        for <bob@here>; Thu, 05 Nov 2026 05:20:42 +0000 (UTC)
+From: alex@there
+To: bob@here
+
+Hello, World!</p>
+<p>The format of the headers is superficially similar to HTTP headers,
+except that no line should exceed 78 bytes. (without the CRLF line terminator)
+Overlong headers are broken up and newly created lines are prefixed with whitespace to indicate that they are a continuation of the last header.</p>
+<p>Mail software generally appends headers to the start of a message, so it's helpful to read them backwards.
+
+"From" and "to" are fairly self explanatory.
+Next, the "received" header contains a note from the receiving MTA:
+it includes the source's HELO name, IP address, RCPT TO and a timestamp.</p>
+<p>The MTA then performed SPF and DKIM checks, which came up empty:
+There's no signature and the MAIL FROM hostname is not publically resolvable.</p>
+<p>The LDA added another "received" header, although it's not very helpful.
+More importantly, it tacked on the "return-path" with the original MAIL FROM address and recorded the mailbox the message was delivered to.</p>
+<p>However, the body isn't always plain text.
+Let's look at an email that includes formatting:</p>
+<p>[...]
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary=----IX71FHL6PHA0538LS1WKT2W9SF7S8X
+Content-Transfer-Encoding: 7bit
+
+------IX71FHL6PHA0538LS1WKT2W9SF7S8X
+Content-Type: text/plain;
+ charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hello, World! I can do bold text!
+
+------IX71FHL6PHA0538LS1WKT2W9SF7S8X
+Content-Type: text/html;
+ charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html><html><body><div dir=3D"auto">Hello, world! I can do <b>bold<=
+/b> text</div></body></html>
+
+------IX71FHL6PHA0538LS1WKT2W9SF7S8X--</p>
+<p>However, since not all email clients can understand HTML, the message also includes a plain text version.
+This is done using MIME's "multipart" encoding, in this case, multipart/alternative, which indicates all the
+versions are functionally equivalent.</p>
+<p>MIME's version number has been stuck at 1.0 since 1996.</p>
+<p>The delimiter is a randomly chosen string, which allows multiple multiparts to be nested inside of each other without escaping.
+Each section of the message has it's own headers, in this case indicating that it's sent in the quoted-printable encoding.
+This allows the email message to contain any bytes without exposing the MTA to scary things like non-seven-bit ASCII:
+remember, the protocol is 45 years old.</p>
+<p>In quoted-printable, Equal signs are used as the escape character: if followed by two hex digits, it decodes to that byte.
+If followed by a newline, both characters should be removed.
+This is used to break long lines that could otherwise cause trouble.</p>
+<p>In this email, the "=3D" becomes an equal sign and both lines are joined together.
+If you've ever seen an email with stray equal signs or which is missing one or two characters ~ every 80 bytes, broken quoted-printable decoding is usually the culprit.</p>
+<p>The second "content-transfer-encoding" is base64, used for binary files like attached images:</p>
+<p>MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="5ZTNvId/H+rlk7Fr"
+Content-Disposition: inline
+
+--5ZTNvId/H+rlk7Fr
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Check out this file:
+
+--5ZTNvId/H+rlk7Fr
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="file.bin"
+Content-Transfer-Encoding: base64
+
+J7mtSdbQItOAi345nwaNkkTXrnDIRPA0DSwhbSAOwm2C/KoHjQIotY9lnJRMBRk9InQaHOxL
+bb7DGd9EN6uRpjvCbox9xblAh3CxH7sl+YAkYcKw1V100RpBwMhgaXfUJBB3oRkLffgRwEyK
+v9qFBLp9zZ+SiRJoRWbA4aZLexPhHZ35vFROVKYtiAeMlD1s15v3kPZvEADam0e45BoSaqmp
+1S3z3b5wBIFHJUxQULD589MKaFx2Z2A+91pl/pbZWmZkzt55D/hZ05kjUUbXUnDnTYAQE2Gk
+WnN+SnrQvfEO+Tz7AdrbLD1q2DgwWW+k0cVJLKjdwRxesGhAkQCZfHVrno6R4iXjTbInIbQv
+hXzQiV840iUiUhk282WADd1ffJ0sot2Waf7XHLIE1lZVFQ3iGofYbw8pZlg3sb35AnIWPZKv
+fbC6Yh95RV23R4K2NHeBX1rpl4bSSiftnD2RbsBzv7cgw/6M/Lj3O40NFGAaUC+J7TpAaXdi
+tvlPsNQhMo8QRf/ub7WK42cPUlz1fKq1k1pzGN96YOsE5azMfF4vLANtbtbVmLIp2WmgBk0P
+9IGMWy/xIAe0cOh+bqzru2+ojJGgx9uX4VSTP9BaTOwkVX5+rQfpp1qJodtHiO8sHw6Pg+Mg
+WcpqQPC7118ccuT44cVpIRkwOSoJzsW++WM=
+
+--5ZTNvId/H+rlk7Fr--</p>
+<p>This is why size limits are often disappointing:
+the encoded email will be ~ 35% larger than the original file.
+More efficient encodings (raw binary data) are supported by some MTAs, but may have to be converted to base64 somewhere down the path...
+which would break DKIM signing.</p>
+<p>No encoding ("7-bit") can be used if the message has short lines and fits in low-bit ASCII. However, "7-bit" is mostly seen as a null encoding for already encoded multipart containers.
+Quoted printable if the message is mostly text, but has something that risks breaking ancient software.
+Base64 for binary data.</p>
+<p>The SSL/TLS used by mail clients is effectively the same as for a browser:
+the mail provider must go to a certificate authority, prove their identity, get a certificate and use it.
+Algorithms and ciphers are disabled at the slightest hint they may be insecure.</p>
+<p>However, MTAs operates on "trusted" networks...
+although it's less that an attacker can't get access to internet traffic, but that if they could,
+it would be possible for them to pass an ACME challenge and take out a trusted certificate.</p>
+<p>As a result, the goal is mostly to protect against passive eavesdropping:
+most sysadmins don't bother dealing with a CA and run a self-signed certificate.
+(it's not like CAs have a good track record: 4)</p>
+<p>Another weird thing about email is that MTAs don't use a separate TLS port.
+All connections start as port 25 plaintext, then the sender issues a STARTTLS command and hands over the connection to a SSL/TLS library.
+It's somewhat janky, but it allows servers to attempt to use encryption and cleanly fall back if it's not supported.</p>
+<p>Such an approach isn't great for submissions, since a fall back would result in leaking the password...
+and baddies on shared networks or nosy residential ISPs can strip out the STARTTLS command.
+For this case, it's best to default use the dedicated SSL submission port 465.</p>
+<p>(This port actually has a bit of a history, with it being deprecated in favor of STARTTLS
+before being re-endorsed once we realized using optional SSL for passwords was a bad idea.)</p>
+<p>Unless you write email related software or run infrastructure, most of this information is profoundly useless.
+However, there are a few things you might want to remember.</p>
+<p>The underlying protocols allow five days for delivery, and it can sometimes take longer.
+Since users expect delivery in seconds and most emails are at least somewhat time sensitive,
+some MTAs are configured to send out delay notification if a message is taking a while.</p>
+<p>You may want to find out if yours does this before assuming the recipient is ignoring you.</p>
+<p>A message will be stored and forwarded by multiple systems in plaintext.
+Anyone on the network path may be able to read your email:
+SSL/TLS is not universally supported and can trivially be stripped out by active attackers.</p>
+<p>"Encrypted" email providers are largely snake oil.
+While the message store can encrypt messages and a custom MUA could decrypt them, the MTA must have access to plaintext.
+As a result, it provides minimal to no security against most attack vectors despite the "mIlItArY gRaDe EnCrYpTiOn".
+The only way to fix email would be to get everyone to agree to switch to an end-to-end encrypted protocol...
+but the whole point of email is universal compatability:
+encrypted messaging can exist, but encrypted email is contradictory.</p>
+<p>The best hope is to find a mail provider that can be trusted not to snoop messages.
+That is to say, not an Advertising company (google) or one that's been pushing hard for LLMs (microsoft / apple):
+both of these businesses create strong incentives to read your messages.
+Although you'll still have to hope whoever you are communicating with isn't beign snooped on by their provider.</p>
+<p>Worse, DKIM signatures act as a lifelong proof that an email came from your provider's servers, even if a message is years old and has no clear chain of custody.
+This makes leaked, hacked, or snooped emails ideal extortion material:
+since the bad actor can trivially prove they haven't been fabricated.</p>
+<p>This property, called non-repudiation, is generally not desirable for messaging systems.
+Avoiding signing not an option if you want to interoperate with big-tech, but it is possible to regularly rotate and publish private keys.
+Before they key is published, the signature can be trusted to verify it is legitimate.
+However, once the key has been published, the signature can been forged by anyone and is rendered retroactively untrustworthy.</p>
+<p>Since authentication is checked during delivery by the MTA and LDA, this doesn't affect how the email will be handled.
+However, it will cast doubt on the authenticity of leaked messages since the signature could have been forged with minimal effort.</p>
+<p>While key rotation is common practice, most mail providers don't publish their old private keys, 
+so the signature is still trustworthy (modulo the service being hacked).
+I would advise against emailing something you wouldn't be comfortable reading out in public.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-consistency" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://maurycyz.com/misc/email/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
