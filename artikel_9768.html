@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems</title>
+    <title>AI Gave Your Incident Archive a Second Job</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9768.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,43 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
+        <h1>AI Gave Your Incident Archive a Second Job</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/HFlakj5EYZYhPovMPldW2KJJQ9G3-8983bp5.png" alt="Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltfb0f3465591962e4/6aee1cd77073b469ffb052f4/archive_-3alexd-Getty-95769788.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="AI Gave Your Incident Archive a Second Job" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/HFlakj5EYZYhPovMPldW2KJJQ9G3-8983bp5.png" alt="Load Balancing Starts Before the Load Balancer: Routing Patterns for Distributed Systems" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltfb0f3465591962e4/6aee1cd77073b469ffb052f4/archive_-3alexd-Getty-95769788.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="AI Gave Your Incident Archive a Second Job" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This is the third in my series on control plane architecture and design patterns. See the first article on a high-level overview of control planes here, and the second on the scaling component here.</p>
-<p>I ended my last piece on scaling with a promise to come back to hot partitions, i.e., the situation where a single piece of your system is hit with disproportionate traffic no matter how well the rest of your infrastructure is provisioned. That problem lives squarely in load balancing and routing, which is what I want to dig into here.</p>
-<p>The thing that surprised me most when I actually started building these systems is how little "load balancing" has to do with load balancers, once you get past the simplest cases. A load balancer is one tool for solving a routing problem. It's not the only one, and for a lot of distributed systems, it's not even the primary one.</p>
-<p>For a basic web application, load balancing is close to what most people picture:</p>
-<p>For stateless, interchangeable backends, this gets you most of the way there. Any healthy instance can serve any request, so the algorithm mostly just needs to avoid overloading any single one.</p>
-<p>This is also where most teams' mental model of "load balancing" stops. It's worth pushing past that, because the moment your backend isn't stateless and interchangeable, this model stops being sufficient.</p>
-<p>A distributed database doesn't have interchangeable backends. Each host owns specific partitions of data, and a request for a given key has to go to the host that actually holds it (or a replica of it). You can't round-robin your way out of that.  The routing decision is now coupled to where the data lives, which is a placement problem, not a traffic-distribution problem.</p>
-<p>This is where load balancing stops being about the request path and starts being about the partitioning and placement strategy decided when data is written, long before any request shows up.</p>
-<p>When a new table or dataset is created in a system like Cassandra, the control plane decides how its partitions get distributed and replicated across the fleet. Get that placement strategy wrong, and no amount of clever request routing fixes it later. You've already baked an imbalance into where the data lives.</p>
-<p>Good placement strategies generally try to:</p>
-<p>None of this touches the request path directly. It's load balancing that happens at write time, and it's arguably the more important half of the problem.</p>
-<p>Even a well-designed placement strategy runs into a specific failure mode: hot partitions. This happens when traffic to specific keys is wildly uneven, usually because of a poorly chosen partition key (a timestamp, a low-cardinality value, a celebrity user ID) that concentrates requests onto one partition regardless of how evenly the data was distributed.</p>
-<p>The uncomfortable part is that this isn't something you can fully prevent through upfront design. Traffic patterns shift, applications evolve, and a key that was fine at launch can become a hotspot a year later. Detecting and correcting for it has to be an ongoing, automated function of the control plane, not a one-time decision.</p>
-<p>Once a hot partition is identified, the fix is usually to split it and redistribute the pieces, but doing this against a partition serving live production traffic is one of the more delicate operations a control plane performs. A few things matter here:</p>
-<p>Systems like DynamoDB build this kind of adaptive re-partitioning directly into their control plane, specifically so that a single misbehaving key doesn't require manual intervention every time it happens.</p>
-<p>Databases are the clearest illustration of placement-time routing, but the same problem, and largely the same solutions, show up anywhere a system shards state across a fleet. Two examples worth knowing well, because they each stress the pattern in a different direction.</p>
-<p>A distributed cache like Redis Cluster or Memcached with consistent hashing looks superficially like the database case: keys are hashed to determine which shard owns them, and requests get routed accordingly. But caches diverge from databases in one important way that reshapes the whole routing problem - cache misses are cheap enough to tolerate, but hot keys are far more common and far more punishing.</p>
-<p>Because caches sit in front of a slower system of record, a single viral key (a trending post, a flash-sale product, a piece of session data for a suddenly-popular event) can spike orders of magnitude above normal traffic in seconds, not the gradual drift you'd see with a hot database partition. A few things follow from that:</p>
-<p>The routing decision for a cache miss is still a placement problem, i.e., determination of which shard owns this key. The operational fix for a hot key, however, usually lives one layer up from the routing logic itself, in how aggressively you can avoid sending duplicate requests downstream in the first place.</p>
-<p>Systems like Kafka consumer groups or Flink jobs route by partition, much like a sharded database. A message with a given key is deterministically assigned to a partition, and a specific consumer or task instance owns that partition for processing.</p>
-<p>But the load balancing constraint here is different in a way that matters: ordering guarantees typically require that all messages for a given key are processed by the same partition, in order, which means you can't rebalance a hot partition by simply splitting it the way you might with a database.</p>
-<p>This creates a distinct set of routing trade-offs:</p>
-<p>Stream processors push placement-time routing to its logical extreme: nearly all of the load balancing work happens at design time, because the ordering guarantees that make the system useful are exactly what make runtime rebalancing so constrained.</p>
-<p>Load balancing in a distributed system operates on two timelines that are easy to conflate:</p>
-<p>For stateless services, the first one is basically the whole problem. For anything stateful and partitioned, the second one dominates, and it's a control plane responsibility that runs continuously in the background rather than a configuration you set once and forget.</p>
-<p>Next in this series, I'll get into reliability guarantees - how control planes enforce promises (replication, TTL-based deletion, eventual consistency) that are genuinely hard to guarantee synchronously in the request path, and the auditing systems teams build to catch the gap between what a system promises and what it actually did.</p>
-<p>Control Planes, Part 2: When to Stop Configuring Autoscalers and Build Your Own</p>
+                <p>Security records are increasingly being used by vendors to train their models, creating new risks for enterprises.</p>
+<p>Traditionally, security incident records have served a singular, very important purpose: to document what the organization observed, decided, and did. Closure notes, rule text, false-positive dispositions, and the reason why an alert was dropped are treated by security teams as records contained in the ticket queue. For organizations to reconstruct their decisions and, crucially, be accountable for them later, all of this evidence must be retained.</p>
+<p>To be sure, security automation is anything but new. For years, SOAR platforms have executed playbooks, closed alerts, and recorded dispositions. They run a rule that customers wrote. The change is what happens to the record afterward, as a portion of the evidence has an alternate destination for a different purpose. Once incident records are ingested into a security AI system with permission to capture data for model building or validation, this evidence can become data the vendor uses for model development and validation.</p>
+<p>Related:What We Missed: Knicks Phishing Test Goes Out of Bounds</p>
+<p>A sufficiently large collection of prompts and related records can offer more than a glimpse into which signals are treated by the organization as meaningful, which detections are suppressed, what analysts mark as benign, and where it misses something.</p>
+<p>A single closure is a comparatively harmless note. A series, however, presents a map; suppressing the same class of alerts delineates boundaries of concern. The rationales for closures indicate acceptable levels of PowerShell noise or failed logins that warrant a ticket. Tuning decisions encode which signals the team stops trusting and when. The contents of the ticket do not need to be accessed by an external party for it to understand the pattern, which is the sensitive portion.</p>
+<p>This isn't about reconstructing an AI incident; that's a logging decision. Nor is it about prompt injection, or the familiar case of a vendor training on customer chat logs. The problem is what happens when ordinary security records acquire a second use.</p>
+<p>Microsoft Security Copilot provides an option for the owner to allow Microsoft to capture and human-review Security Copilot data to enhance and validate Microsoft's security-specific model, which is built on the Azure OpenAI foundation model. The data captured for model improvement can include whatever Microsoft plug-ins and Security Copilot agents have used while interacting with the product. The documentation states that this data is not used to train the foundation model and is not shared with OpenAI. A second setting controls the capture of data for the purpose of product-performance reviews.</p>
+<p>Related:9 Cyber Awareness Tips That Actually Match Today's Maze of Threats</p>
+<p>The default for each setting depends on the method of provisioning the workspace. With the exception of Microsoft 365 E5 and E7 auto-provisioning, data sharing is enabled by default. The customer that enabled the setting has made an intentional decision, but the customer that has not viewed the settings page may not know which default applies. Using the service and allowing a vendor to capture data for model development or validation are different decisions, and Microsoft has already made them separable.</p>
+<p>The archive had one job: namely, to help the organization reconstruct and defend its own decisions. Now the same records may be held by a vendor for model development or validation, which in turn creates new risks. A vendor breach puts the records outside the customer's network, while a legal demand can expose them without the customer's control. The retention rules and access controls were built for an archive the organization controlled, but they were not built for a second copy elsewhere.</p>
+<p>An auditable record has to preserve more than the final decision. It has to distinguish what the organization knew, what the analyst decided, what the system was given, and what the system recommended. Otherwise, the model's observation effectively becomes the decision. Counsel asking what the organization knew at the time of the incident will not be satisfied by this. An auditor asking why the detections were tuned down should not be met with the closure rationale that also appears in the evidence stream.</p>
+<p>Related:Rethinking Cybersecurity Awareness in the AI Era</p>
+<p>This belongs in the procurement contract. A vendor's use of customer security records to provide a service does not by itself authorize their use for model improvement, and evidence retention and model development are different things that should require separate permission. Rule content, closure notes, and ticket text should not be covered by a generic AI clause. If the vendor wants the data for model improvement, then this should be an explicit, revocable choice.</p>
+<p>Until these uses are formally separated, the archive has two functions. One of them continues, as expected, to be operated by the organization. The other turns all the evidence into the vendor's resource.</p>
+<p>Gerald Mako has more than a decade of experience advising European and Asian governments on artificial intelligence, cybersecurity, and technology strategy. His work focuses on AI governance, cyber resilience, and the security challenges created by increasingly autonomous systems.</p>
+<p>Chief Information Security Officer, Cobham Satcom</p>
+<p>Lemuel Valdez has led cybersecurity and security transformation across private equity portfolios, government, and critical infrastructure environments. He has advised and supported more than 20 PE-backed companies on cyber risk, due diligence, incident response, security architecture, and regulatory compliance.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>How to Harness your Security Operations Data for Enterprise Defense</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/load-balancing-starts-before-the-load-balancer-routing-patterns-for-distributed-systems?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyber-risk/ai-gave-your-incident-archive-second-job" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

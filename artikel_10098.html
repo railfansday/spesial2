@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</title>
+    <title>Where should your code live in a Docker Sandbox?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10098.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,65 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
+        <h1>Where should your code live in a Docker Sandbox?</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.docker.com/app/uploads/2025/03/image.png" alt="Where should your code live in a Docker Sandbox?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/2025/03/image.png" alt="Where should your code live in a Docker Sandbox?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Imagine ordering your weekly groceries as naturally as texting a friend:"Hey, we're out of milk and eggs. Can you also add some snacks for Friday movie night?"</p>
-<p>In our previous post, Building Conversational Commerce with Multi-Agent Swarms on GCP, we shared the architectural blueprint for conversational commerce—proposing a 3-layer decoupled design (Ingress, Memory, and Cognition) to solve messaging timeouts, state tracking, and response reliability.</p>
-<p>While blueprints establish the architecture on paper, production readiness demands working software. In this post, we take that blueprint and bring it to life with a functional prototype called HappyDelivery.</p>
-<p>Using LangGraph, Gemini, FastAPI, and Google Cloud, we'll walk through the code, the state machine, deterministic financial tools, and an automated verification suite that demonstrates how this multi-agent swarm operates in practice.</p>
-<p>To build a reliable commerce swarm, we implemented three decoupled layers that handle the journey of every customer text message:</p>
-<p>Let's examine how each layer functions in code with its own dedicated architecture.</p>
-<p>A frequent question when designing conversational commerce is: how does a message sent by a customer on their smartphone actually land in Layer 1, and can this architecture support messaging platforms beyond WhatsApp?</p>
-<p>End users do not communicate directly with your Google Cloud servers. Instead, customer messages traverse an operator ecosystem before landing on your webhook:</p>
-<p>Every major consumer messaging platform operates on the exact same fundamental contract: an asynchronous HTTPS POST webhook delivery with a strict HTTP acknowledgement timeout:</p>
-<p>While the payload schemas and cryptographic headers differ slightly between platforms, Layer 1 abstracts away all client differences:</p>
-<p>This ensures the rest of your system—Session Store (Layer 2) and Agent Swarm (Layer 3)—operates on clean, normalized data without caring whether the shopper sent their message from an iPhone, an Android RCS chat, or a WhatsApp thread.</p>
-<p>Messaging platforms are completely stateless: every text message arrives as an isolated webhook event. To provide a coherent shopping experience, the system must instantly reconstruct the customer's full context without having to re-read or re-parse days of chat logs on every turn.</p>
-<p>We use Cloud Memorystore (Redis) keyed by the customer's verified phone number (session:{phone_number}) to store active state:</p>
-<p>A common question in conversational commerce is whether state lookups will introduce latency. Here is what the baseline infrastructure supports:</p>
-<p>Key Takeaway: In practice, the Session & Cart Layer will never be the bottleneck—it easily outpaces upstream webhook inference and downstream LLM inference.</p>
-<p>Rather than relying on a single monolithic prompt to handle every task, we separate reasoning into a swarm of specialized agents:</p>
-<p>Now that we have seen the high-level design of the three layers, let's look at the actual Python prototype code that brings each layer to life.</p>
-<p>The goal of this service is simple: verify authenticity across any inbound channel, normalize the payload into a canonical schema, and get off the critical path in < 150ms.</p>
-<p>Here is our implementation showing how multiple messaging channels (WhatsApp, RCS, Apple Messages, SMS) are handled by pluggable adapters:</p>
-<p>By immediately returning an HTTP 200 OK and handing the payload off to Pub/Sub, we completely decouple message intake from downstream AI reasoning time across all messaging ecosystems.</p>
-<p>We benchmarked the live Cloud Run HTTPS webhook intake across warm invocations:</p>
-<p>This empirically proves our architectural claim: the Ingress service validates the cryptographic signature and immediately commits the event to Pub/Sub, freeing the customer chat client without waiting on agentic reasoning.</p>
-<p>We also verified security enforcement against tampered payloads:</p>
-<p>The worker pods pulling from Pub/Sub need to instantly look up who the customer is and what is in their current cart.</p>
-<p>Here is the session store implementation using Cloud Memorystore (Redis):</p>
-<p>Each record contains the customer ID (cust_9821), saved address, dietary restrictions, and current cart items. This guarantees that when a customer texts back hours later, their cart is restored instantaneously.</p>
-<p>Every session lookup executes in 0.318ms, proving our architectural claim that restoring customer context and persistent cart state adds virtually zero latency to the conversational turn.</p>
-<p>With Ingress and Redis handling incoming traffic and memory, all the decision-making lives in the LangGraph multi-agent graph.</p>
-<p>Every turn passes through a typed data structure holding the customer's profile, active cart, and the supervisor's routing decision:</p>
-<p>Next, we define the nodes and conditional edges that allow the Supervisor to dynamically route tasks to the right specialist:</p>
-<p>A core tenet of our blueprint is: delegate arithmetic to deterministic tools. Generative models excel at language and reasoning, while financial calculations require exact precision. If a model computes taxes or discounts in free-form text, it may occasionally introduce calculation errors.</p>
-<p>Instead, we bind deterministic tools to our specialist nodes. For example, the Inventory and Transaction agents use a Python calculation tool rather than computing prices in-prompt:</p>
-<p>Worker containers pull messages asynchronously from Pub/Sub and stream LangGraph node transitions in real time.</p>
-<p>Now that we have all three components—Ingress (Layer 1), Redis Memory (Layer 2), and the LangGraph Swarm (Layer 3)—how do they actually run together as a single unified system?</p>
-<p>Here is the complete end-to-end lifecycle of a customer's message:</p>
-<p>The worker loop that coordinates all three layers is concise, clean, and completely decouples the user-facing webhook from back-office AI reasoning:</p>
-<p>With the entire pipeline wired together, let's look at what happens when we run an actual customer order through it.</p>
-<p>To verify the prototype, we ran an automated simulation of an end-to-end customer order. Here is how the swarm behaves across three natural conversational turns:</p>
-<p>Behind the Scenes: The InventoryAgent mutates the in-memory cart (removing Sprite and adding Coke Zero), executes calculate_cart_totals, and confirms delivery details without losing context.</p>
-<p>We validated all core behaviors—webhook HMAC validation, catalog indexing, deterministic math, and multi-turn state transitions—with automated unit and integration tests:</p>
-<p>A critical question when evaluating multi-agent architectures is token consumption and operational inference cost. In a naive implementation where massive prompts and entire conversation histories are repeatedly re-sent on every step, LLM API bills can quickly eat into e-commerce retail margins.</p>
-<p>Our prototype is engineered specifically to prevent token waste through strict agent specialization, deterministic tools, and externalized Redis state:</p>
-<p>Here is the exact token telemetry measured across the live 3-turn HappyDelivery session:</p>
-<p>Bringing the blueprint into working code revealed several practical realities:</p>
-<p>Building this prototype proved that the decoupled architecture outlined in our blueprint isn't just theoretical—it is practical, reliable, and ready for production on Google Cloud.</p>
-<p>By combining LangGraph for multi-agent workflows, Gemini for natural language reasoning, and GCP for fast ingress and persistent memory, we can build shopping experiences that feel as simple as chatting with a friend while maintaining the enterprise rigor required for commerce.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
-<p>Smaller apps and faster GPU inference with LiteRT in Google Play services</p>
+                <p>Secure, minimal container images for every team, free with enterprise features, if needed.</p>
+<p>Giving an agent a sandbox also means deciding which files it will work on. You can share a checkout from your host, give it a separate working directory for a task, or keep the repository entirely inside the sandbox. Each arrangement changes how you, the human, participate in the work.</p>
+<p>You might want to watch the diff in your local editor and make changes alongside the agent, or give it room to manage several tasks while you review the results. sbx supports both. The way you organize the checkout can change as you ask the agent to take on more of the work.</p>
+<p>Sharing a checkout puts the agent in the working tree you already use. Run sbx run from your project directory, and it mounts that directory at the same absolute path inside the sandbox:</p>
+<p>Open a file in your local editor while the agent works on it, and you’ll see changes as they happen. Git works from either side, so you choose whether you want to let the agent make commits or you do it yourself. Development servers on your host can pick up the edits through hot reload, using the runtime and dependencies installed on your host.</p>
+<p>This fits close collaboration on one task. The coordination cost comes from sharing that working tree: switching branches changes the files the agent sees, and your edits become part of its ongoing work. If you want to switch to something unrelated while the agent continues, you’ll need another checkout.</p>
+<p>NOTE: Dependencies written into the shared checkout are shared too. Packages with native binaries, such as esbuild, may work in the Linux sandbox and fail on a macOS or Windows host. Reinstalling on the host can reverse the problem. Keep separate dependency installations, or run the app consistently in one environment.</p>
+<p>Git worktrees give each task a directory and branch. You can mount each worktree in its own sandbox, while your original checkout remains available for other work. The agent’s edits appear in the worktree. You can inspect either with your local editor and development tools. Each task also gets its own running environment, with tools to prepare and a sandbox and worktree to clean up afterward.</p>
+<p>There is a Git limitation with mounting only a linked worktree. Its .git file points to metadata outside the mount, which the agent can’t reach. It can edit files, but checking status, branching, and committing have to happen on the host. The future of software development still needs you to run git status.</p>
+<p>sbx supports a clone mode that gives the agent a separate checkout with Git available inside the sandbox. You keep your local project, but sbx mounts the host source as read-only and creates an independent clone for the agent. Its branch changes and dependency installations stay in its checkout.</p>
+<p>Bringing the result back becomes a handoff. While the sandbox is running, you can fetch committed branches through the Git remote sbx adds on your host. Or the agent can push to the repository’s remote and you can retrieve the branch through your usual Git workflow. Your local editor and development server see the changes after you bring them into your checkout.</p>
+<p>A mountless sandbox has no host workspace directory attached. Clone the repository inside it, and the sandbox holds the checkout and its development environment. Your host copy of the project shares no connection with the sandbox checkout.</p>
+<p>This workflow resembles working on a remote development machine. Agents connect to the project environment, and you can open a shell with sbx exec or connect an editor to the sandbox over SSH. Changes and dependency installations stay separate from your host. To bring work back, you push a branch to the Git remote.</p>
+<p>One sandbox per project can be a useful mental model here. The project and its tools persist across agent sessions and sandbox restarts. An agent can create worktrees per feature it’s working on, push branches, and create pull requests for review. Starting another task doesn’t require you to prepare another host worktree and sandbox, and the agent has Git access in each working directory. Clone mode supports this internal-worktree approach too.</p>
+<p>Those tasks share tools and services, so running servers or changing the environment still needs coordination. Separate sandboxes are useful when tasks need independent environments as well as separate files. Branches alone don’t isolate simultaneous edits in one working directory.</p>
+<p>That independence adds some distance when you want to try the result. Your usual local editor isn’t looking at these files, and a development server running inside the sandbox needs a published port to reach it from your browser.</p>
+<p>Start the development server on port 8080, bound to 0.0.0.0.</p>
+<p>Then publish the port from another terminal on the host:</p>
+<p>Open http://localhost:8080 in your browser. It’s possible to work interactively this way, but there’s more ceremony than opening a project already on your filesystem.</p>
+<p>An environment file can make setup repeatable, selecting tools and cloning the repository at creation with something like the community github-clone kit. Recreating the sandbox then gives you a fresh environment. Push or copy out work you want to retain first: removing a sandbox deletes files held only there.</p>
+<p>An API change might need a corresponding frontend change, or another repository might provide useful reference material. You can mount several directories into one sandbox, with read-only access for reference repositories. Local editing and previews remain available, but each writable checkout needs branch and change coordination. Task-specific checkouts also leave directories to clean up afterward.</p>
+<p>A workspace manager such as jganoff/wsp can assemble selected repositories for a task. Mounting that workspace gives the agent the projects it needs together. These are standard clones with their own Git metadata, so the agent retains Git access, unlike a mounted linked worktree.</p>
+<p>The same scope fits inside a mountless sandbox: clone the repositories needed there and keep the whole workspace in the sandbox. The number of repositories and where their files live are separate choices.</p>
+<p>The checkout’s location, the sandbox’s lifetime, and the repositories it contains are choices you can combine. You can keep a project sandbox around for many tasks, or mount a workspace assembled for one job. What suits you may change when you want to work more closely with the agent, or give it more room to manage the work itself.</p>
+<p>The Git workflows documentation covers the mechanics of direct mounts, clone mode, and host worktrees.</p>
+<p>Docker’s WeAreDevelopers keynote shows how Sandboxes, Kits, and Cloud Sandboxes give AI agents strong isolation and reproducible authority.</p>
+<p>Docker is a founding member of the Blueprint Alliance, a 12-company reference architecture for securing AI agents, built around four governance questions.</p>
+<p>Docker Sandboxes support three ways to organize an agent’s code: shared mounts, Git worktrees, and clone mode. Here’s how to choose between them.</p>
+<p>An AI code review agent invented a CVE and recommended dangerous fixes. Learn how Docker Sandboxes contain agents and why their output needs verification.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/building-conversational-commerce-with-multi-agent-swarms-on-gcp-a-working-prototype/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.docker.com/blog/docker-sandbox-code-checkout-workflows/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thinking of ACE? We Can Do It with Fewer Tokens</title>
+    <title>I’m not a fan of Deno’s security model (2024)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9912.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,126 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Thinking of ACE? We Can Do It with Fewer Tokens</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
+        <h1>I’m not a fan of Deno’s security model (2024)</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/G2z5bU66FNnhBf_UhSNij.jpeg" alt="Thinking of ACE? We Can Do It with Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/G2z5bU66FNnhBf_UhSNij.jpeg" alt="Thinking of ACE? We Can Do It with Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>ALTK-Evolve and ACE both let an agent learn from its own trajectories. The difference is what they do with what they learn — and that decides the token bill.</p>
-<p>Give an LLM agent a realistic multi-step task — split a bill, find a song, reconcile an order across nine simulated apps — and when it fails, it usually isn't for lack of knowledge. It mis-paginates an API, resolves the wrong person, or returns a value when none was asked for. The model knows the APIs; what it hasn't internalized is how to use them reliably. That's learnable from the agent's own history.</p>
-<p>Two recent systems do exactly this, on the same kind of agent: ACE (Agentic Context Engineering) and our ALTK-Evolve (introduced here). Both are a form of agentic memory — turning an agent's past trajectories into reusable lessons and feeding them back at inference time, no weight updates, no human labels. They even agree on the hard part. Where they part ways is delivery.</p>
-<p>A note on words, because the two systems name things differently: we'll call the raw thing an agent learns a lesson. ACE organizes its lessons into one comprehensive, evolving playbook; we consolidate ours into individually retrievable guidelines. Same lessons, two containers.</p>
-<p>ACE names the failure modes precisely: brevity bias — optimization collapsing toward short, generic instructions — and context collapse — a model asked to rewrite its whole context each step summarizing the detail away. Its answer is to keep a rich, itemized playbook, with a helpful/harmful counter on every bullet, and let the model distill relevance at read time.</p>
-<p>We reach the same conclusion from the other direction. Every distinct guideline keeps a support count — how many independent episodes produced it — and we never summarize the store down to a handful of rules. A lesson five different tasks discovered is a different object from one that appeared once, and both are worth keeping.</p>
-<p>So on the core question — should you compress an agent's hard-won lessons into a tidy summary? — ACE and ALTK-Evolve give the same answer: no. Count them, don't collapse them. ACE's per-bullet counters and our support counts are two spellings of the same idea.</p>
-<p>Two places: how the memory is built, and how it's delivered — and it's the delivery difference that shows up in the token bill.</p>
-<p>Consolidation (how the store is built). ACE grows one playbook through a Generator → Reflector → Curator loop, applying incremental delta updates and de-duplicating by embedding. We cluster near-duplicate lessons and merge within a cluster, support-conserving — when several lessons merge, the survivor inherits their combined count, so the store shrinks without losing the record of how much experience backs each guideline. We also extract typed guidelines — strategy, recovery, and optimization — with causal attribution and provenance back to the source trajectory, and at subtask granularity, so a lesson learned on one app can transfer to another.</p>
-<p>Delivery (what reaches the model at inference). This is the one that drives the numbers. ACE injects the comprehensive playbook on every step, the same way regardless of model or task. We treat delivery as a dial, not a constant: a small fixed core of high-support guidelines, extended per task with a handful selected for the task at hand (cosine or LLM-guided, priority-weighted) — or, when a model has the headroom to use it, the full consolidated set. The same lessons are available to both agents; the difference is that ACE always sends all of them, and we send however many a given model can actually use.</p>
-<p>On AppWorld, with the same base ReAct agent, running both systems in-house:</p>
-<p>On the strong model we're better on both metrics at ~40% of ACE's inference cost. On the weak model we edge ACE 56.0 to 54.8 — close enough that we call it a tie on accuracy (a repeat run of ours landed at 54.8, matching ACE almost exactly, which is within this benchmark's run-to-run noise) — at about one-seventh the cost.</p>
-<p>A fair word on cost: ACE's own efficiency story is about building its context cheaply. Ours is on a different axis — serving it. Retrieving a few guidelines per task instead of injecting the whole playbook on every step is where the tokens go, and it's the direct consequence of the delivery difference above.</p>
-<p>Where does the accuracy come from? The by-difficulty breakdown tells two different stories:</p>
-<p>Figure 1. Post-memory Task Goal Completion by difficulty, ours vs. ACE. On DeepSeek-V3.2 (right) we win Easy, Hard, and Overall; ACE only edges Medium. On gpt-oss-120b (left) ACE leads easy and medium, but per-task selection wins the hard tasks — and the aggregate. Each system improves from its own no-memory baseline (see the by-difficulty reference tables under Method notes below).</p>
-<p>The two models tell different stories. On gpt-oss-120b, ACE's full playbook has the edge on Easy and Medium — there's enough of the task solved by generic instruction-following that a comprehensive prompt helps more than it distracts. But on Hard tasks, where the model has to pick the right lesson rather than wade through all of them, curated retrieval pulls ahead — and that's the tier that decides the aggregate. On DeepSeek-V3.2 the story flips: the stronger model absorbs ACE's full playbook well enough to edge us on Medium, but we lead Easy, Hard, and Overall — with more capacity to spare, more lessons (delivered our way) keep helping instead of crowding each other out.</p>
-<p>We give each model its best configuration — the full consolidated set for the strong model, selective retrieval for the weaker one, because a large context overwhelms a weaker model rather than helping it. (Exactly how much to inject, and how it scales across the capability spectrum, is the focus of our follow-up post.)</p>
-<p>Both systems refuse to compress an agent's hard-won experience into a tidy summary — that part, we agree on. The difference is whether delivery is fixed or calibrated: ACE sends the whole playbook every step no matter what; we send however much of the guideline set a given model can actually use. That calibration is what bought the numbers above — same-or-better accuracy at a fraction of ACE's inference cost — and on the weaker model, it was the difference between guidance that helped and guidance that got in the way.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld test_normal, 168 tasks. A ReAct code agent (each step writes Python; the environment returns the output). TGC = Task Goal Completion; SGC = Scenario Goal Completion, which requires every variant of a scenario to pass. Memory is mined from train/dev only; results are single runs (pass@1), as is standard on this benchmark.</p>
-<p>The ACE numbers are our own runs of the ACE agent, evaluated in-house on the same AppWorld splits and the same base models as ALTK-Evolve (DeepSeek-V3.2 and gpt-oss-120b). The ACE paper reports on a different base model (DeepSeek-V3.1), so running it ourselves keeps the comparison controlled for model and harness. Both systems are the same ReAct agent and differ only in the prompt template — which is why the two no-memory baselines differ (72.0 vs 79.8 TGC); we don't rest the comparison on that baseline gap, only on the claims a prompt tweak can't touch: same-or-better accuracy at a fraction of the tokens.</p>
-<p>DeepSeek-V3.2 — by difficulty (baseline → +memory): the two systems start from different no-memory baselines (79.8 vs 72.0 TGC overall) because of the prompt-template difference above.</p>
+                <p>this has been bothering me for a while now, so I want to write down my thoughts
+so I can get it out of my head and move on. weâre gonna talk about how Deno approaches
+security, specifically with its permissions system, and why I think this approach
+is fundamentally insecure and misleading.</p>
+<p>Deno is a language runtime for JavaScript. it consists of a standard library, a package manager,
+a TypeScript transpiler and a bunch of other stuff thatâs not important for our story. itâs not
+a JavaScript implementation, so it does not interpret or compile JavaScript, it reuses V8 for that.</p>
+<p>one of the flagship features of Deno is its permission system
+(itâs under the âSecure by defaultâ header on their landing page).
+the idea is simple: as JS code running in Deno needs the standard library to access the outside world,
+Deno can choose which accesses it allows or disallows, so when you run</p>
+<p>the standard library will only allow code.ts to read /tmp/dir and run uname.</p>
+<p>additionally, a program can request permissions at runtime, so code like</p>
+<p>will display a nice little prompt in the terminal:</p>
+<p>(aside: I really miss this feature in browser extensions. currently, if your extension needs potential
+access to any website, it needs to request actual access to all the websites, which is less than ideal)</p>
+<p>if you like puzzles, this is the point where you can stop and think about what could go wrong with this system.</p>
+<p>of the two specific issues I want to point out this is the less severe one.
+weâll discuss it first because this was the first thing I noticed and it kinda immediately irked me when I first read
+about this.</p>
+<p>(if youâre only interested in the more juicy part, you can skip to the next section).</p>
+<p>so, this nice little prompt is displayed in the terminal. itâs not, like, a PolKit GUI window or anything,
+itâs just text on stdout waiting for input from stdin. this is a wild thing to do.</p>
+<p>you see, terminal has a somewhat weird API. most of the commands / requests application can send to the terminal
+are sent in-band, by printing them to stdout. terminal can then reply by sending data to stdin.
+as Deno allows programs to print arbitrary data to stdout and read from stdin without requiring any permissions
+or doing any filtering, malicious code can send arbitrary commands to the terminal. itâs usually okay,
+because terminals wonât, like, execute shell commands just because stdout told them to, youâre supposed
+to be able to freely cat files without risking arbitrary code execution. itâs markedly less okay if
+you allow malicious code to do whatever with the terminal and then print a prompt on the same exact terminal.</p>
+<p>you could, like, hide the prompt by messing with terminal colors.
+(this one got closed in 2026 because the permission prompt is âpartially visibleâ
+(you can see an emoji) and âAI agents tend toâ change terminal colors, so thatâs a âvalid use-caseâ)</p>
+<p>or trick the user into pre-feeding approval into stdin.</p>
+<p>or trick the terminal into feeding approval into stdin as a response to some request.
+(terminal wonât ever send Enter to stdin to avoid executing commands, but âpress Enter to continueâ
+is common enough to not be suspicious; the user never sees the actual prompt).
+hereâs an asciicast of that,
+I think it looks quite cool.</p>
+<p>the specific issue on the screencast is long patched; the issue with terminal colors is not.
+that doesnât really matter because the real issue is using an attacker-controlled channel for
+security-sensitive information. itâs like executing attacker-controlled JS code on a webpage
+and then asking for password on the same page. you canât know that the page is in a safe state,
+so you canât trust any input.</p>
+<p>even if Deno manages to patch every single issue with the âstandardâ escape codes, you never know
+which non-standard codes even exist out there. many terminals have some, itâs impossible to predict
+how they will interact with your prompt.</p>
+<p>(aside: how come sudo can do it then? the difference is that sudo asks for the password first,
+before running any other code. to trick sudo that way youâd need to fuck up terminal state before
+you even type sudo, and do it quietly enough that you donât notice it while you type it.
+if some terminal allows it, Iâd consider it a bug in the terminal)</p>
+<p>so, thereâs a weird thing with this command I wrote above (Iâll copy it here for reference):</p>
+<p>what does --allow-run=uname even mean? itâs not like programs have canonical names, itâs not org.gnu.coreutils.uname,
+itâs not even /nix/store/8k1dmzr3gwzqdgw45nzj76902ca7g1is-coreutils-full-9.5/bin/uname. itâs just a shortcut for
+âlook at all the directories in PATH one-by-one to see if you can find uname thereâ.</p>
+<p>you can set environment variables for the child process without needing any extra permissions, so what if we just</p>
+<p>once again, we have a pretty and convenient interface that doesnât really make sense from the security standpoint.
+it would be nice if programs were uniquely identified by their names, but theyâre not, and pretending they are
+leads to security holes.</p>
+<p>funnily enough, I didnât even think that this issue would be there when I poked at Deno for the first time,
+so I havenât reported it until now (spoiler alert: this is a comment on a GitHub issue
+that I created for the problem Iâll explain below).</p>
+<p>so letâs imagine we fixed that. itâs not that hard, we can force PATH to be whatever it was when the runtime started,
+or always require fully-qualified paths, or prompt with a fully-qualified path before running. are we safe now?</p>
+<p>lol no of course weâre not. while PATH decides which executable gets run, dynamically-linked executables (so, like, most executables)
+require dynamic loader to actually start. dynamic loader is a program that, well, loads the executable into memory, finds its
+dependencies and does a bunch of other fun stuff we wonât get into. the important part is that dynamic loader is configurable
+via environment variables. you can probably see where this is going now.</p>
+<p>LD_PRELOAD instructs the dynamic loader to load specific dynamic library when loading executables.
+dynamic libraries can execute arbitrary code on load.
+we can just pass LD_PRELOAD and weâve completely escaped the sandbox once again:</p>
+<p>I reported this some time ago and now they patched it by disallowing to set
+environment variables starting with LD_. this, once again, fixes a specific issue while ignoring the larger
+problem: âpermission to run a single commandâ is mostly not a useful concept.
+(you can do secure interfaces by allowing to run a single command, like git-over-SSH does,
+but generally both the environment and the command need to be prepared to handle it)</p>
+<p>say, for example, our script wants to invoke the $EDITOR so user can edit some data (think git commit messages).
+thatâs a very natural permission request, and itâs also an unmitigated disaster because most editors are
+configurable enough for running one to be a full sandbox escape. itâs easy for user to absent-mindedly
+grant --allow-run=vim (âwell, sure, I want to edit this file!â), but then the script can just set
+VIMINIT='!rm -rf /*' and oops, all my files are gone. most programs are configurable, often in some
+ways you wonât think about (like LD_PRELOAD), and attacker controls the execution enviornment.
+âpatch some specific ways to configure programsâ is not the solution, the solution is to sandbox all the code,
+not just JS code.</p>
+<p>when we discussed all this stuff in GitHub issues, a Deno developer wrote:</p>
+<p>The main thing it protects you against is malicious code that isn't smart enough.</p>
+<p>deno tries really hard to do what the operating system should be doing. it emulates syscall filtering by
+filtering standard library calls. unfortunately, this breaks down the second you need to run code
+that doesnât use Deno standard library. it also uses somewhat flawed approach to permission management
+that looks good (wow, runtime prompts! omg, I can just --allow-run=uname!), but introduces security
+risks. in doing this, it implicitly requires user to understand all the implications of various permissions
+and their combinations, which can be really hard.</p>
+<p>Deno process is not actually sandboxed, it only pretends it is. I didnât mention some more boring issues like
+âDeno doesnât prevent you from following symlinks that lead outside of the sandboxâ because they all just boil
+down to this simple one: the process is not sandboxed.</p>
+<p>one can argue that this pseudo-sandboxing is better than nothing: after all, not all the malicious code is smart enough.
+I disagree: Deno permissions give a false sense of security and can lure someone into running untrusted code without proper sandboxing.</p>
+<p>itâs possible that you can use Deno sandboxing safely if you:</p>
+<p>in particular, you may be safe if youâre running untrusted code with no permissions at all
+in a non-interactive context and use some other mechanism to control resource consumption.</p>
+<p>I still donât think you should do it. this path is riddled with footguns because youâre
+executing untrusted code in a fully-privileged process, and the moment you need some OS interactions
+youâre no longer running code âwith no permissions at allâ. you should not try to figure out which
+stdlib APIs can lead to a sandbox escape when combined. you should just use a proper sandbox.</p>
+<p>Iâm not a fan of Denoâs security model.</p>
+<p>also, please: donât harass Deno developers.
+we have a technical disagreement, but no technical disagreement was ever solved by harassment.
+this post is explicitly not an invitation to do it.
+Iâve already explained my point of view to them, they disagreed, and thatâs okay.
+you donât need to reiterate it, it wonât help anybody.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-sldd" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://goldstein.lol/posts/deno-security/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

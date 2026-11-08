@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From Zero to Edge AI: Engineering TinyTB-Net from Scratch</title>
+    <title>Letterpress-1</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9680.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,116 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From Zero to Edge AI: Engineering TinyTB-Net from Scratch</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
+        <h1>Letterpress-1</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F0tic8kla5z3o4wd51de7.png" alt="From Zero to Edge AI: Engineering TinyTB-Net from Scratch" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F0tic8kla5z3o4wd51de7.png" alt="From Zero to Edge AI: Engineering TinyTB-Net from Scratch" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>“Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.” — Antoine de Saint-Exupéry</p>
-<p>Can you train a vision model from scratch on raw medical pixels to detect Tuberculosis, quantize it down to 8 bits, and run inference on a $2.50 microcontroller with less memory than a vintage digital watch?</p>
-<p>Most of the industry today is focused on scaling up: massive GPU clusters, hundreds of billions of parameters, and megawatts of power. But there is a complementary frontier at the extreme low end: how much useful intelligence can you squeeze into tiny, dirt-cheap microcontrollers?</p>
-<p>The target here is an ESP32 ($2.50, running on a single lithium cell) that can sit on a desk in a rural field clinic without internet access, cloud connectivity, or an on-site radiologist.</p>
-<p>This is a walkthrough of building TinyTB-Net from scratch: the architecture, why naive accuracy fails in clinical triage, what broke on my first ResNet attempt, how Squeeze-and-Excitation attention fixed it, how INT8 post-training quantization works under the hood, and how to serve a self-contained diagnostic web interface directly from microcontroller flash without exhausting the heap.</p>
-<p>In order to fully understand this article, knowledge of neural network design is preferable, yet not mandatory.</p>
-<p>Tuberculosis (Mycobacterium tuberculosis) still kills roughly 1.3 million people each year, making it one of the deadliest infectious diseases globally.</p>
-<p>The frustrating part is that effective antibiotics (isoniazid, rifampicin) have been dirt cheap for over seventy years. The primary bottleneck is timely diagnosis. A chest radiograph (CXR) is inexpensive and fast to acquire, but reading it requires a trained radiologist. In low-resource regions, the radiologist-to-patient ratio can drop below 1 to 500,000.</p>
-<p>An offline screening model running on an inexpensive microcontroller turns any battery-powered digital X-ray station or flatbed digitizer into an automated triage station.</p>
-<p>(Quick disclaimer: this is an educational engineering build, not a commercial medical device. Clinical systems in hospitals undergo strict regulatory validation. But exploring how far a 300k-parameter model can go on edge silicon is deeply satisfying.)</p>
-<p>In standard classification benchmarks like CIFAR-10 or ImageNet, tracking top-1 accuracy (correct / total) is standard practice. In medical triage, accuracy is almost uninformative because error costs are heavily asymmetric.</p>
-<p>Consider a test cohort of 120 patients: 59 confirmed active tuberculosis cases and 61 healthy controls.</p>
-<p>In this confusion matrix, errors fall into two buckets with very different consequences:</p>
-<p>False Negatives (top-right, 24 patients): An algorithm tells someone with an active bacterial infection that they are healthy. They return home untreated and continue transmitting bacilli.</p>
-<p>False Positives (bottom-left, 9 patients): A healthy patient is flagged for follow-up testing (like a GeneXpert sputum swab). The confirmatory lab comes back negative two days later. The patient dealt with temporary anxiety and an extra swab, but no one was harmed.</p>
-<p>If your loss function weights false negatives and false positives equally, the optimizer will happily trade missed infections for fewer false alarms. In clinical screening, missing an infection is far worse than ordering an extra swab.</p>
-<p>Instead of overall accuracy, clinical triage relies on three core measures:</p>
-<p>Sensitivity (Recall / True Positive Rate):**</p>
-<p>The fraction of genuinely sick patients detected by the model. In screening, this needs to stay high, typically ≥ 85–90%.</p>
-<p>The fraction of healthy patients correctly cleared. High specificity prevents confirmatory testing labs from being swamped with false alarms.</p>
-<p>**The Trade-off: **Sensitivity and specificity pull in opposite directions. A model predicting “sick” for everyone achieves 100% sensitivity and 0% specificity. Predicting “healthy” for everyone does the reverse.</p>
-<p>Because sensitivity and specificity shift depending on where you set your classification threshold (for example, ≥0.50 versus ≥0.35), we need a threshold-independent measure of ranking quality.</p>
-<p>I track ROC-AUC (Area Under the Receiver Operating Characteristic Curve).**</p>
-<p>A straightforward way to think about ROC-AUC: imagine drawing one confirmed TB patient and one healthy control at random from the test set. ROC-AUC is the probability that the network assigns a higher suspicion score to the sick patient than to the healthy patient.</p>
-<p>AUC=0.50: Equivalent to a random coin flip.</p>
-<p>AUC≥0.85: A clinically viable screening candidate.</p>
-<p>For training, we use standard binary cross-entropy, but with one key tweak: we weight positive examples more heavily.</p>
-<p>In standard training, a false alarm and a missed infection carry the exact same penalty. By scaling up the positive term with pos_weight > 1.0, we tell the optimizer that letting an active case slip through hurts far more than ordering an extra confirmatory swab.</p>
-<p>Under the hood, we use PyTorch’s nn.BCEWithLogitsLoss(). It operates directly on raw logits rather than probabilities, using the numerically stable log-sum-exp formulation to avoid floating-point underflow:</p>
-<p>Why the ESP32? An ESP32 or ESP32-S3 module costs roughly $2.50, runs a dual-core 32-bit Xtensa CPU at 240 MHz, includes built-in Wi-Fi, and draws around 100 to 240 mA at 3.3V. A single 18650 cell can power it through a full day of clinic triage.</p>
-<p>Working with microcontrollers requires careful memory budgeting before writing any architecture code.</p>
-<p>People often assume model weight size is the primary constraint. On an ESP32 with 4 MB or 8 MB of external SPI flash, storing 500 KB to 1 MB of weights in read-only .rodata is straightforward.</p>
-<p>The ESP32 has roughly 320 KB to 512 KB of internal static RAM. During inference, the runtime needs scratch memory for intermediate activation maps (each layer's output tensors).</p>
-<p>Consider an input image of 224×224224×224 pixels. A convolution with 16 output channels and stride 2 yields an activation map of 112 × 112 × 16. In standard 32-bit floats (float32, 4 bytes per number):</p>
-<p>That single buffer exceeds the entire internal SRAM of the microcontroller. Allocating it on the heap triggers an immediate heap panic and crash.</p>
-<p>Quantized to 8-bit integers (int8, 1 byte per value), that buffer drops to ~196 KB:</p>
-<p>Residual architectures also require ping-pong memory arenas to hold skip-connection tensors while evaluating the residual branch, pushing peak activation memory toward ~392 KB. Channel counts, strides, and pooling stages all had to be planned around this limit.</p>
-<p>Training on chest radiographs is quite different from training on ImageNet. I started by combining two public, de-identified clinical datasets:</p>
-<p>NIH NLM Montgomery County Dataset (Maryland, USA): 138 frontal radiographs (58 confirmed active TB cases, 80 healthy controls), captured at 12-bit grayscale depth.</p>
-<p>Shenzhen No.3 Hospital Dataset (Guangdong, China): 662 frontal radiographs (336 confirmed TB cases, 326 healthy controls).</p>
-<p>Together, these provided 800 radiographs (394 TB, 406 healthy).</p>
-<p>Eight hundred images is a very small dataset for training a convolutional network from scratch, yet I was determined to try it out.</p>
-<p>Furthermore, radiographs from different hospital systems exhibit noticeable distribution shifts. The Shenzhen scans were acquired on a Philips digital unit with high contrast and sharp bone edges, while the Montgomery scans have a softer dynamic range. Without strong regularization, a small network easily memorizes scanner artifacts (collimator margins, edge contrast) instead of lung tissue.</p>
-<p>Before adding attention mechanisms or custom kernels, I needed a clean baseline.</p>
-<p>A standard dense network was out of the question. Flattening a single 224×224 grayscale radiograph yields 50,17650,176 input values. Feeding that into a modest 512-neuron hidden layer produces:</p>
-<p>In 32-bit floats, that single layer weighs over 102 MB. That is twenty-five times larger than our entire 4 MB SPI flash chip before writing a single convolution or activation buffer.</p>
-<p>Convolutions avoid this parameter explosion through spatial weight sharing: a 3×3 kernel has only 9 learnable numbers, regardless of the input resolution.</p>
-<p>But stacking convolutions into a deep network runs directly into vanishing gradients during backpropagation:</p>
-<p>When multiplying dozens of layer Jacobians, singular values below 1.0 cause the error signal to decay toward zero before it reaches the early filters. When training from scratch on only 800 medical scans without ImageNet pretraining, an unassisted deep stack refuses to learn.</p>
-<p>Residual connections solve this by letting layers fit a residual mapping, bypassing the transformation entirely:</p>
-<p>Differentiating the block reveals why training stays stable:</p>
-<p>The +1 term creates an unobstructed highway for backpropagation. Even if the learned weights produce a Jacobian near zero, gradients flow backward through the identity shortcut unchanged.</p>
-<p>Using residual units, I assembled a compact 4-stage network for 224 × 224 grayscale scans:</p>
-<p>Stem: Conv 7 × 7 (stride 2, padding 3) → BatchNorm → ReLU → MaxPool 3 × 3 (downsampling from 224 × 224 to 56 × 56).</p>
-<p>Stage 1: 2 residual blocks with 16 channels.</p>
-<p>Stage 2: 2 residual blocks with 32 channels (stride 2 downsampling).</p>
-<p>Stage 3: 2 residual blocks with 64 channels (stride 2 downsampling).</p>
-<p>Stage 4: 2 residual blocks with 128 channels (stride 2 downsampling).</p>
-<p>Head: Global Average Pooling (7 × 7 × 128 → 1 × 1 × 128) → Linear(128 → 1).</p>
-<p>The whole network has roughly 280,000 parameters. In 32-bit floats, that is about 1.12 MB. Quantized to INT8, it drops to 280 KB, easily fitting into ESP32 flash with plenty of room left for firmware and static assets.</p>
-<p>I trained the baseline model for 40 epochs using a standard set of regularized hyperparameters:</p>
-<p>Evaluating the model on a held-out test cohort of 120 patients gave:</p>
-<p>A sensitivity of 59.3% means missing roughly 4 out of every 10 active cases. For clinical triage, this is unacceptable.</p>
-<p>Two main factors explained the poor recall:</p>
-<p>Channel Indifference: Standard convolutions apply spatial filters across all channels equally. In chest radiographs, most variation comes from normal anatomy (ribs, spine, heart border). A 280k-parameter model easily wastes capacity modeling bone structures rather than subtle infiltrates.</p>
-<p>Sample Size: Eight hundred images across two scanner types did not provide enough diversity for training a convnet from scratch.</p>
-<p>In commercial settings, the usual workaround is to pull down an ImageNet-pretrained ResNet-50 and fine-tune it. But a ResNet-50 has 25.6M parameters (~100 MB), which cannot fit in ESP32 flash. I wanted to see if a compact model trained solely from scratch on medical pixels could achieve solid diagnostic numbers.</p>
-<p>That meant addressing both data volume and architectural feature selection.</p>
-<p>To increase training diversity, I incorporated the NIAID TB Portals Belarus Dataset (Minsk, Belarus), adding 308 culture-confirmed tuberculosis radiographs.</p>
-<p>This expanded the dataset to 1,108 chest radiographs:</p>
-<p>702 Confirmed Tuberculosis Scans (Shenzhen + Montgomery + Minsk)</p>
-<p>In a standard convolution, every channel carries equal weight regardless of image content. In a chest radiograph, most channels inevitably spend their capacity tracking dense, high-contrast anatomy like ribs and the spine. What we want instead is a dynamic volume knob that can boost channels tracking faint soft-tissue opacities while dampening normal bone contours.</p>
-<p>To do this without ballooning parameter count or memory, I added Squeeze-and-Excitation (SE) blocks from Hu et al. (2018). The idea is straightforward: average each feature map down to a single summary number (squeeze), pass those summaries through a tiny two-layer bottleneck network to learn channel-wise importance scores (excite), and multiply each channel by its score (scale). It acts like a content-aware gain control for feature maps.</p>
-<p>Because the bottleneck operates on a single channel vector rather than full 2D spatial maps, SE blocks added fewer than 12,000 parameters (~48 KB in float32) across the entire network and zero additional bytes to peak SRAM activation memory. Total model parameters rose modestly from ~280k to 313,153.**</p>
-<p>Training TinyTB-Net on the expanded dataset for 40 epochs yielded a substantial improvement:</p>
-<p>Sensitivity improved from 59.3% to 82.86% at the default threshold of 0.50, and reached 89.5% when calibrated to the clinical screening threshold of 0.35.</p>
-<p>ROC-AUC rose to 0.8932, a solid result for a 313k-parameter network trained entirely from scratch.</p>
-<p>The model reached 0.8932 ROC-AUC, but weights and activations were still in 32-bit floats:</p>
-<p>While 1.25 MB fits into flash, executing 194 million floating-point operations per inference on a 240 MHz microcontroller without a vector FPU takes several seconds per image.</p>
-<p>Quantization maps continuous 32-bit floating-point numbers to 8-bit signed integers (int8, -128 to +127). For each layer, we determine the dynamic range, divide it into 256 steps, and snap each float to the nearest integer index:</p>
-<p>This provides two key benefits for microcontrollers:</p>
-<p>Memory: An 8-bit integer uses 1 byte instead of 4, shrinking weight storage from 1.25 MB down to 305.8 KB (a 4x reduction).</p>
-<p>Execution Speed: Microcontroller ALUs execute 8-bit integer multiplications and additions much faster than software-emulated or multi-cycle floating-point math.</p>
-<p>Compressing 32-bit floats into 8-bit integers discards precision. To check whether this affected clinical output, I evaluated both models on the same 166-patient test cohort:</p>
-<p>Weight storage decreased from 1,252 KB to 305.8 KB (a 4x reduction).</p>
-<p>Test ROC-AUC shifted by +0.0007 (0.8932 to 0.8939).</p>
-<p>Average probability drift across the cohort was only 1.15%, changing the classification of exactly one patient out of 105 positive cases.</p>
-<p>The model now comfortably fits within 7.5% of the ESP32’s flash capacity.</p>
-<p>The web interface is not the focus of this build, but a diagnostic model locked inside a serial terminal is not much use in a field clinic.</p>
-<p>To keep the setup completely self-contained, the ESP32 hosts its own local Wi-Fi Access Point (TinyTB-Diagnostic-AP) and serves a minimal diagnostic web interface directly out of flash memory. You connect with a phone or laptop browser, drop in a radiograph, and run inference locally without internet access or external servers.</p>
-<p>Making room for an uploaded image buffer in ~320 KB of shared RAM without triggering heap panics was not exactly a piece of cake, and I will spare you the blow-by-blow of that debugging session with Claude :) The gist of the solution: we downsample the radiograph client-side on an HTML5 canvas before POSTing a compact raw buffer, and keep all web assets gzipped in read-only program memory.</p>
-<p>A few practical takeaways from this build:</p>
-<p>Small datasets require strong inductive bias: With only ~1,100 training radiographs, generic convolutions spent too much capacity on dominant rib contours. Squeeze-and-Excitation blocks provided the biggest diagnostic gain (+0.13 ROC-AUC) for almost no parameter overhead (under 12k parameters).</p>
-<p>Metric alignment matters more than raw accuracy: Optimizing for naive accuracy produces models that miss active infections. Threshold calibration and weighted cross-entropy are necessary whenever error costs are asymmetric.</p>
-<p>INT8 quantization has minimal clinical penalty: Quantizing weights to 8-bit integers achieved a 4x size reduction with an average probability drift of 1.15% and virtually identical ROC-AUC.</p>
-<p>Much of the recent focus in machine learning centers on expanding cluster scale and parameter count. But building small, focused vision pipelines that run reliably on $2.50 silicon is a reminder of how much utility can be extracted from compact models.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            One script install to automate growth for your website
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/letterpress-1?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1306342?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/shalev_oren/from-zero-to-edge-ai-engineering-tinytb-net-from-scratch-2ml1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/letterpress-1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

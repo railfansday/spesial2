@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Routing Is Simple. Until It Isn’t.</title>
+    <title>Google Cloud API Gateway Introduces Streaming Support for Real-Time and AI-Powered Applications</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9950.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,67 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Model Routing Is Simple. Until It Isn’t.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-07</p>
+        <h1>Google Cloud API Gateway Introduces Streaming Support for Real-Time and AI-Powered Applications</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/gcp-api-gateway-streaming/en/headerimage/google-adk-java-1-0-1793893770890.jpeg" alt="Google Cloud API Gateway Introduces Streaming Support for Real-Time and AI-Powered Applications" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/gcp-api-gateway-streaming/en/headerimage/google-adk-java-1-0-1793893770890.jpeg" alt="Google Cloud API Gateway Introduces Streaming Support for Real-Time and AI-Powered Applications" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Building a router into your agent sounds like an easy win. Send simple requests to cheaper models, reserve expensive ones for harder tasks, or route by specialty — Claude for code, Gemini for multimodal, and so on. A classifier or heuristic makes the call, costs go down, performance stays up. Done.</p>
-<p>Except it’s not. Most routing systems assume that model selection is a classification problem. In our experience building routing into agentic systems, what looks like a model-selection problem quickly becomes a systems optimization problem. Three dimensions made this surprisingly hard for us.</p>
-<p>We expected GPT-4.1 to be cheaper than Claude Sonnet 4.6. It wasn’t.</p>
-<p>Across 417 tasks on the AppWorld Test Challenge using the same CodeAct agent, Sonnet cost $79 total ($0.19/task) while GPT-4.1 cost $155 ($0.37/task) — nearly double. On paper, this makes no sense. GPT-4.1’s token pricing is lower on both input and output, and Sonnet takes roughly three times as many reasoning steps to finish the same tasks. By sticker price alone, GPT-4.1 should win easily.</p>
-<p>The explanation? Caching — something most routing discussions ignore entirely.
-Agent workloads tend to reuse large chunks of context across steps. When cache hit rates are high, effective input costs drop dramatically. Sonnet’s lower cache-read pricing meant it benefited disproportionately from this pattern, enough to overcome both its higher base pricing and its longer trajectories.</p>
-<p>The takeaway: actual cost depends on the interaction between the model, the workload, and the serving infrastructure. A router that only looks at pricing sheets is optimizing against the wrong numbers.</p>
-<p>A common routing strategy is to estimate how hard a task is and send harder tasks to stronger models. Intuitive, but it breaks down in two ways.</p>
-<p>First, difficulty is often invisible at routing time. A request like "summarize this contract" looks simple, but might trigger retrieval, compliance checks, tool use, and multiple rounds of refinement before it’s done. Meanwhile, a highly technical prompt might be handled efficiently by a smaller specialized model. You often don’t know how hard a task actually is until execution is underway.</p>
-<p>Routers aren’t solving one problem. They’re constantly juggling cost, quality, latency, compliance, and reliability all at once.</p>
-<p>It’s tempting to think about latency purely in terms of model size — bigger models are slower, smaller ones are faster. But what the user actually experiences depends on much more than that.</p>
-<p>Routing itself adds overhead. Infrastructure factors — which hardware a model is running on, whether the cache is warm, how busy the endpoint is — often dominate end-to-end response times. A theoretically faster model can still produce a slower experience if the serving conditions aren’t right.</p>
-<p>Then there’s routing granularity. Routing once per task adds minimal overhead. But routing at every step — which gives you more flexibility to adapt mid-execution — means every additional decision point introduces latency and operational complexity.</p>
-<p>A router that ignores the serving system is optimizing against the wrong reality.</p>
-<p>These lessons shaped how we built our router. The key shift: we stopped treating routing as a classification problem and started treating it as an optimization problem. Rather than asking "which model is best for this task?", our algorithm optimizes across cost, quality, and latency simultaneously — while staying lightweight enough to avoid becoming a bottleneck itself.</p>
-<p>The figure below shows the result on the AppWorld Test Challenge with a CodeAct agent. Each blue square is a different configuration of our router, tracing out a cost-accuracy frontier. The important thing isn't any single point — it's that the router gives you a range of operating points to choose from depending on whether you want to prioritize cost, latency, or accuracy. Configuration 1 (latency-optimized) lands at 84% accuracy for $93 and 83s — a 21% cost reduction and 9% latency reduction compared to running Opus alone, with only a 4% accuracy drop. Configuration 2 pushes cost even lower.</p>
-<p>Notice that a standard difficulty-based router (the teal diamond) lands in a similar accuracy range but at higher cost — it doesn't explore the full tradeoff space the way an optimization-based approach can. And because the optimization itself is lightweight (roughly 6 ms and 2 kB of memory per task), the router doesn't become the bottleneck we warned about earlier.</p>
-<p>The lesson we took away from this work is that routing isn’t really about choosing models. It’s about optimizing systems. Models are one variable — an important one, but just one among caching behavior, infrastructure state, compliance constraints, and workload patterns.</p>
-<p>When routing works well, it’s rarely because it found the "best" model for a given task. It’s because it found the best operating point for the entire system. That’s a harder problem than classification, but it’s the one worth solving.</p>
-<p>We’ll be sharing more about the technical details behind our approach in a follow-up post. In the meantime, if you’re building routing into your own agentic systems, we’d love to hear what tradeoffs you’re running into.</p>
-<p>This post was influenced by numerous conversations with colleagues, whose thoughtful questions, feedback, and insights helped refine our thinking.</p>
-<p>So I've always felt that model routing is a false proposition; it should have been part of the harness all along.</p>
-<p>Agreed, routing should disappear into the harness and just be part of the system's execution logic. Our goal is exactly that—making model choice an intrinsic capability rather than a separate concern.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Learning budget left this year? Use it for a QCon conference or a live InfoQ certification cohort, if your employer's policy allows. 
+
+                            Explore your options.</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>The panelists explain how AI tools and vibe coding reshape frontend and mobile engineering. They share insights on evolving junior developer roles, managing AI-generated code review fatigue, designing systems for autonomous agents, enforcing architectural guardrails, and navigating economic shifts in open-source software sustainability.</p>
+<p>Advait Patel shares a playbook for securing AI agent systems in production. He discusses moving defense boundaries from the prompt to the tool layer, enforcing scoped workload identities, and mitigating prompt injection via tool outputs. He explains how to structure audit-ready observability and implement kill switches to protect critical data while keeping deployment fast and compliant.</p>
+<p>Vanessa Formicola shares how technical leaders can move beyond "wishful architecture" by practicing holistic socio-technical engineering. She discusses why engineering leaders must account for organizational maturity, reward structures, geopolitical climate, and team dynamics, framing the staff-plus role as designing the conditions for technology to thrive rather than just picking tools.</p>
+<p>Colin Douch shares battle-tested strategies for building and scaling self-hosted observability stacks. He explains how to effectively correlate metrics, structured logs, and distributed traces using open-source tooling like Prometheus, VictoriaMetrics, and Jaeger, while navigating the engineering trade-offs of avoiding SaaS vendor lock-in.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Google Cloud API Gateway Introduces Streaming Support for Real-Time and AI-Powered Applications</p>
+<p>Nov 05, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>Google has announced the public preview of streaming support for API Gateway, extending its traditional request-response model to support applications requiring real-time communication. According to Google, this is particularly relevant for AI applications that provide streaming model responses, multi-step agent workflows, and interactive sessions.</p>
+<p>The new functionality enables streaming endpoints to operate behind API Gateway while retaining existing gateway policies and security controls, thereby addressing a previous limitation:</p>
+<p>Until now, developers building those experiences in API Gateway had to make an uncomfortable choice: put API Gateway in front of their APIs and give up streaming, or route streaming endpoints around the gateway and give up the authentication, API key enforcement, and observability that made the gateway essential in the first place.</p>
+<p>API Gateway supports several streaming patterns, including Server-Sent Events (SSE), chunked transfer encoding and HTTP response streaming, WebSockets, and gRPC. Streaming connections can remain open for up to one hour, after which clients must establish a new connection if continued communication is required.</p>
+<p>The new release introduces streaming support without requiring changes to existing API specifications or the use of specific APIs, extensions, or annotations. Google emphasizes that all existing API configurations and capabilities continue to work as before, including API key enforcement, JWT validation, service account authentication to backends, Cloud Logging and Cloud Monitoring integration, and path templating and request routing.</p>
+<p>Another benefit of the new release is the introduction of predictable gateway hostnames. Previously, gateway hostnames included a generated hash and could only be determined after the gateway had been created. Now, they follow a deterministic format: GATEWAY_ID-PROJECT_NUMBER.REGION.gateway.dev, allowing developers to reference and configure them before creating the resource.</p>
+<p>Google highlights the importance of streaming support for AI applications, where model responses are generated progressively rather than delivered as a single, complete response. Using the new functionality, developers will be able to stream model responses in real time, update agent progress during multi-step tasks, support tool-calling protocols and connections to remote MCP servers, and handle interactive AI applications.</p>
+<p>API Gateway also supports model routing, providing a single OpenAI-compatible endpoint to route requests to Gemini, Claude, or OpenAI gpt-oss models based on the model field in the request payload.</p>
+<p>Model routing plus streaming means clients get a familiar, standards-based streaming interface, while you retain centralized control over which models are reachable, by whom, and under what policy.</p>
+<p>Commenting on Google's announcement, X user emildrops highlights two important limitations. First, "existing gateways can't be switched in place" and, second, "latency measures the whole stream, not time to first byte... so latency graphs will look broken for reasons that aren't bugs". Similarly, LinkedIn user Ehsan Elahi Zaheer points out that:</p>
+<p>Monitoring also needs care: gateway request-latency metrics measure stream duration, not time to first byte. A single latency chart can hide very different user experiences.</p>
+<p>During the preview period, developers must explicitly enable the new functionality by specifying the --enable-streaming command-line flag when creating a gateway.</p>
+<p>Equal Experts helps organizations harness AI, modernize technology, and build better software through expert engineering, collaboration, and innovative delivery practices. Learn more.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/model-routing-is-simple-until-it-isnt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/gcp-api-gateway-streaming/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
