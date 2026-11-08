@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro vs Next.js: How to Pick Between Islands and Server Components</title>
+    <title>WWDC 24: Running Mistral 7B with Core ML</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10895.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,272 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Astro vs Next.js: How to Pick Between Islands and Server Components</h1>
+        <h1>WWDC 24: Running Mistral 7B with Core ML</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_data_7ee8a38c80.png" alt="Astro vs Next.js: How to Pick Between Islands and Server Components" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/mistral-coreml/thumbnail.png" alt="WWDC 24: Running Mistral 7B with Core ML" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_data_7ee8a38c80.png" alt="Astro vs Next.js: How to Pick Between Islands and Server Components" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/mistral-coreml/thumbnail.png" alt="WWDC 24: Running Mistral 7B with Core ML" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>The line between Astro and Next.js has blurred considerably. This guide replaces gut instinct with a structured decision matrix and side-by-side implementation patterns, exposing where each architecture genuinely excels and where it breaks down.</p>
-<p>This guide targets Astro 4.x, Next.js 14.x (App Router), React 18.x, and Node.js 22.x LTS or later. Run node --version and verify your framework versions with npm list astro next react before proceeding. API surfaces differ across major versions; the patterns shown here may not apply to earlier or later releases.</p>
-<p>The line between Astro and Next.js has blurred considerably. Astro added SSR, server endpoints, and hybrid rendering modes. Next.js introduced partial prerendering and static exports. Both frameworks now cover a wide enough surface area that choosing between Astro and Next.js requires more than a vague sense of which one "feels right" for a project. The wrong call early on locks a team into performance ceilings and hosting costs that are expensive to reverse — migrating routing, data-fetching patterns, and deployment pipelines typically means rewriting, not refactoring.</p>
-<p>This guide replaces gut instinct with a structured decision matrix and side-by-side implementation patterns. The goal is to expose where each architecture genuinely excels, where it breaks down, and how to map project requirements to the right default.</p>
-<p>Astro pages render as static HTML by default. Zero JavaScript ships to the browser unless a developer explicitly opts in. The mechanism for opting in is Astro's client:* directive system, which controls exactly when and how individual UI components hydrate. The available directives include client:load (hydrate immediately on page load), client:idle (hydrate once the browser is idle), client:visible (hydrate when the component scrolls into view), client:media (hydrate when a CSS media query matches), and client:only="react" (skip server rendering entirely; the framework name is a required argument, e.g., "react", "svelte"). Every piece of surrounding markup stays as static HTML. Critically, Astro is framework-agnostic: islands can be built in React, Svelte, Vue, Solid, or Preact, and multiple frameworks can coexist within the same project.</p>
-<p>In the App Router, Next.js components are server-rendered by default. Client components are opted into with the "use client" directive at the top of a file. The server/client boundary is per-component, but unlike Astro's isolated islands, the entire page participates in React's unified component tree and streaming pipeline. This tight coupling to the React ecosystem means Next.js benefits from React's concurrent features, including Suspense boundaries and transitions, but it also means the framework is bound to React as the sole UI layer.</p>
-<p>Astro treats a page as a static document with interactive widgets bolted on. The mental model is HTML-first. Next.js treats a page as a unified React component tree where the server/client split is a rendering concern. The mental model is app-first. This distinction shapes everything from default payload size to how teams reason about state, data fetching, and hydration boundaries.</p>
-<p>Astro treats a page as a static document with interactive widgets bolted on. The mental model is HTML-first. Next.js treats a page as a unified React component tree where the server/client split is a rendering concern. The mental model is app-first.</p>
-<p>Consider a straightforward blog post page: a title, author byline, Markdown body, and a static table of contents. For pure content like this, the architectural differences become immediately visible.</p>
-<p>This assumes a content collection named blog is defined in src/content/config.ts. See Astro's Content Collections documentation to configure the schema.</p>
-<p>The key detail: no client:* directive appears anywhere. This page ships zero client-side JavaScript. The HTML is generated at build time and served as a static file.</p>
-<p>Create a content/blog/ directory at the project root and place your .md files there.</p>
-<p>No "use client" directive here either, so this is a server component. The content renders on the server. When client components exist anywhere in the component tree, the React runtime ships to provide hydration scaffolding. For a fully static page with no "use client" components and output: 'export' configured, Next.js can produce zero client-side JavaScript, though this requires explicit configuration.</p>
-<p>Now consider a search input with live filtering of article titles, debounced API calls, and result rendering. This is where the transition from static to interactive reveals each framework's trade-offs.</p>
-<p>The React search component lives in its own file:</p>
-<p>The Astro page imports it with client:visible:</p>
-<p>The search island hydrates only when the user scrolls it into view. Everything else on the page remains static HTML with zero JavaScript cost.</p>
-<p>This component is imported into a server component page and hydrates as part of the React tree. The isLoading state provides user feedback while fetches are in progress, compatible with React 18 and later.</p>
-<p>Astro provides granular, directive-level control over exactly when JavaScript loads. The client:visible, client:idle, and client:media options let developers tie hydration to real user context rather than page load. Next.js provides deeper integration with React's data-fetching and state primitives but ships a larger baseline runtime, since the React component tree requires its hydration infrastructure regardless of how much interactivity the page actually contains.</p>
-<p>Count which column a project's requirements land in more frequently. If the split is roughly even, the tiebreakers in the following section apply.</p>
-<p>Astro's architecture fights back when the app requires global shared state across many interactive components, such as a real-time collaborative editor. Client-side routing with optimistic UI updates across multiple nested segments — think multi-step wizards with shared state spanning three or more route levels — pushes against the islands model. The clearest signal is when islands start outnumbering the static HTML on a page. At that point, the team is working against the architecture rather than with it.</p>
-<p>The clearest signal is when islands start outnumbering the static HTML on a page. At that point, the team is working against the architecture rather than with it.</p>
-<p>Next.js becomes overhead when the site is predominantly static content and the React runtime (~80-90 KB gzipped for React + ReactDOM + framework code) ships for no user-facing benefit. If the team does not use React and would need to adopt it solely for the framework, the learning curve and ecosystem lock-in are hard to justify. Additionally, Vercel-specific features such as built-in analytics and globally distributed ISR edge caching may be important, but ISR itself works on any Node.js server via next start. When budget or organizational policy prevents hosting on Vercel and the team specifically needs Vercel's global edge distribution layer, self-hosting Next.js adds operational burden that may not be worth the trade-off.</p>
-<p>Lighthouse scores run against starter templates are misleading. A fresh Astro project and a fresh Next.js project both score near-perfect because neither contains real-world complexity. The meaningful difference is architectural.</p>
-<p>With Astro, performance is a default. Zero JavaScript ships unless the developer explicitly adds it, and every addition is visible in the template as a client:* directive. Performance degrades only when a developer opts in, and every addition is auditable. Content sites built on Astro can ship under 50 KB total page weight before custom fonts and images — measure with astro build output and a tool like WebPageTest.</p>
-<p>With Next.js, keeping payloads small demands discipline. Avoiding unnecessary "use client" directives, using streaming and Suspense boundaries effectively, and managing client component boundaries carefully all demand ongoing attention. Next.js apps range from under 100 KB for disciplined RSC pages to 500 KB+ when client boundaries are loose — measure your own bundle with next build output.</p>
-<p>With Astro, performance is a default. Zero JavaScript ships unless the developer explicitly adds it, and every addition is visible in the template as a client:* directive.</p>
-<p>Astro defaults to static site generation. To enable SSR for a specific route, add export const prerender = false as a module export in the component's script block (between the --- fences). Hybrid mode combines both, allowing most pages to be static while specific routes render on the server.</p>
-<p>Next.js supports static generation, server-side rendering, ISR (Incremental Static Regeneration), partial prerendering (experimental as of Next.js 14; check release notes for current status), and an edge runtime option for middleware and select routes.</p>
-<p>For a blog, both Astro SSG and Next.js SSG work well, but Astro ships less JavaScript. E-commerce product pages with frequently changing data pair well with Next.js ISR or Astro SSR backed by a CDN. Documentation sites get a strong out-of-the-box experience from Astro's purpose-built Starlight tool, while Next.js SSG is equally capable if the team already works in the React ecosystem.</p>
-<p>Astro's static adapter works on any CDN. Server adapters exist for Node, Cloudflare Workers, Netlify, Deno, and Vercel. Fully static Astro sites can be hosted for free on most platforms.</p>
-<p>On the Vercel platform, Next.js delivers its best experience. Teams can self-host with next start on Node or through Docker. ISR and image optimization work via next start on any Node.js server. Vercel adds globally distributed ISR cache replication and edge delivery; self-hosting provides the same features without that global distribution layer. SSR adds compute costs that static deployments avoid entirely.</p>
-<p>If the site is content-first and interactivity is sporadic, choose Astro. If the product is an interactive web application built in React, choose Next.js. Projects that blend content with a few deeply interactive sections — search, comments, or embedded tools — can go either way: Astro with React islands or Next.js with disciplined RSC boundaries. The tiebreaker is team expertise and hosting preference.</p>
-<p>The question is not which framework is "better." It is which default — zero JavaScript or a React component tree — matches where the project concentrates its complexity. That concentration can shift as requirements evolve. The decision matrix above is worth revisiting whenever project scope changes, a new feature pushes the interactivity ratio, or hosting constraints shift. The framework that aligns with the project's natural shape will demand the least friction over time.</p>
-<p>Sharing our passion for building incredible internet things.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>WWDC’ 24 is the moment Apple officially unveiled Apple Intelligence and
+reiterated their commitment to efficient, private, and on-device AI.
+During the keynote and the sessions that followed, they demonstrated
+Apple Intelligence, which powers a huge array of AI-enhanced features
+that show practical uses for everyday tasks. These are not
+*AI-for-the-sake-of-AI* shiny demos. These are time-saving,
+appropriate (and fun!) helpers that are deeply integrated with apps and
+the OS, that also offer developers a number of ways to include these
+features within their own apps.</p>
+<p>Apple Intelligence features can only work this well
+because of the vertically integrated software stack that harnesses
+Apple Silicon's capabilities to the fullest. Apple also offers a platform for developers to run models on-device, known as
+Core ML. This software stack allows you to run ML models across all 3
+compute units (CPU, GPU & Neural Engine) available on Apple Silicon hardware.</p>
+<p>In this blog post, we’ll be exploring some of the best new Core ML
+features to replicate the Mistral 7B example Apple showcased in the
+WWDC’24 Deploy machine learning and AI models on-device with Core
+ML
+session, where they use a fork of
+swift-transformers
+to run a state-of-the-art LLM on a Mac. This is a high-quality model
+with more than 7 billion parameters that pushes the capabilities of
+consumer hardware today. You can also check out WWDC’24 Bring your
+machine learning and AI models to Apple
+silicon
+session, where part of the Mistral 7B conversion process is shown.</p>
+<p>Let’s see what steps to take to run it as efficiently as possible, and
+learn the new tools available in iOS 18 & macOS Sequoia.</p>
+<p>By the end of this blog post, you will have learnt all the new goodies
+accompanying the latest macOS release AND you will have successfully run
+a 7B parameter model using less than 4GB of memory on your Mac.</p>
+<p>Step 1: Clone the preview branch of the swift-transformers repo: git clone -b preview https://github.com/huggingface/swift-transformers
+Step 2: Download the converted Core ML models from this Hugging Face repo
+Step 3: Run inference using Swift: swift run transformers "Best recommendations for a place to visit in Paris in August 2024:" --max-length 200 Mistral7B-CoreML/StatefulMistralInstructInt4.mlpackage</p>
+<p>Here are some of the most impactful Core ML features from WWDC’ 24 we
+will use to run Mistral 7B on a Mac.</p>
+<p>The first feature we want to highlight is an entirely new Swift type to
+work with ML tensors. These are multi-dimensional data structures every
+ML framework uses. Python developers working on ML are familiar with
+numpy arrays or torch tensors, which provide convenient,
+high-level interfaces to manipulate these large multi-dimensional
+matrices easily. The new MLTensor type provides a high-level
+abstraction that mimics the ones available in Python frameworks, greatly
+simplifying working with tensor data in Swift.</p>
+<p>Core ML already had multi-dimensional data types in the form of
+MLMultiArray
+and
+MLShapedArray.
+However, they were only meant for data storage and simple operations
+like wrapping your data and sending it as input to a Core ML model, or
+unwrapping results from a Core ML model. However, manipulating tensor
+data with these APIs is difficult. Only a few primitive operations are
+provided, and you may have to write your own by accessing the underlying
+storage as an opaque pointer to number data. This is time-consuming and
+error-prone.</p>
+<p>The new Tensor type provides a high-level abstraction that mimics
+the ones available in Python frameworks, greatly simplifying working
+with tensor data in Swift. Consider a language model like the one we
+want to port to Core ML. Language models take in an input sequence of
+tokens, and they output an estimation of the probabilities of all the
+tokens in the vocabulary, meaning that tokens with a high probability
+have a high chance of being plausible continuations of the input. The
+application’s job is to select the best next token to append to the
+sequence based on those probabilities. Tensor type makes it easy to
+handle these operations without custom code.</p>
+<p>When we released swift-transformers,
+we wrote a lot of code (later extended by the community, thanks! ❤️) to
+help with input preparations (convert words to tokens) and output
+post-processing. For example, check out our softmax operation
+using Accelerate. All this can be removed when using MLTensor, as
+softmax is provided out of the box!</p>
+<p>Before WWDC’ 24, a Core ML model was essentially a pure stateless
+function where you provide inputs and return some outputs. However,
+sometimes you need to keep a state that depends on previous
+computations. The functional programming method for maintaining state is
+to add an additional input/output pair. So, based on your inputs and
+state, the model computes the output and the new state. There is nothing
+wrong with this approach, and in fact, that’s the way high-performance
+frameworks like JAX work.</p>
+<p>However, there are practical limitations: the stateful data needs to be
+sent to the model as an input and retrieved as an output every time you
+call the model. If the stateful data is large, then all this going back
+and forth increases overhead and slows things down. This is particularly
+important for LLMs because you have to run many iterations to generate a
+sequence. The performance bottleneck is usually your computer’s memory
+bandwidth (i.e., how fast you can move things to your GPU and back).
+Stateful models solve this problem by reserving a block of memory for
+state data and keeping it on the GPU so you don’t have to send and
+receive it every time you use the model.</p>
+<p>Stateful buffers were introduced in this WWDC’ 24 session
+using a toy example that is easy to understand but not representative of
+practical uses with big models such as LLMs. An LLM performance trick
+for transformers-based models is key-value caching (known as
+kv-caching). As shown in the following illustration, it avoids costly
+matrix multiplications in the crucial attention block by caching the
+result of previous operations performed in previous steps. We won’t go
+into details, but the takeaways are: kv-cache dramatically increases
+performance, and it requires a large block of memory that is the perfect
+candidate for using stateful buffers. Here is a coremltools user guide
+update about stateful models.</p>
+<p>In WWDC 23, we explored a very cool technique called palletization, and
+we showed how it could help bring text-to-image models, such as Stable
+Diffusion, to Macs and iPhones.</p>
+<p>Whilst these techniques allow you to reduce the size considerably, if
+pushed too far, the impact on quality is drastic. Bigger models suffer
+more from this, as the weight data has an extensive dynamic range.
+Trying to create a small lookup table (LUT) that captures all possible
+values becomes increasingly difficult. The solution introduced in WWDC
+24 is to focus on a smaller portion of the data at a time, and create
+multiple lookup tables for different areas of the same tensor.</p>
+<p>These methods (block-wise quantization) allow us to compress models to
+as low as 4-bit precision. Instead of using 4 bytes (the size of a
+float32 number) to represent each model parameter, we can get away
+with half a byte (a nibble) for each. This is an 8-fold reduction in
+model size (minus some overhead to account for the block-wise
+quantization tables), or 4 times smaller when compared to float16
+precision.</p>
+<p>We won’t use this feature for this example but we wanted to mention it
+here as it was introduced at WWDC 24, and we will be showcasing it in
+some upcoming work. Multifunction support essentially allows you to
+package LoRA adapters into generative models to use the same model (with
+a small set of additional parameters, called adapters) for different
+tasks. LoRA is the preferred community technique for large model
+fine-tuning. In diffusion models, for example, you can use LoRA to
+generate images with different styles, such as photorealistic or
+cartoonish. We believe LoRA is part of the solution that powers Apple’s
+Genmoji implementation. For language models, LoRA adapters can be used
+to adapt a generic LLM to specific tasks or domains.</p>
+<p>To read more about LoRA, you can check this post.</p>
+<p>To read more about Multifunction, you can check out Apple coremltools
+user guide here.</p>
+<p>The single most important component for running a large language model
+efficiently is the kv-cache. As mentioned above, this is a great
+candidate for the new stateful model feature
+released at WWDC’ 24. Models in the transformers library already use
+efficient attention implementations that rely heavily on kv-caching.
+However, the default implementations are optimized for Nvidia GPUs, and
+this hardware has a different set of constraints than Apple Silicon
+does. In the case of Core ML, we need to pre-allocate the full cache
+buffer beforehand and ensure that each time we call the model, we update
+the buffer in place. This avoids inefficient memory allocations and
+tensor concatenations and is also a requirement for Core ML stateful
+buffers.</p>
+<p>To achieve this goal, we have to use a different attention
+implementation that considers these factors. This requires modifying the
+transformers modeling code for the Mistral architecture, and it’s done
+in this fragment of code.</p>
+<p>Note: If you want to follow along and replicate the conversion (or
+convert another Mistral-based model, like a different fine-tune), you
+can use this script
+to run all the conversion steps.</p>
+<p>The first step is to load the model. We’ll use the patched
+implementation with the in-place cache method.</p>
+<p>Before running Core ML conversion, we need to trace the model with
+example inputs. This process records the tensor operations performed on
+those inputs, and the traced graph will be translated to Core ML
+operations during conversion. We use sample inputs to trace the model;
+we don’t need real data.</p>
+<p>The input to a language model is a sequence of tokens of varying length.
+We’ll allow the input to grow from a single token to a maximum context
+length of 2048. We can use
+coremltools range
+dimensions to specify these bounds.</p>
+<p>In addition to the sequence tokens (called inputIds in the example
+above), there’s another input called causalMask, which specifies the
+tokens the model needs to pay attention to. This is mostly used when
+generating multiple sequences at the same time using batching. Check out
+how these inputs are used in an example runner
+here.</p>
+<p>In this situation, all the input sequences inside a batch must have the
+same length, so we use padding tokens and the causal mask to tell the
+model that the padding tokens are not to be considered as inputs.</p>
+<p>The PyTorch modeling code uses keyCache and valueCache as the
+names of the cache buffers to hold the kv-cache. Those blocks are
+allocated for the maximum context length (2048). We use coremltools'
+new
+StateType
+to specify that those blocks must be converted to a stateful Core ML
+buffer during conversion.</p>
+<p>To convert the model to Core ML, we need to specify the input and output
+types, as well as the states. The converted model will use float16
+precision because that’s what we specified for the input data. We also
+need to indicate the minimum deployment target as iOS18, as that’s where
+these features are available. (We can also use macOS15, which refers
+to the same conversion target.)</p>
+<p>Using the new block-size quantization strategies described above, we use
+4-bit linear quantization with block size 32. This will greatly reduce
+model size and make the model run faster. Even though computation will
+still be performed in float16, weights are transferred in 4-bit mode
+and decompressed on the fly, which is more efficient than transferring a
+large amount of 16-bit weights.</p>
+<p>The quantization parameters are configured as follows:</p>
+<p>Let’s use that configuration to quantize the model. The following line
+will take a few minutes to run:</p>
+<p>There’s a final step after conversion and quantization are done. We need
+to include a piece of additional metadata that indicates the model
+identifier we used (mistralai/Mistral-7B-Instruct-v0.3). The Swift
+code will use this to download the tokenizer files from the Hub.
+Tokenization is converting text data to the numerical representations
+used by models, and it’s different for every model.</p>
+<p>The generated model is a mlpackage of about 3.8G, compared with the
+14G that a float16 conversion would produce. You can find it
+here on the
+Hub.</p>
+<p>If you followed the steps above or downloaded the model from the Hub,
+you can run it locally using the preview branch of
+swift-transformers. Apple engineers contributed it to the project,
+including the following important features:</p>
+<p>Full Tensor support, which greatly simplifies pre- and
+post-processing tasks, and allows us to delete many lines of
+low-level, confusing and fragile code.</p>
+<p>Support for the Swift counterpart of the Stateful API.</p>
+<p>Since adopting these features is a breaking change and requires iOS 18
+or macOS 15, we’ll keep them in a preview branch for now.</p>
+<p>To run the model from the command line, please first clone the preview
+branch from the GitHub repo:</p>
+<p>For easier testing, you can also use swift-chat, a simple app we
+wrote to show how to integrate the swift-transformers package
+inside. You have to use the preview branch as well. An example of
+swift-chat running the converted Mistral model was shown at the
+beginning of this post.</p>
+<p>For those of you who are more familiar with Python, it’s just as easy!</p>
+<p>coremltools makes it just as easy to run Core ML models with Python.</p>
+<p>We are extremely excited about the progress in Core ML and
+coremltools this year,
+and we are looking forward to seeing lots of third-party apps leveraging
+ML models to solve real tasks people need. On our side, we are committed
+to making this as easy as possible so developers can concentrate on
+creating cool apps. There are a few things on our drawing board:</p>
+<p>The model updates presented here are excellent for GPUs on Mac
+computers. Core ML can use the Neural Engine, which is particularly
+efficient on iPhones. Getting the most performance out of the Neural
+Engine requires some additional adaptations, which we plan to carry
+out on a few example models. This work will be based on the
+learnings discussed in this 2022 (and still very relevant) article by Apple.
+We won’t run Mistral 7B on iPhone, but there are several smaller
+models, like Apple’s OpenELM or DCLM that make for great
+candidates to explore!</p>
+<p>The code presented here is highly experimental. As summer goes on,
+we plan to adopt these methods and incorporate them into
+exporters, a Python tool designed to convert transformers models
+to Core ML. Hopefully, you’ll soon be able to convert many
+interesting model architectures very easily.</p>
+<p>We’ll keep working on the preview branch of
+swift-transformers to incorporate new features or API changes as
+they are released. If you are interested, keep an eye on it!</p>
+<p>The tools released by Apple in WWDC help us on our long-term goal to
+make AI easy and accessible to all, and we’d love to see where you can
+take them. The example we showed is experimental, but you can use it to
+convert any Mistral fine-tune to Core ML – please let us know if you do!
+If you want to try other model architectures, please feel free to open
+issues or PRs to the preview branch of swift-transformers –
+we’ll try to help you get going!</p>
+<p>There’s never been a better time than today to apply your creativity to
+solve problems that interest you! Go try things, have fun, and tell us
+how we can help.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/astro-vs-nextjs-choose-framework/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/mistral-coreml" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I Tried Chicken Soup From 3 Popular Chains &amp;amp; This One Tastes Homemade</title>
+    <title>What I Learned Building Co-op Translator MCP</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9692.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>I Tried Chicken Soup From 3 Popular Chains &amp;amp; This One Tastes Homemade</h1>
+        <h1>What I Learned Building Co-op Translator MCP</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ff5p53bjnwvghp4iuw6ij.png" alt="What I Learned Building Co-op Translator MCP" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ff5p53bjnwvghp4iuw6ij.png" alt="What I Learned Building Co-op Translator MCP" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p class="rte-simple-html-paragraph">Exactly what I want to warm up with on a cold night.</p></p>
+                <p>Posted on Nov 8
+•
+Originally published at mssong.com</p>
+<p>I recently added a Model Context Protocol server to Co-op Translator.</p>
+<p>Co-op Translator started as a CLI-first tool for translating Markdown files, Jupyter notebooks, and text inside images. The CLI is still the most natural interface when a person wants to translate a repository from a terminal.</p>
+<p>When an agent such as Codex or Claude Code works with a project, it does not only run one big command and walk away. It reads context, chooses a smaller action, checks the result, and then decides the next step. That pushed me to rethink the shape of the Co-op Translator APIs before exposing them through MCP.</p>
+<p>This article is about that shift in interface design.</p>
+<p>First, a CLI can hide complexity because a human asks it to complete a whole job.</p>
+<p>Second, MCP tools need safer defaults because an agent may be operating inside a real workspace.</p>
+<p>Third, agent-assisted translation works best when Co-op Translator owns the document workflow and the host agent owns the language step.</p>
+<p>Finally, not every workflow should become keyless. Image translation still needs provider-backed vision capabilities.</p>
+<p>A CLI command is allowed to do many things at once:</p>
+<p>That command can discover files, translate content, choose output paths, rewrite links, update metadata, and clean up old translated assets. For a human, that is convenient.</p>
+<p>For an agent-facing API, that same convenience can become ambiguity.</p>
+<p>If one tool translates text, rewrites paths, writes files, and updates metadata at the same time, the agent has a harder time understanding which part of the workflow succeeded and which part should happen next.</p>
+<p>So I separated the lower-level responsibilities:</p>
+<p>One API translates Markdown content. Another rewrites links after the caller knows the source and target paths. A project-level API still orchestrates the full repository workflow, similar to the CLI.</p>
+<p>That separation made the MCP server much easier to reason about. The API no longer exposed only "translate this repository." It exposed smaller surfaces an agent could inspect, combine, and recover from.</p>
+<p>An MCP server is not just a thin wrapper around existing functions.</p>
+<p>The tools are model-controlled by the host application, so the defaults matter. A repository translation can create or update many files. That is not something an agent should do silently.</p>
+<p>For that reason, repository translation through MCP starts as a dry run. A write requires explicit confirmation:</p>
+<p>This was one of the clearest lessons from the work: agent-facing APIs need guardrails as much as capabilities. The better default is the one that lets the agent inspect, explain, and ask before changing the workspace.</p>
+<p>Once that boundary was in place, it became easier to ask a second question: which part of translation should Co-op Translator do, and which part should the host agent do?</p>
+<p>The most interesting part was agent-assisted translation.</p>
+<p>In the provider-backed flow, Co-op Translator calls Azure OpenAI or OpenAI directly. That is useful for production pipelines and repeatable automation.</p>
+<p>But in an MCP environment, the host agent already has a model. For Markdown and notebooks, Co-op Translator does not always need to call another LLM provider. It can prepare the work, protect the structure, and let the host agent translate the chunks.</p>
+<p>Co-op Translator handles chunking, code placeholder preservation, frontmatter reconstruction, notebook Markdown cell replacement, and post-translation normalization. The host agent performs the actual translation.</p>
+<p>The agent can call the MCP tools, translate the prepared chunks with its own model, and return reconstructed Markdown.</p>
+<p>This felt like a better division of labor. The agent is good at language. Co-op Translator is responsible for the workflow around the language: chunk boundaries, Markdown safety, notebook reconstruction, and normalization.</p>
+<p>Markdown and notebooks can use the agent-assisted path because the content is already textual.</p>
+<p>Image translation needs OCR, bounding boxes, and layout-aware rendering. The system has to know where text appears inside the image and how to draw translated text back into the visual layout.</p>
+<p>So image translation remains provider-backed. It still needs Azure AI Vision for text extraction and layout information.</p>
+<p>That distinction is important to document clearly. MCP support does not mean every workflow becomes keyless. It means each workflow can choose the execution model that matches the shape of the content.</p>
+<p>Agent-facing APIs need clearer boundaries than human-facing CLIs.</p>
+<p>A human-facing CLI should optimize for convenience. An agent-facing API should optimize for composability, predictability, and safe defaults.</p>
+<p>Good MCP tools are not only about exposing functions. They are about exposing the right workflow surfaces so an agent can make progress without guessing.</p>
+<p>That is what Co-op Translator MCP tries to do: keep the full CLI-style project workflow available, while also giving agents smaller tools for Markdown, notebooks, images, path rewriting, review, and configuration inspection.</p>
+<p>It changed how I think about productizing developer tools for agents. The tool is no longer only something a person runs. It becomes part of another reasoning loop.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.delish.com/food/a74182884/best-chain-restaurant-chicken-soup-taste-test/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/minseoksong/what-i-learned-building-co-op-translator-mcp-1oe1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

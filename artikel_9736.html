@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The AI Brain: SageMaker BGE Cross-Encoder Reranking &amp; Sub-100ms Bedrock ConverseStream SSE (Part 4)</title>
+    <title>The TechBeat: What Happens When AI Agents Start Maintaining Legacy Code? (11/7/2026)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9736.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The AI Brain: SageMaker BGE Cross-Encoder Reranking &amp; Sub-100ms Bedrock ConverseStream SSE (Part 4)</h1>
+        <h1>The TechBeat: What Happens When AI Agents Start Maintaining Legacy Code? (11/7/2026)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fb6v9kg4vd7b2uoi0eodz.png" alt="The AI Brain: SageMaker BGE Cross-Encoder Reranking &amp; Sub-100ms Bedrock ConverseStream SSE (Part 4)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_518_npp7fgug0spu8zwla4x0svvz.png" alt="The TechBeat: What Happens When AI Agents Start Maintaining Legacy Code? (11/7/2026)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fb6v9kg4vd7b2uoi0eodz.png" alt="The AI Brain: SageMaker BGE Cross-Encoder Reranking & Sub-100ms Bedrock ConverseStream SSE (Part 4)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_518_npp7fgug0spu8zwla4x0svvz.png" alt="The TechBeat: What Happens When AI Agents Start Maintaining Legacy Code? (11/7/2026)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In Part 3 of this series, we built our Storage Vault in PostgreSQL 16: co-locating dense pgvector embeddings and full-text BM25 indexes, using Reciprocal Rank Fusion (RRF) to merge candidate chunks into a unified pool of 15 relevant documents.</p>
-<p>At this stage, most engineering teams stop and immediately forward all 15 chunks into their Large Language Model (LLM).</p>
-<p>Doing that introduces three major production hazards:</p>
-<p>To achieve production reliability, an enterprise platform requires a dedicated Stage-2 Precision Reranker.</p>
-<p>To understand why a reranker is necessary, we must examine the difference between Bi-Encoders and Cross-Encoders:</p>
-<p>All vector embedding models (Amazon Titan v2, OpenAI text-embedding-3, Cohere) are Bi-Encoders:</p>
-<p>The Fundamental Flaw: Query tokens and document tokens never interact in the neural network's attention layers. The model compresses an entire 512-token document into a single fixed vector. Nuanced relationships (e.g., subtle conditionality, negation, or multi-step logic) are lost during compression.</p>
-<p>A Cross-Encoder (such as BAAI/bge-reranker-base) does not produce isolated vector coordinates. Instead, it passes both the Query and the Candidate Chunk together as a single input pair:</p>
-<p>Inside the Cross-Encoder's transformer layers:</p>
-<p>If Cross-Encoders are vastly superior, why not use them for the entire search pipeline?</p>
-<p>Compute Complexity: Running full cross-attention across 100,000 documents for a single user query would take dozens of seconds and require tens of thousands of dollars in GPU compute.</p>
-<p>The industry gold standard is the Two-Stage Retrieval Pattern:</p>
-<p>Total retrieval time: under 60ms with zero loss in precision!</p>
-<p>For our real-time reranking engine, we deployed the state-of-the-art open-source BAAI/bge-reranker-base model onto an AWS SageMaker Real-Time Endpoint named bge-reranker-endpoint.</p>
-<p>Many engineers attempt to deploy SageMaker Serverless Inference to cut baseline idle costs. In production RAG platforms, this is a dangerous trap:</p>
-<p>DocLab communicates with SageMaker using a compact JSON contract:</p>
-<p>The Spring Boot backend immediately sorts the results by score descending and extracts the top 3 chunks (filtering out any chunk with confidence below a configurable threshold, such as 0.60).</p>
-<p>We executed live comparative benchmark evaluations on our deployed DocLab architecture.</p>
-<p>The test corpus consisted of diverse enterprise files: Architectural Decision Records (ADRs), Excel sheets, and complex JSON service catalogs.</p>
-<p>With our top 3 chunks validated, we construct our guarded prompt and initiate streaming inference via Amazon Bedrock ConverseStream:</p>
-<p>Instead of forcing the user to wait 4–6 seconds for the full response to generate, DocLab exposes a streaming endpoint:</p>
-<p>Spring Boot bridges Bedrock's asynchronous reactive stream directly to the client's browser using standard HTTP text/event-stream (Server-Sent Events):</p>
-<p>Here is the measured latency breakdown on live AWS infrastructure:</p>
-<p>To the end-user, the chat interface feels instantaneous. Words begin appearing on screen in under 400 milliseconds, fully backed by verified, cited enterprise documentation.</p>
-<p>Our platform now parses multi-format files at zero cost, stores them in a unified hybrid vault, reranks candidates to 0.9970 confidence, and streams responses in under 400ms.</p>
-<p>In Part 5 (The Grand Finale), we tie the entire enterprise platform together:</p>
-<p>Built with AWS Bedrock, Amazon SageMaker, Amazon RDS PostgreSQL 16 pgvector, and Spring Boot.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
+<p>How are you, hacker?
+🪐Want to know what's trending right now?:
+The Techbeat by HackerNoon  has got you covered with fresh content from our trending stories of the day! Set email preference here.</p>
+<p>By @khasky [ 7 Min read ]
+Learn how to install and use Awesome Agent Skills with Claude Code, Codex, Gemini CLI, and Cursor to improve AI-assisted development workflows. Read More.</p>
+<p>By @thomascherickal [ 37 Min read ]
+20 Local Decision Models that run locally free, and most of them before better than the original Jev. Read More.</p>
+<p>By @alexcloudstar [ 14 Min read ]
+I rebuilt my site on Next.js 16 with Claude Code in 2 days. The line count hides what mattered: constraints, tests, small merges, and what to build.  Read More.</p>
+<p>By @krishnaduttpanchagnula [ 4 Min read ]
+Using AI in enterprises is challenging due to issues like cognitive debt, unpredictable token consumption, and the need for strict governance. Read More.</p>
+<p>By @pairprogramming [ 30 Min read ]
+Anthropic replaced Git with Scion; Cursor launched Origin. Why AI agents make the Git client obsolete, which orgs should leave Git, and what GitHub must do. Read More.</p>
+<p>By @nfrankel [ 8 Min read ]
+Tired of Google Drive sync issues? Here's how I built a private password database sync system using Syncthing, Tailscale, and Synology. Read More.</p>
+<p>By @mendoncamaria [ 7 Min read ]
+An open-source tool called REA hit 100,000 GitHub stars in days. Here's what it does, the good and bad it's causing, and why the regulation fight is messy. Read More.</p>
+<p>By @zbruceli [ 19 Min read ]
+A chunk of foam doomed Columbia because its heat shield had no backup. Starship's answer: a steel hull, 18,000 pinned hexagonal tiles, and an ablative layer. Read More.</p>
+<p>By @paoloap [ 5 Min read ]
+8 production-tested Python libraries that replace hundreds of lines of custom code. LiteLLM, Instructor, Tenacity, and 5 more I use in every agent.
+Read More.</p>
+<p>By @solvency [ 10 Min read ]
+AnitaB.org cancelled the 2026 Grace Hopper Celebration 14 days out after a $14.6M loss and a halving of attendance. How women in tech lost their biggest stage. Read More.</p>
+<p>By @vikrantbhalodia [ 12 Min read ]
+AI agents can read and modify legacy code, but missing business context makes autonomous maintenance far riskier than it first appears. Read More.</p>
+<p>By @writedown [ 7 Min read ]
+Foursquare raised $412M and sold to Infillion for $0 to every shareholder. Here's how debt and liquidation preferences zeroed out preferred and common. Read More.</p>
+<p>By @aimodels44 [ 8 Min read ]
+Qwen3.6-35B-A3B-Uncensored-Genesis-Hermes-GGUF is a locally runnable, text-to-text GGUF release with native text, image, and video capabilities. Read More.</p>
+<p>By @marshyon [ 6 Min read ]
+AI promises greater productivity, but dependence comes at a cost. Read More.</p>
+<p>By @tobses [ 15 Min read ]
+Learn how Bitcoin's Lightning Network uses payment channels, timelocks, HTLCs, and onion routing to enable fast, off-chain payments. Read More.</p>
+<p>By @axsaucedo [ 24 Min read ]
+Part 1 of a 2-part series on agent identity and security Read More.</p>
+<p>By @patching [ 17 Min read ]
+NSA says patch PHP or go offline: AI-found PHP2Shell flaws let attackers take over servers running ~70% of websites. Here’s who’s exposed and how to fix it. Read More.</p>
+<p>By @nebojsaneshatodorovic [ 3 Min read ]
+A Star Wars-inspired take on Trump's midterm setbacks, MAGA, Gen Z, online extremism, and the dark side of America's political culture.  Read More.</p>
+<p>The TechBeat: Shipaton Blogging Contest Winners Announced  🎉 (11/6/2026)</p>
+<p>HackerNoon’s rank of trending tech stories based on pageviews, engagement and comments</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/nagachaitanya_inamdar_56c/the-ai-brain-sagemaker-bge-cross-encoder-reranking-sub-100ms-bedrock-conversestream-sse-part-4-2pm3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/11-7-2026-techbeat?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

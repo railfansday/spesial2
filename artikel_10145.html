@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Is it agentic enough? Benchmarking open models on your own tooling</title>
+    <title>Best Static Website Hosting Providers in 2027: Free and Paid Options Compared</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10145.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,205 +15,193 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Is it agentic enough? Benchmarking open models on your own tooling</h1>
+        <h1>Best Static Website Hosting Providers in 2027: Free and Paid Options Compared</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Benchmarking transformers revisions across different metrics</p>
-<p>This is a human-made, agent-focused blogpost.</p>
-<p>Coding agents increasingly work with our software instead of us: describe a task, and the agent picks the library,
-writes the calls, runs them, and debugs its own mistakes. When the library gets in the way, it will
-happily bypass it and rewrite the logic from scratch. This introduces a new concept in library development:
-the code should not only be correct and fast, but should be designed so that an agent can drive it effectively. A clunky API
-or stale docs annoy us developers, but it now also sends the agent down a longer, more expensive path.</p>
-<p>Most benchmarks just look at the final answer. We wanted the whole process instead: not just whether the agent got
-it right, but how much work it took to get there, and how that shifts across models, library revisions, and
-tasks. We measured exactly that, using transformers as our case study.</p>
-<p>Here, we will introduce a tool specific benchmark focusing on how the answer was found, and provide a simple 
-implementation of one such harness, running entirely on open models driven by the
-pi coding agent, with the full sweep of
-models × revisions × tasks fanned out across Hugging Face Jobs
-so every run sees identical hardware.</p>
-<p>But, how do you optimize software for agents?</p>
-<p>We're strong believers in the following two software principles:</p>
-<p>This remains the same within the realm of agentic-optimized tooling, and, for once, the two are directly tied to
-each other.</p>
-<p>You want your tool to exist for an agent: it needs to be discoverable. The API needs to be clear and the docs
-need to be extensive. They need to be structured in a way that the agent has rapid access to the useful files and
-examples. If you want your tool to work for an agent, then you should test it for agentic-use.</p>
-<p>We'll use transformers as an example throughout this blogpost: agents using it to solve ML tasks (classifying
-text, captioning images, transcribing audio), not contributing code to it; though the harness was designed to work
-with any tool that can be operated from the command line.</p>
-<p>Our intuition on transformers was that usage could be dramatically simplified
-with a few changes: a CLI, a Skill, and self-contained, task-specific examples. This is the same recipe
-recently applied to the hf CLI, redesigned to be agent-optimized,
-where agents used 1.3–1.8× (and up to 6×) fewer tokens. We wanted to know whether that kind of win generalizes, and
-whether it could be useful for transformers as well.</p>
-<p>Intuition is a powerful tool, but we wanted more evidence before we opened PRs that add several thousand lines of code to such a widely used codebase as transformers. We set out to measure what success looks like.</p>
-<p>Two agents can both produce the correct label for a sentiment-classification task,
-but one:</p>
-<p>Both reach POSITIVE (0.9999), and here are the two paths an agent actually took on this exact task:</p>
-<p>Both methods reach the same result. But they have very different profiles in cost, latency, token usage, and failures.</p>
-<p>If your evaluation only checks the final string, you're blind to these as well as
-whether a change you shipped to the library (a CLI improvement, better error messages, a
-Skill) actually helped agents.</p>
-<p>Our goal with this harness is to evaluate how much work
-an agent has to do to perform a given task, and whether changes to the library improve performance.</p>
-<p>A few words on how we'll evaluate agents here.</p>
-<p>We run every task under three variants (or "tiers"); three different ways an agent can come at transformers:</p>
-<p>These aren't nested: skill doesn't contain clone (it ships curated docs, not the source tree), and neither
-strictly contains the other, each gives the agent a different kind of help. As we'll see, a model can sometimes 
-do better on clone than on skill.</p>
-<p>Not all models driving agents are equal, and their difference changes what you should look at when running them.</p>
-<p>At one end, you have the largest, most capable open models. On reasonably common tasks,
-these should get the right answer, eventually. For them, task completion saturates near
-100% and stops telling you much about your tool; a more relevant benchmark is the effort
-it took the agent to get there: how many turns, tokens and seconds it took, and whether they walked a clean
-path or used deprecated APIs.</p>
-<p>Local models vary widely in size, and so do their abilities.
-Metrics such as "match %" are more relevant than for their larger counterparts,
-as you can see how model sizes/capabilities affect results on your specific
-tool.</p>
-<p>This harness not only provides guidance to library maintainers on how to improve a repository for agent interactions, it also helps assess how different agents and models perform on the tasks users care about.</p>
-<p>The harness scores every run on several axes, so that you can ask what actually matters
-for each class of model:</p>
-<p>All of it lands in a report you can directly examine:</p>
-<p>The live report: Overview, Coverage, and Results, all client-side.</p>
-<p>And because it captures the native agent trace of every run, numbers are just the beginning: you
-can read exactly what the agent did, command by command. The traces are shareable
-through the Hub's agent-traces viewer:</p>
-<p>A run rendered in the Hub's agent-traces viewer: MiniMax-M2.7 on the answer-question task.
-Open this trace on the Hub ↗</p>
-<p>Before the results, a quick recap of the setup. Each run varies four things: the model driving the agent,
-the transformers revision it runs against, the task, and the tier (bare / clone / skill).
-As discussed, we look at different metrics for the two different model categories.</p>
-<p>Since a large open model will usually get to the correct result, what you're really
-measuring is the effort it took to do so. Did it take ten turns or one? Did it follow
-an API path you deprecated because it trusted obsolete documentation? Did it hit an
-error you hadn't foreseen?</p>
-<p>The natural experiment is to fix one strong model and vary the tool's
-revisions: the successive git versions of transformers we test against, from released tags like
-v5.8.0 and v5.9.0 to the specific commit that introduces the CLI and Skill. We want to watch whether the load
-it puts on the agent goes up or down. We used the harness on transformers to check
-whether adding a dedicated CLI and Skill actually lightened the agents' work.</p>
-<p>For the three large models we used in our tests, the average time spent on all tasks indicates that the Skill commit
-results in less time spent working on the tasks:</p>
-<p>Median time per revision, by tier: the skill commit (green dot) is the fastest.</p>
-<p>On the other hand, in the experiments in which we cloned the repository, we can see a significant increase
-in token consumption due to the commit that introduced the CLI and examples, as we'll see in a moment.</p>
-<p>Median new tokens per revision, by tier: the clone variant jumps once the CLI lands in the repo.</p>
-<p>Reading the clone-variant traces explains why. The commit adds a command, but it also ships the
-CLI's implementation and a set of cli/agentic/*.py usage examples into the repository directly.</p>
-<p>On the clone variant the agent has a full transformers checkout in front of it, and roughly a third of the runs go read the new
-surface (the /cli/ tree and the example scripts) to learn the interface before calling it. This raises the
-median input from ~4k to ~6.4k tokens.</p>
-<p>The two charts are then two sides of one tradeoff: the commit buys the large models less time 
-(they reach for the CLI instead of debugging Python) at the cost of more
-tokens (they read the code that taught them the CLI). A tradeoff worth knowing about before merging PRs.</p>
-<p>One caveat works in the CLI's favor, though, which isn't benchmarked yet: the cost of reading it is amortized 
-with successive runs. Our setup is built for one-off experiments. Each run is a fresh agent that rediscovers 
-the CLI from scratch, so it pays the discovery cost every time. In real usage an agent learns the interface 
-once and then solves task after task within the same session, amortizing that cost across many requests. The
-token bump we measure here is closer to a worst case than to what a user would see day to day.</p>
-<p>Open models give us fine-grained control over the variables that matter most here: size, configuration, quantization,
-provider, training, and anything that would differ from one model to the next. They're also where a good tool surface
-matters most: a small model asked to "use transformers to do X" on a bare environment can
-guess an API that changed some releases ago, may do unnecessary tool calls, and can
-get the wrong answer.</p>
-<p>So here the experiment is the opposite of the above: hold the revision and sweep the model. This helps
-see which models actually take care of the task, not just by token count and time,
-but down to which ones can't reliably handle the tool calls. Our intuition is
-that the smaller the model, the harder both tool use and the task get; we ran the
-harness across a range of model sizes to test exactly that:</p>
-<p>Match % across models, by tier: the skill tier lifts the larger models but drops the smaller ones.</p>
-<p>which also seems to be correlated with the number of tokens ingested</p>
-<p>Median new tokens across models, by tier.</p>
-<p>A note on fair comparison: naively averaging across tasks is misleading when
-coverage is uneven (a model that only finished the quick tasks looks fast). The
-report has a "shared tasks only" toggle (across models and/or revisions) so
-you compare like-for-like, and a Coverage heatmap so you can see exactly which
-task × revision × model cells actually ran.</p>
-<p>Two things come together here: how to look past whether the agent succeeded to what it did and how it
-did it; as well as the first results we pulled out of the harness.</p>
-<p>Match %, tokens, and time tell you the cost of a run but don't tell you much about what happened under the hood.</p>
-<p>This is why we've introduced the concept of markers. A marker is a named pattern the profile (the
-small per-tool plugin that teaches the harness how to build and drive a given library) matches against
-a run.</p>
-<p>It is a one-line label for a behavior you care about, checked against the shell
-commands the agent ran, the code it wrote, the files it read, or its final
-answer. A run can fire several markers or none; the report shows how often each one fired,
-per model and per revision.</p>
-<p>For transformers we declare a handful but we'll only look at the two most relevant ones:</p>
-<p>These are what we watch to see whether a change actually shifted the agent's behavior. Interestingly here,
-the larger the model, the more it leverages the new context instead of using its memory; therefore leveraging
-the newly introduced CLI.</p>
-<p>CLI adoption by tier across models: only the skill tier reaches for it, and more so as models grow.</p>
-<p>CLI adoption is new: the CLI lands in a single commit, isn't in any model's training data, and is only
-lightly documented. The effect is clear: it's the Skill variant, the one that ships the CLI's
-documentation, that actually reaches for it, at 55.3%.</p>
-<p>Comparing the commit across model sizes, the CLI + Skill helps the bigger models: on the skill tier, Kimi and the other large agents reach for the CLI and finish in fewer turns. (On clone they spend more input tokens first, reading the new CLI code, as we saw above, so the win shows up in time and turns, not raw tokens.)</p>
-<p>Kimi-K2.6, GLM-5.1, and MiniMax-M2.7 across revisions</p>
-<p>But in some smaller-model settings, it appears to hurt performance. One plausible explanation is that small
-models lean on memorized API patterns, reproducing pipeline(...) snippets
-they've seen in their training data. The new concepts are then a larger
-surface for them to get wrong. You can watch this directly on the harness: lower
-match %, more retries, the cli marker barely firing. It is particularly striking on the Qwen3-4B model:
-the Skill barely changes its match rate yet its cost distribution is significantly affected.</p>
-<p>Almost all of that comes from the clone tier. The checkout now contains
-the CLI's implementation and cli/agentic/*.py examples, and the 4B agent reads them in bulk: its median new
-tokens jump from ~2.4k to ~23k, with time and output skyrocketing as well, for no gain in
-accuracy.</p>
-<p>Qwen3-4B across revisions. The CLI + Skill commit fans the cost distribution wide open, on the clone tier the agent reads the newly-shipped CLI source in bulk (~10× the new tokens), for no gain in match %. (repeat tokens stays flat: this setup uses no prompt caching.)</p>
-<p>Sometimes, though, the Skill breaks correctness outright. Reading the traces shows how, for example for Qwen3-14B: 
-adding the Skill drops its overall match rate from 67% (bare) to 43%, and on the simplest tasks the collapse is very
-visible: classify-sentiment goes from 100% on the clone variant to 0% with the Skill.</p>
-<p>Qwen3-14B on classify-sentiment, by tier: clone (blue) holds at 100% across revisions, but the Skill variant (green) collapses to 0% at the CLI + Skill revision.</p>
-<p>Looking at the traces, the model mistakes the CLI for a tool it can call directly (as in an agentic-harness
-tool, like web-search). The Skill is not an executable tool: it's documentation loaded
-into the agent's context, and the transformers CLI is only ever meant to be run from the shell (via bash); so this
-will not work.</p>
-<p>Qwen3-14B reads the Skill and, in 39 of its 56 Skill runs, either emits a transformers(command="classify", ...)
-tool call (a tool that was never registered) or, finding nothing like it among its read/bash/edit/write
-tools, concludes it can't run a model and gives up. Either way, rather than fall back to the one-line
-pipeline(...) that scored 100% on the clone checkout, it declares the task impossible.</p>
-<p>Qwen3-14B on classify-sentiment (Skill variant): it reasons that read/bash/edit/write can't run a model, and gives up.</p>
-<p>This is exactly what we built the harness to catch: the same change that speeds the large models
-ends up breaking the small ones, which seemed a bit counterintuitive to us at first and something we'd likely have
-shipped as-is. The takeaway for maintainers: agent-facing APIs should be evaluated across model sizes, because a
-new affordance can reduce work for strong models while adding ambiguity for smaller ones. It also hints at a fix:
-rather than hand-write a Skill and check it after the fact, you could generate and validate one against the weaker
-models up front.</p>
-<p>This is exactly what Upskill does: it turns a strong model's solution into 
-a Skill only when it measurably helps the smaller ones.</p>
-<p>The harness is one CLI, agent-eval. Install it, run a suite, fan it out across models × revisions on HF Jobs, and publish the
-report as a Hugging Face Space.</p>
-<p>Trusted local use only. The harness runs a coding agent with bypassed permissions and executes code from
-whatever revision you point it at, and traces can contain prompts, output, and local paths. See
-SECURITY.md before pointing it at code you didn't write or sharing results.</p>
-<p>The full, kept-current setup and usage instructions live in the README.</p>
-<p>Checking the final answer tells you whether an agent can use your library. It
-doesn't tell you what it costs: the turns, tokens, errors, and the path it took to
-get there. This harness measures that, across the revisions and models you pick.</p>
-<p>On transformers, it caught something we'd have shipped on faith: the CLI + Skill
-helps the largest open models and hurts the smallest ones. Worth knowing before merging!</p>
-<p>It's profile-based, and designed to be adaptable: point it at your own library, define
-a few tasks and their expected answers, get the same report. Code and tasks are in
-the repo, traces are on the Hub.
-Let us know if you use it for your project!</p>
-<p>This harness stands entirely on
-pi, Mario
-Zechner's coding-agent CLI: it drives every open-model run, and only needs an
-HF_TOKEN to serve a model, which is what made the open-model sweep practical at
-all.</p>
-<p>Thanks to the model builders and inference providers behind the models we
-swept. Across the board they performed well above what the bare baseline would
-suggest.</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>You've finished building your website. The HTML, CSS, and JavaScript files are ready, everything works locally, and now you need somewhere to publish it.</p>
+<p>Static website hosting is one of the simplest ways to get a website online. Many providers offer free plans, and you don't need to maintain a traditional web server.</p>
+<p>The harder part is choosing the right provider. Some let you upload a single HTML file and share it immediately. Others connect to GitHub, automatically deploy code changes, and support entire development teams.</p>
+<p>We've compared eight static hosting providers, including TiinyHost, Cloudflare Pages, Netlify, Vercel, and GitHub Pages. Below, you'll find their free hosting limits, pricing, advantages, and drawbacks, along with recommendations for different types of projects.</p>
+<p>Static website hosting is a service that stores and delivers pre-built website files, including HTML, CSS, JavaScript, images, and fonts.</p>
+<p>Unlike traditional server-rendered websites, static sites don't need a server to generate each page when someone visits. The HTML is already prepared and can be delivered directly to the visitor's browser.</p>
+<p>That doesn't mean static websites can't be interactive. JavaScript can still handle navigation, forms, filtering, and other features. Static sites can also communicate with external APIs or databases.</p>
+<p>The main distinction is how pages are generated.</p>
+<p>You can write a static website using plain HTML or generate one with frameworks and tools such as Astro, Hugo, Eleventy, or Next.js static export.</p>
+<p>Static hosting is also commonly associated with Jamstack, an approach that separates the front end from back-end services.</p>
+<p>Lower hosting costs: Many providers let you publish smaller websites for free.</p>
+<p>Simpler maintenance: There's no application server or server-side runtime to maintain for the static pages themselves.</p>
+<p>Efficient content delivery: Static files can be cached across a content delivery network (CDN), reducing the distance between visitors and website assets.</p>
+<p>There are limitations, too. If your website requires user authentication, database operations, or server-side functionality, you'll need additional services or a hosting platform that supports them.</p>
+<p>We compared eight providers based on their deployment methods, free plan allowances, pricing, and suitability for different projects.</p>
+<p>Free hosting limits: Bandwidth, storage, build allowances, and restrictions.</p>
+<p>Deployment process: Whether you can upload files directly or need a Git repository.</p>
+<p>Custom domains and HTTPS: Support for publishing under your own domain.</p>
+<p>Development features: Automatic deployments, preview environments, and integrations.</p>
+<p>Pricing: What happens when a project exceeds its free allowance.</p>
+<p>Usage restrictions: Whether free hosting is suitable for commercial projects.</p>
+<p>The following table summarizes the main differences between all eight services.</p>
+<p>Free plans aren't directly comparable. For example, Vercel restricts its Hobby plan to personal, non-commercial use, while GitHub Pages prohibits using the service as free hosting for an online business or commercial SaaS.</p>
+<p>Bandwidth limits also aren't the same as visitor limits. A website serving large images or downloadable files can consume its monthly allowance with relatively few visitors.</p>
+<p>Cloudflare Pages is a strong choice for developers who want to host static websites without worrying about a conventional monthly bandwidth cap.</p>
+<p>You can connect a GitHub or GitLab repository, and Cloudflare automatically builds and deploys the website when you push changes. Direct uploads are also supported.</p>
+<p>A maximum individual file size of 25 MiB.</p>
+<p>The combination is useful for blogs, documentation websites, and other projects that primarily serve HTML, CSS, JavaScript, and images.</p>
+<p>Cloudflare also provides preview deployments, custom domains, and HTTPS support.</p>
+<p>No fixed bandwidth cap for static asset delivery.</p>
+<p>Generous free plan for typical static websites.</p>
+<p>Monthly build limits can matter for frequently updated projects.</p>
+<p>Cloudflare's product range can make the initial setup less straightforward for beginners.</p>
+<p>Cloudflare is increasingly emphasizing Workers Static Assets for new projects. Pages remains available, but developers starting a new application should compare both deployment approaches.</p>
+<p>For a conventional static website, however, Pages is still a practical option, particularly when traffic could grow beyond the limits of other free plans.</p>
+<p>See the official Cloudflare Pages limits for the current allowances.</p>
+<p>Netlify combines static website hosting with tools designed to make development and deployment easier.</p>
+<p>Connect a Git repository, configure your build settings, and Netlify can publish a new version whenever you push changes.</p>
+<p>It also creates deploy previews, allowing you to inspect changes before merging them into your production branch.</p>
+<p>This is useful when multiple people work on the same website or when you want to review design changes before publishing.</p>
+<p>Netlify supports custom domains, HTTPS, serverless functions, and form handling.</p>
+<p>Netlify's free plan uses a credit-based model with 300 credits per month.</p>
+<p>Production deployments consume 15 credits each.</p>
+<p>Web requests consume 2 credits per 10,000 requests.</p>
+<p>Deploy previews and branch deployments consume no deployment credits.</p>
+<p>The paid Personal plan starts at $9 per month and includes 1,000 monthly credits.</p>
+<p>Convenient Git integration and deploy previews.</p>
+<p>Built-in features such as forms and serverless functions.</p>
+<p>Suitable for both simple websites and more advanced front-end projects.</p>
+<p>Credit-based pricing requires monitoring several types of usage.</p>
+<p>A busy site with frequent deployments can consume its free allowance faster than expected.</p>
+<p>When comparing Netlify alternatives, Cloudflare Pages is particularly worth considering if your main concern is bandwidth.</p>
+<p>For developers choosing between Vercel vs Netlify, the deciding factor is often the framework and workflow. Netlify offers a flexible approach to static site deployment, while Vercel has particularly close integration with Next.js.</p>
+<p>Vercel is particularly well suited to Next.js applications, although it also supports React, Vue, Svelte, Astro, and other frameworks.</p>
+<p>Like Netlify, Vercel connects to your Git repository and deploys updates automatically.</p>
+<p>Every deployment receives its own URL, which helps developers review changes before publishing them to the main website.</p>
+<p>Vercel also supports server-side rendering, functions, and other features beyond traditional static site hosting.</p>
+<p>There is one important restriction: Vercel Hobby is intended for personal, non-commercial use only.</p>
+<p>If you're deploying a business website or another commercial project, you'll need an appropriate paid plan.</p>
+<p>Convenient deployment workflow for Next.js.</p>
+<p>Supports both static and server-rendered applications.</p>
+<p>Paid usage can involve multiple resource-based charges.</p>
+<p>If you're building a personal Next.js application, Vercel is an obvious candidate. For a basic HTML website, however, its additional framework features may be unnecessary.</p>
+<p>GitHub Pages is a straightforward way to publish a website directly from a GitHub repository.</p>
+<p>It works particularly well for developer portfolios, project documentation, open-source websites, and small informational sites.</p>
+<p>You can upload HTML, CSS, and JavaScript files to a repository, configure GitHub Pages, and publish them under a github.io subdomain.</p>
+<p>GitHub Pages can serve existing static files or build websites using supported workflows, including Jekyll and GitHub Actions.</p>
+<p>Published websites have a maximum size of 1 GB.</p>
+<p>Bandwidth has a soft limit of 100 GB per month.</p>
+<p>Free accounts can publish Pages sites from public repositories.</p>
+<p>The bandwidth and build restrictions are soft limits, meaning they aren't necessarily enforced as strict cutoffs.</p>
+<p>Simple integration with GitHub repositories.</p>
+<p>Well suited to documentation and open-source projects.</p>
+<p>Free accounts require a public repository for Pages.</p>
+<p>GitHub Pages is not intended for running online businesses, e-commerce websites, or commercial SaaS products.</p>
+<p>GitHub Pages is particularly convenient if your code already lives on GitHub and you only need to publish documentation or a portfolio.</p>
+<p>For commercial websites, Cloudflare Pages or Netlify may be more appropriate.</p>
+<p>The GitHub Pages documentation explains its hosting limits and usage restrictions.</p>
+<p>Not every website needs a repository, deployment pipeline, or command-line interface.</p>
+<p>If you've created a simple HTML page and want to share it, TiinyHost lets you upload an HTML file or ZIP archive and publish it under a shareable URL.</p>
+<p>It can also host PDFs, making it useful for sharing documents and presentations alongside website projects.</p>
+<p>The main advantage is the upload process. You don't need to configure a repository or install development tools before publishing.</p>
+<p>Sharing an HTML file with someone who doesn't use Git.</p>
+<p>The free plan includes one active site, a 3 MB project upload limit, and an allowance of 5,000 monthly visits.</p>
+<p>The Tiny plan costs €5 per month when billed monthly. It supports uploads up to 25 MB and includes built-in analytics.</p>
+<p>The Solo plan starts at €13 per month when billed monthly and adds features such as custom domains, password protection, and additional projects.</p>
+<p>Annual billing is available at lower effective monthly prices.</p>
+<p>No Git repository or command line required.</p>
+<p>Suitable for previews and smaller projects.</p>
+<p>The free plan's 3 MB limit is restrictive for websites with many images or other assets.</p>
+<p>Custom domains require the Solo plan or higher.</p>
+<p>Upload-based publishing is less convenient than Git automation for frequently updated websites.</p>
+<p>For someone who simply needs free HTML hosting to share a small project, TiinyHost is worth considering.</p>
+<p>For a larger production website that receives regular updates, Git-based hosting is likely to be more manageable.</p>
+<p>Firebase Hosting is Google's hosting service for static websites and web application assets.</p>
+<p>It integrates with other Firebase products, including Authentication, Cloud Firestore, and Cloud Functions.</p>
+<p>That makes it useful when a website needs static hosting but also relies on Google's back-end services.</p>
+<p>Deployment is handled through the Firebase command-line interface.</p>
+<p>After configuring your project, you can deploy using:</p>
+<p>Firebase distributes website assets through its CDN and supports custom domains with SSL certificates.</p>
+<p>The Blaze plan uses pay-as-you-go billing while retaining applicable no-cost allowances.</p>
+<p>One detail worth checking is the distinction between Firebase Hosting and Firebase App Hosting. They are separate products with different features and pricing models.</p>
+<p>Integrates with Firebase Authentication and Firestore.</p>
+<p>Useful for applications already using Google's developer services.</p>
+<p>Initial setup is more involved than uploading an HTML file.</p>
+<p>The daily transfer allowance may become restrictive for larger websites.</p>
+<p>Firebase Hosting makes the most sense when Firebase is already part of your application.</p>
+<p>For a standalone static blog or portfolio that doesn't use Firebase services, Cloudflare Pages or GitHub Pages may be simpler.</p>
+<p>Amazon S3 and CloudFront offer a different approach to static hosting.</p>
+<p>Instead of using a platform that handles the entire deployment process, you combine AWS services to store and deliver your website.</p>
+<p>S3 stores the website files, while CloudFront distributes them through a CDN.</p>
+<p>This setup provides control over caching, permissions, security, and integration with other AWS services.</p>
+<p>It can be suitable for organizations already using AWS or developers who need specific infrastructure configurations.</p>
+<p>AWS uses usage-based pricing for S3 storage, requests, and applicable CloudFront usage.</p>
+<p>Free allowances may apply depending on your account and the current AWS pricing program, but you should calculate costs based on your expected traffic, storage, and requests.</p>
+<p>Unlike simpler hosting services, there isn't one fixed monthly price for every website.</p>
+<p>Several services can contribute to the final bill.</p>
+<p>Incorrect permissions or origin settings can cause access errors.</p>
+<p>One common issue when setting up S3 static website hosting is receiving a 403 Forbidden error because of bucket permissions or CloudFront origin configuration.</p>
+<p>AWS recommends using CloudFront Origin Access Control with a regular S3 bucket origin so that the bucket can remain private. This differs from exposing the S3 website endpoint directly, which does not support HTTPS on its own.</p>
+<p>AWS S3 and CloudFront are worth considering if you need that level of control. For a small static website, a managed hosting platform usually requires less setup.</p>
+<p>Render is a cloud platform that supports static websites alongside web services, databases, background workers, and other application components.</p>
+<p>Its static hosting works through a Git repository.</p>
+<p>Connect your repository, select the build command and publish directory, and Render automatically deploys your website.</p>
+<p>The service includes CDN delivery, custom domains, and managed TLS certificates.</p>
+<p>Render is particularly useful when your project includes both a static front end and back-end services that you want to manage through the same platform.</p>
+<p>Render's Hobby workspace is free and includes:</p>
+<p>500 standard build pipeline minutes per month.</p>
+<p>Additional bandwidth is billed at $0.15 per GB under the current pricing structure, so the Hobby workspace should not be treated as unlimited free hosting.</p>
+<p>The Pro workspace costs $25 per month, excluding any applicable usage-based compute charges.</p>
+<p>Static websites and back-end services on one platform.</p>
+<p>The 5 GB included bandwidth allowance is relatively small.</p>
+<p>Render makes sense when you're already using it for other parts of an application.</p>
+<p>If you only need to host a static HTML website, Cloudflare Pages offers a more generous bandwidth allowance without the additional platform complexity.</p>
+<p>Free static website hosting can be sufficient for a personal portfolio, documentation site, prototype, or small informational website.</p>
+<p>However, the restrictions vary considerably between providers.</p>
+<p>Some hosts measure data transfer, while others use visitor counts or a credit system. Check how each provider calculates usage rather than comparing headline numbers alone.</p>
+<p>If your website rebuilds whenever you publish content, deployment limits matter. A blog updated a few times a month has different requirements from an application receiving dozens of deployments every day.</p>
+<p>Free hosting doesn't always mean you can run a business website. Vercel's Hobby plan and GitHub Pages have restrictions that may rule out certain commercial projects.</p>
+<p>Some services include custom domains on free plans. Others require an upgrade before you can connect one.</p>
+<p>A free plan might stop serving additional usage, while another provider may bill for overages.</p>
+<p>Before publishing a production website, check the provider's billing behavior and configure spending controls where available.</p>
+<p>The right service depends primarily on how you build your website and what you intend to do with it.</p>
+<p>For most developers publishing a conventional static website, Cloudflare Pages is a reasonable starting point.</p>
+<p>If you're working with Git and want convenient previews and deployment tools, Netlify is another good choice.</p>
+<p>For small files, temporary demos, and client previews, a simpler upload-based service may save time.</p>
+<p>You should also consider how often the website will change.</p>
+<p>Uploading files manually may be fine for a page that rarely changes. For a website with regular content updates, automated deployments from Git will generally be easier to maintain.</p>
+<p>Publishing your website is only the first step. If you want search engines to discover and understand your pages, check the technical SEO basics before sharing the URL.</p>
+<p>Every important page should have a descriptive HTML title and a relevant meta description.</p>
+<p>You can use the Meta Tags Generator to create the necessary markup.</p>
+<p>Open Graph tags help control how a page appears when shared on platforms that support them.</p>
+<p>Set the title, description, canonical page URL where appropriate, and preview image.</p>
+<p>A robots.txt file tells compliant crawlers which paths they may access. It doesn't guarantee indexing or prevent a public page from appearing in search results.</p>
+<p>Use the Robots.txt Generator to create your crawler rules.</p>
+<p>Include a sitemap with the canonical URLs you want search engines to discover.</p>
+<p>Structured data helps search engines interpret eligible content.</p>
+<p>Depending on the website, you may want Organization, Article, BreadcrumbList, or other relevant schema types.</p>
+<p>The JSON-LD Schema Generator can help generate markup.</p>
+<p>Confirm the correct domain loads over HTTPS.</p>
+<p>Check canonical tags and redirect behavior.</p>
+<p>Make sure important pages don't contain unintended noindex directives.</p>
+<p>Test page performance and Core Web Vitals.</p>
+<p>Verify the website in Google Search Console.</p>
+<p>Static hosting makes serving website files relatively straightforward, but technical SEO still requires configuration and testing.</p>
+<p>Cloudflare Pages is a good general-purpose choice because of its free static asset bandwidth and Git integration. Netlify is well suited to teams that need deploy previews, while GitHub Pages works well for portfolios and documentation. The best option depends on your deployment workflow, traffic requirements, and whether the website is commercial.</p>
+<p>Yes. TiinyHost, Cloudflare Pages, Netlify, GitHub Pages, Firebase Hosting, Render, and several other services offer free hosting options. Most free plans have restrictions involving bandwidth, deployments, storage, or usage. Check the terms before using a free plan for a business website.</p>
+<p>A small static website can cost nothing to host if it stays within a provider's free allowances. Paid plans vary from fixed monthly subscriptions to usage-based pricing. Domain registration, paid back-end services, and additional storage or bandwidth may increase the total cost.</p>
+<p>For a standalone HTML file, upload-based hosting is generally the simplest approach. Services such as TiinyHost let you publish a file without configuring Git or a build process. If the project already lives in a GitHub repository, GitHub Pages or Cloudflare Pages may be more convenient.</p>
+<p>GitHub Pages is a sensible option for documentation, open-source projects, and personal portfolios. Netlify offers more deployment features, including preview environments, forms, and functions. It also supports commercial projects, making it more appropriate for some business websites that would fall outside GitHub Pages' permitted uses.</p>
+<p>Static website hosting doesn't need to be expensive or complicated. The important part is choosing a service that matches your website and deployment process.</p>
+<p>Cloudflare Pages is a good starting point for static websites that need generous free bandwidth. Netlify is useful for Git-based development, while GitHub Pages suits personal projects and documentation.</p>
+<p>If you're publishing a small HTML file or sharing a prototype, upload-based hosting may be all you need.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/is-it-agentic-enough" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/best-static-website-hosting-providers-in-2027-free-and-paid-options-compared/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scriptable GeoDNS: leaving AWS for Bunny</title>
+    <title>Granite 4.2 LLMs: How They&#x27;re Built</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9902.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,132 +15,84 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Scriptable GeoDNS: leaving AWS for Bunny</h1>
+        <h1>Granite 4.2 LLMs: How They&#x27;re Built</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://media-bernat-ch.b-cdn.net/images/covers/en/blog/2026-bunny-geodns.7be2142de9305f.jpg" alt="Scriptable GeoDNS: leaving AWS for Bunny" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They&#x27;re Built" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media-bernat-ch.b-cdn.net/images/covers/en/blog/2026-bunny-geodns.7be2142de9305f.jpg" alt="Scriptable GeoDNS: leaving AWS for Bunny" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They're Built" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>To op­ti­mize the per­for­mance met­rics of this blog, I re­lied on Ama­zon
-Cloud­Front to serve the as­sets,1 and Route 53 for the geo-aware
-DNS2 to di­rect read­ers to the clos­est host serv­ing the con­tent. But
-Route 53 is ex­pen­sive: US$0.50 per zone per month, US$0.70 per mil­lion
-ge­olo­ca­tion queries, and US$0.75 per healthcheck per month[1],
-plus US$1 per month for the KMS key[2] needed to sign zones with
-DNSSEC. When I dis­cov­ered that Bunny DNS is al­most free[3] for up to 500
-do­mains and fea­tures script­able an­swers, I made the jump! Plus, it’s a Eu­ro­pean
-com­pany based in Slovenia.</p>
-<p>I had been host­ing me­dia as­sets on Cloud­Front since 2011. ❦</p>
-<p>Route 53 had served bernat.ch since De­cem­ber 2021. I didn’t use healthchecks as
-they were too ex­pen­sive. I didn’t host most of my zones there ei­ther, as queries
-for haproxy.​debian.​net alone would have cost me around US$10 per month. ❦</p>
-<p>Bunny.net[4] started as BunnyCDN in 2015[5]. They added IPv6
-sup­port in 2017[6]. Switch­ing was un­event­ful. I don’t bring a cus­tom do­main: I
-serve the con­tent from the b-cdn.​net do­main. As I de­pend on con­tent
-ne­go­ti­a­tion to serve AVIF and WebP im­ages[7], I con­fig­ure the CDN to cache
-each im­age for­mat sep­arately[8].</p>
-<p>I dis­able log­ging[9] to avoid col­lect­ing per­sonal
-in­for­ma­tion. While the bunny.net GDPR page[10] prom­ises they anonymize data, it
-is un­clear what Cloud­Front keeps in its own logs when log­ging is disabled.</p>
-<p>The only down­side of the bunny.net CDN of­fer­ing is the lack of HTTP/3. I asked
-their sup­port: two min­utes later, they an­swered they are work­ing on it but have
-no ETA to share.</p>
-<p>Bunny.net in­tro­duced their DNS of­fer­ing in 2022[11] and re­cently re­duced its
-cost to al­most zero[3]. They sup­port ge­o­graph­i­cal rout­ing[12], but a
-very cool fea­ture is the script­able DNS[13]: it runs a piece of user-sup­plied
-Java­Script on each query to com­pute the answer.</p>
-<p>I run seven small NixOS vir­tual ma­chines to host this blog around the world:
-Paris, Nurem­berg, Ash­burn, Sin­ga­pore, San Jose, São Paulo, and Syd­ney. Bunny’s
-script­able DNS lets me re­turn the IP ad­dresses of the two near­est servers.
-The browser falls back to the sec­ond server if the first one is down.</p>
-<p>The above script re­lies on the
-RoutingEngine.​getClosestServer()[14] helper, which re­turns the
-clos­est alive3 server to the user.4 Thanks to Doggo[15], we can
-check it works as ex­pected, at least for A:5</p>
-<p>A server is alive if it an­swers an ICMP ping. The bunny.net
-doc­u­men­ta­tion[16] gives more de­tails about the checks. ❦</p>
-<p>The user queries Bunny DNS through a re­solver. Usu­ally, ei­ther the re­solver
-is close to the user, or it ex­poses the user’s sub­net through EDNS client
-subnet[17]. ❦</p>
-<p>Don’t use this script as is: RoutingEngine.​getClosestServer() only works
-with IPv4. The fi­nal script[18] works around this lim­i­tation. ❦</p>
-<p>The most an­noy­ing draw­back of this method is that a user from Buenos Aires gets
-both São Paulo (1000 mi, 30 ms RTT) and Ash­burn (5200 mi, 140 ms RTT). Most
-re­solvers ran­dom­ize the or­der, so the user may pull the web page from Ash­burn.
-We could re­turn only the near­est server—and swap the scripted record with the
-built-in ge­o­graphic rout­ing in­stead. But if the server be­comes un­avail­able, the
-browser has no al­ter­na­tive un­til the DNS cache ex­pires. It leaves a short win­dow
-of un­avail­abil­ity, even with a short TTL.</p>
-<p>The HTTPS DNS record[19], de­fined in RFC 9460[20], solves both the avail­abil­ity
-and the la­tency is­sues. Mod­ern browsers query this record to get ad­di­tional
-in­for­ma­tion to reach an HTTP server, in­clud­ing an al­ter­na­tive port and the
-ap­pli­ca­tion layer protocol—HTTP/2 or HTTP/3. Each record has a pri­or­ity. We
-can ask browsers to con­tact the near­est server first and fall back to the next
-one if the first is un­available:</p>
-<p>This looks like the ideal so­lu­tion! Un­for­tu­nately, Chrome ig­nores any record
-whose tar­get is not .[21], hence the last record at pri­or­ity 3.
-More­over, un­like with a CNAME, Bunny DNS does not re­turn the IP ad­dresses for
-first.​geo and second.​geo in the ad­di­tional sec­tion. The re­solver needs to
-send a first re­quest to get the HTTPS record, and a sec­ond to re­solve
-first.geo.</p>
-<p>HTTPS records are still too new[22] for this use case. Back to the draw­ing board! 📐</p>
-<p>As a com­pro­mise, the script re­turns the two near­est servers if they are at a
-sim­i­lar dis­tance from the user. Oth­er­wise, it re­turns only the near­est one with
-a lower TTL of 2 minutes.</p>
-<p>We can check it with Doggo. From Chicago, we get only the Ash­burn server
-with a TTL of 2 min­utes, while from Mex­ico, we get both Ash­burn and San Jose.</p>
-<p>On the live page[23], the map be­low is in­ter­ac­tive: point at a
-lo­ca­tion to get the DNS an­swer, or dis­able servers to see how the an­swers change.</p>
-<p>En­able Java­Script to make the map be­low in­ter­ac­tive: point at a lo­ca­tion
-to get the DNS an­swer, or dis­able servers to see how the an­swers change.</p>
-<p>This page was brought to you by ???. Check on the map be­low whether it matches your
-location!</p>
-<p>The com­plete code[18] is a bit more com­plex. It works around
-RoutingEngine.​getClosestServer() sup­port­ing only IPv4, and it han­dles the case
-where there are not enough alive servers to build an answer.</p>
-<p>Bunny.net has a com­pre­hen­sive Ter­raform provider[24]. I lever­age CDK
-Ter­rain[25] to build the tar­get state in Type­Script and OpenTofu[26] to de­ploy
-it. Have a look at “Man­ag­ing in­fra­struc­ture with Ter­raform, CDKTF, and
-NixOS[27]” for more details.6</p>
-<p>The ar­ti­cle is a bit out­dated. CDK Ter­rain re­places CDKTF, OpenTofu
-re­places Ter­raform, and I now use Col­mena[28] in­stead of NixOps. ❦</p>
-<p>Route 53 cov­ered one ad­di­tional use case of mine: serv­ing acme.​luffy.cx to
-solve DNS-01 ACME chal­lenges[29]. Un­like Route 53, Bunny DNS can­not
-re­strict ac­cess to a sin­gle zone with a fine-grained ac­cess pol­icy. As this
-us­age re­quires nei­ther high avail­abil­ity nor low la­tency, I re­placed Route 53
-with Hick­ory[30], a mem­ory-safe DNS server writ­ten in Rust. It sup­ports
-au­to­matic DNSSEC sig­na­tures[31] and dy­namic up­dates[32]. Its
-con­fig­u­ra­tion is simple:</p>
-<p>The pro­vided zone file[33] only seeds the data­base on first start. I del­e­gate
-DNS-01 chal­lenges to this zone with CNAME records:</p>
-<p>Lego[34], the ACME client I use to get cer­tifi­cates from Let’s En­crypt[35],
-an­swers the DNS-01 chal­lenge by push­ing en­tries with the DNS UPDATE protocol[36].</p>
-<p>Un­for­tu­nately, Bunny DNS can­not pub­lish a DS record in a zone.7 I need one
-to se­cure the acme.​luffy.cx zone and cer­tifi­cate de­liv­ery. There­fore, I host
-the luffy.cx zone on deSEC[37],8 a free DNS host­ing ser­vice run by a
-non-profit or­ga­ni­za­tion based in Berlin. I de­rive the DS record to pub­lish in
-luffy.cx from the DNSKEY record of acme.​luffy.cx:</p>
-<p>I con­tacted bunny.net sup­port to ask when they will sup­port pub­lish­ing a
-DS record and got an an­swer seven min­utes later: they don’t know. 😭</p>
-<p>This is a bum­mer, as they sup­port au­to­matic CDS, a DNS record to ad­ver­tise
-a DS record to the par­ent zone. They han­dle one side of the del­e­ga­tion,
-not the other.</p>
-<p>I also re­ported a bug with the proof of non-ex­is­tence, and they replied a
-day later with a de­tailed answer. ❦</p>
-<p>Why not use deSEC for ACME chal­lenges? You can limit its to­kens to a
-sin­gle RRset[38]. I could say I pre­fer to self-host, but the
-truth is I only dis­cov­ered this while writ­ing this article. ❦</p>
-<p>Over­all, I am quite happy with the switch to bunny.net. There are still a few
-rough edges, like the in­abil­ity to pub­lish DS records, the lack of HTTP/3, and
-the IPv4-only RoutingEngine.​getClosestServer() helper. The bill went from US$5
-per month to US$1. So far, per­for­mance is on par with AWS[39], but I
-only fi­nal­ized the cur­rent setup, in­clud­ing the server in Syd­ney, in late
-Oc­to­ber. I need a bit more time to gather more data, and I’ll post a short update. 📈</p>
-<p>This post was briefly dis­cussed on Hacker News[40] and Lobsters[41].</p>
+                <p>A technical walkthrough of how we built the Granite 4.2 reasoning model family.</p>
+<p>TL;DR: Granite 4.2 is our first family of dense, decoder-only reasoning LLMs, released in three sizes: 3B, 8B, and 30B. These  models are post-trained from Granite-4.1 base models. Granite-4.1 base models were pre-trained from scratch on roughly 15T tokens with a five-phase strategy that extends the context window to 512K tokens, supervised fine-tuned on chain-of-thought, reasoning, and agentic-trajectory data, then post-trained with a multi-stage reinforcement learning pipeline. That pipeline includes agentic RL, where the 8B and 30B models learn to act with tools inside real sandboxed environments. Every model has a thinking / non-thinking switch, a low-effort thinking mode that spends a short reasoning budget on easy questions, and native tool calling. All Granite 4.2 models are released under the Apache 2.0 license.</p>
+<p>Granite 4.2 is the reasoning-focused release of the Granite language-model family. Earlier Granite releases were strong instruction-following assistants; Granite 4.2 adds explicit reasoning. Every model can produce a chain of thought before its answer and can run in thinking or non-thinking mode depending on how much deliberation a task needs. A low-effort mode falls between the two, spending a short reasoning budget on easy questions.</p>
+<p>The three sizes (3B, 8B, and 30B) share the same architectural design and follow the same training pipeline (base model, SFT, then multi-stage RL), each at its own scale. All three are strong reasoners and instruction followers. The clearest capability split shows up in post-training. The 8B and 30B models additionally go through an agentic RL block that teaches them to operate as agents: calling tools, editing and running code, driving a terminal, and searching the web inside real environments. Every model supports native tool calling. Served through an OpenAI-compatible endpoint (for example, with vLLM), it emits tool calls in the OpenAI function-calling format and plugs into agentic harnesses without extra glue. Granite 4.2 is also supported in SGLang, see the SGLang cookbook for a ready-to-serve recipe.</p>
+<p>The rest of this post walks through the build: architecture, pre-training, supervised fine-tuning, the multi-stage RL pipeline, and results.</p>
+<p>Granite 4.2 models are built on a decoder-only dense transformer architecture with the following core components:</p>
+<p>Granite 4.2 models are post-trained from Granite-4.1 base models. Granite-4.1 base models were trained from scratch on approximately 15 trillion tokens using a five-phase training strategy. Phases 1–2 focus on foundational pre-training, phases 3–4 perform mid-training with progressively higher-quality data annealing, and phase 5 introduces long-context training, extending the context window to 512K tokens. Each phase uses a distinct data mixture and learning-rate schedule, gradually shifting from broad web-scale data toward more curated, high-quality sources.</p>
+<p>The pre-training recipe closely follows the previous generation; for a detailed treatment of the data blend, phase schedule, and long-context extension, see the Granite 4.1 blog.</p>
+<p>Supervised fine-tuning (SFT) turns the base model into a reliable instruction-following, reasoning, and tool-using assistant. The SFT data mixture combines agentic (31.6%) and non-agentic (68.4%) data, totaling approximately 7.2 million samples, or roughly 100B tokens, of which about 65B are trainable.</p>
+<p>The agentic corpus covers a broad range of domains, including software engineering (SWE, 69%), tool calling (12.1%), terminal use (8.0%), math (3.5%), search (0.8%), and action (0.2%). These samples and trajectories are generated using a diverse set of agent scaffolds and harnesses, including OpenHands, OpenCode, Terminus-2, SWE-agent, OpenResearcher, MiniSWE, OpenSeeker, EnvScaler, Gemini CLI, Hermes, Codex, and Goose. The agentic data combines samples from both open-source datasets and our own synthetically generated RL environments, spanning a variety of agent–harness combinations.</p>
+<p>The non-agentic corpus consists of several major categories: instruction following (18.8%), coding (18.8%), math (14.6%), multilingual (7.0%), science (5.4%), reasoning (3.0%), and safety (0.8%).</p>
+<p>We apply multiple stages of quality control before a sample enters the final SFT mixture. First, data from different sources is normalized and reformatted into a consistent OpenAI Chat format, making the conversation structure and tool interactions uniform across datasets and scaffolds.</p>
+<p>We then use GPT-OSS-120B and Gemma 4 as LLM-based judges to assess sample quality. Low-scoring samples are removed, as are samples containing hallucinated or fabricated information, invalid tool interactions, or tool calls to functions that are not defined in the corresponding tool list. Several targeted, dataset-specific heuristic rules are also applied where appropriate to further improve quality and remove known sources of noise.</p>
+<p>Finally, we perform both local and global deduplication. Deduplication is based on SHA-256 hashes computed over the combination of the tools and messages fields, removing duplicate samples both within individual data sources and across the overall SFT mixture.</p>
+<p>The complete corpus is first globally shuffled to reduce ordering effects and ensure that samples from different domains are well mixed during training. The shuffled corpus is then partitioned into equally sized .parquet shards, which are tokenized using the model's tokenizer and chat template and prepared for large-scale distributed training.</p>
+<p>Before launching the final large-scale runs, we tune hyperparameters on representative configurations, sweeping learning-rate schedules, initial learning rates, and warm-up ratios to find settings that train stably across model sizes. The final training configuration is summarized below:</p>
+<p>For the 30B model, we additionally perform a second phase of SFT focused specifically on agentic coding. In this phase, agentic, SWE, and coding data are upsampled to increase their effective contribution to the training distribution, while approximately 16% of the mixture is retained as replay data from the original SFT corpus.</p>
+<p>The 30B model is then fine-tuned for roughly one additional epoch at a lower learning rate of 3.0e-6. This targeted second phase increases the model's exposure to agentic coding trajectories without discarding the capabilities acquired during the initial SFT phase.</p>
+<p>After SFT, we apply a multi-stage, multi-environment reinforcement learning pipeline. Rather than a single RL pass, we run a chain of focused stages spanning many environments: math, code, science, instruction following, tool use, and structured output, then software engineering, terminal use, and web search. Each stage is an independent RL run that targets one capability and warm-starts from the previous stage's checkpoint.</p>
+<p>Figure 1. The staged RL curriculum. Foundational RL (verifiable rewards + skill boosters) runs for all sizes; the agentic RL block (SWE → Terminal → Search) runs for 8B and 30B only. Every model finishes with RLHF. Each stage is a separate GRPO run that warm-starts from the previous checkpoint.</p>
+<p>Every stage trains with asynchronous GRPO (Group Relative Policy Optimization), so the generator and trainer halves of the loop never block on each other. A pool of generation workers keeps sampling responses and dropping the finished trajectories into a shared buffer; once the buffer holds a full step's worth, the trainer pulls that batch, takes an optimizer step, and streams the updated parameters back to the generator workers without pausing them. A refresh can land partway through a rollout, leaving a single trajectory stitched together from two adjacent policy versions. We allow this instead of paying to prevent it: the workers reuse their existing KV cache rather than rebuilding it after each refresh, and the one guardrail is a limit that keeps them from drifting more than a single update behind the trainer, which bounds how off-policy any sample can get. Whatever mismatch survives that limit is handled in the objective by truncated importance sampling, which clamps the train-versus-generation log-probability ratio to a fixed ceiling so a handful of stale tokens cannot dominate an update.</p>
+<p>Advantages are group-relative with a leave-one-out baseline: each response is judged against the mean reward of the other samples drawn for the same prompt, which removes the need for a separate value network. To make this concrete, take RLVR, the first and longest-running stage: each step pairs 256 prompts with 16 sampled responses apiece for a 4,096-example batch, which the trainer consumes in a single optimizer step before the next rollout begins. Later stages keep this machinery unchanged and adjust only the per-stage shape, shown next.</p>
+<p>The pipeline keeps a common backbone of hyperparameters across every stage, which makes the curriculum easier to run and compare. A handful of knobs are fixed everywhere:</p>
+<p>What changes from stage to stage is the shape of each run: how many prompts and generations per step, how long the context is, whether the agent loop runs, and how hard we pull back toward the reference policy. The table below gives the exact settings for the 30B chain, stage by stage:</p>
+<p>Parameters shown for the 30B model. Global batch size = prompts/step × generations/prompt (e.g. 256 × 16 = 4096 for RLVR). The 3B and 8B models use the same recipe and hyperparameters with fewer stages (see How the Three Sizes Differ); the stage list is what changes, not the knobs.</p>
+<p>The KL schedule follows the reward type: explore freely where the reward is objective and verifiable (RLVR and SWE 2 run at KL 0), and stay close to the reference where the objective is preference, safety, or a narrow skill graft (RLHF and the code booster use KL 0.05). The rollout-turns column counts the environment interactions GRPO itself sees per rollout. In every case the model is trained on complete, real-environment trajectories.</p>
+<p>Each stage is a separate RL run with a single objective and its own reward signal. When it finishes, its policy is exported to Hugging Face format and becomes the base model for the next stage, so the pipeline is a sequence of warm-starts:</p>
+<p>The 8B and 30B models follow the full ladder. The 3B model takes a shortened path: foundational RL and alignment, without the agentic block.</p>
+<p>A stage is defined mostly by how it is rewarded. Across the pipeline there are three reward types, and a single stage can use more than one:</p>
+<p>Verifiable rewards are objective and hard to game, so the pipeline front-loads them. Judge- and preference-based rewards handle open-ended qualities that no checker can express. Agentic-outcome rewards are the sparsest: often a single bit at the end of a long tool-use trajectory.</p>
+<p>RLVR is the foundational stage and the broadest data mix in the pipeline: a single blended dataset spanning many verifiable domains.</p>
+<p>Each task type carries its own verifier, so the reward is grounded per example. RLVR runs for two rounds on 3B and 8B, and three on 30B. Each round is a fresh warm-started run on a re-weighted mix of public and internally curated RL data.</p>
+<p>After RLVR, a few short booster stages sharpen specific capabilities that benefit from concentrated training focusing on the following domains:</p>
+<p>Boosters are small, focused runs. A light KL penalty keeps the model close to its current behavior while nudging one skill.</p>
+<p>In the agentic stages the model learns to act: call tools, observe results, and iterate inside a real environment, rewarded on whether the task was actually solved. These stages share the same shape: multi-turn tool use, real (not simulated) environments, sparse outcome rewards, and GRPO, warm-started from the coding-boosted checkpoint. They run in order: SWE → Terminal → Search.</p>
+<p>Figure 2. The three agentic-RL environments. Each pairs a real harness with a real environment and a sparse, outcome-based reward. The 3B model runs none of these.</p>
+<p>The final stage of every model is RLHF for human preference and safety. It optimizes against a generative reward model (GenRM) for preference, plus a safety reward covering jailbreak resistance and appropriate refusals. This stage uses the highest KL penalty in the pipeline, aligning tone and safety without eroding the capabilities the earlier stages built. In addition to human preference and safety alignment, this stage also applies a reasoning-length penalty to discourage overly verbose reasoning behavior acquired during earlier stages.</p>
+<p>Same method and infrastructure; the difference is how far up the ladder each model goes.</p>
+<p>3B is a strong foundational-RL model; 8B and 30B add the agentic-RL block on top, learning to act with tools in real environments.</p>
+<p>Reinforcement learning at this scale needs infrastructure that can drive a training loop and a fleet of live environments at the same time. This matters most in the agentic stages, where every training example is a multi-turn rollout that edits code, runs commands, or browses the web. Granite 4.2's RL runs on two open components: NeMo-RL on the training side and NeMo-Gym on the rollout side.</p>
+<p>Figure 3. The RL system. NeMo-RL drives the GRPO loop (Megatron-Core training backend, vLLM generation, and Megatron-Bridge for HF⇄Megatron weight conversion). NeMo-Gym orchestrates rollouts and hosts the tools, sandboxes, and reward/verifier calls as pluggable Resources.</p>
+<p>That uniformity is what makes the staged curriculum above practical: a booster's rule-based checker and a full SWE sandbox present the same interface to GRPO.</p>
+<p>This split is also what makes the asynchronous training loop described above physically possible: generation and policy updates live on separate GPU pools, so the expensive generation fleet — including the live agentic environments — stays busy instead of idling through optimizer steps.</p>
+<p>Granite 4.2 was evaluated across agentic coding, general agentic and tool use, reasoning, chat and instruction following, and long context. The full benchmark table is below, followed by charts that break out the headline results by model size.</p>
+<p>Supported languages: English, German, Spanish, French, Japanese, Portuguese, Arabic, Czech, Italian, Korean, Dutch, and Chinese.</p>
+<p>The charts below break these results out by capability area.</p>
+<p>Figure 4. Reasoning (pass@1). Scores rise consistently with model size across math (AIME25, HMMT), science (GPQA), and code reasoning (LiveCodeBench, SciCode).</p>
+<p>Figure 5. Agentic coding resolve rates. The agentic-RL block is trained only for 8B and 30B; the 30B model leads across SWE-Bench variants and Terminal-Bench.</p>
+<p>Figure 6. General agentic and tool-use benchmarks, reported for all three sizes.</p>
+<p>We also released four quantized variants of the Granite 4.2 models for inference with vLLM. The models are converted to FP8, NVFP4, and MXFP4 using LLM Compressor, and to the GGUF format using the llama.cpp framework for reduced-memory deployment.</p>
+<p>The FP8 version is quantized with dynamic per-channel weights and per-token activations.  No calibration is used.</p>
+<p>The NVFP4 and MXFP4 versions are quantized using GPTQ calibrated on 2K samples drawn from the SFT dataset.  Max context length is 2K during calibration.</p>
+<p>Conversion of the Granite 4.2 models to GGUF is done with the canonical llama.cpp tool as described in https://github.com/IBM/gguf#gguf-conversion--quantization.</p>
+<p>We trained the Granite 4.2 language models on an NVIDIA GB200 NVL72 cluster hosted by CoreWeave, featuring:</p>
+<p>This infrastructure delivers the high-bandwidth, low-latency communication required for efficient large-scale distributed training.</p>
+<p>The training software stack is packaged into .sqsh container images, each giving a run a reproducible, portable environment with its SBSA-compatible CUDA targets, Linux aarch64 Python wheels, and GPU-specific binaries pinned. The large-scale SFT runs build on an NGC PyTorch base image (Ubuntu 22.04, CUDA 12.8, Python 3.12); the RL stack runs in its own NeMo-RL container.</p>
+<p>Granite models support tool calling with integrated reasoning: the model reasons about which tool to call and why before calling it. Tools are defined with the OpenAI function definition schema.</p>
+<p>Granite models can serve as the backbone for agentic coding tools. Because they support reasoning and tool calling through the OpenAI-compatible API, they integrate with popular agentic harnesses without extra adapters. Start the vLLM server, then follow the harness-specific instructions below.</p>
+<p>OpenCode is an AI coding agent that runs in your terminal.</p>
+<p>Configure ~/.config/opencode/opencode.json:</p>
+<p>For full documentation, see opencode.ai/docs.</p>
+<p>Pi is a minimal agent harness for AI-powered coding that runs in your terminal. It supports custom providers via a models.json configuration file.</p>
+<p>Then select the granite-4.2-30b model with /model or Ctrl+L in the interactive session.</p>
+<p>OpenHands is an AI software engineer that can plan, write code, and execute commands.</p>
+<p>Install and launch OpenHands following the official installation guide.</p>
+<p>Configure the LLM in the OpenHands settings with:</p>
+<p>Note: The openai/ prefix is required when connecting to OpenAI-compatible endpoints like vLLM. Refer to the OpenHands local LLM documentation for detailed setup instructions, troubleshooting, and alternative installation methods.</p>
+<p>Last updated: September 11, 2026 to clarify base models.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://vincent.bernat.ch/en/blog/2026-bunny-geodns" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/ibm-granite/granite-4-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

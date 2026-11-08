@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Add AI Content Detection to Your Node.js App</title>
+    <title>How to Optimize AI-Generated Images for Faster Websites</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10369.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,105 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Add AI Content Detection to Your Node.js App</h1>
+        <h1>How to Optimize AI-Generated Images for Faster Websites</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_nodejs_ai_cover_cc20b5de03.png" alt="How to Add AI Content Detection to Your Node.js App" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Optimize_AI_Images_for_Faster_Websites_9995bc6004.png" alt="How to Optimize AI-Generated Images for Faster Websites" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_nodejs_ai_cover_cc20b5de03.png" alt="How to Add AI Content Detection to Your Node.js App" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Optimize_AI_Images_for_Faster_Websites_9995bc6004.png" alt="How to Optimize AI-Generated Images for Faster Websites" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Sooner or later someone on your team asks it. Maybe it’s a product manager, maybe the head of content, maybe a teacher who’s just marked forty near-identical essays: can we tell when people are pasting in ChatGPT output?</p>
-<p>The short answer is no, not with certainty. Anyone who promises you that is selling something.</p>
-<p>But you can get a useful signal, and you can show it to the people who actually make the call: editors, teachers, moderators. In this tutorial you’ll build a small Express app that takes some text, sends it to an AI detector API, waits for the result, and highlights the sentences that look machine-written.</p>
-<p>I’m using the Quetext AI Detector API here. It scores each sentence, not just the whole document, and you can try it without a subscription. Most detection APIs follow the same submit, poll, fetch pattern, though. If you switch providers later, you’ll rewrite one file.</p>
-<p>Put the key in an environment variable. Don’t hard-code it, and don’t let it anywhere near the browser.</p>
-<p>You’ll make three calls. Analysis takes a few seconds, so the API hands you a ticket and makes you come back for the result. Keep the Quetext API docs open in another tab while you follow along; they list every endpoint, field and error code.</p>
-<p>Every request sends your key in an X-API-Key header. The minimum input is 50 words, which sounds annoying until you realise no detector can say anything useful about a two-line comment.</p>
-<p>And remember this number: 10 requests every 5 seconds, per account. Progress checks count. It’ll come back to bite you in the production section if you ignore it.</p>
-<p>Create quetext.js. I like keeping everything provider-specific in one file, so the rest of the app has no idea who’s doing the detecting.</p>
-<p>Three decisions in there that are worth a sentence each:</p>
-<p>The errors keep their HTTP status code. A 402 means you’ve run out of credit and a 429 means you’re polling too fast, and you’ll want to handle those differently from “something broke.”</p>
-<p>It polls every 2.5 seconds because Quetext’s docs suggest 2 to 3. Polling faster won’t speed the report up. You’ll just burn through the rate limit.</p>
-<p>And there’s a hard timeout. Leave it out and one stuck report can hang a request forever. That’s a miserable bug to track down at 11pm.</p>
-<p>Next, server.js. It checks the input, runs the three calls, and gives the frontend a simple response that doesn’t mention Quetext anywhere.</p>
-<p>Look at the mapping at the end. generated_prob becomes probability, and ai_score comes back as a string like "82.50", so it gets parsed into a number. It’s a small detail. But it means your frontend never learns which provider’s field names it’s dealing with, and that’s what makes swapping providers a one-file change.</p>
-<p>Show someone “64% AI” and they’ll jump to a conclusion. Show them a paragraph with three sentences shaded pink and they’ll actually read it.</p>
-<p>So the page shows every sentence, coloured by how likely it is to be AI-generated. Create public/index.html:</p>
-<p>Run node server.js and open http://localhost:3000. Try two samples: something you wrote yourself, then a raw chatbot answer on the same topic. Seeing which sentences light up teaches you more about how these detectors work than any diagram I could draw.</p>
-<p>A quick security point. Those sentences came from your users, then went through an outside service. Treat them as untrusted. That’s why the code uses textContent and never innerHTML, as the OWASP XSS prevention cheat sheet recommends.</p>
-<p>The demo keeps an HTTP request open while it polls. Fine on your laptop. Not fine with real traffic.</p>
-<p>Submit the text, save the report id with a pending status, and respond straight away. A worker (BullMQ, a cron job, a serverless queue, whatever you already use) does the polling and updates the record once it’s done. The UI says “Checking…” until the result shows up.</p>
-<p>Here’s how it goes wrong. It’s Monday morning, 20 editors open their review queues and click “Check” at roughly the same time. Each request polls on its own, and within a few seconds you’ve hit 429s across the board, because the 10-per-5-seconds limit covers your whole account, not each user.</p>
-<p>Use one worker that loops through every pending report, with a short pause between calls. Problem solved.</p>
-<p>You pay per word, so don’t check every blog comment. Article submissions, assignments and paid freelance work usually justify the cost. Cache results against a hash of the text too. Someone who submits the same draft three times shouldn’t cost you three times.</p>
-<p>AI detection doesn’t catch copying. Someone can lift a 2019 blog post word for word and it’ll score 0% AI, because a human wrote it. Just not this human. If originality matters to your product, the same API has plagiarism endpoints that work exactly the same way. The API documentation covers both.</p>
-<p>Developers skip this part. It’s also the part that ends up in angry support tickets.</p>
-<p>In 2023, Liang and colleagues at Stanford ran essays written by non-native English speakers (all human, written for the TOEFL) through seven AI detectors. On average, the detectors labelled more than 61% of them as AI-generated. Simple vocabulary and textbook grammar read as “predictable,” and predictability is exactly what detectors look for.</p>
-<p>Picture an international student getting an automatic zero because a script said so. You don’t want to be the person who built that.</p>
-<p>Do that and the detector is a fast first pass that points people at what’s worth a closer look. Your humans still make the call.</p>
-<p>You send text, the service checks how predictable each sentence would be to a language model, and you get back a probability that a machine wrote it. Most of these APIs are asynchronous. You submit, get a report ID, poll until it’s ready, then fetch the result. The better ones score individual sentences as well as the whole text, which makes building a sensible review screen much easier.</p>
-<p>More than you’d think. Quetext’s API won’t accept fewer than 50 words, and in practice scores settle down once you’re past about 300. A product title or a one-line comment just doesn’t give a detector enough to go on. For short content, either group related pieces together or don’t bother checking it.</p>
-<p>No. Detectors make mistakes, and research shows they flag non-native English writers far more often than native speakers. Use the score to decide what a human looks at first, not to block anything. Give reviewers the highlighted sentences, give users a way to explain themselves, and log what you decided. Your users get treated fairly and your support team avoids a pile of angry tickets.</p>
-<p>Poll at the speed the provider recommends (every 2 to 3 seconds for Quetext), and remember that those polls count against your limit too. Once you’re in production, move checks into a background queue and let one worker poll every pending report, rather than having each user request poll by itself. When you do get a 429, wait a moment and retry.</p>
-<p>No. If the browser calls the API directly, your key ends up in the frontend code where anyone can copy it and spend your credit. Keep the key in an environment variable on your server and send requests through your own endpoint, like the one in this tutorial. That also gives you somewhere to check input length, apply per-user limits and cache results before you pay for anything.</p>
+<p>AI-generated images are becoming a common part of modern web development. Developers use them for website banners, product illustrations, landing pages, blog posts, and digital interfaces. However, generating an image is only one part of the process. Before publishing it, developers need to ensure that the image loads quickly, displays correctly across devices, and maintains its visual quality.</p>
+<p>Large image files can increase page size, consume unnecessary bandwidth, and delay the appearance of important content. These problems can affect user experience and website performance, particularly on mobile devices and slower internet connections.</p>
+<p>A reliable image optimization workflow helps address these challenges. By selecting appropriate dimensions, choosing efficient image formats, automating image processing, and implementing responsive delivery, developers can improve loading performance without sacrificing visual quality.</p>
+<p>This guide explains how to optimize AI-generated images using practical techniques and development tools.</p>
+<p>Images often account for a significant portion of a webpage's total download size. Uploading large, unoptimized images can make pages slower and increase the amount of data visitors need to download.</p>
+<p>Several common problems contribute to poor image performance:</p>
+<p>Incorrect dimensions waste bandwidth on smaller screens.</p>
+<p>Missing image dimensions can cause unexpected layout shifts.</p>
+<p>Poor responsive configuration can make browsers download unnecessarily large images.</p>
+<p>Incorrect loading priorities can delay important visual content.</p>
+<p>These issues can affect Core Web Vitals, including Largest Contentful Paint (LCP), which measures how quickly the largest visible content element appears.</p>
+<p>For developers, image optimization should therefore be part of the website development workflow rather than a final task performed immediately before publication.</p>
+<p>Before optimizing an image, determine where it will appear on the website. A full-width banner requires different dimensions from a product thumbnail or a small interface graphic.</p>
+<p>For example, a website might use the following dimensions:</p>
+<p>These dimensions are examples rather than fixed requirements. The appropriate size depends on the website layout, responsive breakpoints, and supported devices.</p>
+<p>When preparing source visuals, developers can explore different AI image generation options and consider how the generated images will fit their intended layouts.</p>
+<p>Once the image is ready, keep a high-quality master file. This allows developers to create smaller versions for different screen sizes without repeatedly compressing an already optimized image.</p>
+<p>Avoid enlarging small images unnecessarily because upscaling can introduce blur and visible artifacts.</p>
+<p>Choosing the right format can reduce image size while preserving acceptable visual quality.</p>
+<p>Three commonly used formats are AVIF, WebP, and JPEG.</p>
+<p>AVIF: Often provides efficient compression for photographs and detailed illustrations. It can significantly reduce file sizes, although encoding may take longer.</p>
+<p>WebP: Supports lossy and lossless compression, transparency, and animation. It offers broad browser support and is suitable for many website images.</p>
+<p>JPEG: Remains useful for photographs and situations where compatibility with older software or systems is important.</p>
+<p>PNG is appropriate for certain lossless graphics, screenshots, and images that require transparency. However, it can produce unnecessarily large files when used for photographic content.</p>
+<p>No format is automatically the best choice for every image. Developers should compare file sizes and inspect visual quality before selecting the final output.</p>
+<p>A practical approach is to generate AVIF and WebP versions and provide a JPEG fallback where necessary.</p>
+<p>Manually resizing and converting images becomes time-consuming when a website contains dozens or hundreds of visual assets.</p>
+<p>Automation makes the process more consistent. Developers can use Sharp, a Node.js image-processing library, to resize images, convert formats, and generate multiple versions from a single source file.</p>
+<p>Next, create a file named build-images.mjs:</p>
+<p>The script creates multiple image sizes in both WebP and AVIF formats.</p>
+<p>The quality settings are starting points, not universal recommendations. Developers should adjust them after checking the resulting file sizes and visual details.</p>
+<p>This approach is particularly useful for content-heavy websites, product catalogs, and applications that publish images regularly.</p>
+<p>Responsive image delivery allows browsers to select an appropriate image based on the visitor's screen and the space available in the layout.</p>
+<p>HTML provides two important attributes for this purpose: srcset and sizes.</p>
+<p>The srcset attribute lists the available image files and their widths. The sizes attribute describes how wide the image is expected to appear at different viewport sizes.</p>
+<p>In this example, the image is expected to occupy approximately 720 pixels on wider screens and nearly the full viewport width on smaller screens.</p>
+<p>The browser uses this information to choose an appropriate image candidate.</p>
+<p>One common mistake is setting sizes="100vw" for an image that occupies only a small part of the page. This can encourage the browser to download a larger file than necessary.</p>
+<p>Always ensure that the sizes attribute reflects the actual website layout.</p>
+<p>The HTML picture element allows developers to provide multiple image formats and a fallback option.</p>
+<p>The browser selects a supported format, while the img element provides the fallback image and alternative text.</p>
+<p>Developers should verify that every referenced file exists and that its dimensions match the intended layout.</p>
+<p>The picture element can also support different crops for desktop and mobile devices. This is useful when a wide banner needs a separate composition for smaller screens.</p>
+<p>Images without defined dimensions can cause content to move while the browser loads the file. This behavior contributes to Cumulative Layout Shift (CLS).</p>
+<p>Including width and height attributes helps browsers reserve the appropriate space before the image finishes loading.</p>
+<p>For responsive layouts, developers can use CSS:</p>
+<p>This allows images to scale within their containers while maintaining their proportions.</p>
+<p>Images below the initial viewport can generally use native lazy loading:</p>
+<p>However, the main hero image should not normally be lazy-loaded when it is responsible for LCP. Delaying an important above-the-fold image can make the page appear slower.</p>
+<p>Where appropriate, developers can use fetchpriority="high" for the main image to help the browser prioritize its download.</p>
+<p>The correct strategy depends on the image's position and importance within the page.</p>
+<p>Image optimization involves more than file size and dimensions. Developers should also consider accessibility, file organization, and metadata.</p>
+<p>Alternative text helps people using screen readers understand meaningful images. It should describe the image's purpose in the context of the page.</p>
+<p>Decorative images that provide no useful information should generally use an empty alt attribute.</p>
+<p>File names should also be descriptive. Names such as home-office-sunrise.webp are easier to understand and maintain than generic names such as image-final-v3.png.</p>
+<p>Metadata requires additional consideration. Image-processing tools may remove metadata by default to reduce file size. This can include information that a project needs to preserve, depending on its requirements.</p>
+<p>Before removing metadata, developers should review whether the website or client requires attribution, provenance information, or other embedded details.</p>
+<p>After implementing an optimization workflow, test the actual website rather than relying only on exported file sizes.</p>
+<p>Chrome DevTools provides useful information about image requests.</p>
+<p>Open Developer Tools and select the Network panel.</p>
+<p>Resize the viewport or use device emulation.</p>
+<p>Check whether the browser downloads appropriately sized images.</p>
+<p>Developers can also inspect the image selected by the browser through the console:</p>
+<p>This returns the current image URL selected for that element.</p>
+<p>For websites with multiple images, inspect the relevant elements individually.</p>
+<p>Finally, run an audit using Lighthouse or PageSpeed Insights. These tools can identify issues involving oversized images, image formats, loading priorities, and other performance factors.</p>
+<p>Image optimization is only one part of website performance. Server response times, caching, CSS, JavaScript, and third-party scripts can also influence loading speed.</p>
+<p>Several mistakes can reduce the effectiveness of an image optimization workflow:</p>
+<p>Uploading original images without checking their dimensions.</p>
+<p>Assuming one format always produces the smallest file.</p>
+<p>Omitting the sizes attribute from responsive images.</p>
+<p>Lazy-loading important above-the-fold images.</p>
+<p>Applying excessive compression and damaging visual details.</p>
+<p>Removing metadata without checking project requirements.</p>
+<p>Measuring file size without inspecting the final visual quality.</p>
+<p>A consistent testing process helps identify these issues before they affect visitors.</p>
+<p>No. AVIF often provides efficient compression, but the results depend on the image, encoding settings, and quality requirements. Comparing both formats is the best way to choose an appropriate option.</p>
+<p>Four to six sizes may be sufficient for many websites. The ideal number depends on the layout, responsive breakpoints, and supported devices.</p>
+<p>Yes. Reducing the size of the main content image, providing responsive versions, and avoiding unnecessary loading delays can improve LCP when that image is the largest contentful element.</p>
+<p>No. Lazy loading is useful for images outside the initial viewport. Important images near the top of the page should generally load promptly.</p>
+<p>The fundamental techniques are the same as those used for conventional images. However, AI-generated visuals may contain complex textures, gradients, and fine details that require careful inspection after compression.</p>
+<p>AI-generated images can improve website design and make it easier to create custom visual content. However, efficient delivery requires more than exporting an image and uploading it to a website.</p>
+<p>Developers should choose suitable dimensions, compare modern image formats, automate processing, and implement responsive image delivery. Including image dimensions helps prevent layout shifts, while appropriate loading priorities can improve the experience for visitors.</p>
+<p>By testing images across different devices and reviewing their actual performance, development teams can maintain visual quality while reducing unnecessary downloads.</p>
+<p>A repeatable optimization workflow makes it easier to publish new visuals without sacrificing website speed, accessibility, or reliability.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-add-ai-content-detection-to-your-node-js-app/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-optimize-ai-generated-images-for-faster-websites/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
