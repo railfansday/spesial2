@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetBSD 11 desktop on a Raspberry Pi 4</title>
+    <title>Open TTS Leaderboard: Scalable Evaluation for Multilingual Text-to-Speech and Voice Cloning</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9913.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>NetBSD 11 desktop on a Raspberry Pi 4</h1>
+        <h1>Open TTS Leaderboard: Scalable Evaluation for Multilingual Text-to-Speech and Voice Cloning</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/open-tts-leaderboard/thumbnail.png" alt="Open TTS Leaderboard: Scalable Evaluation for Multilingual Text-to-Speech and Voice Cloning" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/open-tts-leaderboard/thumbnail.png" alt="Open TTS Leaderboard: Scalable Evaluation for Multilingual Text-to-Speech and Voice Cloning" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Now that I moved this capsule to a VPS, my Raspberry Pi became available for other use. NetBSD is the only open-source operating system in development that I know of, that doesn't include AI slop. At least for now? I decided to give it a go and try to install it on the Pi. How hard can it be? It turns out, not that much. I made a small guide on how I did it, maybe it helps someone.</p>
-<p>I assume you're preparing the SD card for the Pi on Linux.</p>
-<p>https://nycdn.netbsd.org/pub/NetBSD-daily/netbsd-11/latest/evbarm-aarch64/binary/gzimg/arm64.img.gz</p>
-<p>Get the latest Raspberry Pi UEFI firmware:</p>
-<p>Get Balena's Etcher (if you don't have it):</p>
-<p>https://etcher.balena.io/#download-etcher</p>
-<p>Insert the microSD card in your laptop (I used cheap USB SD card reader).</p>
-<p>Extract the Etcher, enter it's directory and launch it (as a regular user):</p>
-<p>In the UI, select the "Flash from file" option and find the previously extracted NetBSD arm64 image. For destination select the SD card (make sure it's really the SD card! In my case it was on /dev/sda). Flash the image (give sudo access).</p>
-<p>Create a directory for the NetBSD boot partition mount:</p>
-<p>Mount the SD card's first partition there:</p>
-<p>Copy all the files from the rpi_firmware directory to /mnt/netbsd-boot (overwrite everything).</p>
-<p>This step is needed so the UEFI BIOS can actually boot the NetBSD partitions on the SD card.</p>
-<p>Now you can insert the SD card into your Raspberry Pi.</p>
-<p>Turn it on and press ESC to enter the UEFI setup menu.</p>
-<p>Open Boot Maintenance Manager -> Boot Options -> Change Boot Order, move the SD card to the top (with the + key), then choose Commit Changes and Exit.</p>
-<p>NetBSD should now boot. It will start with resizing the root filesystem.</p>
-<p>When finished, you can login with "root".</p>
-<p>It's recommended to create a user right away, but you can do that later too:</p>
-<p>If we type 'ifconfig', we can't see the wireless adapter there. That's a problem.</p>
-<p>In dmesg however we can see that the kernel recognized it and found its driver, but couldn't autoconfigure it:</p>
-<p>bwfm0: Found firmware file: brcmfmac43455-sdio.bin</p>
-<p>bwfm0: autoconfiguration error: NVRAM file not available</p>
-<p>ifconfig now shows the bwfm0 device. Let's configure our WiFi access point.</p>
-<p>Add this to the bottom (pay attention to case sensitivity):</p>
-<p>(Quick Vi help: you enter the interactive (edit) mode by pressing 'i'. You delete a character by leaving the interactive mode with ESC and pressing 'x' on the character you want to delete. You save the file by pressing ':' outside the interactive mode to enter the command mode and typing 'wq' <enter>, as for write and quit.)</p>
-<p>If everything went well, after reboot (or wpa supplicant restart) you should be online.</p>
-<p>ifconfig should show 'status: active' and the IP address it received on dhcp.</p>
-<p>From this point on it's entirely up you how you want to configure the OS and what you want to install. Next are some things I did to make it more usable for me.</p>
-<p>NetBSD has pkg_src, which is way of installing and building packages from source, and pkgin, which is a way to install prebuild binary packages.</p>
-<p>Edit ~/.profile and remove the comment from the export line setting PKG_PATH, so we can install binary packages.</p>
-<p>Then do a logout with 'exit' and log in again.</p>
-<p>Let's add pkgin, the binary package manager:</p>
-<p>Doas works in a simiar way as sudo, to execute admin commands as a regular user.</p>
-<p>Create the doas config with 'vi /etc/pkg/etc/doas.conf' and add this line:</p>
-<p>Make sure that you create .xinitrc and .xsession in your user's home (and also in /root if you would ever want to login as root).</p>
-<p>https://www.netbsd.org/docs/guide/en/chap-x.html</p>
-<p>Log in with your regular user (press enter after typing in the user name to enter the password field).</p>
-<p>This will start NetBSD's built in ctwm window manager. It's very simple, but efficient.</p>
-<p>If you want to make it actually usable though, I recommend NsCDE, a modern desktop environment in the style of CDE, based on fvwm:</p>
-<p>First, install every depencency it needs. Let's do all this as root:</p>
-<p>(Do the same thing for your user's home too).</p>
-<p>Create this folder as NsCDE might expect it:</p>
-<p>Check for warnings. If any package is still missing, install it. Find the available packages with</p>
-<p>To make the shell more usable edit ~/.shrc both for root and your user and add these to the interactive mode settings:</p>
-<p>Now edit the ~/.xinitrc for your user (and for root if you ever would want to login as root) and change the exec line on the bottom to:</p>
-<p>Reboot and login with your user. NsCDE first launch setup should start, where you can configure the theme and integration with GTK and QT.</p>
-<p>If you click the up arrow above the multimedia icon on the task bar you'll find a Volume Control menu option. But clicking it will give you the error message saying that you don't have a volumectrl application installed. Same with the File Manager. Let's fix this:</p>
-<p>Replace the 'InfoStoreAdd filemgr true' with:</p>
-<p>As a start we can also install a graphical web browser:</p>
-<p>Now you're probably getting a hang of it, have fun with your new obscure operating system!</p>
-<p>NetBSD 11 running NsCDE on a Raspberry Pi [image, png, 250Kb]</p>
-<p>Be advised that no attempt was made to verify the remote SSL certificate.</p>
+                <p>The pace of open-source text-to-speech (TTS) model releases has been incredible. On the Hugging Face Hub (as of Sep 30, 2026) there are more than 8K TTS models available 🚀</p>
+<p>Evaluation, however, hasn't kept pace: it remains fragmented and unstandardized. The gold standard is human preference scores such as MOS or MUSHRA (more on metrics). To this end, several arena-based leaderboards have established themselves as useful reference points for the community:</p>
+<p>These arenas compare models by presenting users with TTS outputs from two models, and asking them to choose one over the other. After collecting a sufficient number of votes, an Elo score is computed to rank models, typically with the Bradley–Terry model (see Voice Arena methodology).</p>
+<p>While human preference is the ultimate decider, arenas cannot scale to keep up with the pace of TTS releases. This may partly explain why open-source models are underrepresented on arena-style leaderboards: as of Sep 30, 2026, only 16 of the 92 models on Artificial Analysis are open-weights, with a similar skew on Voice Arena. This likely reflects practical factors: adding an API model requires little more than an API key, whereas an open model must be hosted and served by the arena operator, and commercial providers have more reason to seek placement than open-source authors. Another limitation with arena-style evaluation is voter consistency: no arena can ensure that the same voters with the same criteria of “better” can consistently evaluate models over time. Even the preferences of a single person change over time (“A man cannot step into the same river twice” as famously said by Heraclitus).</p>
+<p>To this end, we've built the Open TTS Leaderboard, which uses objective metrics to evaluate models on complementary aspects of performance:</p>
+<p>By relying on objective metrics evaluating a model drops from a couple weeks (for collecting votes) to a couple hours ⚡</p>
+<p>Importantly, the Open TTS Leaderboard does not replace human preference ranking. ASR-based WER provides a proxy for intelligibility, while speaker similarity estimates voice identity preservation. Neither directly measures naturalness, expressiveness, or listener preference. Nevertheless, they can even inform voting-based leaderboards which models to include in their evaluations.</p>
+<p>Our intention with this leaderboard is for it to be shaped by the community; we want to hear your feedback so the evaluations stay relevant and insightful. The next few sections give an overview of main features of the Open TTS Leaderboard.</p>
+<p>From the default view of the leaderboard, models are ranked by macro-average WER on the English splits of Seed TTS Eval (paper) and CV3 Eval (zero shot) (paper).</p>
+<p>hexgrad/Kokoro-82M, Supertone/supertonic-3, and fishaudio/s2-pro lead the pack on English WER when averaged on these two splits, while the Pareto plots visualize which models strike a good balance between WER, batched inference (RTFx), and size.</p>
+<p>English performance doesn't necessarily translate to other languages. Multiple languages can be toggled to rank models on multilingual performance. Seed TTS Eval only has audio for English and Chinese, so the other languages are simply the score on CV3 Eval (zero shot). Note that Chinese, Japanese, and Korean are character-based languages and so character error rate (CER) is reported, and the “Average WER” across languages is a macro-average across languages.</p>
+<p>k2-fsa/OmniVoice, fishaudio/s2-pro, and FunAudioLLM/Fun-CosyVoice3-0.5B-2512 are strong multilingual models.</p>
+<p>By toggling “Voice cloning”, the models that support this functionality (on the selected languages) can be compared.</p>
+<p>Moreover, a SIM column for speaker similarity now appears in the table, as well as two more Pareto plots for visualizing the tradeoff between SIM, batched inference, and size.</p>
+<p>The average WER of some models, such as bosonai/higgs-tts-3-4b and openbmb/VoxCPM2, improve under voice cloning, namely when a reference audio is provided.</p>
+<p>Numbers only tell part of the story, and as mentioned earlier human preference is the ultimate decider. From the “Listen” tab, you can compare the generated outputs that are behind the metrics, to find which model(s) you prefer!</p>
+<p>Pick the language/dataset you're interested in, whether you want to compare voice cloning, and optionally pick the models or listen to outputs from a random selection.</p>
+<p>The “Listen” tab fills an important gap in existing TTS leaderboards: a space to explore model outputs of various models.</p>
+<p>You can even give feedback on the generated outputs. As we collect more votes from the community, we may include this data on the leaderboard. So vote! But please login with your HF account to help us weed out spam/bots.</p>
+<p>The “Streaming” tab compares the streaming capabilities. Models are ranked by TTFA (time-to-first-audio), which quantifies how long a user waits after probing a model in order to obtain audio that can be played. This is important for voice agents and other interactive apps.</p>
+<p>For streaming models (✅ under “Streaming API”) it's the time until the first audio chunk arrives. For non-streaming models, it's the time until the whole utterance is generated, because playback can't start any earlier. Every model runs one audio at a time (batch size 1), on the same 50 English prompts from CV3-Eval, on the same hardware and in its default voice. We drop the first 3 runs as warm-up and report the median TTFA across the rest.</p>
+<p>The default view compares performance on an H200 GPU. Results are also available for CPU for a small (but growing) set of models!</p>
+<p>kyutai/pocket-tts is a great model for streaming on both GPU and CPU!</p>
+<p>The goal of the Open TTS Leaderboard is not only to keep up with the incredible pace of TTS model releases, but to be shaped by the community; we want to hear your feedback so the evaluations stay relevant and insightful. Let us know which datasets, models, and metrics you want to see!</p>
+<p>We will soon open-source the evaluation scripts, much like the Open ASR Leaderboard repo, so that you can directly provide your feedback and suggestions via GitHub Issues and PRs! Let's shape TTS evaluations together 🤗</p>
+<p>Rank text‑to‑speech voices via blind A/B listening</p>
+<p>Explore speech‑recognition model performance across datasets</p>
+<p>TTS systems evaluated on objective metrics.</p>
+<p>Glad this board splits multilingual TTS quality from voice-cloning identity instead of one aggregate green.</p>
+<p>The check I'd keep reading: whether the ranking still holds when you hold language/domain fixed versus when cloning is the axis. Otherwise teams optimize the easier subscale and still call the result "SOTA TTS."</p>
+<p>English performance doesn't necessarily translate to other languages. Multiple languages can be toggled to rank models on multilingual performance. Seed TTS Eval only has movie box audio for English and Chinese, so the other languages are simply the score on CV3 Eval (zero shot). Note that Chinese, Japanese, and Korean are character-based languages and so character error rate (CER) is reported, and the “Average WER” across languages is a macro-average across languages.</p>
+<p>Open TTS Leaderboard is an open evaluation platform designed to make multilingual text-to-speech and voice-cloning models easier to compare at scale. Traditional TTS arenas usually let users listen to outputs from two models and choose the one they prefer. Those votes can then be used to calculate an Elo-style score, often through approaches such as the Bradley–Terry model, giving users a simple way to understand how different systems perform based on human preference.</p>
+<p>Human feedback remains an important part of evaluating speech quality, but relying only on arena-style voting can be difficult as new TTS models are released at a rapid pace. Open-source models can also face practical barriers because they generally need to be hosted and served by the evaluation platform, while API-based commercial models can be added more easily. This can result in open-weight systems being less visible on public leaderboards. Another challenge is consistency: people's preferences and listening criteria can change over time, meaning that votes collected months apart may not always represent exactly the same standards.</p>
+<p>Open TTS Leaderboard aims to address these challenges by providing a scalable and transparent space for evaluating multilingual TTS and voice-cloning systems. The goal is to make comparisons easier to reproduce, expand coverage of open models, and provide useful evaluation signals alongside human preference. By bringing together scalable testing and community feedback, the project can help researchers, developers, and users better understand how speech models perform across different languages, voices, and use cases.</p>
+<p>GitHub repo with the eval scripts is public! https://github.com/huggingface/open-tts-leaderboard</p>
+<p>Rank text‑to‑speech voices via blind A/B listening</p>
+<p>Explore speech‑recognition model performance across datasets</p>
+<p>TTS systems evaluated on objective metrics.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://neongd.com/articles/netbsd11-rpi4.gmi" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/open-tts-leaderboard" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
