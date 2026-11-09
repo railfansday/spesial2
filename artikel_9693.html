@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Make Your Coding Agent Wait 7 Days for New Packages: npm, pnpm, Yarn, Bun and uv</title>
+    <title>Build specialized multimodal models with LFM3</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9693.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,63 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Make Your Coding Agent Wait 7 Days for New Packages: npm, pnpm, Yarn, Bun and uv</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
+        <h1>Build specialized multimodal models with LFM3</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fcs21xep2nb10sm1f0lgp.jpg" alt="Make Your Coding Agent Wait 7 Days for New Packages: npm, pnpm, Yarn, Bun and uv" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/wEKXxH6qGa7vmHjn5KA-W.png" alt="Build specialized multimodal models with LFM3" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fcs21xep2nb10sm1f0lgp.jpg" alt="Make Your Coding Agent Wait 7 Days for New Packages: npm, pnpm, Yarn, Bun and uv" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/wEKXxH6qGa7vmHjn5KA-W.png" alt="Build specialized multimodal models with LFM3" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 8
-•
-Edited on Nov 8
-•
-
-
-
-
-AI-assisted</p>
-<p>The malicious chalk release was live for under 12 hours. The Nx one for about 4 hours, rspack for about an hour. William Woodruff lined up ten well-known supply-chain attacks and found that 8 of them had a window of opportunity shorter than a week (his post).</p>
-<p>Put your coding agent inside that window. It decides it needs a date library, runs npm install a few seconds later, and the registry hands it the newest version. Nobody has looked at that version yet, including the scanners and the maintainer whose account was phished an hour ago.</p>
-<p>The fix is a release-age gate, also called a cooldown: refuse any version younger than N days. npm, pnpm, Yarn, Bun and uv all have one now. They spell it five different ways, in four different units, and one of them does nothing at all on an npm that is a few months old.</p>
-<p>Here is the 7-day version of the gate in each manager, with the file it lives in and the release that added it.</p>
-<p>Sources for each row: npm 11.10.0 and the npm config docs, pnpm 10.16, Yarn's PR #6901, Bun 1.3, uv 0.9.17.</p>
-<p>Get the unit wrong and the gate is either useless or absurd. minimumReleaseAge: 7 in pnpm is seven minutes. minimumReleaseAge = 7 in Bun is seven seconds. min-release-age=10080 in npm is about 27 years.</p>
-<p>A cooldown lets a new version sit for a week before anything on your machine is allowed to install it.</p>
-<p>In npm, the gate is one line in the project's .npmrc. The current npm 11 config docs also list an exclude key that takes names or globs, for your own packages:</p>
-<p>The docs say npm "will build the npm tree such that only versions that were available more than the given number of days ago will be installed", and that if no version fits, "the command will error." If npm audit fix is blocked because the patched version is too new, npm keeps the vulnerable version, warns, and exits non-zero. That is your cue to add the package to the exclude list on purpose.</p>
-<p>Only exempt a scope you own on the public registry. The npm config docs say you should own your private scope there "so that nobody else can publish a package with the same name." If you don't, someone else can publish @myorg/anything and walk past the gate. The same goes for the exclude lists in pnpm, Yarn and Bun below.</p>
-<p>The trap is the version. min-release-age arrived in npm 11.10.0, released February 11, 2026. An older npm reads your .npmrc, does not know the key, and installs with no gate. From npm 11.2.0 on you at least get an unknown-config warning (npm docs). Before 11.2.0 you get nothing. The file in your repo says 7 days, and nothing on that machine enforces it.</p>
-<p>So check the version before anything installs. A small script does it on macOS, Linux and Windows:</p>
-<p>Keep registry tokens in your user-level ~/.npmrc. The project .npmrc is going into git, and from there into every worktree.</p>
-<p>pnpm counts in minutes. Since pnpm 11 it reads pnpm settings from pnpm-workspace.yaml and keeps .npmrc for registry and auth only (pnpm 11.0):</p>
-<p>pnpm 11 already defaults to 1440 minutes, one day. The detail that matters is in minimumReleaseAgeStrict: it is true only when you set minimumReleaseAge yourself. With the default, pnpm falls back to a version that breaks the age rule when nothing else fits. Set the value explicitly and pnpm fails resolution instead. The exclude list takes names, globs and exact versions like webpack@4.47.0 || 5.102.1.</p>
-<p>Yarn calls it an age gate and calls the exclusions pre-approved packages, which take descriptors or name globs:</p>
-<p>Yarn keeps the value in minutes: in Classmethod's test, yarn config get npmMinimalAgeGate reported "21d" as 30240. For a range, Yarn installed the newest version that passed, and the gate held for transitive dependencies too. An exact pin that is too new fails with "No candidates found" in the PR's tests.</p>
-<p>Bun counts in seconds and sits under [install]:</p>
-<p>Bun's docs say it "filters out package versions published more recently than this threshold." Its exclude list takes package names, or name@version to exempt one exact release. The docs show no scope wildcard, so list your own packages by name.</p>
-<p>uv uses exclude-newer, which takes an exact timestamp. Since 0.9.17 it also takes relative durations, and that is what turns it into a cooldown:</p>
-<p>It accepts friendly durations ("7 days", "1 week") and ISO 8601 ones ("P7D"), but no months or years. false exempts one package. Three things behave differently from the JavaScript managers, per uv's resolution docs:</p>
-<p>A git worktree is a checkout of tracked files. Nothing ignored or untracked in your main checkout comes along. A setting in your user-level ~/.npmrc reaches every worktree on your machine, but not a teammate's laptop, CI or a container. That is why the gate belongs in a committed file: .npmrc, pnpm-workspace.yaml, .yarnrc.yml, bunfig.toml or pyproject.toml. Any agent that runs an install in any checkout of the repo reads it.</p>
-<p>This is where Hermes IDE fits. I build it, so weigh this part with that in mind. In Hermes, ⌘N (Ctrl+Shift+N on Windows and Linux) starts each task on its own hermes/<name> branch, in its own worktree, with the task as the agent's first prompt. Hand a task to Claude Code there and the agent's npm install runs in a fresh checkout that already has your .npmrc.</p>
-<p>The ⌘N New task sheet: Claude Code, the orders-api project, a new hermes/ worktree, Accept edits, and the command Hermes will run.</p>
-<p>The committed file covers the setting. The npm version check needs to run somewhere too. Hermes reads .hermes/worktree.toml from your repo and runs its setup commands in each new task's worktree before the agent starts. The first command that fails stops the rest (recipe docs):</p>
-<p>The first time Hermes sees the recipe, and again whenever it changes, it shows you the commands and waits until you choose Run setup. On a machine with npm 11.9, the check fails, npm ci never runs, and the failure stays in the task's setup card and lands in your inbox, so you see it before you hand that worktree to an agent. Choosing Skip starts the session without running setup, and that skips the check too. Commit the recipe next to the .npmrc so both travel together.</p>
-<p>The Review Desk's Worktrees tab: one worktree per task, each on its own hermes/ branch, with its task, age and disk size.</p>
-<p>Test the gate on your own machine before you rely on it. The TypeScript nightly makes a good test, because a new build from main is published to npm by midnight PST every day (TypeScript docs). Its newest version is normally less than a day old.</p>
-<p>The two npm view calls pass --min-release-age=0 so the gate can't hide the newest version or its publish time from you. The install keeps your .npmrc setting. With the gate working, npm stops with npm error code ETARGET and a notarget No matching version found for typescript@... line that names the cutoff date. That is the error Classmethod got pinning a too-new eslint. If the install succeeds instead, npm -v on the first line tells you why.</p>
-<p>The same pin works as a test for the other managers: pnpm add -D "typescript@$v" should fail resolution, since you set minimumReleaseAge yourself. Run it before you trust it.</p>
-<p>Know what seven days does not cover. In Woodruff's list, xz-utils had a window of about five weeks, and only a longer cooldown gets near it. A cooldown also delays the good releases, including security fixes, which is what the exclude lists and npm's audit fix warning are for. It doesn't read the code either. It only makes sure someone else got a week to.</p>
-<p>A coding agent is a model with a shell tool, and npm install is one of the calls it makes on its own. AI That Acts is the book in my AI in TypeScript series about tool calling: how a model picks a function, what you let a tool do, and how to build a first working agent in TypeScript around those decisions.</p>
-<p>The whole series, from your first LLM call to agents in production, is at xgabriel.com/ai-in-typescript.</p>
-<p>If you run several agents on one repo, Hermes IDE is free, source-available under BSL 1.1, and runs on macOS, Windows and Linux (GitHub).</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>LFM3 is our new generation of Liquid Foundation Models (LFMs), built to be the starting point for specialized intelligence. It brings text, vision, audio, omni, and decision models onto one shared backbone, all in the 2B parameter range. This means you can pick the model for your modality, fine-tune it on your own data on a single GPU, and deploy it where your application runs.</p>
+<p>LFM3 brings four main changes compared to our previous LFM2 family:</p>
+<p>LFM2 showed that a hybrid of short convolutions and attention can run fast on-device without sacrificing quality. For LFM3, we used our hardware-in-the-loop architecture search to redesign that architecture for agentic use cases, which need more capability per parameter and fast inference over long contexts. The search now covers 14 device and backend combinations, from phones and a Raspberry Pi 5 to laptops, cloud CPUs, GPUs, and the Qualcomm Hexagon NPU.</p>
+<p>LFM3-1.7B-Base has 24 layers and four main changes:</p>
+<p>The payoff shows at long context. Per parameter, LFM3-1.7B matches LFM2-1.2B on short prompts across edge devices, and with 8K tokens in context it is about 25% faster. LFM3-1.7B-Base was pre-trained on 22T tokens with the same 128K vocabulary as LFM2.5-8B-A1B. The final 3.5T tokens are a mid-training stage on curated data with a larger share of agentic traces and tool calls, which also extends the context window to 256K tokens.</p>
+<p>Every LFM3 model branches from LFM3-1.7B-Base. Instead of running one large general-purpose model, you pick the one that fits your inputs, customize it, and run it on-device.</p>
+<p>The vision and audio models also get two new in-house encoders:</p>
+<p>Each model runs in transformers. The snippets below come from the model cards, which also list the other inference engines each model supports.</p>
+<p>Reach for LFM3-1.7B when you need local agents, tool calling, structured outputs, or a base for domain-specific fine-tuning. It is post-trained to run in agentic harnesses such as Hermes Agent, Pi, and OpenClaw. It outperforms its predecessor, LFM2.5-2.6B, with 35% fewer parameters, and the biggest gains are on agentic tasks: on WebArena-Verified, it scores 38.42 against 3.02, and it even beats Qwen3.5-9B on long tasks in browsers and business apps. You can find more details in the LFM3-1.7B model card.</p>
+<p>To run LFM3-1.7B, install the latest version of transformers:</p>
+<p>For local agent setup, see the Agent Harnesses guide.</p>
+<p>Reach for LFM3-VL-2B when you need on-device visual understanding. It is the first LFM vision model that takes video as input; it reasons step by step before it answers, and it finds objects and reasons about how they are placed, a strong foundation for robotics. Compared with LFM2.5-VL-3B, it has fewer parameters (1.9B against 3.1B) yet raises the average across 62 vision benchmarks from 57.6 to 71.4, on par with Gemma 4 12B, a model more than six times larger. You can find more details in the LFM3-VL-2B model card.</p>
+<p>To run LFM3-VL-2B, install transformers>=5.21.0 with its vision dependencies:</p>
+<p>See the LFM3-VL-2B model card for tool calling, tool search, and on-device inference with llama.cpp.</p>
+<p>Reach for LFM3-Audio-2B when you need voice chat, speech recognition, speech synthesis, or translation across 18 languages on a laptop or edge device. It takes text or audio as input and responds with text, speech, or both, and it can turn spoken requests into tool calls. Compared with LFM2.5-Audio-1.5B, it uses a new in-house audio encoder and speech codec, speaks with higher quality (UTMOSv2 3.83 against 3.22), and adds audio understanding, general-purpose audio reasoning, and tool calling. You can find more details in the LFM3-Audio-2B model card.</p>
+<p>To run LFM3-Audio-2B, install transformers>=5.20.2 with its audio dependencies:</p>
+<p>Load the model and processor directly from the Hugging Face Hub:</p>
+<p>Then ask a question aloud and get a reply in text and speech:</p>
+<p>See the LFM3-Audio-2B model card for live speech recognition, speech synthesis, audio understanding, and tool calling.</p>
+<p>Reach for LFM3-Omni-2B when you need one on-device model that sees, listens, and talks back, in place of a separate ASR model, vision-language model, LLM, and TTS model. It can answer spoken questions about an image, watch and listen to a video together, and turn what it sees and hears into tool calls. It is our first omni model, with text, vision, and audio input and both text and speech output, and it keeps the core capabilities of the standalone LFM3 models, including visual question answering, speech recognition, speech synthesis, and instruction following. Like LFM3-Audio-2B, it speaks through LiquidCodec, which turns generated tokens into speech faster than real time, so spoken replies stream as the model generates them. On audio-visual video understanding, it beats models up to 10.7B parameters, such as Qwen2.5-Omni-7B, on Daily-Omni, WorldSense, and AV-SpeakerBench. You can find more details in the LFM3-Omni-2B model card.</p>
+<p>To run LFM3-Omni-2B, install transformers>=5.20.2 with its vision and audio dependencies:</p>
+<p>Then ask a question about a photo by voice:</p>
+<p>See the LFM3-Omni-2B model card for speech output, video with its soundtrack, and tool calling.</p>
+<p>Reach for the d1 models when you need fast, structured decisions instead of generated text. Give them a situation (a support ticket, an invoice, an app screen, a photo, a voice note) and a list of questions, and they answer all of them in a single forward pass, each with a calibrated probability. Beyond yes/no, choices, and scores, they can now point at objects, read values from documents, estimate numbers with a range, and pick every option that applies. You can find more details in the model cards for d1-2B and d1-omni-2B.</p>
+<p>To run d1-2B, install transformers>=5.19 with its vision dependencies:</p>
+<p>Then load d1-2B and ask it several questions about one support ticket in a single pass:</p>
+<p>For brevity, we only include the example for d1-2B. See the d1-omni-2B model card for audio clips and spoken questions.</p>
+<p>LFM3 is built to be specialized. Frontier models are powerful generalists, but they are not necessarily experts in your use case. LFM3 packs extra capacity into a small, fast model, so a short fine-tune can turn it into a reliable expert on your task, with your data, terminology, and tools. Because it is small, you can deploy the fine-tuned model where your application runs, from devices to private infrastructure to the cloud.</p>
+<p>Every model can be fine-tuned on a single GPU, and these notebooks walk you through a complete task for the text, vision, audio, and omni models, from data preparation to evaluation.</p>
+<p>We adapt LFM3-VL-2B into three complementary robotics models for orchestration, navigation, and manipulation. The orchestrator operates a robot arm through tool calls: it grounds objects by pointing, measures them with depth tools, invokes motion planners, and checks outcomes in subsequent camera images. The navigator follows route descriptions using recent RGB observations, predicting spatial targets and a waypoint trajectory in just five tokens. The manipulation VLA maps images, language, and robot state to eight-step chunks of continuous actions in a single forward pass. Jointly trained across 15 embodiments, the VLA achieves 96.2% average success across the four LIBERO suites and 45.7% on RoboCasa-GR1 tabletop tasks, generating action chunks in under 50 ms on a Jetson AGX Orin with TensorRT FP16. These results highlight LFM3-VL-2B as a compact foundation for robotics, spanning high-level planning to low-level control with real-time action generation on embedded hardware.</p>
+<p>Watch LFM3-VL-2B handle perception, navigation, and manipulation in this demo video.</p>
+<p>All LFM3 models are open-weight and available on Hugging Face today:</p>
+<p>If you use this work, please cite the release blog:</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/gabrielanhaia/make-your-coding-agent-wait-7-days-for-new-packages-npm-pnpm-yarn-bun-and-uv-1021" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/LiquidAI/lfm3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

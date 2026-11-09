@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Actions &quot;Resource not accessible by integration&quot;: Fix It With the Smallest GITHUB_TOKEN Permission</title>
+    <title>Two Secret Scanners Found 5 of 7 Exposed Credentials Each, but Missed Different Secrets</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9702.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,59 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>GitHub Actions &quot;Resource not accessible by integration&quot;: Fix It With the Smallest GITHUB_TOKEN Permission</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
+        <h1>Two Secret Scanners Found 5 of 7 Exposed Credentials Each, but Missed Different Secrets</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4yd4fqbppw3zjuh9yues.png" alt="GitHub Actions &quot;Resource not accessible by integration&quot;: Fix It With the Smallest GITHUB_TOKEN Permission" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/XHtVrOtLTIephlN0dFpdPOIih6G3-5e83bda.png" alt="Two Secret Scanners Found 5 of 7 Exposed Credentials Each, but Missed Different Secrets" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4yd4fqbppw3zjuh9yues.png" alt="GitHub Actions "Resource not accessible by integration": Fix It With the Smallest GITHUB_TOKEN Permission" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/XHtVrOtLTIephlN0dFpdPOIih6G3-5e83bda.png" alt="Two Secret Scanners Found 5 of 7 Exposed Credentials Each, but Missed Different Secrets" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The error means the GITHUB_TOKEN your job runs with lacks the permission for the API call it just made. Fix it by adding a permissions: block to the specific job with only the scope that call needs (for example pull-requests: write to comment on a PR). Don't flip the whole repository to "read and write" just to make the red X go away.</p>
-<p>Depending on the action or CLI, you will see one of these in the job log:</p>
-<p>All of them come down to the same thing: GitHub authenticated the request as the workflow's app token, and that token's permission set did not include what the endpoint requires. It is an authorization problem, not a bad token, so regenerating secrets will not help.</p>
-<p>Takeaway: a 403 from github-actions[bot] is a missing permission scope, never an expired credential.</p>
-<p>Three things commonly change underneath you.</p>
-<p>Takeaway: the same YAML can get different tokens depending on repo defaults, the trigger, and the PR author.</p>
-<p>This is the part the error message never tells you. As of late 2026, these are the scopes I reach for most:</p>
-<p>One trap: PR comments go through the issues API under the hood, so on some endpoints issues: write also works, but pull-requests: write is the one that matches intent and is what most actions document.</p>
-<p>Set the default low at the top of the workflow, then raise it only in the job that needs it:</p>
-<p>The workflow-level contents: read means any job you add later starts with the minimum. The job-level block replaces (not merges with) the workflow-level one, which is why contents: read is repeated there.</p>
-<p>Takeaway: declare read-only at the top, grant write per job, and repeat every scope the job still needs.</p>
-<p>Because the restriction is deliberate. A fork's code is untrusted; if it could run with a write token or your secrets, anyone could open a PR that exfiltrates them. So a pull_request run from a fork cannot comment, label, or push, whatever your YAML says. In my testing, the confusing part is that the same workflow succeeds on branches inside the repo and fails only for outside contributors.</p>
-<p>The same logic applies to Dependabot PRs: they get a read-only token and a separate Dependabot secrets store. If an auto-merge or comment workflow fails only on Dependabot branches, that is why.</p>
-<p>Takeaway: for fork PRs, do not fight the read-only token; move the privileged step into a trusted workflow_run job.</p>
-<p>Two more causes that look identical in the log:</p>
-<p>When a step needs more than the token can ever give, such as pushing to a different repository or triggering a workflow from a workflow (events created with GITHUB_TOKEN generally do not start new runs), use a GitHub App installation token or a fine-grained personal access token stored as a secret. A GitHub App is the better long-term choice because it is not tied to one person's account. The honest drawback: it adds setup (create the app, install it, mint a token in the job), so use it only when permissions: genuinely cannot cover the case.</p>
-<p>Takeaway: if the YAML is right and it still 403s, the ceiling is set by the calling workflow or the organization, not by your job.</p>
-<p>The GITHUB_TOKEN for that run does not have the permission scope the API endpoint requires. Add the matching scope, such as pull-requests: write, to the job's permissions: block.</p>
-<p>It works, but it gives every job, including ones that run third-party actions, write access it does not need. Keep the repository default read-only and grant write per job.</p>
-<p>Fork PRs run with a read-only GITHUB_TOKEN and no secrets by design. Post the comment from a separate workflow_run workflow instead.</p>
-<p>If you own the repo and the failing job is a trusted internal one, add a job-level permissions: block with the single scope from the table and stop there. If the failure only happens for forks or Dependabot, restructure so the privileged step runs through workflow_run rather than loosening the token. If you need cross-repository writes or chained workflow triggers, move to a GitHub App token. Treat "read and write for everything" as a last resort, not a fix.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Software Engineer - backend & AI/ML. First-Class BSc Computing. I write about backend, AI/LLM engineering and what I ship.</p>
+<p>Software Engineer - backend & AI/ML. First-Class BSc Computing. I write about backend, AI/LLM engineering and what I ship.</p>
+<p>Software Engineer - backend & AI/ML. First-Class BSc Computing. I write about backend, AI/LLM engineering and what I ship.</p>
+<p>Earlier this year, I wrote a secret scanner. Regex rules, a Java backend, a Chrome extension that lights up files on a GitHub page when something looks like a credential. It was a portfolio project and I never used it in anger.</p>
+<p>Last week I pointed it at my own GitHub account - all 17 repositories, full history - and ran gitleaks over exactly the same commits as a control. I expected to confirm my scanner was worse. It is worse, by every aggregate measure. That turned out to be the least interesting thing in the results.</p>
+<p>There were 7 distinct real secrets in my history. My scanner found 5 of them. Gitleaks found 5 of them. They were not the same 5.</p>
+<p>17 repositories, 0 forks, 2 of them private. 1,049 commits in total, cloned at full depth, every non-merge commit reachable from any ref diffed against its parent.</p>
+<p>Gitleaks v8.30.1, run per repository with --log-opts="--all" so it walked the whole history rather than just the tip.</p>
+<p>My own scanner could not do that at all, which was the first thing I learned.</p>
+<p>I had somehow never noticed this. The detection engine only ever receives files from one place: a live call to the GitHub API that resolves the repository's current default branch and lists its tree.</p>
+<p>There is no local-path parameter. There is no ref=<commit> on the tree listing. It can see what is in HEAD right now, and nothing else. It also caps itself at 30 files per scan with a 5-second per-file timeout - sensible throttling for a browser session, fatal for an audit.</p>
+<p>Which means that as shipped, my scanner structurally cannot find the thing secret scanners exist to find: the credential someone removed from HEAD and left sitting in commit 400.</p>
+<p>To get an apples-to-apples comparison at all, I pulled all 15 of its regex rules, its severity labels, its skip-list and its false-positive filters out of the Java service and into a standalone runner that walks history. Same rules, same logic, different plumbing. Everything below labelled "my rules" is that runner, and the gap is noted where it matters.</p>
+<p>Worth saying plainly: 15 regexes, and no entropy check anywhere. That becomes important in a minute.</p>
+<p>Deduplicated by value - compared by hashing locally, never by reading them:</p>
+<p>7 distinct secrets, in 11 file locations, across 2 of 17 repositories.</p>
+<p>Six of the seven are still in public history as I write this. The oldest has been there 296 days. The JWTs: 283 to 288 days each.</p>
+<p>The other 15 repositories were clean. Everything both tools flagged there was noise, which I will come back to.</p>
+<p>Two tools. Same commits. Same seven secrets sitting there. Each one found five, each one missed two, and the overlap is three.</p>
+<p>Neither of them was sufficient alone. I only know the true number because I ran both.</p>
+<p>My scanner's false-positive filter discards any file whose path contains the substring test.</p>
+<p>That is a reasonable heuristic. Test directories are full of fake tokens - I know, because my own scanner's test suite is full of fake tokens, and the filter dutifully hid those too.</p>
+<p>It also hid four real device tokens, because the scripts I used to drive real hardware are named things like test_live_flight.py and test_telemetry.sh. They are test scripts in the sense of "testing a drone on my desk", not in the sense of "unit test fixture". The filename convention and the actual secret risk disagreed, and my filter only knew about the convention.</p>
+<p>Two of the five distinct JWTs exist only in files matching that filter. For those two, my scanner's answer is not "low confidence". It is silence.</p>
+<p>Both Postgres passwords sit in docker-compose.yml under a plain POSTGRES_PASSWORD: key. Gitleaks reported zero findings for the entire history of one of those repositories.</p>
+<p>The likely reason: gitleaks' closest default rule, generic-api-key, is entropy-gated. These passwords are 17–18 characters, alphanumeric, and not especially random-looking. They did not clear the bar.</p>
+<p>My rules have no entropy gate at all. A regex that looks for password: followed by a literal will match a boring password, because it has no concept of boring.</p>
+<p>I want to flag this one as inference rather than fact. Gitleaks v8.30.1 compiles its default ruleset into the binary instead of shipping an inspectable .toml, so I am reasoning from what it did and did not flag, not from reading its rules. If someone knows the actual rule that should have fired here, I would like to be corrected.</p>
+<p>My scanner was too noisy, so it got a path-exclusion filter. Gitleaks was too noisy, so it got an entropy floor. Both filters work. Both filters are why each tool has a blind spot, and the blind spots don't overlap.</p>
+<p>Every false-positive filter is a false-negative generator. You do not get to tune out noise for free. You get to choose which category of real finding you are willing to stop seeing, and most of the time you choose it implicitly, in a one-line heuristic written to make a demo less embarrassing.</p>
+<p>The test exclusion in my code is six words long. I wrote it so a screenshot of the extension wouldn't be full of fixture tokens. It cost me two of five credentials.</p>
+<p>Both false-positive rates are terrible, and both are terrible for largely the same stupid reason.</p>
+<p>A single commit in one repository checked in an entire Python virtualenv. That one directory accounts for 29 of my scanner's 66 findings and 16 of gitleaks' 36 - vendored library internals from requests, urllib3, numpy, pip, protobuf and friends, flagged over and over.</p>
+<p>My scanner's skip-list excludes node_modules, vendor, dist, build and .git. It does not exclude .venv or site-packages. Gitleaks fell into the same hole from the other direction.</p>
+<p>Strip that one directory out and both tools look dramatically more credible, which tells you something about how much of a scanner's reported precision is really just its vendored-dependency exclusion list.</p>
+<p>The rest of the false positives were the predictable kind: env-var templates like ${POSTGRES_PASSWORD} that reference a secret rather than contain one, validation schemas (password: z.string().min(8)), hashPassword(...) calls, Maven wrapper boilerplate, and my own scanner's test fixtures.</p>
+<p>A regex sees password and cannot tell a label from a value. That is the whole problem, and no amount of rule-tuning fixes it - it is an argument for entropy and context, which is exactly the thing that then creates the other blind spot.</p>
+<p>Six credentials are still sitting in public history as of this writing, the oldest for 296 days. I found them with a tool I wrote and then never pointed at myself, in projects I have been linking to from a CV.</p>
+<p>The tool was not the problem. I built it, I published it, and I never ran it on the one account I had complete access to. The scanner worked about as well as a scanner of that design can work. The gap was that I treated it as a portfolio artifact rather than as something to use.</p>
+<p>If you have written one of these, go run it on yourself before you write about it. That part costs an evening and I can tell you from experience that the results are more interesting than the demo.</p>
+<p>Author’s note: No secret value appears in this article or in the audit report behind it; findings were recorded as type, file, commit, and date only, and no credential was tested against any live system.</p>
+<p>I Built a 3D Office Where Local AI Agents Share One RTX 4090</p>
+<p>Software Engineer - backend & AI/ML. First-Class BSc Computing. I write about backend, AI/LLM engineering and what I ship.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/libme/github-actions-resource-not-accessible-by-integration-fix-it-with-the-smallest-githubtoken-2gk7" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/two-secret-scanners-found-5-of-7-exposed-credentials-each-but-missed-different-secrets?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

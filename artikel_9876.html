@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
+    <title>Nvidia CEO Jensen Huang starring in possible remake of The Spy Who Shagged Me</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9876.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,59 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
+        <h1>Nvidia CEO Jensen Huang starring in possible remake of The Spy Who Shagged Me</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5308332.jpg?imageId=5308332&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Nvidia CEO Jensen Huang starring in possible remake of The Spy Who Shagged Me" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5308332.jpg?imageId=5308332&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Nvidia CEO Jensen Huang starring in possible remake of The Spy Who Shagged Me" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
-<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
-<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
-<p>This guide has two halves that run in different places:</p>
-<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
-<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
-<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
-<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
-<p>Then we start the base-model server with the following command:</p>
-<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
-<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
-<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
-<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
-<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
-<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
-<p>This trains ~6M parameters, about 1.66% of the model.</p>
-<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
-<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
-<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
-<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
-<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
-<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
-<p>Then we serve the merged model with the following command:</p>
-<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
-<p>Comparing the two runs on the identical serving stack:</p>
-<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
-<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
-<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
+                <p>Admits to affair after company board opens probe into alleged contact with possible Chinese asset who bought GPUs in bulk</p>
+<p>Nvidia’s board has opened an investigation into its CEO Jensen Huang after he admitted to an affair, amid allegations he had a romantic relationship with a woman US authorities feel is likely a Chinese spy.</p>
+<p>The AI hardware giant’s board published a statement on Sunday afternoon that states it is “initiating an independent investigation in light of recent reporting that founder and CEO Jensen Huang has been the target of a foreign intelligence effort.”</p>
+<p>The New York Times is the source of that reporting. On October 29 it alleged US government intelligence agencies decided to investigate a woman who goes by Alice Huang and/or Huang Le, on grounds she passes intelligence with Beijing.</p>
+<p>In that story The Times used the term “close relationship” to describe the Nvidia CEO's associations with both Ms Huang and US president Donald Trump.</p>
+<p>On Sunday the newspaper alleged US authorities believe Alice Huang and Jensen Huang shared a "romantic" relationship.</p>
+<p>The Times further alleges Ms Huang is a Chinese citizen who worked for a Singapore-based company called Megaspeed that has bought plenty of Nvidia hardware and is suspected of doing so to make it available to Chinese users, either by running inside datacenters or perhaps even facilitating transport to the Middle Kingdom.</p>
+<p>The US has for years banned or restricted exports of advanced GPUs to China, partly because it feels Beijing’s armed forces can use them to build systems that will erode America’s military superiority.</p>
+<p>Any relationship, of any sort, between Jensen Huang and a Chinese intelligence operative would therefore be enormously concerning. The company told the NYT that Jensen Huang and Alice Huang just had normal CEO-to-customer-exec chats that were no threat to Nvidia intellectual property or US national security.</p>
+<p>Shortly after Nvidia’s board published its statement, Huang sent an email to staff that the company made public.</p>
+<p>“I owe my family and all of you an apology,” the email opens. “I was unfaithful to my wife. My actions hurt her and our children. There is no excuse for what I did. I am deeply sorry.”</p>
+<p>Huang’s email doesn’t explicitly link his actions to The Times’ reports, but he says he supports the Nvidia board’s decision to open its investigation “and will cooperate fully.”</p>
+<p>"To my colleagues at NVIDIA, including those I have worked alongside for decades, and to our board, partners, and shareholders around the world: you deserve better from me," he wrote, without specifying if that's a reference to infidelity. "Leading NVIDIA is the privilege of my life. My responsibility is to serve you and be worthy of your trust. I have fallen short of that responsibility. I am fully committed to NVIDIA and will work to earn back your confidence."</p>
+<p>“I love our country and our company,” the CEO added. “I am committed to protecting NVIDIA and supporting America’s national security. I am proud and grateful to be an American.”</p>
+<p>The CEO’s mail, and the board’s statement, make no allegations about any “close relationship” with Ms. Huang.</p>
+<p>The exact nature of that relationship therefore remains mysterious, as does Nvidia’s relationship with Singapore, a tiny island nation that has sometimes been the source of 22 percent of the company’s revenue.</p>
+<p>Singapore is simply incapable of hosting as much Nvidia kit as that volume of purchases would buy, because its government limits datacenters to 1.6 GW of energy consumption. When asked to explain that oddity, Nvidia has said that it’s satisfied Singaporean entities buy its hardware on behalf of end-users in other locations, and that such deals are not used to evade the USA’s sanctions.</p>
+<p>Nvidia is not a notably scandal-prone company, but in 2022 it did admit to having previously misrepresented the impact of cryptocurrency mining on sales of its gaming hardware. China has opened an antitrust case, and US authorities may have considered doing likewise.</p>
+<p>Jensen Huang, however, has never presented as the kind of CEO who makes operating at the edge of the law a regular tactic. Nor does he hold sufficient Nvidia shares or voting power to unilaterally make major decisions.</p>
+<p>This leaves the leader of the world’s top AI company appearing to have made a very human error. ®</p>
+<p>Fixes are arriving faster than new bug reports for one major Linux project</p>
+<p>PLUS: Japan declares infosec emergency; Apple’s makes biggest school Mac sale, ever, anywhere, in the Philippines; And more!</p>
+<p>PARTNER CONTENT: 300+ AI applications delivering surges in core metrics and annual cost reduction of over CNY100m</p>
+<p>Admits to affair after company board opens probe into alleged contact with possible Chinese asset who bought GPUs in bulk</p>
+<p>Browser demo renders the classic shooter in ASCII, with no login required and considerable squinting encouraged</p>
+<p>Technical debt shoveled aside to make large-scale AI training more resilient</p>
+<p>Agent orchestration startup gets its exit</p>
+<p>Firms still want kit on-premises, but spike in revenue is as much about increased costs as higher sales</p>
+<p>Customers sweating assets amid tight budgets, as Microsoft execs get creative with sales pitches</p>
+<p>But first it needs planning permission, government approval and, rather importantly, a customer</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>OpenVDDK is reportedly already being used in production, at scale</p>
+<p>Combining the NetBSD kernel with the Alpine Linux userland</p>
+<p>Canonical has a long way to catch up, but it knows who it's chasing</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/legal/2026/11/09/nvidia-ceo-jensen-huang-starring-in-possible-remake-of-the-spy-who-shagged-me/5308327" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

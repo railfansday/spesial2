@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From SoWa Power Station to the Binding Pocket: Why Structural Biology Needs Its Hallway Moment</title>
+    <title>Hugging Face ❤️ TorchTPU: TPUs, Natively</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9708.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,32 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From SoWa Power Station to the Binding Pocket: Why Structural Biology Needs Its Hallway Moment</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-08</p>
+        <h1>Hugging Face ❤️ TorchTPU: TPUs, Natively</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fh1n1gw88vxv9uld5wg8f.png" alt="From SoWa Power Station to the Binding Pocket: Why Structural Biology Needs Its Hallway Moment" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fh1n1gw88vxv9uld5wg8f.png" alt="From SoWa Power Station to the Binding Pocket: Why Structural Biology Needs Its Hallway Moment" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I still remember the hum of the SoWa Power Station on a rainy Tuesday in Boston. The old brick building, repurposed into a co‑working space, smelled of cold coffee and solder. I was hunched over a laptop, a half‑finished Dockerfile blinking on the screen, while a colleague across the table wrestled with a Cryo‑EM map that refused to converge. Between sips of lukewarm espresso we talked about the same thing every structural biologist talks about in hallways: the gap between a raw density map and a chemically plausible binding pocket.</p>
-<p>That conversation — just a few minutes in a noisy corridor — became the catalyst for a months‑long project that reshaped how my team thinks about model building. The problem isn’t new. AlphaFold2 gave us remarkable backbone predictions, but the side‑chain rotamers in ligand‑binding sites still drift. Cryo‑EM maps at 3 Å often leave the density for a bound fragment ambiguous. And the traditional pipeline — manual fitting in Coot, followed by real‑space refinement in Phenix — feels like stitching a quilt with a needle that keeps slipping.</p>
-<p>I decided to treat the pipeline as a software system rather than a series of manual steps. The first architectural decision was to separate data ingestion from model generation. A thin Rust service pulls map files from an S3 bucket, validates voxel spacing, and writes a normalized MRC header into a PostgreSQL table. The schema is deliberately minimal:</p>
-<p>Downstream, a Python worker pool (Celery + Redis) consumes rows from that table. Each worker launches a containerized pocket‑finder that runs a deterministic fragment‑placement algorithm: a Monte‑Carlo search guided by a differentiable density‑correlation loss. The loss function is simple enough to be expressed in a few lines of PyTorch, yet it captures the physics we care about:</p>
-<p>Because the loss is differentiable, we can back‑propagate through a small equivariant graph neural network that predicts side‑chain chi angles. The network was trained on the PDBbind refined set (≈ 12 k complexes) — no proprietary data, just publicly available structures. Training took 6 hours on a single A100; inference on a 3 Å map finishes in ~45 seconds per ligand.</p>
-<p>The engineering trade‑off that surprised me most was the batch size of the Monte‑Carlo sampler. Early prototypes used 10 000 proposals per ligand, which gave a nice smooth convergence curve but blew the GPU memory budget when we tried to run 200 ligands in parallel. Reducing to 2 000 proposals cut memory use by 70 % and only increased the median RMSD of the top‑ranked pose by 0.12 Å — well within the experimental error of the maps we handle. That decision turned a prototype that could process a dozen structures a day into a service that clears a 500‑map queue overnight.</p>
-<p>I still hear the echo of that hallway chat when I watch the dashboard. The Prometheus metrics show a steady 98 % success rate for pocket detection, and the Grafana panel for “average wall‑time per ligand” hovers at 1.3 minutes. But the real win isn’t the numbers; it’s the fact that a junior scientist can now push a new Cryo‑EM dataset through the same API that our senior modelers use, get a ranked list of plausible binding modes, and move straight to synthesis planning. The hallway moment became a reproducible, version‑controlled workflow.</p>
-<p>There were setbacks. The first time we swapped the Monte‑Carlo sampler for a Hamiltonian Monte‑Carlo implementation, the acceptance rate plummeted to 3 % and the pipeline stalled for two weeks. I remember staring at the logs at 2 am, wondering if the extra gradient evaluations were worth the latency. We reverted, added a simple adaptive step‑size heuristic, and the acceptance rate climbed back to 23 %. The lesson: sometimes a well‑tuned simple algorithm outperforms a theoretically superior one when you have hard latency constraints.</p>
-<p>Now, when a new fragment library arrives — say, a 10 k‑compound covalent set — the team only needs to drop a CSV into the ingestion bucket. The same Rust service parses SMILES, generates 3‑D conformers with RDKit, and enqueues them. The pocket‑finder treats each conformer as an independent ligand, and the results are written back to a results table keyed by map_id and ligand_id. Downstream, a Jupyter notebook pulls the top‑5 poses per ligand, computes interaction fingerprints, and feeds them into a SAR model. The whole loop, from map upload to SAR prediction, runs in under an hour for a typical campaign.</p>
-<p>What started as a conversation beside a flickering fluorescent light has become a piece of infrastructure that lives in our CI/CD pipeline, versioned alongside the rest of our codebase. The “hallway moment” — that spontaneous, low‑friction exchange of ideas — is now codified as an API contract, a set of container images, and a handful of SQL migrations. It’s reproducible, auditable, and, most importantly, accessible to anyone on the team who can write a curl request.</p>
-<p>If you’ve ever stood in a corridor, coffee in hand, wondering why the best ideas only happen when you’re not at your desk, consider turning that moment into a service. The tools are there: container orchestration, differentiable programming, open structural data. The hallway is just a metaphor for a well‑designed interface between people and computation.</p>
-<p>Let’s keep the conversation going — share your own hallway‑to‑pipeline stories, and together we’ll build the next generation of structural‑biology tooling.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>If you ever tried to run PyTorch on a TPU, you probably ported your code to torch_xla, or you ended up having to learn JAX. With TorchTPU, a native PyTorch backend, TPU is now just another device. It opens up native support of TPU in the Hugging Face ecosystem. Transformers, Diffusers and Kernels run natively on TPU. Pick a model from the Hub, send it to "tpu", and you're done.</p>
+<p>TPU stands for Tensor Processing Unit. TPUs are Google's own AI accelerators. They are chips built for one job: the matrix math that neural networks spend most of their time on. Google has been designing them for about ten years, and uses them to train and serve its own models, including Gemini.</p>
+<p>TPUs are available on Google Cloud, from a single chip up to pods of thousands of chips. They shine when you need a lot of compute, for training or for serving at scale.</p>
+<p>The catch has always been software. The TPU stack grew up around TensorFlow and JAX, and PyTorch users had to work harder to get in.</p>
+<p>Until now, running PyTorch on TPUs meant going through PyTorch/XLA (torch_xla). It worked, but it had its quirks. Tensors were lazy (the tensors, not you), so your code didn't always run when you thought it did. Small changes could trigger graph recompilations, and debugging was hard to reason about.</p>
+<p>To make life easier, we built Optimum TPU. It gave Hugging Face models inference and training support on TPUs. Now that TorchTPU brings native support, Optimum TPU is not required anymore to run Hugging Face models with Transformers and Diffusers.</p>
+<p>TorchTPU adds TPU as a new backend to PyTorch. You write regular PyTorch code. It comes with Pallas kernels tuned for TPUs, support for distributed training, and a torch.compile integration for when you want more speed. Installing it on a TPU VM takes one command:</p>
+<p>The extra index gives you the CPU build of torch. Without it, pip pulls the much bigger CUDA build, which you don't need on a TPU.</p>
+<p>Transformers v5 was built around one idea: be the source of truth for model definitions, so they can run anywhere. "Anywhere" now includes TPUs. To load a model on a TPU, pass device_map="tpu". That's it.</p>
+<p>The model runs in eager mode by default. You can also use torch.compile for better performance, or run it in a distributed setup.</p>
+<p>TPU is now a first-class device in Diffusers. For prototyping or debugging, eager mode only needs pipe.to("tpu"). For deployment, compiled mode adds one compile call. Your pipelines and code stay the same, and there's no TPU fork to maintain.</p>
+<p>The first call compiles, and every call after that with the same image size reuses the graph.</p>
+<p>Models too big for one chip? Pass a TensorParallelConfig to from_pretrained and the transformer is sharded across chips as it loads, so the full model never has to fit in one place. Many popular pipelines support it out of the box, and the ones that don't are just a tp_plan away. The Diffusers TPU guide has the full recipe.</p>
+<p>Here are some examples run on a Cloud TPU v6e-4:</p>
+<p>TP=4 (each model split across four chips) · bf16 · batch 1</p>
+<p>The Kernels Hub has ready-to-use TPU kernels. Load one with the Kernels library and give your model a speed boost.</p>
+<p>TPU kernels are written in Pallas, which gives you low-level control over the hardware. You can also bring in kernels from the Tokamax library. Here is a ragged-dot kernel from Tokamax plugged into a Mixture-of-Experts model:</p>
+<p>The bigger the batch, the bigger the win. At batch size 64, decoding is 21.5× faster on Qwen3-30B-A3B and 12.8× faster on Gemma 4 26B-A4B.</p>
+<p>Decode throughput on a TPU v6e-8, Hub kernel vs. the default implementation.</p>
+<p>We're continuously improving TPU support in transformers by running the library test suite. We are working to add a nightly CI on TPU and make the results available in the (transformers dashboard)[https://huggingface.co/spaces/transformers-community/transformers-ci-dashboard].</p>
+<p>The Transformers CI dashboard, with TPU results next to other accelerators. Work in progress!</p>
+<p>It's not all green yet, and we're fine with that. Of the tests that run on TPU, 96.5% pass. Every failure we find becomes a small repro script and an issue on the TorchTPU repo. So far we have reported 34 issues, and 19 are already fixed. Running on TPU also caught a few bugs in Transformers itself, like in StaticCache and the Qwen3 tensor-parallel plans. We fixed those upstream.</p>
+<p>If something breaks on TPU, we want to find out before you do.</p>
+<p>TPUs are no longer a side quest for PyTorch users. Install TorchTPU, grab a model from the Hub, and send it to "tpu".</p>
+<p>We can't wait to see what you build 🤗. If you hit a problem, open an issue and tell us about it.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/ashish_624379625242c5d263/from-sowa-power-station-to-the-binding-pocket-why-structural-biology-needs-its-hallway-moment-9kj" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/hf-torchtpu" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
