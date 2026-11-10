@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Palette: teaching a small model to build decks in your design language</title>
+    <title>Sure mate, buy me a bloody coffee</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9826.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,130 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Palette: teaching a small model to build decks in your design language</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Sure mate, buy me a bloody coffee</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/63890e3843d8b0797a0ad606/5pHD09UHuAK-6OyKGKimD.png" alt="Palette: teaching a small model to build decks in your design language" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://peateasea.de/assets/images/chefpresso-cover.jpeg" alt="Sure mate, buy me a bloody coffee" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/63890e3843d8b0797a0ad606/5pHD09UHuAK-6OyKGKimD.png" alt="Palette: teaching a small model to build decks in your design language" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://peateasea.de/assets/images/chefpresso-cover.jpeg" alt="Sure mate, buy me a bloody coffee" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Ask a frontier model for a slide deck and you'll get a good one. Ask for ten and they start to look alike: the same tasteful defaults, the same house style, a faint "AI-generated deck" look. That's fine until you want the deck to look like your template. Frontier models have their own house style, and no amount of prompting stops them drifting back to it. And sometimes the content is confidential and can't leave your systems at all.</p>
-<p>Both of those point to a model you own: open weights, running on your own infrastructure, trained on your own design language. The catch is that small open models, the kind you'd actually self-host, are bad at this. Their decks come out broken: titles that vanish into the background, text running off the slide, shapes stacked on top of each other.</p>
-<p>Palette tests one bet: that a small open-weight model, trained on synthetic data in your design language and checked by a harness, can compete with frontier systems while you keep ownership of the result. We fine-tuned a 20B model to build decks the way people do: a designer plans the deck and a coder draws each slide. Its training data follows the IBM Design Language, and on PresentBench it ranks first on two of the three domains we measured. This post covers how we synthesized the data, trained the model and built a harness around it.</p>
-<p>A slide deck looks simple, but making one asks a model to do three things small models are bad at.</p>
-<p>It lays out the slide without seeing it. The model doesn't draw slides; it writes code that places every element at an x, y, width and font size. Whether a 75-character title fits on two lines at 56pt is arithmetic the model does in its head, and it only finds out it was wrong after the code renders. Small models get this wrong often, which is where overlapping shapes and text running off the slide come from.</p>
-<p>It makes two kinds of decisions at once. Deciding what each slide says and how to show it (a chart or a table? what to cut?) is editorial judgment. Placing it precisely is geometry. A single pass has to do both across 10–20 slides, while keeping the palette, type and layout consistent.</p>
-<p>There's no data showing how decks get made. Plenty of finished decks exist, but not the rationale behind the design choices or the code that produced them.</p>
-<p>Nobody makes a deck in one pass. You decide the story first (how many slides, what each one says, which gets a chart and which gets a table) and only then build each slide. Palette splits the work the same way, into two roles served by a single LoRA adapter:</p>
-<p>Each role now makes one kind of decision: the designer handles the editorial judgment, and the coder handles the geometry. The brief between them is readable and editable, so a person or an agent can change one slide's layout without regenerating the deck. And because every slide's context is fixed before any code is written, the coder calls run in parallel, one per slide, which makes the coding stage about 6–7× faster.</p>
-<p>We trained the adapter with LoRA rather than full fine-tuning: it teaches a format and a skill on top of a capable base without disturbing what the base already knows, and it made each experiment cheap. One lesson: coder examples are about 5× longer than designer examples, so a naive mix undertrained the designer until we oversampled its examples 5×.</p>
-<p>There's no public corpus of plans, design decisions and slide code, so we generated one with a large open teacher. Each deck starts from a recipe that sets its genre, length, layouts and any user directives, so we control what the data covers. Plans range from tidy outlines to raw content dumps, so the model learns to cut and condense. We generated around 1000 decks covering roughly 10,000 slides.</p>
-<p>Every example also carries the reasoning behind it, written as a counterfactual: the trace weighs an alternative and says why it was rejected, so the model learns the rule behind a choice, not just the choice. The designer reasons about content and form. For example:</p>
-<p>"Revenue for four quarters, with one clear upward trend. I considered a table, but the point of this slide is the trend, not the exact figures, so a bar chart makes it visible at a glance."</p>
-<p>"The title is 62 characters. At 44pt it would wrap to three lines and run into the chart below, so I set it at 36pt, which fits on two lines and leaves room above the chart."</p>
-<p>The teacher alone doesn't make the data good; the loop around it does. Every synthesized deck is rendered and checked for overlaps and overflow by the same checker the harness uses at inference. Broken slides are repaired, and their reasoning is rewritten as the same kind of counterfactual, covering what the original layout got wrong and why the fix works. Each mistake the checker catches becomes a better training example.</p>
-<p>The hardest problem was faithfulness. The worst failure is a slide with facts that weren't in the input, and we found that a prompt rule can't prevent it. If a brief asks for a six-by-five table but carries only three bullets, the coder has to invent the rest.</p>
-<p>What fixed it was reference decks, not the rules: fixing a reference reliably changed the teacher's output, while adding a rule rarely did. The teacher sees a few reference decks in its prompt and copies them far more than it follows instructions.</p>
-<p>Users often want finer-grained control over specific design choices: a chart instead of a table, a particular color, a darker cover. Palette lets them ask for these with directives, short instructions written directly in the plan and wrapped in [[ ]]:</p>
-<p>The designer builds each directive into the brief, and the coder follows it when drawing the slide. Without the directive, the model would reasonably show these milestones as a table; with it, the model draws a timeline instead.</p>
-<p>The model follows directives because it was trained to. The data recipes include directives from 12 categories, a few of which are shown below, each phrased several different ways, so the model learns the intent rather than a fixed phrase.</p>
-<p>Figure 1. An illustration of the same plan without (left) and with (right) the [[make this a timeline]] directive.</p>
-<p>Even a well-trained model sometimes produces a broken slide: a title in the same color as the background, or two boxes stacked on top of each other. So Palette doesn't return the model's output directly; every deck goes through a harness first.</p>
-<p>Figure 2. The designer drafts the brief, the coder writes each slide's code in parallel, and the harness checks and repairs every slide before the deck is returned.</p>
-<p>First, simple rules fix known mistakes, such as a malformed color code that would otherwise turn every slide black. Then each slide is rendered and measured: a geometry checker flags text that overlaps, gets clipped or runs off the slide. Flagged slides go to a separate editor model, which rewrites that slide's code.</p>
-<p>The key rule is that a rewrite is kept only if the checker confirms the slide improved; otherwise the original stays. That makes the harness safe to run on every deck. It can fix a slide, but it can't make one worse.</p>
-<p>Figure 3. An illustration of a repair. As generated (left), each card's title is stacked on top of its description; the harness detects the overlaps and reflows the cards into a 2×2 grid (right).</p>
-<p>To measure its effect, we generated each PresentBench deck once and scored it with and without the harness. Across 131 decks, the harness adds 3.5 points on average.</p>
-<p>We evaluate on PresentBench, which scores generated decks on five criteria: fundamentals, visual design, completeness, correctness and fidelity. PresentBench provides a source document rather than a plan, so for these runs a separate frontier model drafted each plan from its document, and Palette built the deck from that plan. We report three domains; baseline numbers are from the PresentBench paper.</p>
-<p>Figure 4. PresentBench scores by domain. Palette (blue) against NotebookLM, Manus 1.6 and five other systems (gray). Palette ranks first on Economics and Education, third on Talk, and second on the three-domain mean.</p>
-<p>Palette does best where structured content and numeric accuracy decide the score, ranking first on Economics and Education. On Talk, where decks are narrative and speech-driven, two closed systems score higher and Palette places third. Across the three domains it places second, 1.1 points behind NotebookLM (59.7 vs 60.8) and ahead of the rest of the field, as a single 20B open-weight model.</p>
-<p>PresentBench measures whether a deck is good, but not whether it follows a specific design language. We're not aware of a benchmark that does, and it's a gap we hope to help close.</p>
-<p>The harness already computes cheap, verifiable signals: does the slide render, does anything overlap or overflow, does every fact trace back to the brief. Today we use them to repair output after generation. Next, we want to use the same checks as rewards for reinforcement learning, so the model stops making these mistakes in the first place. Because the coder works one slide at a time, each slide is a short, independently checkable rollout, a natural fit for GRPO-style training.</p>
-<p>We also want to close the gap on figure-heavy decks by extracting figures from source documents (e.g. with Docling) and placing them with the harness. And we're exploring a lighter way to bring your own templates: re-skinning output from one or two of your existing .pptx files, without retraining.</p>
-<p>Building Palette taught us a few effective methods that extend naturally to other tasks whose output has a structure you can check in code, from charts and diagrams to UI layouts:</p>
+                <p>Versatile software developer, physicist and geek</p>
+<p>I donât usually get involved in the internet reply-fest du jour, but
+this time I thought Iâd give it a go.  It involves coffee, just in case you
+wondered.</p>
+<p>BTW: Iâve used a bit of the antipodean vernacular in this post.  You have
+been warned.</p>
+<p>There was a bit of a kerfuffle last week on the IndieWeb about whether or
+not people should have a âbuy me a coffeeâ (or equivalent) link on their
+blog.  The argument of the article that sparked the
+debate1
+being that this is rampant capitalism, everything is getting monetised these
+days, itâs not going to cover your hosting costs, hosting doesnât cost much
+anyway, so why bother, and please just stop.  Well, that was my impression.</p>
+<p>And I get it that personal blogs donât strictly need a virtual tip jar.  My
+guess is that very few people are making any real money from them.  But itâs
+not about the money.  Itâs more about recognition for the hard work that
+writing entails and about being seen for that work and someone going âHey
+mate, love yer work, hereâs a couple of bucks, good on ya!â.  So Iâm
+throwing my hat into the ring on the side of the âYep, have a âbuy me a
+coffeeâ buttonâ group.</p>
+<p>If you look around my blog, youâll see a buy me a
+coffee button at the bottom of my articles.  I
+donât get much money through those links.  If anything, Iâve received all of
+about 10 â¬ over the blogâs entire lifetime.  Itâs definitely not enough to
+cover my hosting costs.  That doesnât matter.  What does matter is that
+each time someone drops me a tip via the buy-me-a-coffee button, I am
+absolutely overjoyed.  Someone read an article!  It was useful to them!
+And they liked it!  Wicked!</p>
+<p>Itâs brilliant.  Itâs feedback.  Something Iâve written was valuable to
+someone!  Yay!  [insert short dance in front of laptop]</p>
+<p>I rarely get emails about my blog articles.3 Most
+responses have come from someone giving a tip and saying, âHey, nice
+articleâ.  Thatâs so cool!  Itâs not money I can live off (otherwise Iâd
+be living under a bridge4); itâs a signal, itâs feedback, and
+itâs one of the small pieces of connection I get from the wider world after
+having put my thoughts and experience online.</p>
+<p>Yes, most of the stuff I write is for me (or more realistically, for my
+future self).  Yet, when I write, I often have some imaginary âreaderâ in
+mindâsomeone who is going to benefit from the knowledge or experience Iâm
+documenting.  So, if someone out there thinks âThat was good, Iâll throw
+this bloke a couple of Euros his way and say helloâ, then thatâs bloody
+awesome.</p>
+<p>To be honest, if someone just dropped me a line via email and said âHey,
+cool post, gudday mateâ Iâd also be over the moon.  For instance, the other
+night I was at the Hannover TeX user group
+meeting and someone mentioned that theyâd
+stumbled across an article of mine (one that Iâve referred to myself many
+times) and found it useful.  I was totally stoked!</p>
+<p>Imagine a busker playing their guitar on a street corner, a hat sitting in
+front of them to collect what cash bystanders might throw their way.  Are
+they monetising what theyâre doing?  Strictly speaking, sure.  Are they
+paying rent from it?  Most likely not.  Is this the evil tendrils of
+capitalism threading their way into every facet of our lives?  Ah, that
+would be a no.  Are you obliged to put money into their hat?  Not if you
+donât want to.  If you enjoy their music, you can give them a nod and a
+smile and a bit of applause.  Thatâs great feedback for the musician.  And
+if you really like what theyâre playing, you can throw a few coins into
+their hat.  Thatâs how busking works.</p>
+<p>For small creators on the IndieWeb itâs exactly the same: people putting
+their stuff out there and maybeâjust maybeâsomeone will connect with them
+and say âHey mate, I liked what you wrote.  Nice stuff!â And, on the off
+chance that someone liked something enough, they might buy you a virtual
+coffee.  Itâs the same act as someone moving forward from the crowd gathered
+around the busker, dropping coins into their hat, nodding and giving them a
+smile.  I can tell you, getting that recognition and some nice words via my
+buy-me-a-coffee link not only makes my day, it makes my frikken week.  The
+money doesnât go far,5 but shit, itâs a nice
+feeling to know that something I created was sufficiently worthwhile for
+someone that they tipped me for it.</p>
+<p>Will the money ever cover my hosting costs?  I donât reckon, eh?  Am I
+over the moon if someone buys me a coffee?  You betcha!  And I think thatâs
+the case for a lot of creators with such links on their blog: theyâd be
+totally stoked to get a small donation and a âhulloâ if someone liked one of
+their posts.6</p>
+<p>So sure, mate, buy me a bloody coffee!7  Or buy someone else
+a coffee.  But if you donât want to, you donât have to.  No oneâs forcing
+you.</p>
+<p>And if you donât want to dish out for a coffee, why not just drop me a line
+and let me know what you thought?  That would rock!</p>
+<p>The discussion surrounding this post has really taken
+off.  For most of the discussion, see the links in the
+coffee saga follow-up post
+by the same author.  Unfortunately for them, the article ended
+up going viral on Hacker News.  Thatâs probably a lot more attention than
+they expected to get from the post.  And wow, when people have opinions
+on the internet, they really have opinions!Â ↩</p>
+<p>Although, I have to say that the
+Simplicissimus
+segues from video topic to sponsor advertising have to be some of the
+smoothest, subtlest and well thought out Iâve ever seen.  Sometimes I
+find myself waiting for the ad, just so I can see how they handle the
+transition between topic and ad.Â ↩</p>
+<p>I donât have and donât want a comment section.
+Thereâs a reason why the phrase âdonât read the commentsâ is basic
+internet wisdom.Â ↩</p>
+<p>And the animals Iâll have trapped will all have become my
+pets.  But I digressâ¦Â ↩</p>
+<p>I think most of my buy-me-a-coffee money has gone
+to Cameron Kaiserâs blog Old Vintage Computing Research.
+His posts are amazing!  Go check them out!Â ↩</p>
+<p>Case in point: after Iâd written the first draft of this
+post, spu wrote an article about how moved they were after receiving a buy-me-a-coffee donation.  Small donation.  Nice message.  HUGE effect.  Thatâs what Iâm talking about.  BTW: go buy that person a coffee; they write good stuff.Â ↩</p>
+<p>If you liked this post, please buy me a coffee!</p>
+<p>Moving files around outside of Git in a Git-managed project will cause Git
+and humans to get confused.  Why donât my new files show up?  Why are some
+files d...</p>
+<p>Imagine you want to learn computational physics and Python as an advanced
+high-school student or undergraduate.  Where to start?  Assuming no prior
+programmi...</p>
+<p>After about five months of AI bots hungrily munching on my blogâs free
+training data, they seem to have abruptly stopped.  Itâs a good sign, but
+given they s...</p>
+<p>Do you have LaTeX projects on GitHub?  Ever wondered how to get GitHub to
+build them automatically?  Hereâs how I do it.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/palette-deck-building" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://peateasea.de/sure-mate-buy-me-a-bloody-coffee/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

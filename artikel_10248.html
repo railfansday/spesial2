@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</title>
+    <title>Transformers.js v4: Now Available on NPM!</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10248.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,65 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Transformers.js v4: Now Available on NPM!</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/transformersjs-v4/thumbnail.png" alt="Transformers.js v4: Now Available on NPM!" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/cui_banner_light_1600x900_1791294.2e16d0ba.fill-1200x600.jpg" alt="Building Conversational Commerce with Multi-Agent Swarms on GCP: A Working Prototype" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformersjs-v4/thumbnail.png" alt="Transformers.js v4: Now Available on NPM!" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Imagine ordering your weekly groceries as naturally as texting a friend:"Hey, we're out of milk and eggs. Can you also add some snacks for Friday movie night?"</p>
-<p>In our previous post, Building Conversational Commerce with Multi-Agent Swarms on GCP, we shared the architectural blueprint for conversational commerce—proposing a 3-layer decoupled design (Ingress, Memory, and Cognition) to solve messaging timeouts, state tracking, and response reliability.</p>
-<p>While blueprints establish the architecture on paper, production readiness demands working software. In this post, we take that blueprint and bring it to life with a functional prototype called HappyDelivery.</p>
-<p>Using LangGraph, Gemini, FastAPI, and Google Cloud, we'll walk through the code, the state machine, deterministic financial tools, and an automated verification suite that demonstrates how this multi-agent swarm operates in practice.</p>
-<p>To build a reliable commerce swarm, we implemented three decoupled layers that handle the journey of every customer text message:</p>
-<p>Let's examine how each layer functions in code with its own dedicated architecture.</p>
-<p>A frequent question when designing conversational commerce is: how does a message sent by a customer on their smartphone actually land in Layer 1, and can this architecture support messaging platforms beyond WhatsApp?</p>
-<p>End users do not communicate directly with your Google Cloud servers. Instead, customer messages traverse an operator ecosystem before landing on your webhook:</p>
-<p>Every major consumer messaging platform operates on the exact same fundamental contract: an asynchronous HTTPS POST webhook delivery with a strict HTTP acknowledgement timeout:</p>
-<p>While the payload schemas and cryptographic headers differ slightly between platforms, Layer 1 abstracts away all client differences:</p>
-<p>This ensures the rest of your system—Session Store (Layer 2) and Agent Swarm (Layer 3)—operates on clean, normalized data without caring whether the shopper sent their message from an iPhone, an Android RCS chat, or a WhatsApp thread.</p>
-<p>Messaging platforms are completely stateless: every text message arrives as an isolated webhook event. To provide a coherent shopping experience, the system must instantly reconstruct the customer's full context without having to re-read or re-parse days of chat logs on every turn.</p>
-<p>We use Cloud Memorystore (Redis) keyed by the customer's verified phone number (session:{phone_number}) to store active state:</p>
-<p>A common question in conversational commerce is whether state lookups will introduce latency. Here is what the baseline infrastructure supports:</p>
-<p>Key Takeaway: In practice, the Session & Cart Layer will never be the bottleneck—it easily outpaces upstream webhook inference and downstream LLM inference.</p>
-<p>Rather than relying on a single monolithic prompt to handle every task, we separate reasoning into a swarm of specialized agents:</p>
-<p>Now that we have seen the high-level design of the three layers, let's look at the actual Python prototype code that brings each layer to life.</p>
-<p>The goal of this service is simple: verify authenticity across any inbound channel, normalize the payload into a canonical schema, and get off the critical path in < 150ms.</p>
-<p>Here is our implementation showing how multiple messaging channels (WhatsApp, RCS, Apple Messages, SMS) are handled by pluggable adapters:</p>
-<p>By immediately returning an HTTP 200 OK and handing the payload off to Pub/Sub, we completely decouple message intake from downstream AI reasoning time across all messaging ecosystems.</p>
-<p>We benchmarked the live Cloud Run HTTPS webhook intake across warm invocations:</p>
-<p>This empirically proves our architectural claim: the Ingress service validates the cryptographic signature and immediately commits the event to Pub/Sub, freeing the customer chat client without waiting on agentic reasoning.</p>
-<p>We also verified security enforcement against tampered payloads:</p>
-<p>The worker pods pulling from Pub/Sub need to instantly look up who the customer is and what is in their current cart.</p>
-<p>Here is the session store implementation using Cloud Memorystore (Redis):</p>
-<p>Each record contains the customer ID (cust_9821), saved address, dietary restrictions, and current cart items. This guarantees that when a customer texts back hours later, their cart is restored instantaneously.</p>
-<p>Every session lookup executes in 0.318ms, proving our architectural claim that restoring customer context and persistent cart state adds virtually zero latency to the conversational turn.</p>
-<p>With Ingress and Redis handling incoming traffic and memory, all the decision-making lives in the LangGraph multi-agent graph.</p>
-<p>Every turn passes through a typed data structure holding the customer's profile, active cart, and the supervisor's routing decision:</p>
-<p>Next, we define the nodes and conditional edges that allow the Supervisor to dynamically route tasks to the right specialist:</p>
-<p>A core tenet of our blueprint is: delegate arithmetic to deterministic tools. Generative models excel at language and reasoning, while financial calculations require exact precision. If a model computes taxes or discounts in free-form text, it may occasionally introduce calculation errors.</p>
-<p>Instead, we bind deterministic tools to our specialist nodes. For example, the Inventory and Transaction agents use a Python calculation tool rather than computing prices in-prompt:</p>
-<p>Worker containers pull messages asynchronously from Pub/Sub and stream LangGraph node transitions in real time.</p>
-<p>Now that we have all three components—Ingress (Layer 1), Redis Memory (Layer 2), and the LangGraph Swarm (Layer 3)—how do they actually run together as a single unified system?</p>
-<p>Here is the complete end-to-end lifecycle of a customer's message:</p>
-<p>The worker loop that coordinates all three layers is concise, clean, and completely decouples the user-facing webhook from back-office AI reasoning:</p>
-<p>With the entire pipeline wired together, let's look at what happens when we run an actual customer order through it.</p>
-<p>To verify the prototype, we ran an automated simulation of an end-to-end customer order. Here is how the swarm behaves across three natural conversational turns:</p>
-<p>Behind the Scenes: The InventoryAgent mutates the in-memory cart (removing Sprite and adding Coke Zero), executes calculate_cart_totals, and confirms delivery details without losing context.</p>
-<p>We validated all core behaviors—webhook HMAC validation, catalog indexing, deterministic math, and multi-turn state transitions—with automated unit and integration tests:</p>
-<p>A critical question when evaluating multi-agent architectures is token consumption and operational inference cost. In a naive implementation where massive prompts and entire conversation histories are repeatedly re-sent on every step, LLM API bills can quickly eat into e-commerce retail margins.</p>
-<p>Our prototype is engineered specifically to prevent token waste through strict agent specialization, deterministic tools, and externalized Redis state:</p>
-<p>Here is the exact token telemetry measured across the live 3-turn HappyDelivery session:</p>
-<p>Bringing the blueprint into working code revealed several practical realities:</p>
-<p>Building this prototype proved that the decoupled architecture outlined in our blueprint isn't just theoretical—it is practical, reliable, and ready for production on Google Cloud.</p>
-<p>By combining LangGraph for multi-agent workflows, Gemini for natural language reasoning, and GCP for fast ingress and persistent memory, we can build shopping experiences that feel as simple as chatting with a friend while maintaining the enterprise rigor required for commerce.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Cost per task: Using cheap classifiers to route across Gemini models and thinking levels</p>
-<p>Smaller apps and faster GPU inference with LiteRT in Google Play services</p>
+                <p>We're excited to announce that Transformers.js v4 is now available on NPM! After a year of development (we started in March 2025 🤯), we're finally ready for you to use it.</p>
+<p>The biggest change is undoubtedly the adoption of a new WebGPU Runtime, completely rewritten in C++. We've worked closely with the ONNX Runtime team to thoroughly test this runtime across our ~200 supported model architectures, as well as many new v4-exclusive architectures.</p>
+<p>In addition to better operator support (for performance, accuracy, and coverage), this new WebGPU runtime allows the same transformers.js code to be used across a wide variety of JavaScript environments, including browsers, server-side runtimes, and desktop applications. That's right, you can now run WebGPU-accelerated models directly in Node, Bun, and Deno!</p>
+<p>We've proven that it's possible to run state-of-the-art AI models 100% locally in the browser, and now we're focused on performance: making these models run as fast as possible, even in resource-constrained environments. This required completely rethinking our export strategy, especially for large language models. We achieve this by re-implementing new models operation by operation, leveraging specialized ONNX Runtime Contrib Operators like com.microsoft.GroupQueryAttention, com.microsoft.MatMulNBits, or com.microsoft.QMoE to maximize performance.</p>
+<p>For example, adopting the com.microsoft.MultiHeadAttention operator, we were able to achieve a ~4x speedup for BERT-based embedding models.</p>
+<p>Developing a new major version gave us the opportunity to invest in the codebase and tackle long-overdue refactoring efforts.</p>
+<p>Until now, the GitHub repository served as our npm package. This worked well as long as the repository only exposed a single library. However, looking to the future, we saw the need for various sub-packages that depend heavily on the Transformers.js core while addressing different use cases, like library-specific implementations, or smaller utilities that most users don't need but are essential for some.</p>
+<p>That's why we converted the repository to a monorepo using pnpm workspaces. This allows us to ship smaller packages that depend on @huggingface/transformers without the overhead of maintaining separate repositories.</p>
+<p>Another major refactoring effort targeted the ever-growing models.js file. In v3, all available models were defined in a single file spanning over 8,000 lines, becoming increasingly difficult to maintain. For v4, we split this into smaller, focused modules with a clear distinction between utility functions, core logic, and model-specific implementations. This new structure improves readability and makes it much easier to add new models. Developers can now focus on model-specific logic without navigating through thousands of lines of unrelated code.</p>
+<p>In v3, many Transformers.js example projects lived directly in the main repository. For v4, we've moved them to a dedicated repository, allowing us to maintain a cleaner codebase focused on the core library. This also makes it easier for users to find and contribute to examples without sifting through the main repository.</p>
+<p>We updated the Prettier configuration and reformatted all files in the repository. This ensures consistent formatting throughout the codebase, with all future PRs automatically following the same style. No more debates about formatting... Prettier handles it all, keeping the code clean and readable for everyone.</p>
+<p>Thanks to our new export strategy and ONNX Runtime's expanding support for custom operators, we've been able to add many new models and architectures to Transformers.js v4. These include popular models like GPT-OSS, Chatterbox, GraniteMoeHybrid, LFM2-MoE, HunYuanDenseV1, Apertus, Olmo3, FalconH1, and Youtu-LLM. Many of these required us to implement support for advanced architectural patterns, including Mamba (state-space models), Multi-head Latent Attention (MLA), and Mixture of Experts (MoE). Perhaps most importantly, these models are all compatible with WebGPU, allowing users to run them directly in the browser or server-side JavaScript environments with hardware acceleration. We've released several Transformers.js v4 demos so far... and we'll continue to release more!</p>
+<p>We've migrated our build system from Webpack to esbuild, and the results have been incredible. Build times dropped from 2 seconds to just 200 milliseconds, a 10x improvement that makes development iteration significantly faster. Speed isn't the only benefit, though: bundle sizes also decreased by an average of 10% across all builds. The most notable improvement is in transformers.web.js, our default export, which is now 53% smaller, meaning faster downloads and quicker startup times for users.</p>
+<p>Version 4 also adds new library features that make it easier to build robust, production-ready applications.</p>
+<p>The new ModelRegistry API is designed for production workflows. It provides explicit visibility into pipeline assets before loading anything: list required files with get_pipeline_files, inspect per-file metadata with get_file_metadata (quite useful to calculate total download size), check cache status with is_pipeline_cached, and clear cached artifacts with clear_pipeline_cache. You can also query available precision types for a model with get_available_dtypes. Based on this new API, progress_callback now includes a progress_total event, making it easy to render end-to-end loading progress without manually aggregating per-file updates.</p>
+<p>We also added new environment controls for model loading. env.useWasmCache enables caching of WASM runtime files (when cache storage is available), allowing applications to work fully offline after the initial load.</p>
+<p>env.fetch lets you provide a custom fetch implementation for use cases such as authenticated model access, custom headers, and abortable requests.</p>
+<p>Finally, logging is easier to manage in real-world deployments. ONNX Runtime WebGPU warnings are now hidden by default, and you can set explicit verbosity levels for both Transformers.js and ONNX Runtime. This update, also driven by community feedback, keeps console output focused on actionable signals rather than low-value noise.</p>
+<p>A frequent request from users was to extract the tokenization logic into a separate library, and with v4, that's exactly what we've done. @huggingface/tokenizers is a complete refactor of the tokenization logic, designed to work seamlessly across browsers and server-side runtimes. At just 8.8kB (gzipped) with zero dependencies, it's incredibly lightweight while remaining fully type-safe.</p>
+<p>This separation keeps the core of Transformers.js focused and lean while offering a versatile, standalone tool that any WebML project can use independently.</p>
+<p>We've made several quality-of-life improvements across the library. The type system has been enhanced with dynamic pipeline types that adapt based on inputs, providing better developer experience and type safety.</p>
+<p>Additionally, we've added support for larger models exceeding 8B parameters. In our tests, we've been able to run GPT-OSS 20B (q4f16) at ~60 tokens per second on an M4 Pro Max.</p>
+<p>We want to extend our heartfelt thanks to everyone who contributed to this major release, especially the ONNX Runtime team for their incredible work on the new WebGPU runtime and their support throughout development, as well as all external contributors and early testers.</p>
+<p>Yeah bro, here https://huggingface.co/collections/webml-community/transformersjs-v4-demos</p>
+<p>Very cool ! Any idea if it's possible to have interoperability with ekzhang/jax-js (it support ONNX backend too)</p>
+<p>Might be usefull for educational contant and interactive visualisation</p>
+<p>If using onnxruntime-web, why does the package still error if we don't have onnxruntime-node? I am trying to deploy on a azure function app and need minimal dependency for quick deployments. but it fails due to the this require statement...</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/building-conversational-commerce-with-multi-agent-swarms-on-gcp-a-working-prototype/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/transformersjs-v4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

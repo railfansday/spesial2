@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hill-Climbing Agent Quality with Agents CLI Evaluation</title>
+    <title>PRX Part 3 — Training a Text-to-Image Model in 24h!</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10213.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,60 +15,73 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Hill-Climbing Agent Quality with Agents CLI Evaluation</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>PRX Part 3 — Training a Text-to-Image Model in 24h!</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/68e529af513e724edd8702f6/zMyALdakGbN6SDG3ucmLd.jpeg" alt="PRX Part 3 — Training a Text-to-Image Model in 24h!" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/68e529af513e724edd8702f6/zMyALdakGbN6SDG3ucmLd.jpeg" alt="PRX Part 3 — Training a Text-to-Image Model in 24h!" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A live walkthrough of the Agents CLI eval loop, from a first run to regression tracking, model-backend experiments, and automated alerting</p>
-<p>Building an agent that works on a demo is a different problem from building an agent that stays working across model upgrades, tool changes, and new conversation shapes. The first takes a weekend; the second takes a loop. A team writes test cases, runs them, grades them, reads what failed, changes the agent, and runs the cases again. If the score goes up, the change was good. If it goes down, revert. Over weeks of this, the agent inches toward the ceiling of what the model, tools, and prompt can do together. The quality-engineering name for this is hill-climbing.</p>
-<p>The Agents CLI eval namespace was built around this loop. The commands are small and framework-agnostic: eval generate runs the agent against a dataset of cases, eval grade scores the generated traces, eval compare diffs two run results side by side, eval analyze clusters failures into themes, and eval optimize runs an automated hill-climbing pass on the agent's prompt.</p>
-<p>Below: baseline → regression → model swap → scheduling and alerting.</p>
-<p>The scaffold used throughout is the LangChain template that ships with Agents CLI v1.8.0. The setup is a single command:</p>
-<p>The scaffold ships with an eval dataset at tests/eval/datasets/basic-dataset.json, a config at tests/eval/eval_config.yaml, and a custom LLM-as-judge metric at tests/eval/response_quality.py. The config declares the metric to run:</p>
-<p>The metric grades each response on a 1-to-5 scale for accuracy, relevance, and clarity, using gemini-3.8-flash as the judge. The default dataset has a single trivial case, which is not enough for a hill-climb. The first thing we do is expand it to four cases that probe different behaviors:</p>
-<p>Four cases: a greeting, a weather question the mock tool handles with the hardcoded foggy response, a weather question for a city the tool defaults on, and an off-topic question that the agent has to decide how to handle. This is a small dataset by design; the hill-climbing loop pays off when the dataset is small enough to run on every change.</p>
-<p>With the dataset in place, we run eval generate to drive the agent against each case, then eval grade to score the resulting traces:</p>
-<p>Mean 4.0 out of 5 across four cases, with a standard deviation of 1.41. That stdev tells us immediately that the cases are not scoring uniformly, which is a healthier starting point than a flat 5.0 across the board. A flat 5.0 either means the agent is perfect (unlikely) or the dataset is too easy to show variation. 4.0 with real spread is a hill to climb.</p>
-<p>To demonstrate the loop, we introduce a realistic regression. A developer working across several agent projects accidentally pastes the wrong system prompt into our weather agent: a chef persona meant for a different codebase. In app/agent.py:</p>
-<p>The change compiles, the agent still runs, and nothing in the pre-eval pipeline (lint, unit tests, type checks) catches it. Re-running the same eval generate plus eval grade sequence produces:</p>
-<p>Mean 2.75, down from 4.0. The judge agrees with our intuition that a chef persona on a weather agent is a worse product than a general-purpose helpful assistant. The stdev also tightened from 1.41 to 0.96, consistent with the chef prompt pushing most cases toward the same mediocre range.</p>
-<p>A 1.25-point drop on a 1-to-5 scale is substantial, and the kind of regression that can slip through code review when the diff looks small ("one string literal changed"). The loop surfaced the change at all, with a specific number attached to it, before the agent reached production.</p>
-<p>Mean scores are a start; the per-case diff is where the hill-climb happens. eval compare reads two result files and produces a structured JSON diff:</p>
-<p>The output lists which keys changed and which stayed the same:</p>
-<p>The differences object has the full per-case breakdown with the baseline and candidate values side by side. For a hill-climbing workflow, we typically pipe the output through jq or a small Python script to extract the signal; the raw JSON is the complete evidence.</p>
-<p>Walking the two result files and lining up the scores per case shows where the regression landed:</p>
-<p>Three cases dropped, one held. The most important of the three is sf_weather: the chef persona pulled the model's attention away from the registered get_weather tool, so the agent stopped calling it and started making up weather values. Unit tests can't catch this: the code runs, the tool is still registered, but the model's behavior around it has shifted. Only an end-to-end eval that scores the response in context surfaces this.</p>
-<p>The mean drop by itself (−1.25) is a clear signal, but the per-case breakdown is what tells the developer where to look. A one-line system-prompt change propagated through three different cases in three different ways: greeting lost a point on tone, sf_weather lost two on tool usage, off_topic lost two on scope creep.</p>
-<p>A common hill-climbing question is whether a cheaper or faster model would do the job acceptably. For the LangChain template, the model is defined in app/agent.py:</p>
-<p>We swap gemini-3.8-flash for gemini-2.5-flash (restoring the helpful system prompt first), re-run eval generate plus eval grade, and compare the two result files. The mean drops from 4.00 to 2.75, the same magnitude as the chef-prompt regression, but the per-case breakdown tells a completely different story:</p>
-<p>The cheaper model matched 3.8-flash exactly on the greeting and rome_weather cases and lost a point on sf_weather (slightly less polished phrasing). The whole visible drop traces to off_topic, where the cheaper model refused with a hedge about the event "not having happened yet" (a training-cutoff artifact), and the judge marked it harshly.</p>
-<p>The lesson is that the summary number is misleading. Look only at the mean and you'd call gemini-2.5-flash as bad as the chef prompt. Look at the per-case breakdown and you'd call it a reasonable swap for most of the agent's workload, with one case (handling out-of-scope questions about recent events) exposing a real limitation. If the production distribution of user questions matches the first three cases more than the fourth, the swap is worth considering. If off_topic-style questions are common, it is not.</p>
-<p>Two caveats on this experiment. First, model swaps interact with the prompt: a prompt tuned for a stronger model often leaks capability when ported to a weaker one, so the right comparison is "weaker model with a prompt tuned for it" versus "stronger model with its own tuned prompt." Second, the Vertex AI Eval Service calls a judge model to grade the traces, and the judge is held constant across the comparison. Changing the judge is a different experiment and should be done separately.</p>
-<p>Agents CLI does not ship a scheduler, but the eval commands are designed to drop into standard infrastructure. The pattern we can use here is a cron job or Cloud Scheduler trigger that runs eval generate plus eval grade on a cadence and writes the results to a persistent location:</p>
-<p>A nightly run against a stable regression dataset catches drift from model updates, data changes in the agent's tools, and dependencies that shift under the agent's feet. For a production agent, the scheduled run also captures the model vendor's quiet upgrades, which can move the agent's behavior without any change on our side. The dataset for the scheduled run is typically larger than the one used in the inner loop (dozens to hundreds of cases rather than a few), since it only runs once a day.</p>
-<p>The scheduled run produces a result file every day, but a file nobody looks at is not an alert. The pattern here can be a wrapper script that compares each new run's mean against a baseline (the previous run, or a committed known-good) and exits non-zero when the drop exceeds a threshold. The non-zero exit is what triggers the alert from the surrounding scheduler.</p>
-<p>Running it against our regression demo (baseline 4.0, candidate 2.75 from the chef-prompt run):</p>
-<p>And against an identical pair (self-compare):</p>
-<p>The non-zero exit code is what a cron job, Cloud Scheduler, or GitHub Actions step picks up to send the alert.</p>
-<p>For ADK projects, eval optimize runs an automated hill-climbing pass on the agent's prompt using the GEPA framework (not currently supported for the LangChain extension). The command takes a dataset and a target metric, proposes prompt variants, grades each one, keeps the variants that improve the metric, and iterates. The output is a set of candidate prompts ranked by their eval score, which a human then reviews and promotes to the agent definition.</p>
-<p>Two things to understand about eval optimize. First, it is scoped to prompt optimization, not to arbitrary agent changes: the agent's tools, structure, and model stay fixed. Second, GEPA sometimes finds genuine improvements and sometimes finds prompt variants that score higher on the specific metric by overfitting to its wording. The reviewer is the control. For projects where the loop applies, the discipline is to run eval optimize on the regression dataset (where improvements are measurable) and to review the candidate prompts carefully before promotion.</p>
-<p>A few patterns and anti-patterns from running this loop ourselves and watching teams do the same.</p>
-<p>Lead with a small, representative dataset, not a comprehensive one. The temptation when starting an eval is to try to cover every edge case the agent will ever see. The result is a dataset that takes an hour to run and that nobody runs on a change. Four cases that run in under a minute, as above, exercise the main behaviors and get run on every change. A regression dataset of three hundred cases that runs for an hour becomes a release gate at best and shelfware at worst.</p>
-<p>Snapshot result files, not scores. The score is a summary; the result file is the evidence. When a regression surfaces three weeks after a prompt change, having the full result JSON from before and after the change (not just the mean score) is what lets eval compare show the specific case that moved. The per-case breakdown in Step 4 above would not have been possible from scores alone.</p>
-<p>Separate the dataset from its expectations. The dataset is the inputs. The eval config is the expectations. They evolve on different cadences: the dataset grows as new real-world cases surface in production, and the config evolves as the team's definition of "good" matures. Keeping them in separate files, both committed to version control, makes it clear which half changed when a score moves.</p>
-<p>Treat summary metrics with suspicion. The model-swap experiment in Step 5 is the clearest example. The mean dropped by half a point, but the per-case breakdown showed the drop was concentrated in one case while the others held or improved. A team that only looked at the mean would have made the wrong call.</p>
-<p>More evals do not automatically lead to more fixes. A recent controlled study we ran found that coding agents using agents-cli run four times as many evals as coding agents without it, but change the agent after an eval about as often as the baseline. The behavior gain comes from what the skills put into the build at the start, not from the inner iteration. Evals are necessary for quality, but the quality comes from acting on what the evals show.</p>
-<p>Scaffold an Agents CLI project and run the first eval loop in a handful of commands:</p>
-<p>The full eval namespace is documented at google.github.io/agents-cli/cli. The source code, including the first-party eval primitives, is at github.com/google/agents-cli.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>What is Pathways? Single-controller training for large models</p>
-<p>Fast, reliable A2UI, with swappable inference formats</p>
+                <p>In the last two posts (Part 1 and Part 2), we explored a wide range of architectural and training tricks for diffusion models. We tried to evaluate each idea in isolation, measuring throughput, convergence speed, and final image quality, and tried to understand what actually moves the needle.</p>
+<p>In this post, we want to answer a much more practical question:</p>
+<p>What happens when we combine all the tricks that worked?</p>
+<p>Instead of optimizing one dimension at a time, we’ll stack the most promising ingredients together and see how far we can push performance under a strict compute budget.</p>
+<p>To make things concrete, we’re doing a 24-hour speedrun:</p>
+<p>This is very far from the early diffusion days, where training competitive models could cost millions of dollars. The goal here is to demonstrate how much the field has evolved and how far careful engineering can take you in just a single day of training.</p>
+<p>This speedrun is not just a fun experiment. It will likely serve as the foundation for our large-scale training recipe going forward.</p>
+<p>Alongside the results, we’re also open-sourcing our code (Github link), which contains:</p>
+<p>So you can reproduce, modify, and extend everything yourself.</p>
+<p>Now let’s walk through what went into this 24h run.</p>
+<p>We use the x-prediction formulation from Back to Basics: Let Denoising Generative Models Denoise [Li and He, 2025]. As seen in Part 2, this enables training directly in pixel space and eliminates the need for a VAE altogether.
+We use a patch size of 32 and use a 256-dimensional bottleneck in the initial token projection layer. This design keeps the sequence length under control, making pixel-space training computationally manageable even at higher resolutions.</p>
+<p>(512/32)2=256
+(512 / 32)^2 = 256
+(512/32)2=256</p>
+<p>(1024/32)2=1024
+(1024 / 32)^2 = 1024
+(1024/32)2=1024</p>
+<p>Instead of following the usual 256px → 512px → 1024px schedule, we start directly at 512px and then fine-tune at 1024px.</p>
+<p>With controlled token counts and modern hardware, pixel-space training is no longer prohibitive. It is simply a cleaner and more direct formulation.</p>
+<p>One very nice side effect of predicting x0x_0x0​ directly in pixel space is that we can reuse a whole toolbox from classical computer vision.</p>
+<p>When your model outputs latents, perceptual supervision becomes awkward. You either have to decode back to pixels or define losses in a learned latent space that may or may not align with human perception. Once you predict pixels directly, everything becomes straightforward again. You can plug in perceptual losses exactly as they were originally designed.</p>
+<p>We take inspiration from the paper PixelGen: Pixel Diffusion Beats Latent Diffusion with Perceptual Loss [Ma et al.], where the authors introduce additional perceptual objectives on top of the diffusion loss. They show that adding perceptual signals can noticeably improve convergence speed and final visual quality.</p>
+<p>For this 24h run, we add two auxiliary losses:</p>
+<p>The idea is simple: In addition to the standard flow matching objective, we encourage the predicted clean image to match the target image in a perceptual feature space. LPIPS captures low-level perceptual similarity, while DINO features provide a stronger semantic signal.</p>
+<p>We keep the same overall idea as the paper, but we tweaked a few details. In our experiments, we empirically found that it worked better to:</p>
+<p>These are small implementation details, but in our setting they consistently gave better results.</p>
+<p>We used a weight of 0.1 for the LPIPS loss and 0.01 for the DINO perceptual loss, matching the values recommended in the original paper.</p>
+<p>These losses are lightweight compared to the main transformer forward pass, and in our setup they add only a small overhead while providing a consistent quality boost.</p>
+<p>To make each step cheaper, we use token routing with TREAD [Krause et al., 2025]), which randomly selects a fraction of tokens and lets them bypass a contiguous chunk of transformer blocks, then re-injects them later so nothing is dropped.</p>
+<p>We picked TREAD over SPRINT (Park et al., 2025) mostly for simplicity, and because the extra complexity of SPRINT did not feel worth the fairly small additional compute savings in our setting (sequence length 64 vs. 128 with TREAD at 512px).</p>
+<p>Following the TREAD recipe, we route 50% of the tokens from the 2nd block to the penultimate block of the transformer.</p>
+<p>Routed models can look worse under vanilla CFG, especially when undertrained, so we implemented a simple self-guidance scheme inspired by Guiding Token-Sparse Diffusion Models (Krause et al., 2025), which guides using a dense vs. routed conditional prediction instead of relying on an unconditional branch.</p>
+<p>We used REPA [Yu et al., 2024] for representation alignment.</p>
+<p>For the teacher, we went with DINOv3 [Siméoni et al. 2025] since it gave the best quality improvements in our previous experiments.</p>
+<p>Concretely, we apply the alignment loss once,at the 8th transformer block with a loss weight of 0.5.</p>
+<p>Since we combine REPA with TREAD routing, we only compute the alignment loss on the non-routed tokens, meaning the tokens that actually go through the blocks where we apply the loss. This keeps the REPA signal consistent and avoids comparing features for tokens that skipped the computation path.</p>
+<p>We used the Muon optimizer, using the FSDP implementation from muon_fsdp_2, since it showed a clear improvement over Adam in our previous runs.</p>
+<p>Muon is only applied to 2D parameters (basically matrices). Everything else (biases, norms, embeddings, etc.) is optimized with Adam, which is why the config has two parameter groups.</p>
+<p>We trained on three publicly available synthetic datasets:</p>
+<p>The schedule is basically: go fast at 512, then sharpen at 1024:</p>
+<p>We also keep an EMA of the weights for sampling and eval:</p>
+<p>Below are the evaluation curves we tracked throughout the run and a few sample grids from the final checkpoint:</p>
+<p>For a one day training run, this is already a pretty solid place to be. The model is not flawless yet (you can still spot some texture glitches, occasional weird anatomy, and it can get a bit shaky on very hard prompts), but it is clearly usable. Prompt following is strong, the overall aesthetic is consistent, and the 1024 stage mostly does what we want: sharpen details without breaking composition.</p>
+<p>The key takeaway is that we're very close. The remaining issues look more like undertraining artifacts and limited data diversity than signs of a structural flaw in the recipe. The failure modes are consistent with what you’d expect from a model that simply hasn’t seen enough varied data yet. With more compute and broader coverage, this exact setup should continue improving in a fairly predictable way.</p>
+<p>Zooming out, this speed run also highlights how far diffusion training has come. By combining pixel-space training, efficient routing, representation alignment, and lightweight perceptual guidance, you can now get a meaningful model in about a day on a budget that would have sounded unrealistic not that long ago.</p>
+<p>This 24h run is just a starting point, not the finish line. Next, we will keep pushing the same recipe with a bit more scale and iterate on the dataset mix and captioning.</p>
+<p>All the code and configs behind this speedrun, as well as the full experimental framework used throughout Part 1 and Part 2, are available in the PRX repository: https://github.com/Photoroom/PRX.</p>
+<p>While we don’t redistribute the exact training datasets used in this run, the pipeline is fully configurable and designed to be easily adapted to your own data. You can plug in different datasets, tweak individual components (TREAD, REPA, perceptual losses, Muon, etc.), and run controlled experiments with minimal friction. Our goal is to make this a practical playground for fast diffusion research, and we hope the community will use it to explore, benchmark, and iterate on these techniques in their own setups.</p>
+<p>If you made it this far, thank you for reading. We would also love to have you join our Discord community, where we share PRX progress and results, and discuss anything diffusion and text-to-image related.</p>
+<p>Goodbye for now, and stay tuned for the next round of experiments! 🚀</p>
+<p>This speedrun was inspired by several recent efforts exploring fast and low-cost training of diffusion models. If you're interested in speedrunning text-to-image models, we encourage you to check out the following works:</p>
+<p>24 hours is very impressive, but looking at 32 H200 makes it make a bit more sense xD. Super cool that you used Muon! And, are you planning on releasing the re-captioned brivangl/midjourney-v6-llava?</p>
+<p>Yeah, definitely not possible on consumer hardware… yet :D That’s also why we added the $1500 tag.</p>
+<p>Regarding releasing the captions, we hadn’t really thought about that. If you think it would be valuable for the community, we can work on releasing them as well.</p>
+<p>Hi, this article is very inspiring.I'd like to get your thoughts on the perceptual loss. During a research internship on (raw) image restoration - and trying to explore the perception/distortion tradeoff , I did a few attempts at VGG and  Dino loss aswell.  I always ended up with checkerboard patterns (no matter vgg or dino). If you look at the original paper from Johnson , it's full of these artifacts.Did you face any  such issue or can share useful insights about that topic ?</p>
+<p>I don’t think we really observed such artifacts, or at least not due to LPIPS. We did see something similar without LPIPS when using JIT on undertrained models, but I don’t think we observe them anymore. It might simply be because the model had not converged yet.One situation where we started to observe checkerboard patterns was during reward alignment with GRPO or SRPO on one of these models. In that case the artifacts were much more noticeable, but I don’t think they were related to LPIPS since we were not using it at the time.What type of model were you using?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/hill-climbing-agent-quality-with-agents-cli-evaluation/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/Photoroom/prx-part3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

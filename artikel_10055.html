@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Routing Is Simple. Until It Isn’t.</title>
+    <title>What’s !important #20: GTA 6 Scroll Effects, Scrollspies, random()</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10055.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Model Routing Is Simple. Until It Isn’t.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>What’s !important #20: GTA 6 Scroll Effects, Scrollspies, random()</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/10/wi20-1.jpg" alt="What’s !important #20: GTA 6 Scroll Effects, Scrollspies, random()" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/10/wi20-1.jpg" alt="What’s !important #20: GTA 6 Scroll Effects, Scrollspies, random()" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Building a router into your agent sounds like an easy win. Send simple requests to cheaper models, reserve expensive ones for harder tasks, or route by specialty — Claude for code, Gemini for multimodal, and so on. A classifier or heuristic makes the call, costs go down, performance stays up. Done.</p>
-<p>Except it’s not. Most routing systems assume that model selection is a classification problem. In our experience building routing into agentic systems, what looks like a model-selection problem quickly becomes a systems optimization problem. Three dimensions made this surprisingly hard for us.</p>
-<p>We expected GPT-4.1 to be cheaper than Claude Sonnet 4.6. It wasn’t.</p>
-<p>Across 417 tasks on the AppWorld Test Challenge using the same CodeAct agent, Sonnet cost $79 total ($0.19/task) while GPT-4.1 cost $155 ($0.37/task) — nearly double. On paper, this makes no sense. GPT-4.1’s token pricing is lower on both input and output, and Sonnet takes roughly three times as many reasoning steps to finish the same tasks. By sticker price alone, GPT-4.1 should win easily.</p>
-<p>The explanation? Caching — something most routing discussions ignore entirely.
-Agent workloads tend to reuse large chunks of context across steps. When cache hit rates are high, effective input costs drop dramatically. Sonnet’s lower cache-read pricing meant it benefited disproportionately from this pattern, enough to overcome both its higher base pricing and its longer trajectories.</p>
-<p>The takeaway: actual cost depends on the interaction between the model, the workload, and the serving infrastructure. A router that only looks at pricing sheets is optimizing against the wrong numbers.</p>
-<p>A common routing strategy is to estimate how hard a task is and send harder tasks to stronger models. Intuitive, but it breaks down in two ways.</p>
-<p>First, difficulty is often invisible at routing time. A request like "summarize this contract" looks simple, but might trigger retrieval, compliance checks, tool use, and multiple rounds of refinement before it’s done. Meanwhile, a highly technical prompt might be handled efficiently by a smaller specialized model. You often don’t know how hard a task actually is until execution is underway.</p>
-<p>Routers aren’t solving one problem. They’re constantly juggling cost, quality, latency, compliance, and reliability all at once.</p>
-<p>It’s tempting to think about latency purely in terms of model size — bigger models are slower, smaller ones are faster. But what the user actually experiences depends on much more than that.</p>
-<p>Routing itself adds overhead. Infrastructure factors — which hardware a model is running on, whether the cache is warm, how busy the endpoint is — often dominate end-to-end response times. A theoretically faster model can still produce a slower experience if the serving conditions aren’t right.</p>
-<p>Then there’s routing granularity. Routing once per task adds minimal overhead. But routing at every step — which gives you more flexibility to adapt mid-execution — means every additional decision point introduces latency and operational complexity.</p>
-<p>A router that ignores the serving system is optimizing against the wrong reality.</p>
-<p>These lessons shaped how we built our router. The key shift: we stopped treating routing as a classification problem and started treating it as an optimization problem. Rather than asking "which model is best for this task?", our algorithm optimizes across cost, quality, and latency simultaneously — while staying lightweight enough to avoid becoming a bottleneck itself.</p>
-<p>The figure below shows the result on the AppWorld Test Challenge with a CodeAct agent. Each blue square is a different configuration of our router, tracing out a cost-accuracy frontier. The important thing isn't any single point — it's that the router gives you a range of operating points to choose from depending on whether you want to prioritize cost, latency, or accuracy. Configuration 1 (latency-optimized) lands at 84% accuracy for $93 and 83s — a 21% cost reduction and 9% latency reduction compared to running Opus alone, with only a 4% accuracy drop. Configuration 2 pushes cost even lower.</p>
-<p>Notice that a standard difficulty-based router (the teal diamond) lands in a similar accuracy range but at higher cost — it doesn't explore the full tradeoff space the way an optimization-based approach can. And because the optimization itself is lightweight (roughly 6 ms and 2 kB of memory per task), the router doesn't become the bottleneck we warned about earlier.</p>
-<p>The lesson we took away from this work is that routing isn’t really about choosing models. It’s about optimizing systems. Models are one variable — an important one, but just one among caching behavior, infrastructure state, compliance constraints, and workload patterns.</p>
-<p>When routing works well, it’s rarely because it found the "best" model for a given task. It’s because it found the best operating point for the entire system. That’s a harder problem than classification, but it’s the one worth solving.</p>
-<p>We’ll be sharing more about the technical details behind our approach in a follow-up post. In the meantime, if you’re building routing into your own agentic systems, we’d love to hear what tradeoffs you’re running into.</p>
-<p>This post was influenced by numerous conversations with colleagues, whose thoughtful questions, feedback, and insights helped refine our thinking.</p>
-<p>So I've always felt that model routing is a false proposition; it should have been part of the harness all along.</p>
-<p>Agreed, routing should disappear into the harness and just be part of the system's execution logic. Our goal is exactly that—making model choice an intrinsic capability rather than a separate concern.</p>
+                <p>This is the final issue of What’s !important on CSS-Tricks.com. The good news is that it’s coming back in an expanded form as the CSS-Tricks newsletter. I had ya there for a second, didn’t I? Sorry, I couldn’t decide whether to trick or treat, so I went for both. Happy Halloween!</p>
+<p>The newsletter officially kicks off on November 10th. That’s after a way-too-long four-year hiatus. What the heck, right? It’s not only high time for it to come back, but for you to get on the list. You’ll get hand-written and hand-curated news, links, and editorials that you can only find there. Join the party with me!</p>
+<p>So, let’s go out with a big bang for our “final” issue. It’s packed with some stuff that I’ve been holding onto since before the site came back to life earlier this week, but also some new stuff, and I can’t wait to finally get it out to you.</p>
+<p>Scooch over Apple, Rockstar has something they’d like to say about fancy scrolling effects (to be fair, they’ve had 13 years to create them). First, check out the GTA 6 website (which oddly doesn’t work in Firefox), then watch Kevin Powell’s GTA 6 scroll effects walkthrough, which is frankly the most fun that you can have while waiting (and waiting) for GTA 6.</p>
+<p>Mojtaba Seyedi demonstrated how to build a scrollspy with modern CSS. What’s a scrollspy, you ask? Well, if you have a navigation that links to different sections of the page, a scrollspy highlights the section that you’re currently on in the navigation.</p>
+<p>Brecht De Ruyte showcased and explained some absolutely stunning random() demos.</p>
+<p>Lea Verou explained, in detail, the different ways of implementing icons on the web. Many exciting CSS features of the future are mentioned, including Linked Parameters, ident(), @mixin and @apply, the @property shorthand, and more, so it’s a really deep dive with a lot of intrigue.</p>
+<p>Kilian Valkhof suggested a universal pseudo-selector. I mean, the universal selector (*) doesn’t select pseudo-elements, which is why almost every website uses the following CSS snippet, right?</p>
+<p>But there are way more of them now (e.g., ::backdrop and ::details-content, to name just a couple of common ones in the context of box-sizing: border-box), so Kilian suggests ::*.</p>
+<p>Declan Chidlow told us which new HTML and CSS features are useful for design systems. My favorites are text-box, sibling-index(), sibling-count(), @scope, and @custom-media, which are very handy even outside of design systems.</p>
+<p>Adam Argyle shared a sweet CSS trick to make <textarea>s adapt to their content (like contenteditables do naturally):</p>
+<p>As you can see, there’s a bit of anchor positioning going on there. Is it just me or is anchor positioning the most versatile CSS feature right now?</p>
+<p>Here’s another CSS trick, this one to create wavy dividers using random() and shape(). This has Temani Afif written all over it, doesn’t it?</p>
+<p>While it certainly isn’t the only color contrast checker out there, This hue shall pass is a new one that enables us to check every combination of colors, recognizes the difference between Fail and Fail: close to passing, and allows us to adjust the lightness until the color contrast ratio meets the AA/AAA standards. I think I’ll be using this one (made by Clearleft, by the way) from now on.</p>
+<p>Concocted in Ahmad Shadeed’s lab, Gradient Layers enables us to edit gradients or create them from scratch visually, which is easier than fiddling with CSS, especially if they have multiple layers.</p>
+<p>On that note, we have two new gradient types on the way. Josh Tumath explained how they work and what their CSS code might look like.</p>
+<p>These examples are cool but it’s the image below that really demonstrates how awesome these gradient types are (this one uses a mesh gradient):</p>
+<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Coming back November 10! See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/model-routing-is-simple-until-it-isnt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/whats-important-20/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

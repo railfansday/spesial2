@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
+    <title>DigiCert admits 16-month security lapse exposed customer information</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9959.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>DigiCert admits 16-month security lapse exposed customer information</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5305665.jpg?imageId=5305665&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="DigiCert admits 16-month security lapse exposed customer information" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5305665.jpg?imageId=5305665&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="DigiCert admits 16-month security lapse exposed customer information" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
-<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
-<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
-<p>This guide has two halves that run in different places:</p>
-<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
-<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
-<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
-<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
-<p>Then we start the base-model server with the following command:</p>
-<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
-<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
-<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
-<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
-<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
-<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
-<p>This trains ~6M parameters, about 1.66% of the model.</p>
-<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
-<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
-<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
-<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
-<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
-<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
-<p>Then we serve the merged model with the following command:</p>
-<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
-<p>Comparing the two runs on the identical serving stack:</p>
-<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
-<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
-<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
+                <p>Botched server move left the door open, and DigiCert took months to notice someone had wandered in</p>
+<p>DigiCert has admitted that a botched server migration left an internal system exposed to the internet for more than a year, allowing an unauthorized user to access customer data, including passports, driver's licenses, and other identity documents.</p>
+<p>The certificate authority has begun notifying affected customers but has yet to disclose how many people had their information exposed.</p>
+<p>In an email seen by The Register, DigiCert confirmed the compromised information included names, business email addresses, phone numbers, and business addresses. Some records may also have contained passports, driver's licenses, utility bills, or other identification documents.</p>
+<p>"We are completing a review of identification documents to determine the specific individuals involved," DigiCert told those affected, adding that it would notify those people once the review was complete.</p>
+<p>DigiCert's incident report traces the blunder back to February 2025, when an internal business system was moved from a VPN-protected network to a different availability zone. That change also opened the system up to the public internet, where it sat for more than 16 months without DigiCert realizing.</p>
+<p>The archive used the same account management platform as DigiCert's customer-facing products, including a self-registration feature that was never supposed to be available on the internal system. This allowed outsiders to create accounts without multifactor authentication and, thanks to a separate permissions flaw, use them to browse archived customer records.</p>
+<p>DigiCert found the unauthorized accounts on June 18, 2026, but initially dismissed them as harmless because they weren't assigned to an application. A security researcher raised the alarm about the account creation issue three days later, but it took until July 2 for DigiCert to shut it down.</p>
+<p>Unfortunately, someone had already been poking around.</p>
+<p>It wasn't until October 12 that DigiCert began investigating whether customer information had actually been accessed. On October 19, it confirmed that an unauthorized account had accessed a subset of archived records between June 27 and July 2.</p>
+<p>DigiCert described the affected records as a "small proportion" of its archive but hasn't disclosed how many customers or individuals were caught up in the breach. The company did not respond to The Register’s questions at the time of publication.</p>
+<p>DigiCert's postmortem makes for uncomfortable reading. The server move didn't get a proper security review, monitoring failed to pick up suspicious activity, and the access controls weren't much use against self-registered accounts. The company has since switched off self-registration, tightened network access, and added monitoring that might have come in handy a few months earlier.</p>
+<p>Certificate authority operations, CertCentral, and DigiCert ONE were unaffected, the company said, adding that customer credentials and issued certificates remain secure. It also found no evidence that the unauthorized account had been used to issue, revoke, or validate certificates.</p>
+<p>That’s good news for anyone worried about their certificates, but less so for those who handed DigiCert a copy of their passport. ®</p>
+<p>Enterprise security tools will offer its capabilities without handing customers the model itself</p>
+<p>The 'first cyber offensive campaign carried out purely for the purpose of sabotage on national territory'</p>
+<p>PARTNER CONTENT: 300+ AI applications delivering surges in core metrics and annual cost reduction of over CNY100m</p>
+<p>Wiz researchers uncovered the secret-stealing supply-chain attack</p>
+<p>Altman, Torvalds, Yen. One has got his head screwed on. The others could do with some grounding</p>
+<p>Pair of researchers chain WAF bypasses and default logins to command vehicles in Australia and the US</p>
+<p>A mountain of CVEs, a certificate cleanup, and yet more work for Microsoft's patching teams</p>
+<p>Technical debt shoveled aside to make large-scale AI training more resilient</p>
+<p>Agent orchestration startup gets its exit</p>
+<p>Firms still want kit on-premises, but spike in revenue is as much about increased costs as higher sales</p>
+<p>Customers sweating assets amid tight budgets, as Microsoft execs get creative with sales pitches</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>OpenVDDK is reportedly already being used in production, at scale</p>
+<p>Combining the NetBSD kernel with the Alpine Linux userland</p>
+<p>Canonical has a long way to catch up, but it knows who it's chasing</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/security/2026/11/06/digicert-admits-16-month-security-lapse-exposed-customer-information/5308097" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

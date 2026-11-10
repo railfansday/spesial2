@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slightly better interpolating spline</title>
+    <title>Adding MCP Tools to Reachy Mini</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10030.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Slightly better interpolating spline</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Adding MCP Tools to Reachy Mini</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://gasiulis.name/new-spline/card.png" alt="Slightly better interpolating spline" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/adding-mcp-tools-to-reachy-mini/reachy_mini_remote_spaces_thumbnail.png" alt="Adding MCP Tools to Reachy Mini" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://gasiulis.name/new-spline/card.png" alt="Slightly better interpolating spline" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/adding-mcp-tools-to-reachy-mini/reachy_mini_remote_spaces_thumbnail.png" alt="Adding MCP Tools to Reachy Mini" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Today I'm introducing a new interpolating spline. Its name is S9. Without further demagoguery, here it is -</p>
-<p>You can click on knots and drag to see how this thing works.</p>
-<p>For comparison with other splines, here is a demo. And here you can find the implementation source.</p>
-<p>For decades people were used to manually clicking and dragging cubic BÃ©zier points until they developed Stockholm syndrome for it. Sometimes experienced designers will even tell you about having some magic rules like "keeping control arm lengths to about a third of chord length" which is good advice, but only if no better option is available. The fact is, humans cannot manually come up with good looking sequences of curves. The problem is inability to see subtle variations in the curvature of polynomial curves.</p>
-<p>So what is this curvature anyway? The best way to explain is using a related concept called osculating circle. It is an approximation of how the curve is bending at any point on it. Take a look at this demo -</p>
-<p>If you play with this for long enough, you will see a pattern. If a circle size along the curve changes very little, the curve looks better. If it changes a lot, the curve looks worse. This smoothness of how the circle changes along the curve is called curvature variation. Less variation is better.</p>
-<p>We can visualise this in a different way. If we record the reciprocal of osculating circle radius on every step of the curve, we get curvature profile of a curve.</p>
-<p>Now you can see another pattern. If this plot is smooth, the curve also looks smooth.</p>
-<p>However, it can be very difficult to see how smooth or not smooth this blue function is. Especially in absence of large spikes and multiple turns. Instead, let me show you another related plot. Here, in red, is a plot of a function representing curvature variation of the curve. And the rule is simple - thinner this plot gets, less curvature variation the curve has. We want the red part to be as close to the horizontal grey line as possible. For example, a section of a circle will have an integral (red number next to function plot) of this function equal to zero.</p>
-<p>As you can see, it can be quite hard to get this red function to relax. But it can still be worse though. This is just one segment. How about we connect two curves?</p>
-<p>See now you have to juggle more than two balls - you need to make individual curves smooth, but also keep the connection between the curves continuous too. In other words, the blue function must not have any gaps and the red function must stay as flat as possible.</p>
-<p>This gets worse with every additional curve because polynomial curves have this property where changing one side of it will change curvature on the other side as well.</p>
-<p>At this point you should see that trying to get harmony out of 20 or 30 connected curves has the same entertainment value as colonoscopy. This is what splines solve. Automatic smoothness of individual segments and continuity between curves.</p>
-<p>The goal for S9 is to look good and to adapt to changes smoothly so it is useful in interactive CAD applications. This requires the following -</p>
-<p>The primary goal is roundness. I want a spline which feels natural for forming fundamentally round and smooth objects.</p>
-<p>At the moment there are very few splines that are optimized for the same goal as S9. In my opinion, the best published G2-continuous interpolating spline is this one. In fact, it is very good, only using one cubic curve to connect a pair of knots. I doubt you can do much better than this with a single cubic. Second best is Îº-Curves, which is implemented in Adobe Illustrator as a "Curvature" tool. Using quadratic curves, but has a few fundamental problems where the solver can fail without special case handling. Then there is Hobby spline. A very old one. It does not guarantee G2 continuity, but the solver is much simpler. Apple Keynote and some other applications use it.</p>
-<p>There are some other, more famous splines like Catmull-Rom. I'm sure they have use cases even today, but they have no use in any even remotely serious CAD application. In fact, I would argue that any locally solved spline would have a flaw somewhere that cannot be fixed.</p>
-<p>I decided to call this spline S9 because it is my 9th attempt to come up with a decent spline. I still have the first 8.</p>
-<p>Fundamentally this spline works in a similar way to Hobby spline. It has two separate elements to it -</p>
-<p>The solver part is not a problem. The issue is how to come up with a curve parametrized by two angles. And it is harder than it looks.</p>
-<p>The final and the most important part is the curve this spline is made of. After years of attempts, the best I was able to do is to describe the curve as a function of arc length.</p>
-<p>For greek letter connoisseurs, here is an implementation of the curve in Desmos graphing calculator. That thing is powerful.</p>
-<p>Curve math is explained in detail in comments for S9 curve. Weight computation rules are sprinkled around in the solver.</p>
-<p>The curve solver is given two tangent angles and two weight parameters which are somewhat abstract, but the idea is as follows -</p>
-<p>For two weights of 1, the curve is identical to the Euler spiral. This formula also has extra knobs to control curvature change near ends when weights decrease.</p>
-<p>Weights are calculated from start and end angles. Which, like velocity function for Hobby spline, reduces a number of free parameters to two.</p>
-<p>Input is two tangent angles you can adjust with sliders.</p>
-<p>This curve, when used with automatic weight computation, will form high curvature spikes at the ends for large angles. This is a requirement for this type of spline. But for low to medium angles, it does have very little curvature variation which was the goal.</p>
-<p>The source repository includes implementation of both curve solver and spline solver. However, it is not meant to be a full implementation of path construction solution for CAD. For example, it does not include G2-continuous transitions from straight to curved segments, sharp corners or angle locking. These features would be independent additions.</p>
-<p>Here is a minimal list of resources for anyone interested in curves and splines -</p>
-<p>Minimum Curvature Variation Curves, Networks, and Surfaces for Fair Free-Form Shape Design. Henry Packard Moreton. 1992.
-From Spiral to Spline: Optimal Techniques in Interactive Curve Design. Raphael Linus Levien. 2009.
-Typographers, programmers and mathematicians, or the case of an Ã¦sthetically pleasing interpolation. BogusÅaw Jackowski. 2013.
-Îº-Curves: Interpolation at Local Maximum Curvature. Zhipei Yan, Stephen Schiller, Gregg Wilensky, Nathan Carr, Scott Schaefer. 2017.</p>
+                <p>The Reachy Mini conversation app can now use tools hosted in public Hugging Face Spaces, called over MCP. You can give your robot a new ability, like checking the weather or searching the web, by adding a Space from the Hub instead of editing the app. The tool keeps running in the Space itself, so no code is downloaded onto your machine. And you can publish your own tools for other people to use.</p>
+<p>Below, we look at what a tool is, how profiles control what the robot can use, and the current limits of the remote path.</p>
+<p>When you talk to the robot, what you get back isn't only a voice, it's a system that reacts to the conversation: the robot can move and respond non-verbally, when it's applicable. The part we want to focus on here is the tools that make that possible. A tool is something the model can do during a conversation: play an emotion, move the head, look through the camera. Each tool has a name and a short description. The model reads those, decides when one is useful, calls it, and uses what comes back.</p>
+<p>Today every tool is local and ships inside the app, and most of them are about the robot's body:</p>
+<p>A tool in the code isn't usable until it's enabled in a profile, a folder with two files that matter here: instructions.txt (the prompt) and tools.txt (the tools that are turned on).</p>
+<p>The default profile enables the full set:</p>
+<p>If a name isn't in tools.txt, the model can't call it.</p>
+<p>You can also write your own tool: add a Python file to the profile (or external_tools/), give it a name and description, and list that name in tools.txt.</p>
+<p>Today there are built-in tools and custom local tools, and tools.txt decides which are active. This works well for the robot's body and keeps the trusted core small.</p>
+<p>The constraint here is that every tool has to be local Python. For move_head or play_emotion that's right: they talk to the hardware and belong in the app but a lot of useful things have nothing to do with the body, like web search, weather, or lookups. For those, keeping everything local is mostly friction:</p>
+<p>Remote tools add a third kind, alongside the built-in and custom local tools you already have, for capabilities that are easier to publish, share, and update on their own:</p>
+<p>We started with two canary tools, small test tools to exercise the new flow:</p>
+<p>They're enough to exercise the whole feature: install from the Hub, discover the remote tools, enable them per profile, and let the realtime backend call them exactly like built-in tools.</p>
+<p>To use both at once, add each Space and their tools stack in the same profile:</p>
+<p>Now the robot can search the web and check the weather in the same conversation, which is exactly what the canary_web_search_weather profile below does.</p>
+<p>add validates the Space on the Hub, probes the MCP endpoint, discovers its tools, and by default appends the tool IDs to the active profile's tools.txt. The active profile is default unless you've set REACHY_MINI_CUSTOM_PROFILE. Use --install-only to skip that step.</p>
+<p>tools.txt is the gatekeeper: a remote tool is only active if its ID appears in the profile's tools.txt, alongside whatever built-in tools you want.</p>
+<p>Each installed Space gets a local alias derived from its slug, with hyphens, dots, and slashes collapsing to underscores:</p>
+<p>Remote tools are then namespaced with a double underscore:</p>
+<p>This keeps remote tool names from colliding with built-in ones and lets multiple Spaces coexist in the same profile.</p>
+<p>The implementation also strips redundant Space-name prefixes when possible, so a verbose remote tool name becomes a cleaner local ID. If stripping would cause a collision between two tools from the same Space, the code falls back to the fully namespaced name.</p>
+<p>There is also a duplicate safety check at registry level: Tool.name values must be unique across the entire merged tool set. The app fails fast if two sources claim the same name.</p>
+<p>For this work we created two focused canary profiles to isolate the MCP experiment from the full embodied tool set.</p>
+<p>The first keeps a few expressive tools (emotions, head movement) and adds web search on top:</p>
+<p>The second is the same, plus the weather tool alongside search:</p>
+<p>The small physical tool set means Reachy Mini can still react expressively while answering current questions from the web.</p>
+<p>The remote-tool plumbing gets the tools into the model. The prompts decide how the model uses them.</p>
+<p>That was especially visible in the search-plus-weather canary. A combined question like:</p>
+<p>can be handled in at least three ways: weather first then search, search first then weather, or both in the same turn. If the prompt is vague, the model serialises the calls and creates unnecessary latency. So the canary prompts became part of the feature, not just incidental configuration.</p>
+<p>Two things are worth calling out. First, the Space has to actually behave like an MCP server; if tool discovery fails, the install fails. Second, prompt instructions can encourage parallel calls but cannot guarantee them. If deterministic orchestration matters for a use case, that logic should move from the prompt into code.</p>
+<p>If you want others to use your tool, publish it as a public Gradio Space that exposes the standard MCP endpoint, and keep the tools stateless so they work well over the network. Whether a Space installs depends on this runtime behavior, not on tags.</p>
+<p>Tags aren't required for installation, but they help people find compatible Spaces:</p>
+<p>The app now has three kinds of tools sharing one registry: built-in, local custom, and remote MCP tools, and profiles still decide which of them a given assistant can reach. A small, trusted core stays at the center while the optional capabilities around it can be added, tested, and swapped without touching the app itself.</p>
+<p>What we're most curious about now is what people build. If you publish a tool Space, tag it reachy-mini-tool and mcp so others can find it. We'd love to see what Reachy Mini ends up able to do!</p>
+<p>Acknowledgements: Many thanks to Fabien Danieau for proofreading this post and helping test the workflow, to Andres Marafioti for helping test it, and to Remi Fabre and the Pollen Robotics team for the ideas and feedback that shaped the remote tools workflow.</p>
+<p>MCP Space for Reachy Mini weather briefs.</p>
+<p>Great work on making Reachy even easier to customize!How can I add these MCP tools on a wireless Reachy Mini with a preinstalled conversation app?</p>
+<p>The tools.txt approach makes the MCP integration especially clear. I like how remote tools are kept separate from the built-in robot tools while still being enabled per profile. The distinction between installing a Space and actually activating its tool IDs in tools.txt also seems important, particularly when multiple remote tools are being used together.I’m also using an MCP server on my site, https://tinid.ph/, to work with AI agents, and it has been really useful for me. In particular, it has helped a lot with identifying and fixing technical issues on the site. The idea of keeping tools accessible to AI agents through MCP, rather than building every capability directly into the application, makes a lot of sense.</p>
+<p>MCP Space for Reachy Mini weather briefs.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://gasiulis.name/new-spline/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/adding-mcp-tools-to-reachy-mini" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

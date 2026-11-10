@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One polite email taught my Hindsight agent to pay scammers</title>
+    <title>Welcome RL Environments to the hub</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9782.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,52 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>One polite email taught my Hindsight agent to pay scammers</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Welcome RL Environments to the hub</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6fdu02erqgodmlld8hiw.png" alt="One polite email taught my Hindsight agent to pay scammers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/datasets-filters/thumbnail.png" alt="Welcome RL Environments to the hub" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6fdu02erqgodmlld8hiw.png" alt="One polite email taught my Hindsight agent to pay scammers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/datasets-filters/thumbnail.png" alt="Welcome RL Environments to the hub" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>One polite email taught my Hindsight agent to pay scammers</p>
-<p>The email that broke my agent had no "ignore previous instructions" in it. It was polite, it was signed by the vendor's accounts team, and it said Acme Supplies had moved banks. The next time someone asked it to pay Acme, my payments agent drafted a ₹1,18,400 transfer to the attacker's account, explained its reasoning clearly, and was completely sure of itself.</p>
-<p>Nothing was wrong with the model. The problem was memory.</p>
-<p>Memory turns a one-time injection into a standing order</p>
-<p>Without memory, a prompt injection only lasts one conversation. Close the session and it's gone. Once an agent has long-term memory, an injection becomes a fact the agent believes from now on. It's retained once and recalled every time a related question comes up, often weeks later, long after anyone remembers where it came from. OWASP now lists this as its own agent risk (memory poisoning, ASI06), and it changes how you have to think about what agent memory actually is: it's no longer a cache, it's an attack surface that persists.</p>
-<p>Write-time filters help, and you should have them. But my polite email would pass any keyword filter. So I built the part I couldn't find anywhere: what happens after the poison is already in memory. I called it MemoryGuard. It detects the harmful action, explains why the memory is suspicious, traces everything that memory touched, and removes only the poisoned parts, then proves the fix.</p>
-<p>The agent's long-term memory lives in Hindsight, an open-source agent memory system. Every time something enters memory, whether an email, a web page, a chat message, a tool output or the agent's own answers, it goes through Hindsight's retain path, and every question goes through recall. Each agent gets its own memory bank: my vendor-payments agent and my IT-helpdesk agent never share memories.</p>
-<p>MemoryGuard sits around that memory layer, not inside the model:</p>
-<p>Hindsight does what a memory layer should: durable storage, semantic recall, and metadata travelling with every memory. I didn't want to build a vector store; I wanted to build the security around one. The rest of this post covers the decisions that mattered.</p>
-<p>Decision 1: trust comes from where, never from what</p>
-<p>My first design scored each memory's trustworthiness by reading it. That's backwards: an attacker controls the content, so content-based trust is attacker-controlled trust. Instead, every memory gets a provenance envelope at write time, stored as Hindsight metadata, and trust is set by the source class only:</p>
-<p>The scale is boring on purpose: system of record 1.0, user chat 0.6, tool output 0.5, the agent's own answers 0.4, email 0.3, web 0.2. The event_time / accepted_time split turned out to matter more than I expected: a memory that claims to be from last March but was stored five minutes ago is worth a second look.</p>
-<p>You can't add provenance later. If it isn't recorded at write time, no amount of analysis will tell you afterwards whether a memory came from the user or from a web page.</p>
-<p>Decision 2: memory is never the authority for an action</p>
-<p>This is the main idea of the project. The agent is allowed to believe whatever it recalls. It is not allowed to act on a high-impact field (a bank account, a payment recipient, admin rights, a password-reset address) unless that value matches the system of record.</p>
-<p>Before any drafted payment goes anywhere, the gate looks up the vendor's verified account. If the drafted account differs, it collects every memory that mentions the drafted account and checks the most trusted one:</p>
-<p>There's no model in that path. The same input always gives the same decision, and no injected sentence can talk it out of it. When I later added an IT-helpdesk agent, the engine didn't change. I added two new checks against a different source of truth: admin rights only for people on the official admin list, and password-reset links only to an employee's registered email or phone. Supporting a new kind of agent means supplying two things: its source of truth and the actions to check.</p>
-<p>Decision 3: a score you can't explain is a score nobody acts on</p>
-<p>When the gate blocks something, the supporting memories get scored. Five signals, each between 0 and 1: contradicts the verified record, low-trust source, injection markers, similarity to known attack phrasings, and whether the memory touches a high-impact field. The total is a weighted sum, and each signal's share of the total is the explanation:</p>
-<p>For the polite email, the inspector shows 0.70: contradicts verified record 50%, low-trust source 25%, high-impact field 14%, similar to known attack 11%, injection markers 0%. That last zero is the point. A keyword filter would have scored this email as clean. No model training, no black box, and a reviewer can disagree with a specific line instead of with a number.</p>
-<p>Decision 4: trace answers, not just inputs</p>
-<p>The most uncomfortable finding: the agent poisons itself. After recalling the fake email, it answered "Acme is now paid to 9174-6620-3381", and because agents retain their own answers, that answer went back into memory as a new, separate memory. Deleting the email alone would have left the agent still believing the lie.</p>
-<p>So every retain records a source → memory edge, every recall records memory → answer, and every drafted action records answer → action. When something is flagged, the blast radius is a breadth-first walk from the poisoned source:</p>
-<p>For the bank-change email that walk returns six nodes: the email source, the email memory, the first answer, the memory the agent wrote from that answer, the second answer, and the blocked payment. Healing moves exactly those memories to a vault (kept for forensics, deletable only with human approval), leaves the other 21 memories alone, and replays every affected question against the cleaned memory:</p>
-<p>The replay is what makes people trust the cleanup: you aren't asked to believe the agent is fixed, you're shown it.</p>
-<p>It also has to stay quiet on normal content. I ingested ten real public sites, including news, docs, GitHub and a government site. Together they contained more than 200 hidden HTML snippets, and none were flagged. On a set of 32 labelled samples I wrote myself (21 benign, including hard negatives, and 11 attacks), the scanner caught 10 of 11 attacks with zero false positives. Those samples were also used while tuning, so treat that as a sanity check, not a benchmark.</p>
-<p>Detection is a signal; the gate is the control. My one benchmark miss was a subtle fake fact ("settle invoices with our parent company instead") with no account number and no suspicious wording. The scanner scored it 0.22. That's why the real guarantee doesn't depend on the scanner: whatever payee the agent drafts, the gate compares the account with the system of record, and an unverified account is blocked. The flip side is also true: a lie that doesn't change a field the gate checks can get through, so the gate's coverage is your security boundary. Know exactly what it checks.</p>
-<p>Record provenance on every write, especially your own agent's writes. The agent's answer going back into memory was the most important path in the system, and it's the one most designs forget.</p>
-<p>LLM judges are useful and unreliable. A privilege-escalation sample passed in one run because the judge changed its mind. I replaced that check with two deterministic markers (role override and approval bypass) and kept the judge as one input among five.</p>
-<p>Keep untrusted text away from your own security model. MemoryGuard's judge reads attacker-written text, so it gets the same treatment as the agent: untrusted content is marked word by word as data (Microsoft's spotlighting technique), and account numbers and email addresses are swapped for placeholders before any third-party LLM sees them.</p>
-<p>Separate the memory layer from the security layer. Because Hindsight owns storage and recall, MemoryGuard only has to own provenance, lineage, gating and healing. Each half is simpler, and the security engine doesn't change when the agent does. If you're building on agent memory, the Hindsight docs on retain and recall are worth reading with this question in mind: where does every memory come from, and what would I have to undo if it were a lie?</p>
-<p>Prompt injection isn't solved, and I don't claim to have solved it. What I can say is that when a lie gets into my agent's memory, I now know where it came from, what it touched, and how to undo exactly that.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Reinforcement Learning environments give new capabilities to agentic AI systems, and they’re a great way to measure and improve performance in your agents. Therefore, Hugging Face Hub now has a special place for RL Environments.</p>
+<p>An environment gives an agent a task, responds to its actions with observations, and scores the outcome. The resulting rewards can measure an agent's performance during evaluation or provide a learning signal during training. For an introduction to this interaction loop, see our blogpost on environments. Within the environment, the agent will perform a set of tasks that are represented as datasets. Therefore, environments can be split into broadly two parts: tasksets and runtimes. In this release, we are focusing on the tasksets.</p>
+<p>An RL environment on the Hub is a dataset repo that shows up in the new RL Environments filter. The Use this dataset button gives you the command to run it in that framework. There is no new repo type, no registry, and no sign-up. There are already environments in Harbor, Verifiers, and NVIDIA NeMo Gym.</p>
+<p>Every RL paper or framework uses its own way to find environments. Custom hubs, runtime registries, independent task datasets, or a GitHub list of tasks with a custom loader. This means that many of the published environments are siloed: if you publish an environment for one framework, users of the other three can’t load it. If you want to train on an environment from another framework or a new paper, you’ll need to port it by hand.</p>
+<p>We think this is the wrong shape. An environment is tasks, tests, containers, and a reward rule, which are data with a runtime on top. The Hub already stores data, versions it, gates it, previews it, and serves it to millions of people. It does not need a second system to hold environments. It needs a way to say "this data is an environment, and here is how you run it."</p>
+<p>The frameworks keep doing what they are good at. The Hub does what it is good at, which is hosting, discovery, and versioning. Nobody has to own the catalogue. In fact, catalogues can run on other platforms too, powered by the hub.</p>
+<p>The dataset repository hosts your environment files. The framework runs them locally or on a supported cloud backend. Hugging Face Jobs can run cloud workloads, and Hugging Face Sandboxes, built on Jobs, provide interactive command execution. The tags describe compatibility and generate loading commands; adding a tag does not start a job or sandbox.</p>
+<p>The RL Environments filter. Go to huggingface.co/datasets?other=rl-environment. Every dataset with the rl-environment tag appears there, whatever framework it works with.</p>
+<p>Framework tags. Four environment frameworks are registered as dataset libraries:</p>
+<p>Each framework tag puts the framework's icon on the dataset page and adds a generated snippet to Use this dataset.</p>
+<p>A dataset can carry more than one framework tag. That is the point. Tags describe compatibility, and compatibility is not exclusive. Each listed framework must support the files in the repository; adding a tag does not convert them.</p>
+<p>Choose the example for your framework and run it in a separate Python environment with the prerequisites listed below.</p>
+<p>Harbor can load task directories from a Hub repository. The oracle agent runs the task's reference solution, then the verifier scores the result. It does not call a model.</p>
+<p>The viewer shows the task's reward, verifier output, and logs. This checks the task and its reference solution before you try a model agent.</p>
+<p>The Harbor integration of verifiers v1 can run the same task directories in different runtimes, such as Docker. It also supports different harnesses, including a minimal bash harness.</p>
+<p>Here repo is the full Hugging Face Git URL, while dataset is the name and version in that repo's registry.json. This loader uses Harbor's registry conventions, so a bare Hub repo ID cannot replace both values.</p>
+<p>OpenEnv's Harbor integration can run the same task directories with an agent such as OpenCode and return the verifier's reward alongside the agent's trace.</p>
+<p>The command downloads the dataset's tasks/ directories, runs one task in Docker, and writes the result. The default connection uses a temporary Gradio tunnel so the sandboxed agent can reach OpenEnv's model proxy. Read the verifier result and the number of model calls:</p>
+<p>A reward of None means no verifier reward was produced; inspect error before interpreting the run as a model failure. This path expects Harbor task directories.</p>
+<p>NeMo Gym supports evaluation and RL training: its environments collect trajectories and compute rewards, while a training framework updates model weights. For example, the Structured Outputs dataset pairs prompts with JSON schemas. Its verifier rewards schema adherence; it does not check whether the generated content is factually correct.</p>
+<p>The best part is that this gives one repo and one discussion tab where people report broken tasks from all major frameworks. So when an author fixes a bad test, every framework gets the fix on the next pull.</p>
+<p>Open your dataset card and add this to the YAML header:</p>
+<p>That is the whole integration. Keep rl-environment, then list every framework that can load your files. If your environment works with a framework we have not registered yet, open a PR to the list of supported libraries.</p>
+<p>We opened PRs to tag some of the environments people already train on. If you maintain one of these, merge the PR and your environment shows up in the filter.</p>
+<p>The first version generates one default snippet per framework. Per-config snippets are next, so a repo with several task sets can show the right command for each. After that we will look at structural detection for frameworks with strict layouts. It would also be really cool build custom task UIs, we’ve been experimenting with this here:</p>
+<p>The bigger goal is for framework tagging to be automatic everywhere. OpenEnv already does it on upload. If you maintain Harbor, Verifiers, Nemo Gym, or any other environment framework, add the tags in your push path. It is a few lines, and every environment your users publish becomes visible to everyone else.</p>
+<p>If you train agents, go browse the filter. If you build environments, publish and tag them, whether they cover coding, tool use, games, robotics, or another task. Include the files, a working run command, and the rule that produces the reward so others can use them. If your framework is missing, contribute it to the list of supported libraries.</p>
+<p>Building and scaling RL environments for LLM training</p>
+<p>Building and scaling RL environments for LLM training</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/itsaditi16/one-polite-email-taught-my-hindsight-agent-to-pay-scammers-nia" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/rl-environments" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

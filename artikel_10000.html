@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Much Memory Does Your Agent Actually Need?</title>
+    <title>Is it agentic enough? Benchmarking open models on your own tooling</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10000.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,205 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Much Memory Does Your Agent Actually Need?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Is it agentic enough? Benchmarking open models on your own tooling</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post, we compared ALTK-Evolve with ACE and showed that how you deliver an agent's self-distilled guidelines — a few retrieved per task vs. the whole set injected — drives both accuracy and cost. This post steps back to the question that comes before it: how much should you give it?</p>
-<p>Equipping an agent with agentic memory sounds simple: distill lessons from its past work, put them back in context, and more experience should mean better performance. It doesn't always work that way. When we scaled the evaluation to eight models — from a 30B dense model to frontier proprietary systems — one finding stood out:</p>
-<p>Agentic memory is not a feature you switch on. It's a dose you calibrate to the model.</p>
-<p>ALTK-Evolve lets an agent learn from its own past trajectories: distilling reusable guidelines and injecting them back at inference time, with no weight updates and no human annotation.</p>
-<p>The right dose differs by model tier: strong models with headroom want the full guideline set, weaker models do best with a compact core plus per-task retrieval, and saturated models show no measurable gain.</p>
-<p>Curated retrieval can be both the most accurate and the cheapest option: gpt-oss-120b gained +16.1pp task completion at only +5% tokens — and prompt caching keeps even the full guideline set affordable in production.</p>
-<p>Not every model benefits from the same amount of memory. Across eight models spanning the capability spectrum, we saw three recurring patterns:</p>
-<p>Strong models with headroom want the full guideline set — every guideline, including rare edge-case lessons. They have the capacity to absorb and apply all of it. DeepSeek-V3.2 (671B MoE) climbed +9.5 percentage points in task completion when given its full self-mined guideline set.</p>
-<p>Smaller or weaker models get drowned by a large guideline set. For these, a tight, high-confidence core plus a handful of task-relevant guidelines retrieved per task works best. gpt-oss-120b (117B MoE) gained +16.1pp with this selective approach — while the full guideline set gained less and cost ~50% more tokens.</p>
-<p>Already-saturated models show no measurable gain. We call this the saturated pattern — the label describes what we observed, not a proven cause. The model may already have been near its ceiling on these tasks, the guidelines may not have addressed its remaining failures, or it may not have applied the guidance effectively. GLM-5 (745B MoE) sat here in our runs.</p>
-<p>What puts a model into one pattern rather than another isn't simply parameter count. Benchmark headroom, context-window size, architecture, guideline quality, and task distribution all appear to shape where a model lands, and separating those factors is ongoing work. The practical takeaway holds either way: the right dose of memory depends on the model, and we can calibrate it.</p>
-<p>"Memory" here doesn't mean replaying a past transcript. It means a guideline set — strategies that worked, mistakes to avoid, and edge cases — distilled from the agent's own prior trajectories. The loop is straightforward:</p>
-<p>The agent attempts tasks and produces trajectories.</p>
-<p>ALTK-Evolve extracts behavioral guidelines from both its successful and unsuccessful runs.</p>
-<p>It consolidates those guidelines into a reusable set.</p>
-<p>At inference time, the agent receives either the full guideline set or a task-relevant selection of it.</p>
-<p>No model weights are updated. The learning loop changes the guidance available to the agent, not the underlying model — which is exactly why it's cheap to adopt and portable across the eight models we tested.</p>
-<p>We evaluated on AppWorld — 585 multi-step tasks (168 test_normal + 417 test_challenge) across 9 simulated apps (calendars, messaging, payments, and so on). Tasks are scored two ways: whether the agent fully completes each task (TGC — Task Goal Completion) and whether every variant of a scenario passes (SGC — Scenario Goal Completion, a stricter, all-or-nothing bar). Full definitions are in the appendix.</p>
-<p>Because the confusing part of any memory study is what's actually in the context window, we define the configurations up front.</p>
-<p>Both memory configurations draw from the same guideline set, mined once (via the loop above) from AppWorld's training split only. What changes between them is only how that one set is delivered — the full guideline set injects all of it every step, while curated retrieval delivers a selected subset — never how the guidelines were produced, and no test-split data ever goes into building it.</p>
-<p>The number of guidelines a model mines depends on its own capability, so we report configurations by strategy — "full guideline set" vs. "curated retrieval" — rather than by raw counts, which aren't comparable across models.</p>
-<p>Representative models from the eight-model sweep, measured by task completion (TGC) on test_normal:</p>
-<p>Figure 1. Representative models in the three observed patterns. Bars show TGC on AppWorld test_normal for baseline vs. the best-memory configuration; the x-axis begins at 40% to make differences visible. TGC alone understates the larger SGC gains — see the SGC columns in the table below.</p>
-<p>The figure plots TGC to keep it readable; the table adds the stricter SGC metric, where the gains are often larger:</p>
-<p>Reading the SGC column, the stricter metric usually moves more than TGC — DeepSeek's SGC jumps +16.1pp against a +9.5pp TGC gain — because good guidelines especially help an agent clear every variant of a scenario, not just the average case. And the effect doesn't disappear at the top of the range: GPT-5.5 and Opus, both near the ceiling on TGC, still gain +7.2 and +7.1pp SGC respectively. Memory keeps paying off as long as a model has a remaining failure mode to target.</p>
-<p>A practical concern: injecting a full guideline set inflates every ReAct step's input, because the guidelines are re-sent each turn. Here's what we observed:</p>
-<p>Table 1. Average token use per task, accumulated across agent steps, measured against the no-memory baseline.</p>
-<p>Curated retrieval keeps cost near baseline. For weaker models, where selection wins on accuracy, it also wins on cost — the best of both worlds (+16.1pp TGC at only +5% tokens for gpt-oss-120b). Better performance here does not require more inference cost.</p>
-<p>Memory doesn't blow up the reasoning loop. DeepSeek runs about the same number of ReAct steps with memory as without (≈18–19 on average), so the added cost is input-token inflation, not longer trajectories.</p>
-<p>The real efficiency lever in production is prompt caching: the static portion of the guideline set is identical across steps and can be cached, cutting effective cost substantially. Cache-aware prompt design — keeping the shared guideline-set prefix stable so it stays cacheable — is worth engineering for. We also hypothesize that context-window size plays a role: models with larger windows may absorb the full guideline set more effectively, while smaller-context models benefit more from retrieval that keeps injected content compact. We have not yet run controlled experiments isolating this factor.</p>
-<p>The lesson isn't to give an agent everything it has learned. It's to give it the amount of experience it can actually use.</p>
-<p>For weak models, that means a compact core plus a few task-specific lessons — which, conveniently, is also the cheapest option.</p>
-<p>For strong models with headroom, it means preserving the full guideline set, kept affordable in production via prompt caching.</p>
-<p>For saturated models, it means spending no extra context until their remaining failure modes are better understood.</p>
-<p>The gains are real across the board — automatic, leakage-free, and requiring no human annotation — but only when the dose fits the model.</p>
-<p>This is a starting point, not the finish line:</p>
-<p>A learned selector. Our current retrieval ranks guidelines by cosine similarity, which we've shown doesn't perfectly predict which guidelines help a given task. A selector trained on outcome signal is the natural next step.</p>
-<p>Memory for very weak models. Below a minimum capability baseline, self-distillation lacks signal. Teacher-distilled memory for very weak models is a separate problem we're exploring.</p>
-<p>Beyond AppWorld. These results are validated on AppWorld — a rigorous multi-step benchmark, but a single one. Broader agent benchmarks and real-world deployments are in progress.</p>
-<p>Isolating context window. As above, we want controlled experiments that separate context-window size from raw capability.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld tasks are graded by two metrics, both reported as percentages (higher is better):</p>
-<p>TGC — Task Goal Completion. The share of individual tasks the agent completes fully and correctly. This is the headline "did it get the job done" number.</p>
-<p>SGC — Scenario Goal Completion. A stricter, all-or-nothing metric. Each scenario bundles several variants of the same task (the same request with different data, phrasing, or edge conditions). SGC counts a scenario as passing only if the agent succeeds on every variant. It measures reliability — an agent that solves a task most of the time but fails on one variant scores on TGC but not on SGC.</p>
-<p>Really interesting take on agentic memory. The idea that memory needs to be calibrated to the model rather than simply accumulated is especially useful for production systems. Selective retrieval also seems like a practical way to improve reliability without unnecessarily increasing context and inference costs. It makes a strong case for thoughtful custom AI agent development and enterprise AI agent solutions, where memory, performance, and cost all need to be designed together. https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+                <p>Benchmarking transformers revisions across different metrics</p>
+<p>This is a human-made, agent-focused blogpost.</p>
+<p>Coding agents increasingly work with our software instead of us: describe a task, and the agent picks the library,
+writes the calls, runs them, and debugs its own mistakes. When the library gets in the way, it will
+happily bypass it and rewrite the logic from scratch. This introduces a new concept in library development:
+the code should not only be correct and fast, but should be designed so that an agent can drive it effectively. A clunky API
+or stale docs annoy us developers, but it now also sends the agent down a longer, more expensive path.</p>
+<p>Most benchmarks just look at the final answer. We wanted the whole process instead: not just whether the agent got
+it right, but how much work it took to get there, and how that shifts across models, library revisions, and
+tasks. We measured exactly that, using transformers as our case study.</p>
+<p>Here, we will introduce a tool specific benchmark focusing on how the answer was found, and provide a simple 
+implementation of one such harness, running entirely on open models driven by the
+pi coding agent, with the full sweep of
+models × revisions × tasks fanned out across Hugging Face Jobs
+so every run sees identical hardware.</p>
+<p>But, how do you optimize software for agents?</p>
+<p>We're strong believers in the following two software principles:</p>
+<p>This remains the same within the realm of agentic-optimized tooling, and, for once, the two are directly tied to
+each other.</p>
+<p>You want your tool to exist for an agent: it needs to be discoverable. The API needs to be clear and the docs
+need to be extensive. They need to be structured in a way that the agent has rapid access to the useful files and
+examples. If you want your tool to work for an agent, then you should test it for agentic-use.</p>
+<p>We'll use transformers as an example throughout this blogpost: agents using it to solve ML tasks (classifying
+text, captioning images, transcribing audio), not contributing code to it; though the harness was designed to work
+with any tool that can be operated from the command line.</p>
+<p>Our intuition on transformers was that usage could be dramatically simplified
+with a few changes: a CLI, a Skill, and self-contained, task-specific examples. This is the same recipe
+recently applied to the hf CLI, redesigned to be agent-optimized,
+where agents used 1.3–1.8× (and up to 6×) fewer tokens. We wanted to know whether that kind of win generalizes, and
+whether it could be useful for transformers as well.</p>
+<p>Intuition is a powerful tool, but we wanted more evidence before we opened PRs that add several thousand lines of code to such a widely used codebase as transformers. We set out to measure what success looks like.</p>
+<p>Two agents can both produce the correct label for a sentiment-classification task,
+but one:</p>
+<p>Both reach POSITIVE (0.9999), and here are the two paths an agent actually took on this exact task:</p>
+<p>Both methods reach the same result. But they have very different profiles in cost, latency, token usage, and failures.</p>
+<p>If your evaluation only checks the final string, you're blind to these as well as
+whether a change you shipped to the library (a CLI improvement, better error messages, a
+Skill) actually helped agents.</p>
+<p>Our goal with this harness is to evaluate how much work
+an agent has to do to perform a given task, and whether changes to the library improve performance.</p>
+<p>A few words on how we'll evaluate agents here.</p>
+<p>We run every task under three variants (or "tiers"); three different ways an agent can come at transformers:</p>
+<p>These aren't nested: skill doesn't contain clone (it ships curated docs, not the source tree), and neither
+strictly contains the other, each gives the agent a different kind of help. As we'll see, a model can sometimes 
+do better on clone than on skill.</p>
+<p>Not all models driving agents are equal, and their difference changes what you should look at when running them.</p>
+<p>At one end, you have the largest, most capable open models. On reasonably common tasks,
+these should get the right answer, eventually. For them, task completion saturates near
+100% and stops telling you much about your tool; a more relevant benchmark is the effort
+it took the agent to get there: how many turns, tokens and seconds it took, and whether they walked a clean
+path or used deprecated APIs.</p>
+<p>Local models vary widely in size, and so do their abilities.
+Metrics such as "match %" are more relevant than for their larger counterparts,
+as you can see how model sizes/capabilities affect results on your specific
+tool.</p>
+<p>This harness not only provides guidance to library maintainers on how to improve a repository for agent interactions, it also helps assess how different agents and models perform on the tasks users care about.</p>
+<p>The harness scores every run on several axes, so that you can ask what actually matters
+for each class of model:</p>
+<p>All of it lands in a report you can directly examine:</p>
+<p>The live report: Overview, Coverage, and Results, all client-side.</p>
+<p>And because it captures the native agent trace of every run, numbers are just the beginning: you
+can read exactly what the agent did, command by command. The traces are shareable
+through the Hub's agent-traces viewer:</p>
+<p>A run rendered in the Hub's agent-traces viewer: MiniMax-M2.7 on the answer-question task.
+Open this trace on the Hub ↗</p>
+<p>Before the results, a quick recap of the setup. Each run varies four things: the model driving the agent,
+the transformers revision it runs against, the task, and the tier (bare / clone / skill).
+As discussed, we look at different metrics for the two different model categories.</p>
+<p>Since a large open model will usually get to the correct result, what you're really
+measuring is the effort it took to do so. Did it take ten turns or one? Did it follow
+an API path you deprecated because it trusted obsolete documentation? Did it hit an
+error you hadn't foreseen?</p>
+<p>The natural experiment is to fix one strong model and vary the tool's
+revisions: the successive git versions of transformers we test against, from released tags like
+v5.8.0 and v5.9.0 to the specific commit that introduces the CLI and Skill. We want to watch whether the load
+it puts on the agent goes up or down. We used the harness on transformers to check
+whether adding a dedicated CLI and Skill actually lightened the agents' work.</p>
+<p>For the three large models we used in our tests, the average time spent on all tasks indicates that the Skill commit
+results in less time spent working on the tasks:</p>
+<p>Median time per revision, by tier: the skill commit (green dot) is the fastest.</p>
+<p>On the other hand, in the experiments in which we cloned the repository, we can see a significant increase
+in token consumption due to the commit that introduced the CLI and examples, as we'll see in a moment.</p>
+<p>Median new tokens per revision, by tier: the clone variant jumps once the CLI lands in the repo.</p>
+<p>Reading the clone-variant traces explains why. The commit adds a command, but it also ships the
+CLI's implementation and a set of cli/agentic/*.py usage examples into the repository directly.</p>
+<p>On the clone variant the agent has a full transformers checkout in front of it, and roughly a third of the runs go read the new
+surface (the /cli/ tree and the example scripts) to learn the interface before calling it. This raises the
+median input from ~4k to ~6.4k tokens.</p>
+<p>The two charts are then two sides of one tradeoff: the commit buys the large models less time 
+(they reach for the CLI instead of debugging Python) at the cost of more
+tokens (they read the code that taught them the CLI). A tradeoff worth knowing about before merging PRs.</p>
+<p>One caveat works in the CLI's favor, though, which isn't benchmarked yet: the cost of reading it is amortized 
+with successive runs. Our setup is built for one-off experiments. Each run is a fresh agent that rediscovers 
+the CLI from scratch, so it pays the discovery cost every time. In real usage an agent learns the interface 
+once and then solves task after task within the same session, amortizing that cost across many requests. The
+token bump we measure here is closer to a worst case than to what a user would see day to day.</p>
+<p>Open models give us fine-grained control over the variables that matter most here: size, configuration, quantization,
+provider, training, and anything that would differ from one model to the next. They're also where a good tool surface
+matters most: a small model asked to "use transformers to do X" on a bare environment can
+guess an API that changed some releases ago, may do unnecessary tool calls, and can
+get the wrong answer.</p>
+<p>So here the experiment is the opposite of the above: hold the revision and sweep the model. This helps
+see which models actually take care of the task, not just by token count and time,
+but down to which ones can't reliably handle the tool calls. Our intuition is
+that the smaller the model, the harder both tool use and the task get; we ran the
+harness across a range of model sizes to test exactly that:</p>
+<p>Match % across models, by tier: the skill tier lifts the larger models but drops the smaller ones.</p>
+<p>which also seems to be correlated with the number of tokens ingested</p>
+<p>Median new tokens across models, by tier.</p>
+<p>A note on fair comparison: naively averaging across tasks is misleading when
+coverage is uneven (a model that only finished the quick tasks looks fast). The
+report has a "shared tasks only" toggle (across models and/or revisions) so
+you compare like-for-like, and a Coverage heatmap so you can see exactly which
+task × revision × model cells actually ran.</p>
+<p>Two things come together here: how to look past whether the agent succeeded to what it did and how it
+did it; as well as the first results we pulled out of the harness.</p>
+<p>Match %, tokens, and time tell you the cost of a run but don't tell you much about what happened under the hood.</p>
+<p>This is why we've introduced the concept of markers. A marker is a named pattern the profile (the
+small per-tool plugin that teaches the harness how to build and drive a given library) matches against
+a run.</p>
+<p>It is a one-line label for a behavior you care about, checked against the shell
+commands the agent ran, the code it wrote, the files it read, or its final
+answer. A run can fire several markers or none; the report shows how often each one fired,
+per model and per revision.</p>
+<p>For transformers we declare a handful but we'll only look at the two most relevant ones:</p>
+<p>These are what we watch to see whether a change actually shifted the agent's behavior. Interestingly here,
+the larger the model, the more it leverages the new context instead of using its memory; therefore leveraging
+the newly introduced CLI.</p>
+<p>CLI adoption by tier across models: only the skill tier reaches for it, and more so as models grow.</p>
+<p>CLI adoption is new: the CLI lands in a single commit, isn't in any model's training data, and is only
+lightly documented. The effect is clear: it's the Skill variant, the one that ships the CLI's
+documentation, that actually reaches for it, at 55.3%.</p>
+<p>Comparing the commit across model sizes, the CLI + Skill helps the bigger models: on the skill tier, Kimi and the other large agents reach for the CLI and finish in fewer turns. (On clone they spend more input tokens first, reading the new CLI code, as we saw above, so the win shows up in time and turns, not raw tokens.)</p>
+<p>Kimi-K2.6, GLM-5.1, and MiniMax-M2.7 across revisions</p>
+<p>But in some smaller-model settings, it appears to hurt performance. One plausible explanation is that small
+models lean on memorized API patterns, reproducing pipeline(...) snippets
+they've seen in their training data. The new concepts are then a larger
+surface for them to get wrong. You can watch this directly on the harness: lower
+match %, more retries, the cli marker barely firing. It is particularly striking on the Qwen3-4B model:
+the Skill barely changes its match rate yet its cost distribution is significantly affected.</p>
+<p>Almost all of that comes from the clone tier. The checkout now contains
+the CLI's implementation and cli/agentic/*.py examples, and the 4B agent reads them in bulk: its median new
+tokens jump from ~2.4k to ~23k, with time and output skyrocketing as well, for no gain in
+accuracy.</p>
+<p>Qwen3-4B across revisions. The CLI + Skill commit fans the cost distribution wide open, on the clone tier the agent reads the newly-shipped CLI source in bulk (~10× the new tokens), for no gain in match %. (repeat tokens stays flat: this setup uses no prompt caching.)</p>
+<p>Sometimes, though, the Skill breaks correctness outright. Reading the traces shows how, for example for Qwen3-14B: 
+adding the Skill drops its overall match rate from 67% (bare) to 43%, and on the simplest tasks the collapse is very
+visible: classify-sentiment goes from 100% on the clone variant to 0% with the Skill.</p>
+<p>Qwen3-14B on classify-sentiment, by tier: clone (blue) holds at 100% across revisions, but the Skill variant (green) collapses to 0% at the CLI + Skill revision.</p>
+<p>Looking at the traces, the model mistakes the CLI for a tool it can call directly (as in an agentic-harness
+tool, like web-search). The Skill is not an executable tool: it's documentation loaded
+into the agent's context, and the transformers CLI is only ever meant to be run from the shell (via bash); so this
+will not work.</p>
+<p>Qwen3-14B reads the Skill and, in 39 of its 56 Skill runs, either emits a transformers(command="classify", ...)
+tool call (a tool that was never registered) or, finding nothing like it among its read/bash/edit/write
+tools, concludes it can't run a model and gives up. Either way, rather than fall back to the one-line
+pipeline(...) that scored 100% on the clone checkout, it declares the task impossible.</p>
+<p>Qwen3-14B on classify-sentiment (Skill variant): it reasons that read/bash/edit/write can't run a model, and gives up.</p>
+<p>This is exactly what we built the harness to catch: the same change that speeds the large models
+ends up breaking the small ones, which seemed a bit counterintuitive to us at first and something we'd likely have
+shipped as-is. The takeaway for maintainers: agent-facing APIs should be evaluated across model sizes, because a
+new affordance can reduce work for strong models while adding ambiguity for smaller ones. It also hints at a fix:
+rather than hand-write a Skill and check it after the fact, you could generate and validate one against the weaker
+models up front.</p>
+<p>This is exactly what Upskill does: it turns a strong model's solution into 
+a Skill only when it measurably helps the smaller ones.</p>
+<p>The harness is one CLI, agent-eval. Install it, run a suite, fan it out across models × revisions on HF Jobs, and publish the
+report as a Hugging Face Space.</p>
+<p>Trusted local use only. The harness runs a coding agent with bypassed permissions and executes code from
+whatever revision you point it at, and traces can contain prompts, output, and local paths. See
+SECURITY.md before pointing it at code you didn't write or sharing results.</p>
+<p>The full, kept-current setup and usage instructions live in the README.</p>
+<p>Checking the final answer tells you whether an agent can use your library. It
+doesn't tell you what it costs: the turns, tokens, errors, and the path it took to
+get there. This harness measures that, across the revisions and models you pick.</p>
+<p>On transformers, it caught something we'd have shipped on faith: the CLI + Skill
+helps the largest open models and hurts the smallest ones. Worth knowing before merging!</p>
+<p>It's profile-based, and designed to be adaptable: point it at your own library, define
+a few tasks and their expected answers, get the same report. Code and tasks are in
+the repo, traces are on the Hub.
+Let us know if you use it for your project!</p>
+<p>This harness stands entirely on
+pi, Mario
+Zechner's coding-agent CLI: it drives every open-model run, and only needs an
+HF_TOKEN to serve a model, which is what made the open-model sweep practical at
+all.</p>
+<p>Thanks to the model builders and inference providers behind the models we
+swept. Across the board they performed well above what the bare baseline would
+suggest.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-hmm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/is-it-agentic-enough" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

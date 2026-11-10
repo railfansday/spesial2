@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome FLUX.3 Image Klein in Diffusers</title>
+    <title>Meta is back with Muse Glimmer: local, agentic, multimodal, and open source</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9893.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,74 +15,76 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Welcome FLUX.3 Image Klein in Diffusers</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>Meta is back with Muse Glimmer: local, agentic, multimodal, and open source</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/flux3/thumbnail.png" alt="Welcome FLUX.3 Image Klein in Diffusers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/muse-glimmer/thumbnail.png" alt="Meta is back with Muse Glimmer: local, agentic, multimodal, and open source" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/flux3/thumbnail.png" alt="Welcome FLUX.3 Image Klein in Diffusers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/muse-glimmer/thumbnail.png" alt="Meta is back with Muse Glimmer: local, agentic, multimodal, and open source" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Black Forest Labs FLUX.3 Image Klein is here, and it runs in Diffusers from day one. One model does text-to-image and multi-reference image-to-image, and it adds something new, the layout control. You write bounding boxes into the prompt to say where each part of the image should go, or which parts of a reference image to move.</p>
-<p>Both open checkpoints are in the FLUX.3 Image Klein collection:</p>
-<p>You can head on to the Hugging Face space and generate some images right now!</p>
-<p>Install the latest diffusers and transformers (for the Qwen3-VL text encoder):</p>
-<p>Load the distilled checkpoint and generate an image:</p>
-<p>FLUX.3 responds best to a full scene description with the subject, the setting, the light, the composition, and the style. The official prompting guide from Black Forest Labs has more tips. The distilled checkpoint generates a 1024 × 1024 image in 16 steps by default. Pass height, width, or num_inference_steps to change them.</p>
-<p>Pass a reference image (or more) with the image argument. Write the prompt as a caption of the image you want, with the change included.</p>
-<p>With several references, refer to them in the prompt as <ref_image_0>, <ref_image_1>, ... in the order they are passed to image:</p>
-<p>Add a JSON list of regions after the caption. Each region has an id, a bbox, and a desc, and the caption mentions it as <id>.</p>
-<p>Boxes are written as [y_min, x_min, y_max, x_max], y first, on a 0–1000 scale. Because the scale is normalized, the same box works at any image size.</p>
-<p>For edits, each region says where its content comes from (src_bbox in the reference) and where it goes (tgt_bbox in the output). A region with the same two boxes stays where it is.</p>
-<p>This example moves the knitted knight up and to the left, and pins the backdrop, the cliff, the needle, the dragon, and the fire:</p>
-<p>Everything above uses the distilled checkpoint. The base checkpoint runs 50 steps with classifier-free guidance, and it's the one to fine-tune (see LoRA finetuning).</p>
-<p>Black Forest Labs also ships the transformer as a single file, in bf16 and in two quantized formats: fp8r (rowwise FP8) and nvfp4. Load any of them with from_single_file, then load the other components by name so the bf16 transformer isn't downloaded too.</p>
-<p>For the unquantized single file, use https://huggingface.co/{model_id}/blob/main/model.safetensors and drop quantization_config.</p>
-<p>FLUX.3 works for both text-to-image and image-to-image, which makes it a great base for custom LoRAs. diffusers ships DreamBooth LoRA training scripts for both tasks (you can also train with Ostris' AI Toolkit).</p>
-<p>Here is a text-to-image example that learns a tarot-card style from the multimodalart/1920-raider-waite-tarot-public-domain dataset, triggered with trtcrd:</p>
-<p>To reduce memory usage, add a few optimization flags:</p>
-<p>--gradient_checkpointing recomputes activations in the backward pass (lower VRAM, slightly slower), --cache_latents pre-encodes the images and frees the VAE, and --use_8bit_adam keeps the optimizer states in 8-bit.</p>
-<p>A couple of knobs are worth experimenting with. The grid below trains the same tarot style with different LoRA ranks and optimizers; the adapters are on the Hub at diffusers-modular/flux3-tarot-lora. More training features and configurations are documented in the DreamBooth FLUX.3 README.</p>
-<p>For instruction-based editing, the image-to-image script (train_dreambooth_lora_flux3_klein_img2img.py) trains on (reference image, target image, instruction) triplets, where the reference is addressed in the prompt as <ref_image_0>.</p>
-<p>See the DreamBooth FLUX.3 README for all options and the full image-to-image example.</p>
-<p>In this section, we will talk about the memory consumption and the speed of generation of the models.</p>
-<p>End-to-end timings for the distilled checkpoint (16 steps), averaged over three runs after a warmup:</p>
-<p>Single NVIDIA H100 80GB, no offloading, default attention backend.</p>
-<p>A reference image roughly doubles the time. Reference tokens join the same sequence as the text and the image being generated, so a 1024 × 1024 reference adds 4,096 tokens to every transformer call</p>
-<p>Let's open the model up, one piece at a time. The model takes three kinds of tokens:</p>
-<p>FLUX.3 is a latent-space flow model for image generation. This means that the denoiser takes latents as inputs and produces latents as outputs. We use a VAE to decode the latents back to pixels. FLUX.3 uses the same VAE architecture as Flux.2.</p>
-<p>The FLUX.2 VAE compresses an image 8× in each direction into 32 channels, and then every 2 × 2 patch of that latent is packed into a single token with 128 channels.</p>
-<p>So one token covers a 16 × 16 pixel patch, and a 1024 × 1024 image becomes a 64 × 64 grid of 4,096 tokens. The noisy image starts as random noise of exactly that shape. A reference image goes through the same VAE encoder and packing, and keeps its own size.</p>
-<p>The text encoder is Qwen3-VL, a vision-language model. FLUX.3 doesn't just take its last layer. It reads the hidden states of eight of its 36 layers (layers 4, 8, …, 32) and stacks them, so each text token becomes a 8 × 2560 = 20,480-dimensional vector before a linear layer projects it to the transformer's width of 3072.</p>
-<p>This gives the transformer features from several depths of the language model, not just its final layer. The prompt is padded to a multiple of 80 tokens, and the transformer attends to the padding too, which is why the pipeline takes one prompt per call.</p>
-<p>The transformer processes the tokens in two stages:</p>
-<p>The two stages differ in who can attend to whom.</p>
-<p>In stage 1, each stream only attends to itself, so each kind of token gets refined on its own terms first. In stage 2, everything attends to everything, where the image learns from the text and from the references. For comparison, FLUX.2's double-stream blocks also give text and image separate weights, but let them attend to each other from the start. FLUX.3 keeps the streams fully apart first, then merges them.</p>
-<p>At the end, the text and reference tokens are simply dropped. Only the image tokens go through the output layers, which predict how to move them one step toward a clean image.</p>
-<p>Every block, in either stage, has the same shape. Attention and the MLP run in parallel on the same normalized input, and their sum is added back to the residual stream.</p>
-<p>Each block starts with a LayerNorm that has no learned scale or shift of its own. The scale, shift, and gate come from a timestep embedding instead (this is called modulation). Inside the attention, the queries and keys are RMS-normalized and get rotary position embeddings (RoPE), which we look at below.</p>
-<p>In a joint block, all tokens share the same weights, but text, image, and reference tokens each get their own scale, shift, and gate.</p>
-<p>In FLUX.1 and FLUX.2, one timestep embedding modulates every token. In FLUX.3, the modulation depends on the kind of token.</p>
-<p>The noisy image tokens are modulated by the current timestep t. The text and reference tokens are always modulated by timestep 0, which means "clean, nothing to denoise here". So even a reference that looks almost the same as the output is marked as given context, not as something to generate.</p>
-<p>The distilled checkpoint is a flow map. It is also told the timestep each step jumps to. That second timestep gets its own embedding, which is added to every token's modulation, so each of its 16 steps can make a larger jump.</p>
-<p>Attention on its own doesn't know where a token is (this phenomenon is called permutation equivariance). RoPE fixes that by rotating each query and key by an amount that depends on the token's position. FLUX.3 uses four position axes, (t, h, w, l) (timestep, height, width, length of sequence), and gives each one a quarter (32 dimensions) of every 128-dimensional attention head:</p>
-<p>Text tokens line up along l, like words in a sentence. The image and the references are 2D grids in (h, w), separated from each other along l. Because a reference uses the same (h, w) coordinates as the output, "the same spot in the reference" has a precise meaning to the model, which is what the src_bbox / tgt_bbox editing relies on.</p>
-<p>FLUX.3 is a flow-matching model. Generation starts from pure noise, and at each of the 50 steps the transformer predicts a velocity. This is the direction from noise toward a clean image. The scheduler takes one step along it.</p>
-<p>At every step you can also read off the model's current guess of the final image. Decoding that guess at a few steps shows how the image takes shape:</p>
-<p>The fox, its pose, and the light are already in place by step 10, while the noise level is still 0.97. The snow-laden branches and the texture of the fur only appear in the last few steps. FLUX.3's scheduler uses a large time shift (6.93), which keeps the noise level high for most of the run: 44 of the 50 steps happen above σ = 0.5. We built this figure by adding one small block to the pipeline, which brings us to Modular Diffusers.</p>
-<p>If you are new to flow matching, we have a beginner friendly tutorial and a video for you to understand how it works.</p>
-<p>FLUX.3 ships as a Modular Diffusers pipeline.</p>
-<p>You can list the workflows and print the exact blocks of each one, without loading any weights.</p>
-<p>get_workflow() resolves the auto branches and gives you the plain sequence of steps that will run. print(blocks.get_workflow("image_conditioned").doc) prints the components, inputs, defaults, and outputs of that workflow.</p>
-<p>Pop the text encoder out, encode the prompt once, free it, and generate from the cached embeddings.</p>
-<p>The denoising figure above came from one extra block that records the model's guess of the clean image at every step:</p>
-<p>Built something with FLUX.3? Share your LoRAs and pipelines on the Hub. We'd love to see them! 😎</p>
-<p>Visualize how noise transforms into images in your browser</p>
-<p>Open weights for image editing, generation and layouts</p>
-<p>Visualize how noise transforms into images in your browser</p>
-<p>Open weights for image editing, generation and layouts</p>
+                <p>To celebrate, we are shipping with Meta day-0 support in transformers, llama.cpp, vLLM, Inference Endpoints, and other libraries. We built a few cool things and explain our findings in this blog.</p>
+<p>Check out the demos below for inspiration.</p>
+<p>You can find Muse Glimmer on the Hugging Face Hub.</p>
+<p>Scores are reported as published. Bold indicates the best result among the compared models; ↓ indicates lower is better.</p>
+<p>Muse Glimmer is a dense 30B parameter model consisting of:</p>
+<p>In addition to the main VLM, there’s also a speculative decoding drafter implemented on DFlash. Usage of this module is optional, and it can provide much faster generation in exchange for some memory cost. We found this drafter to be particularly well suited to structured content generation such as coding.</p>
+<p>The language model uses the following architecture components:</p>
+<p>Muse Glimmer uses one image encoder to handle both images and videos. Unlike the relatively small vision encoders used in other VLMs, this is a sizable 2B ViT-like model designed after the Perception Encoder architecture. Perception Encoder was previously introduced by Meta as a backbone for various downstream spatial and multimodal tasks.The encoder patchifies images to a shape of 2 frames x 3 channels x 14 x 14, and passes them through a linear layer for projection. An interpolated absolute position embedding from a learned position table is then added to these embeddings. These are then sent to the vision tower which consist of 50 layers and GELU MLPs. Similar to the language model, the attention pattern consists of three window attention layers followed by one full attention layer. Inside the attention layers, 2D RoPE is applied to the queries and keys.</p>
+<p>After transformer, pixel shuffle concatenates 2x2 groups of neighboring spatial tokens which reduces the number of image tokens 4x without discarding their channels. The merged features are then projected to the shared embedding space of the text decoder.</p>
+<p>Videos go through the same encoder frame by frame, where each frame is converted into patches (of shape [batch, temporal groups, grid height, grid width, 2 frames, 3 channels, 14, 14]). The processor targets 2 frames per second and caps the clip at 96 frames sampled evenly across video. The processor creates timestamped video placeholders, interleaving text with frame e.g. “Time: 0.0s <|video|> x N” in which the final video embeddings are replaced before the final projection layer.</p>
+<p>Upgrade transformers to the latest version to be able to use Muse Glimmer.</p>
+<p>Muse Glimmer comes with day-0 support in transformers, both for the main model and the speculative decoding drafter. You can use AutoModelForMultimodalLM and AutoProcessor classes to load the model and the processor.</p>
+<p>The same snippet runs unchanged on NVIDIA (CUDA), AMD (ROCm) and Intel (XPU) GPUs, device_map="auto" places the model on whichever accelerator is available.</p>
+<p>After loading the model, you can do text-only inference with it as follows.</p>
+<p>We would need torchvision to be able to use images and text.</p>
+<p>Muse Glimmer accepts images as input, as demonstrated here:</p>
+<p>To work with videos we recommend installing torchcodec into the environment.</p>
+<p>Muse Glimmer can answer complex questions about videos without audio. You can do video inference as follows, here’s an example from VideoMME2, which is the most popular video question answering benchmark.</p>
+<p>Muse Glimmer can do multimodal tool calling, here’s how you can do it. In the example below, we ask the model to call the weather tool based on the city in the image.</p>
+<p>You can use Muse Glimmer to do open ended object detection in images as follows.</p>
+<p>Here is an end to end script to perform object detection GitHub Gist</p>
+<p>Muse Glimmer comes with day-0 llama.cpp support. Meta has distributed calibrated quants in this repo, and Unsloth is releasing optimized quants as well. DFlash speculative decoding is supported as well. You can use a pre-built llama binary to start a llama server or a CLI. To install llama.cpp, run:</p>
+<p>Then you can start the server as follows.</p>
+<p>Once the server has started, you can head to localhost:8080 to chat with the built-in WebUI.</p>
+<p>You can also query the server as follows.</p>
+<p>You can also use llama server with coding agents like Pi.</p>
+<p>DFlash uses a lightweight block-diffusion drafter model to provide same output with extra speed-ups in decoding phase. Transformers and llama.cpp ship support for DFlash drafter of Muse Glimmer day-0.</p>
+<p>Below you can see how speculative decoding can speed-up generation in realistic setups. The video shows llama.cpp webui with DFlash on the left and regular generation on the right.</p>
+<p>You can load the drafter and model as follows, and infer like how you would with base model with an additional parameter (shown in the upcoming snippets).</p>
+<p>You can start llama server using following command. --spec-draft-n-max argument controls how many future tokens DFlash proposes during each speculative-decoding step. Muse Glimmer’s DFlash model was trained with a block size of 16, one anchor token plus 15 proposed tokens, so any value above 15 will be clamped to 15.</p>
+<p>You can also use llama cli with speculative decoding drafter as follows.</p>
+<p>For a managed, autoscaling deployment, open the Muse Glimmer 30B Inference Endpoints preset. The model is already selected: choose the organization, cloud provider, region, compatible GPU instance, authentication, and autoscaling settings, then review the hourly price and click Create Endpoint. Once its status is Running, you can test it in the Playground and copy the endpoint URL and model name from the Overview.</p>
+<p>The deployed model exposes an OpenAI-compatible Chat Completions API. Keep your Hugging Face token in an environment variable, set HF_ENDPOINT_URL to the URL shown in the Overview without /v1, and set HF_ENDPOINT_MODEL to the endpoint's model name.</p>
+<p>See the Inference Endpoints documentation for configuration, autoscaling, security, logs, and monitoring.</p>
+<p>For this release, we ship support for vLLM with transformers backend.</p>
+<p>You can use TRL to fine-tune Muse Glimmer using various methods from SFT to Async GRPO. We have run two experiments on bf16 with Hopper-class GPUs with 80GB VRAM each.</p>
+<p>As part of this release, we ship an example to fine-tune Muse Glimmer on small split of MolmoWeb dataset. This shows how to make model generate structured outputs and how to fine-tune on images.</p>
+<p>We also experimented with running the model on OpenCode with AsyncGRPO example. Model shows strong coding capabilities, so we encourage you to try training with coding environments in OpenEnv and TRL.</p>
+<p>Here are some fun ways to try out Muse Glimmer. In our opinion, the coolest thing about this model is that it is a local scale personal assistant that can code. That means you can make it do things like, quantize itself, find quantized weights on the Hub, deploy itself to inference endpoints, and even optimize itself for specific hardware! Let’s go team local 🚀</p>
+<p>Assume the Inference Endpoint exposes an OpenAI-compatible /v1 API.</p>
+<p>Set HF_TOKEN in the OpenClaw gateway environment, then add this to ~/.openclaw/openclaw.json:</p>
+<p>Use the exact model ID returned by the endpoint’s /v1/models response if it differs.</p>
+<p>If we hook up Muse Glimmer to the Hugging Face MCP and update its AGENTS.md we give it the capability to find a quantized version of itself on the hub and run locally. This is handy if you want to work on something private, or just cut costs.</p>
+<p>If you do this a second time, Muse Glimmer will find the cached weights and switch to them, so feel free to add a convenient command like /spawn.</p>
+<p>Muse Glimmer inspects the machine and Hub, selects or creates a Q4_K_M GGUF, launches llama-server, and validates model discovery and chat completion. The result is a smaller local build behind an OpenAI-compatible API. Here’s the prompt we added to AGENTS.md.</p>
+<p>https://huggingface.co/buckets/huggingface/muse-glimmer-assets/resolve/Muse%20Glimmer%20Quantisation%20Demo%20-%20explained.mp4?download=true</p>
+<p>By adding this to AGENTS.md openclaw or hermes will be able to solve the rest.</p>
+<p>Muse Glimmer can also take care of the opposite. Let’s get Glimmer to deploy itself on Hugging Face Inference Endpoints. Which is useful if you want to speed up on some cutting edge hardware.</p>
+<p>N.B. You can also just deploy Muse Glimmer to Inference Endpoints directly and connect your agent.</p>
+<p>Muse Glimmer pins the model revision, deploys it to a protected Hugging Face Inference Endpoint, and verifies health, model discovery, and chat completion. It then connects the Claw agent with secrets and rollback preserved. Here’s the prompt we added to AGENTS.md. Muse glimmer will also need the Hugging Face MCP and/or the Hugging Face CLI and Skills.</p>
+<p>Finally, let’s get Muse Glimmer to do some light RSI. We can instruct our agent to optimize its own inference engine for specific hardware, in this case a Nvidia H100. To do this, the agent will need to use another inference engine, like Inference Endpoints above.</p>
+<p>Muse Glimmer benchmarks its own single-H100 serving stack, testing one reversible change at a time while holding the workload fixed. It keeps only correctness-passing gains and finishes with the fastest reproducible configuration. Here’s the prompt we added to AGENTS.md. Muse glimmer need the Hugging Face MCP and the Hugging Face CLI and Skills.</p>
+<p>https://huggingface.co/buckets/huggingface/muse-glimmer-assets/resolve/onyx-optimization-progress.gif?download=true</p>
+<p>Try Muse Glimmer as a Hugging Face research agent. The Gradio Space sends each model request to a private Hugging Face Inference Endpoint through its OpenAI-compatible API. It also connects to the official Hugging Face MCP server, giving the agent read-only tools to search and inspect Hub repositories, models, datasets, Spaces, documentation, and papers.</p>
+<p>We are happy to welcome Muse Glimmer to the Hugging Face Hub. Try Muse Glimmer with your local coding setups today!</p>
+<p>Timing is a bit suspicious Meta faced about $1B in fines over child-safety failures specifically a New Mexico judge found its platforms were harming children and that Meta didn’t warn the public about the dangers. now it’s releasing a cheaper API so others pay the fines, damage control.</p>
+<p>Muse Glimmer uses one image encoder to handle both images and videos. Unlike the relatively small vision encoders used in other VLMs, this is a sizable 2B ViT-like model designed after the Perception Encoder architecture. Perception Encoder was previously introduced by Meta as moviebox a backbone for various downstream spatial and multimodal tasks.The encoder patchifies images to a shape of 2 frames x 3 channels x 14 x 14, and passes them through a linear layer for projection. An interpolated absolute position embedding from a learned position table is then added to these embeddings. These are then sent to the vision tower which consist of 50 layers and GELU MLPs. Similar to the language model, the attention pattern consists of three window attention layers followed by one full attention layer. Inside the attention layers, 2D RoPE is applied to the queries and keys.</p>
+<p>After transformer, pixel shuffle concatenates 2x2 groups of neighboring spatial tokens which reduces the number of image tokens 4x without discarding their channels. The merged features are then projected to the shared embedding space of the text decoder.</p>
+<p>I also like the architectural choices here, particularly the hybrid attention pattern, grouped-query attention, and Q-K normalization. Alternating sliding-window and full-attention layers seems like a thoughtful way to balance long-context capability with efficiency, while sharing KV heads across query heads can significantly reduce memory requirements during generation.</p>
+<p>The day-zero ecosystem support makes the release even more compelling. Having integrations across Transformers, llama.cpp, vLLM, and other tools means developers can start testing real-world workflows immediately instead of waiting for the surrounding ecosystem to catch up. Open multimodal models that are genuinely practical to run locally could be a huge part of where AI development goes next. 💡👏</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/flux-3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/muse-glimmer" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

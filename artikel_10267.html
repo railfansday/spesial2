@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fast, reliable A2UI, with swappable inference formats</title>
+    <title>The Jensen Huang spy scandal is becoming a White House problem</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10267.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,45 +15,132 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fast, reliable A2UI, with swappable inference formats</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-09</p>
+        <h1>The Jensen Huang spy scandal is becoming a White House problem</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/00-header-1600x900.2e16d0ba.fill-1200x600.png" alt="Fast, reliable A2UI, with swappable inference formats" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/00-header-1600x900.2e16d0ba.fill-1200x600.png" alt="Fast, reliable A2UI, with swappable inference formats" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We've heard your concerns about the speed of A2UI and generative UI experiences: people wait while the model generates each screen. This release gives you levers to make that faster, so you can choose the trade-off that fits each screen.</p>
-<p>With this release, we’re happy to introduce swappable inference formats and share examples on leveraging decision models with A2UI, which help building faster and more reliable generative UI experiences. Using our new A2UI Express as an inference format you can reduce latency by up to 3x, and up-to 80x using decision models like Jev to make layout decisions. Express requires up to 3x fewer tokens to generate the same kinds of UI compared to Direct JSON. We'll dive into the details in this blog post.</p>
-<p>A2UI is an agent-optimized protocol for generative UI, where a client advertises a catalog of trusted components as a contract, an agent sends A2UI messages describing a bespoke user interface composed from that catalog, and the client's renderer draws the UI (see Introducing A2UI).</p>
-<p>Initially agents generated A2UI JSON transport messages directly, every curly brace and nested element. It turns out that generating JSON trees constrained by a complex JSON schema is slow and error-prone for LLMs. This coupled A2UI to LLMs, which output text, and made it difficult to integrate faster System One decision models.</p>
-<p>Now agents can generate A2UI Express, an intermediate format optimized for inference speed and accuracy, and rely on deterministic code in A2UI's Agent SDKs to translate it into the JSON-based transport protocol. Agent builders are also free to swap in any other DSL and its associated compiler for any special use-cases, and our A2UI Agent SDK(s) make it compatible with transports and renders.</p>
-<p>The format the model generates is what we call inference_format. You set it with one argument when you create the generator. The SDK generates the prompt instructions for that format and compiles the model's reply into standard A2UI messages. This post covers how the swap works, why we developed A2UI Express as the new default inference format, and how a decision model can build screens from layouts you define in advance.</p>
-<p>An inference format has two parts, and the SDK generates both from your catalog's JSON schema. A prompt section teaches the model the format's syntax, and a compiler compiles the model's reply into validated A2UI messages. Because both come from the schema, a format can't describe a component or property that your catalog lacks.</p>
-<p>You choose the format with one argument when you create the generator:</p>
-<p>A2UI Express is available in the Python agent SDK (a2ui-agent-sdk 0.9.0 on PyPI), in the TypeScript agent SDK (@a2ui/agent on npm), and in the Dart SDK (a2ui_agent 0.0.1-wip004 on pub.dev). In TypeScript, you pass new ExpressFormatFactory() as the generator's third argument. The Python and TypeScript SDKs can both stream Direct JSON chunk by chunk, and they compile Express from the complete reply.</p>
-<p>Express writes one statement per line, in a style close to Python. Each line assigns a component to a variable, and the variable name becomes the component ID. Arguments are positional: the compiler maps them to property names in the order your catalog schema declares them, and _ skips one. $/title binds a value to the data model, and Event("accept") declares a server action. This is the A2UI gallery's notification card in Express:</p>
-<p>Swappable Inference formats including A2UI Express also work with macros in the Python agent SDK, which help when a screen shows data your systems already hold. The model writes a call with only an ID, such as OrderStatus("ord_42"), and your macro fetches the order and fills in the values, so every value on screen comes straight from your data. The macros README shows the setup.</p>
-<p>Customer feedback uncovered latency and accuracy issues with direct JSON generation. To fix this, we started devising a new inference format. We experimented with four options:</p>
-<p>We ran all four formats through the same 51-task eval on gemini-3.5-flash and compared them for thinking modes: on and off.</p>
-<p>A2UI Express follows python like syntax and was inspired in part by OpenUI Lang, the language of the open-source OpenUI project, which also writes each component as a name = Component(...) statement with positional arguments. OpenUI Lang adds its own built-in functions and state, and the two languages aren’t yet interchangeable. The OpenUI team has proposed working toward a shared syntax in #3214. Comment if you're interested.</p>
-<p>Based on our tests; we observed that Express inference format works just as well even with thinking off; which can give you the fastest inference times when working with full expressivity of A2UI.</p>
-<p>Some screens have a known shape, such as a settings page, a checkout or a confirmation. For those, the model doesn't need to design a layout. It needs to choose among layouts you have already defined, and a different kind of model is built for that. For this, you would not need the full expressivity provided by A2UI Express.</p>
-<p>Jev, from TypeSafe, is what is called a System One model, built to make fast, structured decisions that code can use directly. Jev doesn't generate text or JSON. You send it a state and a set of typed questions, and it answers each one with calibrated probabilities. A question can ask whether a statement is true (Noul), which option from a list fits (Choice), or how something scores on a rubric (Score). Jev answers many questions in one request, in roughly 100 to 300 ms.</p>
-<p>Apparite(jev2ui), an open-source design tool, shows one way to connect a System One model to A2UI. Jev decides the structure of each screen, code builds the A2UI components from those decisions, and a small model, gemini-3.5-flash-lite, writes only the text. The questions live in a Markdown grammar written ahead of time. A blockquote asks a question, and the bullets are its options, each with criteria. This block from grammar/screen.md decides which control a settings row gets:</p>
-<p>On a podcast app's settings screen, Jev answers Skip forward → value, Auto-download → switch and Log out → danger, each at p ≈ 1.00. Apparite builds a whole screen in three steps:</p>
-<p>In one run of 11 prompts, the component tree was on screen in 92 to 298 ms and each screen was complete in 0.8 to 1.7 s. The text writer generated 101 to 341 tokens per screen, and both of Apparite's Jev pipelines produced valid A2UI on all 11 prompts. The project treats these numbers as a first look, since the sample is small.</p>
-<p>Controlled generation can only produce the layouts its grammar describes. Apparite's grammar covers nine screen archetypes and twelve blocks, so screens without a known shape are a better fit for Express. A2UI Agent SDKs, don’t include a decision model inference format yet; apparite(jev2ui) project is an example on how A2UI messages could be assembled given a batch of independent decisions from a decision model.</p>
-<p>A2UI Express is fast and keeps the full expressivity of A2UI, but a decision model making multiple independent decisions is still faster. Choose by how much of the screen you can define ahead of time:</p>
-<p>Use Express in your agent. Install the Python SDK with pip install a2ui-agent-sdk or the TypeScript SDK with npm install @a2ui/agent, pass ExpressFormatFactory() when you create the generator, and run the model with thinking off. Your catalog and renderers stay as they are, and the Express specification documents the syntax.</p>
-<p>To teach Gemini, or any other model that loads skills, to write Express with only your components, generate skills from your catalog with the Python SDK's SkillGenerator:</p>
-<p>Try controlled generation. Clone the example jev2ui repository, and follow the instructions there to get started. A hosted version of Apparite(jev2ui) runs at apparite.cnfg.ai.</p>
-<p>Earlier A2UI posts: Introducing A2UI (December 2025), A2UI v0.9 (April 2026) and A2UI + MCP Apps (June 2026).</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>Hill-Climbing Agent Quality with Agents CLI Evaluation</p>
-<p>Smaller apps and faster GPU inference with LiteRT in Google Play services</p>
+                <p><p class="wp-block-paragraph">The scandal engulfing Nvidia CEO Jensen Huang is no longer simply a question of whether one of Silicon Valley&#8217;s <a href="https://www.fastcompany.com/91033514/nvidia-most-innovative-companies-2024" rel="noreferrer noopener" target="_blank">most powerful men</a> had an affair with a suspected Chinese spy. It&#8217;s also a question of what the White House knew—and what it might have chosen to overlook.</p>
+
+
+
+<p class="wp-block-paragraph">Huang and Nvidia confirmed the relationship Sunday, following a <a href="https://www.nytimes.com/2026/11/08/technology/nvidia-investigation-jensen-huang-china.html" rel="noreferrer noopener" target="_blank">bombshell <em>New York Times</em> report</a>. Alice Huang (no relation to Jensen)—the woman at the center of the revelations—is an executive at Singapore-based data center company Megaspeed, a major customer of Nvidia chips. U.S. intelligence surveillance reportedly showed that she had been funneling information directly to the Chinese government.</p>
+
+
+
+<p class="wp-block-paragraph">What remains unclear is how much sensitive information may have been compromised, what Huang knew about the woman he was seeing, and why U.S. intelligence officials apparently failed to warn him about her suspected ties to Beijing. The answers could prove deeply damaging to both Huang and the White House.</p>
+
+
+
+<p class="wp-block-paragraph">“It was pretty clear to a lot of people that he would be a target of Chinese intelligence collection,” says Sam Bresnick, a research fellow at Georgetown University’s Center for Security and Emerging Technology, given Huang’s <a href="https://www.fastcompany.com/91617023/what-ais-biggest-ceos-really-want-from-washington" rel="noreferrer noopener" target="_blank">proximity to Trump</a> and his leadership of a company that is “central to the U.S.-China <a href="https://www.fastcompany.com/section/artificial-intelligence" title="AI">AI</a> competition.”</p>
+
+
+
+<h2 class="wp-block-heading" id="h-nvidia-s-changing-story">Nvidia’s changing story</h2>
+
+
+
+<p class="wp-block-paragraph">The admission of the affair also contradicts how Nvidia and Huang himself had previously characterized his ties to Alice Huang. As recently as October 29, company spokesperson <a href="https://www.nytimes.com/2026/10/29/us/politics/nvidia-china-jensen-huang-trump.html" rel="noreferrer noopener" target="_blank">John Rizzo</a> described their interactions as routine business dealings, while <a href="https://www.bloomberg.com/news/articles/2026-10-29/nvidia-ceo-says-ties-to-company-under-spying-probe-were-normal" rel="noreferrer noopener" target="_blank">Huang insisted</a> they were “completely normal and not unusual.”</p>
+
+
+
+<p class="wp-block-paragraph">Huang now faces an investigation by Nvidia’s board, although directors said in a Sunday <a href="https://nvidianews.nvidia.com/news/statement-from-nvidia-board-of-directors" rel="noreferrer noopener" target="_blank">statement</a> that they had “no reason to believe that either national security or Nvidia secrets were compromised” and expressed “confidence in Jensen and his leadership team.”</p>
+
+
+
+<p class="wp-block-paragraph">The board’s investigation may be the least of Huang’s worries. The powerful CEO faces the prospect of bipartisan congressional scrutiny, along with mounting questions about his influence in Washington and his future at Nvidia.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-the-questions-congress-wants-answered">The questions Congress wants answered</h2>
+
+
+
+<p class="wp-block-paragraph">Already, Congress has begun asking questions. Late last week, three House members—Republicans Brian Mast, John Moolenaar and Eric Crawford—sent Huang a letter <a href="https://foreignaffairs.house.gov/sites/evo-subsites/republicans-foreignaffairs.house.gov/files/evo-media-document/11.4.26nvidialetter.pdf" rel="noreferrer noopener" target="_blank">requesting</a> that he attend a closed-door hearing on the matter in Washington. Asked by <em>Fast Company </em>on Monday whether Huang intends to attend, Nvidia declined to answer on the record. Next year, the new <a href="https://www.fastcompany.com/91634246/what-state-ag-election-results-mean-for-big-tech-accountability" rel="noreferrer noopener" target="_blank">Democrat-controlled Congress</a> will likely call a number of tech leaders, including Huang, to testify about their dealings with Trump.</p>
+
+
+
+<p class="wp-block-paragraph">On Monday, Senator Chris Coons of Delaware <a href="https://thehill.com/homenews/senate/6208634-chris-coons-jensen-huang-nvidia-affair-probe/" rel="noreferrer noopener" target="_blank">called for an investigation</a> into Huang and Nvidia to determine whether national security had been compromised. “We need answers about the relationship between AI billionaires and the Trump administration,” he wrote on X. Coons is <a href="https://thehill.com/policy/international/6198389-democrats-foreign-policy-power-congress/" rel="noreferrer noopener" target="_blank">poised to chair</a> the Senate Foreign Relations Committee when Democrats take control of Congress in January, giving him considerable power to pursue those answers.</p>
+
+
+
+<p class="wp-block-paragraph">There is certainly plenty to investigate. There is still much we don’t know, and what emerges could prove deeply damaging to both Huang and the White House.</p>
+
+
+
+<p class="wp-block-paragraph">For one, we don’t know whether Alice Huang obtained sensitive information from Jensen Huang and transmitted it to the Chinese government. Huang and his devices may have been in possession of several types of valuable information, says Bresnick. That could include trade secrets about upcoming Nvidia chips, the company’s research strategies, or U.S. government plans to restrict China’s access to advanced AI technology.</p>
+
+
+
+<p class="wp-block-paragraph">“Did he provide information to her about the Trump administration&#8217;s thinking on AI—U.S.-China competition, export controls, and trade policy more broadly?” Bresnick asks. “Because if they have greater texture on what the administration&#8217;s thinking, it&#8217;s easier for them to position themselves.&#8221; (The White House did not respond to <em>Fast Company</em>’s request for comment.)</p>
+
+
+
+<p class="wp-block-paragraph">It’s also unclear what Huang knew about Alice Huang, and when. He certainly knew he was having an affair with an executive at a customer company, in violation of Nvidia’s code of conduct. But we don’t know when he learned that she was a suspected spy. Why didn’t Huang run a background check on her, Bresnick asks, or consult U.S. intelligence agencies?</p>
+
+
+
+<h2 class="wp-block-heading" id="h-what-did-the-white-house-know">What did the White House know?</h2>
+
+
+
+<p class="wp-block-paragraph">Then there’s the question of when U.S. intelligence learned about Alice Huang’s activities.</p>
+
+
+
+<p class="wp-block-paragraph">According to the reporting, the U.S. government had known about Alice Huang’s ties to Beijing for months. Bresnick finds it strange that intelligence officials apparently failed to warn Jensen Huang, given his close relationship with the president and his position atop a company developing some of the world’s most advanced AI technology. “The fact that this potentially could have been at risk” makes the apparent lack of intervention all the more puzzling, he says.</p>
+
+
+
+<p class="wp-block-paragraph">One possibility is that the White House prevented intelligence agencies from warning Huang about the suspected spy. The Trump administration, after all, has compelling reasons to keep Huang and Nvidia out of the headlines. The stock market’s strong performance has been a central selling point for the administration, and Nvidia is the crown jewel of the AI-related stocks that have driven much of its growth. AI and AI-related companies accounted for as much as half of the market’s gains this year, according to a <a href="https://am.jpmorgan.com/content/dam/jpm-am-aem/global/en/insights/eye-on-the-market/ai-tracker-amv.pdf" rel="noreferrer noopener" target="_blank">new J.P. Morgan report</a>.</p>
+
+
+
+<p class="wp-block-paragraph">The White House may have had an even more direct financial incentive. The federal government stands to collect revenue from Nvidia’s AI chip sales to China. Last year, Huang persuaded Trump to allow Nvidia to sell its H200 chips in China, provided the U.S. government received a 25% cut of the sales. Huang also reportedly discussed selling Nvidia&#8217;s top-of-the-line Blackwell graphics processing units in China, but that proposal was <a href="https://www.wsj.com/world/china/trump-nvidia-china-chip-exports-51e00415?mod=article_inline" rel="noreferrer noopener" target="_blank">ultimately shut down</a> over national-security concerns. In August 2025, Huang <a href="https://www.fastcompany.com/91386003/nvidia-amd-china-trump" rel="noreferrer noopener" target="_blank">agreed</a> to give the U.S. government a 15% cut in exchange for permission to sell the lower-performing H20 chip to China.</p>
+
+
+
+<p class="wp-block-paragraph">“Was the government hoping to get a bunch of money from these deals, from Chinese buyers getting access to these things?&#8221; Bresnick asks.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-nvidia-s-influence-comes-under-scrutiny">Nvidia’s influence comes under scrutiny</h2>
+
+
+
+<p class="wp-block-paragraph">Alice Huang&#8217;s company, Megaspeed, became an official Nvidia Cloud Partner in November 2023 and purchased more than $4.8 billion worth of Nvidia chips over roughly two years, <a href="https://apnews.com/article/nvidia-jensen-huang-chinese-spy-investigation-df45d21030691f59c67bc0b35adb89a2" rel="noreferrer noopener" target="_blank">according to the Associated Press</a>. But the company was also under investigation by the Commerce Department over suspicions that it was funneling restricted AI chips to China. A <a href="https://www.nytimes.com/2025/10/09/technology/nvidia-chips-china-megaspeed.html" rel="noreferrer noopener" target="_blank"><em>New York Times</em> investigation</a> last year found that its offices in Singapore and Malaysia were largely empty, while many of its executives were based in China. U.S. Commerce Department officials who spoke to <em>The Times</em> even described finding boxes of restricted Nvidia chips in a Megaspeed facility in Malaysia.</p>
+
+
+
+<p class="wp-block-paragraph">On Monday, <em>The Times</em> reported that the Commerce Department&#8217;s investigation came to an abrupt halt last year after Nvidia&#8217;s general counsel, Tim Teter, contacted investigators seeking information about the case. Teter reportedly told them that Jeff Kessler, a senior Commerce official appointed by Trump, had given Nvidia permission to reach out. The communication alarmed investigators, some of whom worried that Kessler&#8217;s involvement had potentially compromised their work.</p>
+
+
+
+<p class="wp-block-paragraph">The case was subsequently transferred to the Justice Department, which is now conducting a criminal investigation into Megaspeed. Officials familiar with the matter told <em>The Times</em> the transfer was intended to prevent the investigation from being compromised. There is no evidence that Kessler instructed investigators to share information with Nvidia, but the unusual circumstances of the transfer have raised questions about the company&#8217;s influence over the very officials responsible for policing its chip sales.</p>
+
+
+
+<p class="wp-block-paragraph">For Bresnick, the investigation also raises questions about how Megaspeed was able to acquire billions of dollars&#8217; worth of advanced Nvidia chips despite suspicions about its operations. “We had no idea where those chips went,” he says.</p>
+
+
+
+<p class="wp-block-paragraph">Together, the revelations raise questions about whether Nvidia&#8217;s political influence complicated the government&#8217;s response to potential national security threats. The questions come at a politically sensitive moment: Corruption was a <a href="https://www.theguardian.com/us-news/2026/oct/30/government-corruption-us-midterm-poll" rel="noreferrer noopener" target="_blank">major factor</a> in voters’ decisions in the midterms, and Nvidia now risks becoming entangled in a controversy that could damage its standing in Washington.</p>
+
+
+
+<p class="wp-block-paragraph">Despite Huang’s scandal, Creative Strategies chairman and longtime analyst Tim Bajarin suggests those calling for his ouster could meet serious opposition.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">“Removal of Jensen would be a very difficult decision because he is the heart and soul of Nvidia,” Bajarin says. “I have met with Jensen many times over the years, and he was always the smartest guy in the room. More importantly, he has the global vision for Nvidia’s future and needs to be the one driving their future.”</p>
+
+
+<hr /></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/fast-reliable-a2ui/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.fastcompany.com/91638546/the-jensen-huang-spy-scandal-is-becoming-a-white-house-problem" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
