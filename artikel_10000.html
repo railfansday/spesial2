@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Is it agentic enough? Benchmarking open models on your own tooling</title>
+    <title>Run a vLLM Server on HF Jobs in One Command</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10000.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,205 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Is it agentic enough? Benchmarking open models on your own tooling</h1>
+        <h1>Run a vLLM Server on HF Jobs in One Command</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/vllm-jobs/thumbnail.png" alt="Run a vLLM Server on HF Jobs in One Command" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/vllm-jobs/thumbnail.png" alt="Run a vLLM Server on HF Jobs in One Command" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Benchmarking transformers revisions across different metrics</p>
-<p>This is a human-made, agent-focused blogpost.</p>
-<p>Coding agents increasingly work with our software instead of us: describe a task, and the agent picks the library,
-writes the calls, runs them, and debugs its own mistakes. When the library gets in the way, it will
-happily bypass it and rewrite the logic from scratch. This introduces a new concept in library development:
-the code should not only be correct and fast, but should be designed so that an agent can drive it effectively. A clunky API
-or stale docs annoy us developers, but it now also sends the agent down a longer, more expensive path.</p>
-<p>Most benchmarks just look at the final answer. We wanted the whole process instead: not just whether the agent got
-it right, but how much work it took to get there, and how that shifts across models, library revisions, and
-tasks. We measured exactly that, using transformers as our case study.</p>
-<p>Here, we will introduce a tool specific benchmark focusing on how the answer was found, and provide a simple 
-implementation of one such harness, running entirely on open models driven by the
-pi coding agent, with the full sweep of
-models × revisions × tasks fanned out across Hugging Face Jobs
-so every run sees identical hardware.</p>
-<p>But, how do you optimize software for agents?</p>
-<p>We're strong believers in the following two software principles:</p>
-<p>This remains the same within the realm of agentic-optimized tooling, and, for once, the two are directly tied to
-each other.</p>
-<p>You want your tool to exist for an agent: it needs to be discoverable. The API needs to be clear and the docs
-need to be extensive. They need to be structured in a way that the agent has rapid access to the useful files and
-examples. If you want your tool to work for an agent, then you should test it for agentic-use.</p>
-<p>We'll use transformers as an example throughout this blogpost: agents using it to solve ML tasks (classifying
-text, captioning images, transcribing audio), not contributing code to it; though the harness was designed to work
-with any tool that can be operated from the command line.</p>
-<p>Our intuition on transformers was that usage could be dramatically simplified
-with a few changes: a CLI, a Skill, and self-contained, task-specific examples. This is the same recipe
-recently applied to the hf CLI, redesigned to be agent-optimized,
-where agents used 1.3–1.8× (and up to 6×) fewer tokens. We wanted to know whether that kind of win generalizes, and
-whether it could be useful for transformers as well.</p>
-<p>Intuition is a powerful tool, but we wanted more evidence before we opened PRs that add several thousand lines of code to such a widely used codebase as transformers. We set out to measure what success looks like.</p>
-<p>Two agents can both produce the correct label for a sentiment-classification task,
-but one:</p>
-<p>Both reach POSITIVE (0.9999), and here are the two paths an agent actually took on this exact task:</p>
-<p>Both methods reach the same result. But they have very different profiles in cost, latency, token usage, and failures.</p>
-<p>If your evaluation only checks the final string, you're blind to these as well as
-whether a change you shipped to the library (a CLI improvement, better error messages, a
-Skill) actually helped agents.</p>
-<p>Our goal with this harness is to evaluate how much work
-an agent has to do to perform a given task, and whether changes to the library improve performance.</p>
-<p>A few words on how we'll evaluate agents here.</p>
-<p>We run every task under three variants (or "tiers"); three different ways an agent can come at transformers:</p>
-<p>These aren't nested: skill doesn't contain clone (it ships curated docs, not the source tree), and neither
-strictly contains the other, each gives the agent a different kind of help. As we'll see, a model can sometimes 
-do better on clone than on skill.</p>
-<p>Not all models driving agents are equal, and their difference changes what you should look at when running them.</p>
-<p>At one end, you have the largest, most capable open models. On reasonably common tasks,
-these should get the right answer, eventually. For them, task completion saturates near
-100% and stops telling you much about your tool; a more relevant benchmark is the effort
-it took the agent to get there: how many turns, tokens and seconds it took, and whether they walked a clean
-path or used deprecated APIs.</p>
-<p>Local models vary widely in size, and so do their abilities.
-Metrics such as "match %" are more relevant than for their larger counterparts,
-as you can see how model sizes/capabilities affect results on your specific
-tool.</p>
-<p>This harness not only provides guidance to library maintainers on how to improve a repository for agent interactions, it also helps assess how different agents and models perform on the tasks users care about.</p>
-<p>The harness scores every run on several axes, so that you can ask what actually matters
-for each class of model:</p>
-<p>All of it lands in a report you can directly examine:</p>
-<p>The live report: Overview, Coverage, and Results, all client-side.</p>
-<p>And because it captures the native agent trace of every run, numbers are just the beginning: you
-can read exactly what the agent did, command by command. The traces are shareable
-through the Hub's agent-traces viewer:</p>
-<p>A run rendered in the Hub's agent-traces viewer: MiniMax-M2.7 on the answer-question task.
-Open this trace on the Hub ↗</p>
-<p>Before the results, a quick recap of the setup. Each run varies four things: the model driving the agent,
-the transformers revision it runs against, the task, and the tier (bare / clone / skill).
-As discussed, we look at different metrics for the two different model categories.</p>
-<p>Since a large open model will usually get to the correct result, what you're really
-measuring is the effort it took to do so. Did it take ten turns or one? Did it follow
-an API path you deprecated because it trusted obsolete documentation? Did it hit an
-error you hadn't foreseen?</p>
-<p>The natural experiment is to fix one strong model and vary the tool's
-revisions: the successive git versions of transformers we test against, from released tags like
-v5.8.0 and v5.9.0 to the specific commit that introduces the CLI and Skill. We want to watch whether the load
-it puts on the agent goes up or down. We used the harness on transformers to check
-whether adding a dedicated CLI and Skill actually lightened the agents' work.</p>
-<p>For the three large models we used in our tests, the average time spent on all tasks indicates that the Skill commit
-results in less time spent working on the tasks:</p>
-<p>Median time per revision, by tier: the skill commit (green dot) is the fastest.</p>
-<p>On the other hand, in the experiments in which we cloned the repository, we can see a significant increase
-in token consumption due to the commit that introduced the CLI and examples, as we'll see in a moment.</p>
-<p>Median new tokens per revision, by tier: the clone variant jumps once the CLI lands in the repo.</p>
-<p>Reading the clone-variant traces explains why. The commit adds a command, but it also ships the
-CLI's implementation and a set of cli/agentic/*.py usage examples into the repository directly.</p>
-<p>On the clone variant the agent has a full transformers checkout in front of it, and roughly a third of the runs go read the new
-surface (the /cli/ tree and the example scripts) to learn the interface before calling it. This raises the
-median input from ~4k to ~6.4k tokens.</p>
-<p>The two charts are then two sides of one tradeoff: the commit buys the large models less time 
-(they reach for the CLI instead of debugging Python) at the cost of more
-tokens (they read the code that taught them the CLI). A tradeoff worth knowing about before merging PRs.</p>
-<p>One caveat works in the CLI's favor, though, which isn't benchmarked yet: the cost of reading it is amortized 
-with successive runs. Our setup is built for one-off experiments. Each run is a fresh agent that rediscovers 
-the CLI from scratch, so it pays the discovery cost every time. In real usage an agent learns the interface 
-once and then solves task after task within the same session, amortizing that cost across many requests. The
-token bump we measure here is closer to a worst case than to what a user would see day to day.</p>
-<p>Open models give us fine-grained control over the variables that matter most here: size, configuration, quantization,
-provider, training, and anything that would differ from one model to the next. They're also where a good tool surface
-matters most: a small model asked to "use transformers to do X" on a bare environment can
-guess an API that changed some releases ago, may do unnecessary tool calls, and can
-get the wrong answer.</p>
-<p>So here the experiment is the opposite of the above: hold the revision and sweep the model. This helps
-see which models actually take care of the task, not just by token count and time,
-but down to which ones can't reliably handle the tool calls. Our intuition is
-that the smaller the model, the harder both tool use and the task get; we ran the
-harness across a range of model sizes to test exactly that:</p>
-<p>Match % across models, by tier: the skill tier lifts the larger models but drops the smaller ones.</p>
-<p>which also seems to be correlated with the number of tokens ingested</p>
-<p>Median new tokens across models, by tier.</p>
-<p>A note on fair comparison: naively averaging across tasks is misleading when
-coverage is uneven (a model that only finished the quick tasks looks fast). The
-report has a "shared tasks only" toggle (across models and/or revisions) so
-you compare like-for-like, and a Coverage heatmap so you can see exactly which
-task × revision × model cells actually ran.</p>
-<p>Two things come together here: how to look past whether the agent succeeded to what it did and how it
-did it; as well as the first results we pulled out of the harness.</p>
-<p>Match %, tokens, and time tell you the cost of a run but don't tell you much about what happened under the hood.</p>
-<p>This is why we've introduced the concept of markers. A marker is a named pattern the profile (the
-small per-tool plugin that teaches the harness how to build and drive a given library) matches against
-a run.</p>
-<p>It is a one-line label for a behavior you care about, checked against the shell
-commands the agent ran, the code it wrote, the files it read, or its final
-answer. A run can fire several markers or none; the report shows how often each one fired,
-per model and per revision.</p>
-<p>For transformers we declare a handful but we'll only look at the two most relevant ones:</p>
-<p>These are what we watch to see whether a change actually shifted the agent's behavior. Interestingly here,
-the larger the model, the more it leverages the new context instead of using its memory; therefore leveraging
-the newly introduced CLI.</p>
-<p>CLI adoption by tier across models: only the skill tier reaches for it, and more so as models grow.</p>
-<p>CLI adoption is new: the CLI lands in a single commit, isn't in any model's training data, and is only
-lightly documented. The effect is clear: it's the Skill variant, the one that ships the CLI's
-documentation, that actually reaches for it, at 55.3%.</p>
-<p>Comparing the commit across model sizes, the CLI + Skill helps the bigger models: on the skill tier, Kimi and the other large agents reach for the CLI and finish in fewer turns. (On clone they spend more input tokens first, reading the new CLI code, as we saw above, so the win shows up in time and turns, not raw tokens.)</p>
-<p>Kimi-K2.6, GLM-5.1, and MiniMax-M2.7 across revisions</p>
-<p>But in some smaller-model settings, it appears to hurt performance. One plausible explanation is that small
-models lean on memorized API patterns, reproducing pipeline(...) snippets
-they've seen in their training data. The new concepts are then a larger
-surface for them to get wrong. You can watch this directly on the harness: lower
-match %, more retries, the cli marker barely firing. It is particularly striking on the Qwen3-4B model:
-the Skill barely changes its match rate yet its cost distribution is significantly affected.</p>
-<p>Almost all of that comes from the clone tier. The checkout now contains
-the CLI's implementation and cli/agentic/*.py examples, and the 4B agent reads them in bulk: its median new
-tokens jump from ~2.4k to ~23k, with time and output skyrocketing as well, for no gain in
-accuracy.</p>
-<p>Qwen3-4B across revisions. The CLI + Skill commit fans the cost distribution wide open, on the clone tier the agent reads the newly-shipped CLI source in bulk (~10× the new tokens), for no gain in match %. (repeat tokens stays flat: this setup uses no prompt caching.)</p>
-<p>Sometimes, though, the Skill breaks correctness outright. Reading the traces shows how, for example for Qwen3-14B: 
-adding the Skill drops its overall match rate from 67% (bare) to 43%, and on the simplest tasks the collapse is very
-visible: classify-sentiment goes from 100% on the clone variant to 0% with the Skill.</p>
-<p>Qwen3-14B on classify-sentiment, by tier: clone (blue) holds at 100% across revisions, but the Skill variant (green) collapses to 0% at the CLI + Skill revision.</p>
-<p>Looking at the traces, the model mistakes the CLI for a tool it can call directly (as in an agentic-harness
-tool, like web-search). The Skill is not an executable tool: it's documentation loaded
-into the agent's context, and the transformers CLI is only ever meant to be run from the shell (via bash); so this
-will not work.</p>
-<p>Qwen3-14B reads the Skill and, in 39 of its 56 Skill runs, either emits a transformers(command="classify", ...)
-tool call (a tool that was never registered) or, finding nothing like it among its read/bash/edit/write
-tools, concludes it can't run a model and gives up. Either way, rather than fall back to the one-line
-pipeline(...) that scored 100% on the clone checkout, it declares the task impossible.</p>
-<p>Qwen3-14B on classify-sentiment (Skill variant): it reasons that read/bash/edit/write can't run a model, and gives up.</p>
-<p>This is exactly what we built the harness to catch: the same change that speeds the large models
-ends up breaking the small ones, which seemed a bit counterintuitive to us at first and something we'd likely have
-shipped as-is. The takeaway for maintainers: agent-facing APIs should be evaluated across model sizes, because a
-new affordance can reduce work for strong models while adding ambiguity for smaller ones. It also hints at a fix:
-rather than hand-write a Skill and check it after the fact, you could generate and validate one against the weaker
-models up front.</p>
-<p>This is exactly what Upskill does: it turns a strong model's solution into 
-a Skill only when it measurably helps the smaller ones.</p>
-<p>The harness is one CLI, agent-eval. Install it, run a suite, fan it out across models × revisions on HF Jobs, and publish the
-report as a Hugging Face Space.</p>
-<p>Trusted local use only. The harness runs a coding agent with bypassed permissions and executes code from
-whatever revision you point it at, and traces can contain prompts, output, and local paths. See
-SECURITY.md before pointing it at code you didn't write or sharing results.</p>
-<p>The full, kept-current setup and usage instructions live in the README.</p>
-<p>Checking the final answer tells you whether an agent can use your library. It
-doesn't tell you what it costs: the turns, tokens, errors, and the path it took to
-get there. This harness measures that, across the revisions and models you pick.</p>
-<p>On transformers, it caught something we'd have shipped on faith: the CLI + Skill
-helps the largest open models and hurts the smallest ones. Worth knowing before merging!</p>
-<p>It's profile-based, and designed to be adaptable: point it at your own library, define
-a few tasks and their expected answers, get the same report. Code and tasks are in
-the repo, traces are on the Hub.
-Let us know if you use it for your project!</p>
-<p>This harness stands entirely on
-pi, Mario
-Zechner's coding-agent CLI: it drives every open-model run, and only needs an
-HF_TOKEN to serve a model, which is what made the open-model sweep practical at
-all.</p>
-<p>Thanks to the model builders and inference providers behind the models we
-swept. Across the board they performed well above what the bare baseline would
-suggest.</p>
+                <p>You can spin up a private, OpenAI-compatible LLM endpoint on Hugging Face infrastructure with a single command — no servers to provision, no Kubernetes, pay-per-second. Once it's up, you can query it from your laptop, a notebook, or anywhere else.</p>
+<p>It's the quickest way to stand up a model for tests, evals, or batch generation. (If you're after a managed, production-ready service instead, that's what Inference Endpoints are for — more on when to pick which at the end.)</p>
+<p>hf jobs run is docker run for HF infrastructure. We use the official vllm/vllm-openai image, ask for a GPU with --flavor, and expose vLLM's port with --expose:</p>
+<p>--expose 8000 routes the container's port through HF's public jobs proxy (see the Serve Models guide for the full reference). The command prints the URL your server is reachable at:</p>
+<p>6a381ca1953ed90bfb947332 is your job ID. Keep track of it, we'll need it. We'll use <job_id> as a placeholder for it in the rest of the post.</p>
+<p>Give it a couple of minutes to download weights and boot. When the logs show Application startup complete, you're live.</p>
+<p>vLLM speaks the OpenAI API, and every request just needs your HF token as a bearer token. The quickest way to hit it is curl:</p>
+<p>which returns the usual OpenAI-style JSON, with choices[0].message.content holding "Hello! How can I assist you today? 😊".</p>
+<p>Or, from Python, point the OpenAI client at the exposed URL and pass the token as the API key:</p>
+<p>Quick health check before you start: curl https://<job_id>--8000.hf.jobs/v1/models -H "Authorization: Bearer $(hf auth token)" should list the model.</p>
+<p>🔐 The endpoint is gated, not public. Every request must carry an HF token with read access to the job's namespace. A plain browser visit will be rejected. In effect, the jobs proxy is your API gate: access is scoped to you (and your org). That's fine for private use, but treat the URL accordingly: don't share it expecting it to be open, and don't paste your token into untrusted places. If you need finer-grained or public access, put a proper gateway in front instead. Or see HF Jobs or Inference Endpoints? below.</p>
+<p>Jobs are billed per second, so stop the server when you're done:</p>
+<p>The --timeout you set is a safety net (it'll auto-stop), but cancelling explicitly is cheaper. An a10g-large runs at $1.50/hour — check hf jobs hardware for the full price list and pick the smallest flavor that fits your model.</p>
+<p>The same command scales to much larger models — pick a beefier --flavor and tell vLLM to shard the model across the GPUs with --tensor-parallel-size. For example, the 122B Qwen3.5 mixture-of-experts model on 2× H200:</p>
+<p>--tensor-parallel-size should match the number of GPUs in the flavor (h200x2 → 2, h200x8 → 8). Run hf jobs hardware to see what's available and give bigger models a longer --timeout, since they take longer to download and load. For large models, H200 flavors are usually the best value.</p>
+<p>The --max-model-len 32768 --max-num-seqs 256 flags are specific to this model: Qwen3.5-122B is a hybrid Mamba/attention architecture with a 256K-token default context, which doesn't leave enough memory for vLLM's default batch settings. Capping the context length and concurrent-sequence count keeps it within the GPUs' memory. If a model fails to start with an out-of-memory or cache-block error, dialing these two down is the first thing to try. Everything else (the exposed URL, the OpenAI client, the token auth) stays exactly the same.</p>
+<p>Prefer a chat window over curl? A few lines of Gradio point at the same endpoint. Add --reasoning-parser deepseek_r1 to the vllm serve command so Qwen3's thinking comes back as a separate field (not necessary, but helpful), then run this code locally (you'll just need the job ID):</p>
+<p>Run it, open http://127.0.0.1:7860, and chat — reasoning streams into the collapsible panel, the answer below.</p>
+<p>Need to debug a startup failure, watch GPU memory, or tail logs interactively? You can open a shell straight into the running job. Launch it with --ssh and make sure your public key is registered at huggingface.co/settings/keys:</p>
+<p>You're now inside the container, where you can run nvidia-smi, inspect the process, or poke at the model directly — which makes debugging and monitoring much easier than reading logs from the outside. SSH support requires huggingface_hub >= 1.20.0.</p>
+<p>The same endpoint can back a terminal coding agent. Pi is a provider-agnostic agent harness. Point it at the job and you get a Read/Write/Edit/Bash agent running on your own self-hosted model.</p>
+<p>One thing to set up first: agents drive the model through tool calls, and vLLM only accepts those if the server is launched with tool calling enabled. So relaunch with --enable-auto-tool-choice and a --tool-call-parser matching the model family (hermes for Qwen3). Agents also benefit from a stronger model, so this is a good place to bring in the bigger one:</p>
+<p>Then add the job as a custom provider in ~/.pi/agent/models.json:</p>
+<p>The model you spun up a couple of commands ago, now driving an interactive coding agent in your terminal.</p>
+<p>HF Jobs isn't the only way to serve a model on Hugging Face. Inference Endpoints are our managed product for the same job, and which one fits depends on what you're after.</p>
+<p>Reach for HF Jobs when you want maximum flexibility and control: it's just docker run on HF infrastructure, so you pick the image, the exact vllm serve flags, and the hardware, and you pay per second for as long as the job runs. That makes it a great fit for experiments, one-off evals, batch generation, or kicking the tires on a model before committing to anything.</p>
+<p>Reach for Inference Endpoints when you want something more production-ready. They add the operational niceties a long-lived service needs: finer-grained access control (an endpoint can be public, protected, or private), and scale-to-zero, so you're not billed during periods of inactivity. If you're standing up a durable endpoint rather than running a job, that's the tool to grab.</p>
+<p>This post sticks to vLLM, but the same expose-a-port pattern works with any OpenAI-compatible server. To serve GGUFs with llama.cpp or run SGLang instead, see the Serve Models on Jobs guide, which walks through those backends.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/is-it-agentic-enough" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/vllm-jobs" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

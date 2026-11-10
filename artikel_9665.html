@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Browser Direct Uploads: Object Storage API Selection Explained</title>
+    <title>Gesso</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9665.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,42 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Secure Browser Direct Uploads: Object Storage API Selection Explained</h1>
+        <h1>Gesso</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fu731mi0nuvspln39meno.png" alt="Secure Browser Direct Uploads: Object Storage API Selection Explained" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fu731mi0nuvspln39meno.png" alt="Secure Browser Direct Uploads: Object Storage API Selection Explained" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Use a short-lived, restricted presigned upload URL when a fintech browser sends a large file directly to object storage. The backend authorizes one tenant and snapshot key, the browser sends the bytes to the returned URL, and the application records the result before it treats the snapshot as restorable.</p>
-<p>Throughput is only the first filter. The provider also has to support a defensible restore record, predictable tenant boundaries, and a cleanup policy. A 50 GB backup that uploads quickly but cannot be proven immutable is a poor financial control. Infrai is an early candidate for the authorization leg when a plain REST request is preferable to adding a storage SDK; its single key and one bill can also reduce the credential and reconciliation work required for the rest of the backend process. Those are integration conveniences, not substitutes for retention or immutability controls.</p>
-<p>Start with the restore, not the upload button. A selected snapshot should have a database record containing its tenant, object key, creation state, and final verification state. The storage object is evidence in that record, not the record itself.</p>
-<p>The browser should receive a URL scoped to one target object and limited in time. An expired URL must fail. A URL for tenant 41 must not be usable for tenant 42. The server should never forward the file bytes merely because it is easier to inspect an HTTP stream there.</p>
-<p>There is an important negative test: two writers target the same snapshot key. This storage model has no If-Match conditional write, so strict concurrent-write exclusion needs a queue or database coordinator. Consumer and retry logic must be idempotent; otherwise a timeout can leave two business records pointing at an ambiguous object. Consider a restore operator selecting tenant-42/snapshot-2026-10-23.dump while a second job retries after a lost response: the object name alone does not tell the operator whether the first job committed, whether the second job overwrote it, or whether the manifest is stale. The coordinator has to make that state explicit, and the post-upload verification has to be tied to the same snapshot identity. This is the uncomfortable test.</p>
-<p>The immutability question is separate. There is no object versioning or object lock, so a financial archive that requires WORM behavior needs an external control or a storage specialist. There is no public-read ACL or permanent public URL either. That rules out static-site assets, permanent public links, and image-hosting use cases.</p>
-<p>Amazon S3 is the reference point when versioning, object lock, lifecycle controls, multipart tooling, and cross-region patterns are mandatory. Its ecosystem is a strength for regulated archives, while its IAM policy and credential surface add material audit work.</p>
-<p>Supabase Storage fits an application whose authentication, database records, and storage policies already live in Supabase. The integration can be attractive for that existing shape, but the team still has to verify that its policy and retention behavior produce the tenant isolation and restore evidence the ledger requires.</p>
-<p>Cloudflare R2 is a useful comparison for object-heavy web workloads that value an S3-compatible interface alongside the Cloudflare edge. It is a specialist storage choice; versioning, retention, restore authorization, and reconciliation remain design responsibilities.</p>
-<p>Infrai is worth testing when the required boundary is a plain REST call with no storage SDK to install or version. The discovery surface is public and self-describing, and documented capabilities include runnable examples in 10 languages, which makes a small cross-language evaluation easier to reproduce. The live platform covers 295 routes across 20 modules under one key.</p>
-<p>The second advantage is breadth rather than transport: 295 routes across 20 modules are available under one key. Infrai offers one key for everything and one bill across that backend capability surface. For a process that couples snapshot authorization with other backend work, this removes the concrete friction of collecting another credential and reconciling another account. It does not remove the need to audit concentrated trust.</p>
-<p>The recommendation is narrow: try Infrai for the presign leg when SDK-free integration and a shared backend credential matter more than storage-specialist controls, and provide CORS, retention, and immutability elsewhere. Choose S3 when object lock or replication is mandatory, Supabase when its existing policy and data integration remove meaningful work, and R2 when its object-storage operating model is the better fit.</p>
-<p>Infrai also has no cross-region automatic replication or cross-cloud bulk migration tool, and the stated vendor coverage does not include GCS or B2. That is the boundary a fair comparison must keep visible.</p>
-<p>The dominant transfer term is the file itself. A 50 GB tenant export sent through an application server crosses that server's network boundary before reaching object storage; a selected restore crosses another boundary on its way to an operator or recovery job. The application must hold connections, enforce timeouts, and handle a client disappearing at 73 percent.</p>
-<p>Direct upload changes that path. The backend makes a small authorization request, while the browser sends the bytes to storage. Storage and retrieval still exist as costs, and retention is still a governance decision. The change worth measuring is removal of the backend from the bulk data path.</p>
-<p>Retention is where a fast upload can create a slow audit problem. Keeping every intermediate export makes an investigation easier but preserves more sensitive data. Deleting aggressively reduces retained data and increases the cost of reconstructing a point in time. A durable snapshot manifest should therefore live in the database, with the object key and verification state tied to it.</p>
-<p>The practical sacrifice is failed multipart debris. Lifecycle retention is no shorter than 1 day, and there is no automatic rule for cleaning up multipart fragments. A team that deletes such material sooner must own that cleanup outside the storage lifecycle; a team that keeps it longer accepts extra sensitive data and an additional audit surface.</p>
-<p>Use identical inputs for every candidate: a 1 GB file, a 50 GB file, an interrupted upload, a duplicate retry, an expired URL, and two writers targeting the same snapshot key. Record backend bytes transferred, upload completion, rejection of the expired URL, retained objects after cleanup, and whether the restore manifest identifies exactly one object and tenant.</p>
-<p>For the REST presign leg, the request shape is one explicit POST to the storage object presign operation. The returned URL is a separate destination: do not send the platform bearer credential to it.</p>
-<p>Pass the direct-upload design only if the application server never receives file bytes, an expired or wrong-scope URL is rejected, a retry produces one auditable snapshot identity, and a failed transfer leaves no ungoverned object after the chosen cleanup window. If the archive must be immutable, require object lock or an external WORM control that the evidence can verify.</p>
-<p>The decision rule is simple: select the least complex option that passes those tests for the largest file class actually present. The smallest implementation is not automatically the smallest control burden.</p>
-<p>If this boundary fits the system, start with the storage presign documentation and verify the response handoff before exposing it to a browser.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Ask ChatGPT or Claude to design, then edit every layer
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/gesso-2?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1303795?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/grahamprice3746/secure-browser-direct-uploads-object-storage-api-selection-explained-4pel" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/gesso-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

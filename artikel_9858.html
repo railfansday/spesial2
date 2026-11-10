@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What is malloc doing, anyway?</title>
+    <title>Google Cloud Spend Caps Reach General Availability with API and Monthly Resets</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9858.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,70 +15,64 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What is malloc doing, anyway?</h1>
+        <h1>Google Cloud Spend Caps Reach General Availability with API and Monthly Resets</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://benmandrew.com/assets/headers/malloc-card.png" alt="What is malloc doing, anyway?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/google-cloud-spend-caps/en/headerimage/generatedHeaderImage-1793609514337.jpg" alt="Google Cloud Spend Caps Reach General Availability with API and Monthly Resets" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://benmandrew.com/assets/headers/malloc-card.png" alt="What is malloc doing, anyway?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/google-cloud-spend-caps/en/headerimage/generatedHeaderImage-1793609514337.jpg" alt="Google Cloud Spend Caps Reach General Availability with API and Monthly Resets" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>malloc has a very nice and simple interface: you ask for a certain amount of memory, and you’re given a void pointer to your block of contiguous bytes that’s been magicked into existence. Once you’re done with it, you call free with the same pointer and the memory disappears into the ether.</p>
-<p>But what’s actually happening here? Obviously, as we’re running as a userspace program, malloc must be asking the kernel for the memory through syscalls. However, we may be allocating many small blocks, and syscalls are expensive (575 ns for an empty one, as measured below), so some bookkeeping is done in the background. We’ll demonstrate this on GNU libc (glibc) with the program snippet below, which calls malloc(16) a thousand times.</p>
-<p>Using strace, we can see that the whole loop makes only two brk syscalls: the first asks where the program break is (the address where the process’s heap ends), and the second grows the heap by 132 KiB. These are both done in the first malloc call — the other 999 just take from that already allocated memory.</p>
-<p>You may see both brk and sbrk mentioned in discussions. brk is a syscall that sets the program break to the address it is provided, and sbrk is a libc convenience wrapper that takes a delta, increasing the program break by that amount.</p>
-<p>A running process gets its own address space, split into a number of regions. These include text for executable code, data for initialised global variables, and bss for uninitialised global variables, among others. The following program prints one address from each region of the process.</p>
-<p>The addresses rise from the binary’s code up to its stack.</p>
-<p>Some of these regions can change as the program runs. For example, malloc(16) grows the heap and moves the break up. Note that in this run, the break and printf in libc are 23.4 TiB apart, about 1,530 times the machine’s 15.6 GiB of RAM. Nearly all of that range is unmapped, so it costs no physical memory.</p>
-<p>Because we can move the program break directly, we can write a little allocator of our own. This is called a bump allocator, because each call simply bumps up the amount of memory that we are allowed to use.</p>
-<p>This allocator is not very good! It moves the break on every single request, and each move is a syscall. We can time a syscall against malloc to see why malloc requests large blocks from the kernel and cuts them up itself. Each of the following three functions is timed over a million calls.</p>
-<p>sbrk(16) costs only 35 ns more than the empty syscall, whereas malloc(16) runs 22.7 times faster than sbrk(16).</p>
-<p>The bump allocator also has no way to reuse freed memory. Each request lands straight after the one before, so in the following example, d goes after c even though b has been freed.</p>
-<p>The rest of the post improves the allocator one stage at a time.</p>
-<p>malloc actually allocates more memory than you request. This is because each allocation, or chunk, has a size header just before the returned pointer; this is how free works without passing an explicit size. Chunk sizes are always multiples of 16, so the low bits of the size are always zero, and glibc keeps three flags in them.</p>
-<p>Each chunk is the request plus 8 bytes for the header, rounded up to a multiple of 16, with a minimum of 32. The rounding keeps every pointer that malloc returns 16-byte aligned, which is the alignment x86-64 gives max_align_t, so the memory suits any C type. The 32-byte minimum leaves room for the list pointers that a chunk stores once it is freed.</p>
-<p>When we free a chunk, it is put into what’s called a free list to allow reuse. When more data is requested, malloc looks through this free list and splits large chunks to fit small requests, and free merges free neighbours back together. Each chunk in the free list needs two pieces of information: its size (which we already have), and a pointer to the next chunk in the free list. glibc stores the pointer after the size, reusing the memory that the user stored their data in before it was freed!</p>
-<p>The toy allocator stores the same two fields in each chunk.</p>
-<p>We can improve our my_malloc by rounding the request plus its header up to a multiple of 16 bytes, and taking the first chunk in the free list that is big enough. To keep things simple, the toy’s header is the whole chunk_t, so a chunk keeps room for next even while it is in use. That makes the header 16 bytes where glibc’s is 8, and my_malloc(100) takes a 128-byte chunk where malloc(100) takes 112.</p>
-<p>We define take to split that chunk, leaving whatever the request does not need in the free list.</p>
-<p>When no free chunk fits, grow_heap moves the program break up in 64 KiB steps using sbrk and puts the new space on the free list as one chunk.</p>
-<p>With headers, we can now actually implement a proper my_free function! It steps back from the pointer to the header and hands the chunk c to insert_free. That function walks the list to find the free chunks either side of c by address, prev and next, and links c in between them. Then, if c ends where next starts, or starts where prev ends, the two become one chunk.</p>
-<p>A test program allocates a, b and c, frees a and b, allocates d, then frees the rest.</p>
-<p>Each line shows the chunk that the call allocated, if any, and then the free list. Every chunk is an [offset, size] pair counted from the start of the heap, and the offset is where its header starts, 16 bytes before the pointer that my_malloc returns.</p>
-<p>d gets the chunk at offset 0, split from the 352-byte chunk that a and b merged into. The bump allocator put its fourth request after everything else. Freeing c merges three chunks into one, and freeing d leaves the single 64 KiB chunk that grow_heap added.</p>
-<p>my_free reuses memory, but it never returns any to the kernel. Whether a free chunk still costs RAM depends on when the kernel puts physical memory behind an address. Each process sees virtual memory, which the kernel maps onto physical RAM in 4 KiB pages. That separation allows the kernel to hand out address ranges with no physical RAM behind them — a virtual page only needs to be backed by physical memory on its first write.</p>
-<p>The following program moves the break up by 1 GiB, then writes one byte to every page and prints a row after each 256 MiB.</p>
-<p>Virtual size counts the addresses the process has mapped, and resident set size (RSS) counts the pages that are in RAM. Straight after sbrk, virtual size is already just over 1 GiB, while RSS is 1308 KiB. Each 256 MiB written then costs 65,536 page faults, one per 4 KiB page, increasing the RSS.</p>
-<p>Once a chunk’s pages have been written, they stay resident after my_free, until the allocator gives them back to the kernel.</p>
-<p>We give memory back to the kernel by lowering the break. We introduce a new function, trim, that lowers the break once the free chunk at the top of the heap reaches 128 KiB, keeping 64 KiB so that the next few requests don’t move the break straight back up.</p>
-<p>A test program allocates 1 MiB and then a 16-byte chunk above it, then writes to every page of the 1 MiB block. (Anonymous RSS counts resident memory with no backing file, which keeps libc’s code out of the numbers.)</p>
-<p>Freeing the 1 MiB block leaves the break at 1088 KiB and anonymous RSS at 1124 KiB, because the 16-byte chunk above it is still live. Once that chunk goes too, trim lowers the break to 64 KiB, dropping the anonymous RSS to 160 KiB.</p>
-<p>Only the top of the heap can be given back. A live chunk holds the break above it, so every free chunk below it stays resident, as the 1 MiB block did here. Over a long run, many allocations and deallocations leave free gaps between live chunks that later requests rarely fill, which is called fragmentation. These gaps stay resident, so in a long-running program, fragmentation can grow RSS until a memory limit kills the process.</p>
-<p>The mmap syscall usually maps a file into the address space. With the MAP_ANONYMOUS flag there is no backing file, and the kernel creates a zero-filled, page-aligned mapping anywhere in the address space. Like the heap, its resident pages count towards the anonymous RSS. The munmap syscall returns a block with its own mapping to the kernel as soon as it is freed, whatever lies next to it.</p>
-<p>To integrate this into our own allocator, my_malloc chooses between sbrk and mmap by the size of the request. Any request of 128 KiB or more, header included, gets a mapping of its own from map_chunk, rounded up to whole pages; smaller requests take the existing sbrk free list path.</p>
-<p>For mmapped chunks, we use one of the three flags in the size header (M) to record that this chunk has its own mapping. my_free checks this bit to know how to free it. It unmaps a mapped chunk with munmap, and puts any other chunk back on the free list, where trim can release it.</p>
-<p>Running the previous demo again, we see that freeing the 1 MiB block drops the anonymous RSS while the 16-byte chunk is still live.</p>
-<p>The following diagram shows how this might look in the address space.</p>
-<p>Why not mmap everything? Some allocators do! Even glibc creates extra heaps, called arenas, with mmap, and spreads threads across them so that they don’t all contend for the lock on the main heap. However, separate mappings have separate regions with no guarantee of contiguity, and chunks can’t be coalesced across these gaps. On the other hand, allocating with sbrk just bumps up the one contiguous region that you already have. A freed chunk that stays on the heap keeps its pages resident, so reusing it causes no page faults. Each new mapping starts with no physical memory behind it, and faults on every page it writes.</p>
-<p>We compare the performance of our allocators against glibc’s malloc with a workload that repeatedly allocates and deallocates blocks of varying sizes1. To measure the speed, we find the average time of a step: free a random live block, allocate a replacement of random size, and write to each of its pages. At the end of the run, the live blocks hold 10.3 MiB. The last two columns give the anonymous RSS at that point, and again after every block is freed, which is the memory the allocator keeps.</p>
-<p>my-bump-1 never frees or reuses memory, so its RSS is the 1425 MiB that the run allocates in total. Its 1.72 µs per step comes from an sbrk call for every request and page faults on new pages. my-freelist-2 reuses memory, so its RSS of 17.8 MiB is much closer to the 10.3 MiB of live data. However, each step walks the list twice: my_malloc walks it to find a fit, and insert_free walks it to find the chunk’s neighbours. my-trim-3 adds a third walk, because trim looks for the last free chunk on every my_free. my-freelist-2 and my-trim-3 run 65 and 142 times slower than glibc respectively. In return, my-trim-3 keeps only 0.188 MiB once every block is freed. my-mmap-4 calls mmap for large requests, which raises its time per step to 11.8 µs but gives it the lowest RSS with blocks live, at 11.2 MiB.</p>
-<p>Why is glibc so fast? The slowdowns in our allocators are due to having to walk a long free list of chunks multiple times. glibc instead keeps free chunks in bins, separate lists by size, so a request can walk a list of appropriately sized chunks directly. It also keeps up to seven freed chunks of each small size in a thread-local cache (tcache) and hands them straight back to the next request of that size.</p>
-<p>The tcache also explains the last column, where glibc keeps 19.0 MiB after every block is freed. The heap counts a cached chunk as in use, so one near the top stops glibc from lowering the break. The GLIBC_TUNABLES environment variable can turn the tcache off with GLIBC_TUNABLES=glibc.malloc.tcache_count=0, or fix the mmap threshold at 128 KiB with GLIBC_TUNABLES=glibc.malloc.mmap_threshold=131072.</p>
-<p>With the tcache off, freeing everything leaves 0.250 MiB, and each step takes 1.5 times as long as before.</p>
-<p>glibc makes 51 mmap calls in the whole run, against the 5040 that my-mmap-4 makes. Freeing a mapped chunk raises glibc’s threshold to that chunk’s size, so later large requests come from the heap. With the threshold fixed at 128 KiB, every large request pays for its syscalls and page faults again, and glibc runs 10.7 times slower.</p>
-<p>malloc spends memory to stay away from the kernel, parcelling out large blocks in userspace so that most calls never make a syscall.</p>
-<p>The benchmark keeps 4000 blocks live, and each step frees a random block and allocates a replacement of a random size. Of the requests, 90% are 16 to 512 bytes, 9% are up to 16 KiB, and 1% are 128 KiB to 256 KiB. Each new block gets one write per page. An allocator runs 500,000 steps in a fresh process, built at -O2. Run on an Intel Xeon E3-1230 v3. ↩︎</p>
-<p>Liked this? Get new posts
-      via RSS
-        or by email.</p>
-<p>Comments are moderated and appear after review; they are published without edits. Markdown and math ($$…$$) are supported. No account or email needed.</p>
-<p>Posting a comment requires JavaScript. Comments are moderated and published without edits; the thread above
-        renders without it.</p>
-<p>© 2017–2026 Ben Andrew. Unless otherwise stated, all content is licensed under the
-      CC BY-NC 4.0 License. This is my personal website.
-      The views expressed on these pages are mine alone and not those of my employer.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Live Webinar and Q&A: Scaling OpenTelemetry: Managing Collectors, Configuration, and Cost (Nov 19, 2026)
+
+                            Save Your Seat</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>Agentic AI architecture extends microservices and cloud-native architectures with AI agents that work with context, memory, and protocols such as MCP and A2A. The article covers bounded-context integration, task-dependent coordination strategies, new security risks, and observability needs. It expects gradual adoption alongside existing architectures, with platforms absorbing common components.</p>
+<p>Aditya Mulik explains how Walmart Global Tech deployed multi-agent LLM workflows across 4,700 stores for nightly batch inventory forecasting. He discusses tackling production hurdles - schema violations, cross-department data mismatches, and network drops - via MCP grounding and loop agents, while slashing cloud inference costs from $100k+ to $10k per month shifting from PTUs to pay-as-you-go.</p>
+<p>Vanessa Formicola shares how technical leaders can move beyond "wishful architecture" by practicing holistic socio-technical engineering. She discusses why engineering leaders must account for organizational maturity, reward structures, geopolitical climate, and team dynamics, framing the staff-plus role as designing the conditions for technology to thrive rather than just picking tools.</p>
+<p>Colin Douch shares battle-tested strategies for building and scaling self-hosted observability stacks. He explains how to effectively correlate metrics, structured logs, and distributed traces using open-source tooling like Prometheus, VictoriaMetrics, and Jaeger, while navigating the engineering trade-offs of avoiding SaaS vendor lock-in.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Google Cloud Spend Caps Reach General Availability with API and Monthly Resets</p>
+<p>Nov 10, 2026
+								
+								
+								
+									
+									3
+									min read</p>
+<p>Google Cloud has made spend caps generally available on Cloud Billing Budgets, letting customers pause new usage of a service in a project once a monthly budget is reached, without deleting resources. The GA release adds an API, estimated live costs that trigger caps within minutes for AI services, and automatic monthly resets, but enforcement remains limited to Gemini API, the Gemini Enterprise Agent Platform, Cloud Run, and Cloud Run functions.</p>
+<p>A spend cap is a budget with enforcement attached: according to the documentation, when estimated spend on the capped service reaches the target amount, new requests to that service in that project are blocked, in-flight requests run to completion and are charged, persistent resources keep running, and nothing is deleted. Usage covered by committed-use discounts is paused along with pay-as-you-go usage, while Provisioned Throughput for AI models is never halted. Billing administrators and project owners receive alerts at 50, 80, and 100 percent of the cap.</p>
+<p>The company changed three things between the July public preview and the GA release:</p>
+<p>The limits are as specific as the features: a cap covers one project and one service for a calendar month, so folders, organizations, labels and multi-service budgets are out of scope, as are reseller accounts and subscription charges such as Gemini Enterprise seats. The estimate that drives enforcement is calculated at list price and excludes credits and discounts. Enforcement is also not instant: the documentation states that "any cost overages are billed as normal" and advises setting the cap "slightly below your absolute limit." Compute Engine, Cloud Storage, and networking are not among the eligible services, which means the cap addresses a runaway model or agent loop and not a forgotten GPU instance.</p>
+<p>The narrower scope drew criticism when the preview expanded in October. On a Hacker News thread, one commenter who had asked Google for the capability a year earlier to control AI spend called the result "very crude, not granular like the rich IAM system," noting the four-product, month-only design. Another observed that Cloud Run had been added that morning, so the service list was still growing.</p>
+<p>Developer Simon Willison argued in October that pay-by-usage services should default to hard caps, because coding and personal agents make it far easier to spin up code that calls paid APIs, and that "most businesses and individuals would prefer errors to a surprise $10,000+ bill." He cited Google's caps alongside a project-level spend limit in AWS's new account experience, which pauses the whole project and stops its resources when reached, preserving data for 90 days, and which AWS is rolling out to a limited number of customers. Azure's spending limit remains confined to free accounts and credit-based subscriptions; Microsoft states it isn't available for subscriptions with commitment plans or with pay-as-you-go pricing.</p>
+<p>Spend caps pair with early anomalies, a daily baseline model that flags directional cost variances per service and names the top SKUs behind a spike, which Google positions as the detection half of the same control loop. Both are configured from the Budgets and Alerts page in the Billing console or through the Budgets API.</p>
+<p>Microsoft Ignite 2026; Explore What's Next in AI and Software Engineering - Learn how to architect agentic systems, modernize cloud infrastructure, and tackle emerging engineering challenges. Get practical insights from Microsoft experts and industry leaders. Microsoft Ignite is less than two weeks away!
+
+Register now to join us in person or attend online for free, November 17–20.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://benmandrew.com/articles/what-is-malloc-doing-anyway" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/google-cloud-spend-caps/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
