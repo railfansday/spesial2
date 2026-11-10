@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beyond the compiler: Making IBM i run modified native code - Program Validation Value</title>
+    <title>Large-Scale Measurement and Real-World Mitigation of Web Browser Fingerprinting in the Wild</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9996.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,311 +15,207 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Beyond the compiler: Making IBM i run modified native code - Program Validation Value</h1>
+        <h1>Large-Scale Measurement and Real-World Mitigation of Web Browser Fingerprinting in the Wild</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
         
         <div class="article-body">
-            <img src="https://blog.silentsignal.eu/assets/img//img/door.gif" alt="Beyond the compiler: Making IBM i run modified native code - Program Validation Value" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://blog.silentsignal.eu/assets/img//img/door.gif" alt="Beyond the compiler: Making IBM i run modified native code - Program Validation Value" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>IBM i does not treat an application program as a normal file that happens to
-contain POWER instructions. A compiler produces Machine Interface (MI) code,
-IBM i’s stable instruction-level boundary, and the system translates it into a
-native form. The generated native code contains checks that support the IBM i
-object and tagged-pointer model.</p>
-<p>Changing those instructions can make IBM i execute behavior that was not
-present in the MI input. Earlier
-Below MI research examined the wider
-consequences on IBM i V7R4. Here I focus on the IBM i 7.5
-Program Validation Value (PVV),
-a 32-byte value stored with a saved program.</p>
-<p>I reconstructed the 32-byte PVV calculation and matched all 1,223 known-valid
-values. The reconstructed calculation derives its HMAC key entirely from saved
-program attributes and fixed Licensed Internal Code (LIC) constants; it
-contains no separate secret for origin authentication. IBM i applies separate
-digital-signature checks where required. In controlled USER-state programs—the
-ordinary, non-SYSTEM execution mode—recalculating PVV and the separate save-file
-checks allowed selected native instruction changes to survive restore and
-resave. A disposable CrackMe produced the expected changed output,
-demonstrating execution.</p>
-<p>USERB1, an ordinary test account without special authorities, restored a
-USERB1-owned, PVV-repaired MEMDUMP program through IBM’s Restore Object List
-(QSRRSTO) API, and a resave preserved its modified native instructions. Its
-executable payload matched byte-for-byte the payload used in a controlled
-runtime test. In that test, MEMDUMP ran as USERB1 and read from a known-address
-USER-domain buffer in a cooperating job running under QSECOFR, IBM i’s
-security-officer profile. Other controls showed IBM i rejecting unsigned SYSTEM
-and INHERIT program-state variants and enforcing the SYSTEM-domain access
-boundary.</p>
-<p>My previous article
-covered the outer save file (SAVF) container: its per-record checksums and
-global checksum. During restore, IBM i also calculates PVV and compares it
-with four values stored in the saved program.</p>
-<p>The USER-state controls ran under the test system’s existing
-restore-policy system values
-(QVFYOBJRST=3, QFRCCVNRST=1, and QALWOBJRST=*ALL) at
-QSECURITY 40,
-which enforces resource security and integrity protection.</p>
-<p>SAVF record and global checks establish container consistency; PVV establishes
-consistency with selected serialized program data. LIC copies the 32-byte
-descriptor unchanged into the HMAC key object. Every descriptor byte
-comes from saved program attributes or fixed LIC constants, and the recovered
-path contributes no additional secret. A party with the serialized program and
-the reconstructed algorithm can therefore derive the key and recompute PVV; a
-match establishes consistency, not trusted origin. Restore authorization and
-system policy still govern the operation, while digital signatures authenticate
-origin where required.</p>
-<p>A program has separate
-state and domain attributes.
-Its execution state is USER, SYSTEM, or INHERIT; INHERIT uses the caller’s
-state. The program object itself has a USER or SYSTEM domain, and that saved
-attribute contributes separately to the PVV descriptor. Other objects accessed
-by the executing code also have domains. The USER domain is a storage-domain
-classification, not a user identity or ownership boundary. At QSECURITY 40,
-USER-state code cannot directly access SYSTEM-domain objects.</p>
-<p>PVV is calculated in four steps for the supported program format:</p>
-<p>Leif Svalgaard described the earlier mechanism in Chapter 15, “Program
-Validation Value,” of AS/400 Machine Level Programming.
-His public program index
-also lists MIPGMVV, which calculates an eight-byte value from program
-attributes. I reproduced his published example. Its four selector constants do
-not match the current LIC descriptor constants in either byte order, but both
-designs select values according to state and domain. That similarity pointed
-me toward the current 32-byte validation route.</p>
-<p>I started with CHKOBJITG, the IBM i command that checks object integrity.</p>
-<p>For a program, CHKOBJITG reaches the IBM-supplied QSYS/QSYCHKIT program.
-Its native procedure QSYINTEGRI::checkPgmMod contains this sequence, copied
-from the retained IBM Display/Alter/Dump (DAD) output:</p>
-<p>ADDI loads selector 259 into r10; the following SCV 10, Supervisor Call
-Vectored, enters dispatcher vector 10. The 10 in the mnemonic identifies the
-vector, while the value in r10 selects the service. That combination led to
-this observed call path:</p>
-<p>The live capture tied the path to the loaded address of my CALLAES test
-fixture. I matched the remaining code against the IBM i 7.5 LIC from
-installation media by procedure name, normalized instruction sequence, call
-topology, constants, and tables. The live instructions and invocation frames
-identify the observed CHKOBJITG route; the build-matched LIC supplies the
-complete procedure bodies. For both VBNTSSOB and VBNNAPE2, the installation
-addresses were 0x3000 above the captured live addresses and the normalized
-bodies agreed; that displacement is evidence for this match, not an IBM i
-addressing rule.</p>
-<p>My parser supports uncompressed IBM i 7.5 program (*PGM) and service-program
-(*SRVPGM) items whose record graph, section descriptors, and 40-bit segment
-identity plus 24-bit in-segment pointer mapping follow the recovered layout. It
-rejects other layouts before calculation instead of trying models until one
-happens to match the stored result.</p>
-<p>vbnspnt2 writes 32 calculated bytes, loads them as four 64-bit doublewords,
-and compares them with four values stored in different parts of the program
-graph. Any mismatch returns false.</p>
-<p>For CALLAES, the item starts at SAVF logical offset 0x4000. The item-relative
-offset must first be converted to a SAVF logical offset. That logical coordinate
-counts only 512-byte payloads; the physical coordinate also counts each
-16-byte record trailer:</p>
-<p>Applying both stages gives these four locations:</p>
-<p>LIC follows a graph of program headers, components, procedure records, native
-sections, counted arrays, and optional records. It adds selected byte ranges,
-not the complete program item.</p>
-<p>Saved pointers cannot be hashed directly because their segment identities may
-change after restore. LIC replaces them with a stable segment number and the
-offset inside that segment. For example:</p>
-<p>LIC also changes the order of some data. Appends shorter than 0x400 bytes are
-copied into one owned stream. Appends of 0x400 bytes or more remain separate
-entries. The final HMAC message contains the complete copied stream first,
-followed by the retained entries.</p>
-<p>Here, an aggregate entry is one buffer passed to the HMAC update path.</p>
-<p>If the logical append order is a short span A, a retained span B, and a
-short span C, the message order is A || C || B.</p>
-<p>For CALLAES, 65 logical appends became three aggregate entries:</p>
-<p>The final message length was 0x20B4, or 8,372 bytes.</p>
-<p>The descriptor contains four 64-bit values:</p>
-<p>“Version class” and “mode” are names for reconstructed selector inputs. I do
-not present them as documented SAVF field names.</p>
-<p>Within the retained fixtures, the recovered version_kind=0x0028 input selects
-one version class by contributing 0 to the table index; other observed values,
-including CALLAES’s 0x000A, contribute 1. With CALLAES’s USER state and
-domain, that selects 2E9132CE813F75B2. The mode byte independently selects
-the fourth 64-bit descriptor value: mode 1 selects 3809245098034DDE, while
-mode 2 selects 3809745098034DDE.</p>
-<p>Canonical program-state values are 0x0001 for USER, 0x0080 for SYSTEM, and
-0x0000 for INHERIT. For descriptor selection, the state selector treats
-0x0080 as SYSTEM, 0x0000 as INHERIT, and every other value as the remaining
-selector class. The domain selector tests the least significant bit of program
-base byte +0x20—bit 7 in IBM’s MSB-0 numbering. In the CALLAES fixture the
-byte was 0x80; that bit is clear, so the program domain was USER. A byte of
-0x81 selects SYSTEM program domain. This byte is separate from the 16-bit
-state value 0x0080.</p>
-<p>For CALLAES, the selected descriptor was:</p>
-<p>The calculation selects these fixed tables without consulting the stored PVV.</p>
-<p>The lower LIC code creates a key object, copies all 32 descriptor bytes into
-it, and feeds each aggregate entry to a message digest object. The next layer
-implements the standard HMAC construction with a 64-byte block,
-the 0x36 inner pad, the 0x5C outer pad, and SHA-256.</p>
-<p>The recovered calculation maps directly to Python’s standard HMAC
-implementation:</p>
-<p>For CALLAES, it returns the exact 32 stored bytes shown above.</p>
-<p>I applied the recovered model to IBM-supplied save-file items and disposable
-programs and service programs. The corpus measures agreement and structural
-coverage over supported rows, not blind holdout or live restore and execution
-tests. The final totals were:</p>
-<p>A structure profile fingerprints object type, release and version selectors,
-mode, record shapes, and canonical-chunk construction without including the
-protected byte values. The 1,003 profiles occur among the 1,223 known-valid
-rows; repeated saves or equivalent layouts can share one. The 16 deliberate
-mutation fixtures remained invalid. The parser rejected another 17 items
-before calculation: seven had malformed section descriptors or descriptors
-that did not expose the validated 40-bit segment and 24-bit offset mapping, and
-ten contained pointers that could not be mapped unambiguously to a recovered
-segment. These are unsupported structures, not unexplained PVV mismatches.</p>
-<p>I produced these results with the local pvv-ibmi tool bundle. pvv_demo.py
-is its command-line entry point, savf_checksum_demo.py implements the SAVF
-checks, and scripts/reconstruct_v7r5_pvv.py parses the program graph and
-calculates PVV. I plan to publish the bundle and its usage notes in the
-Silent Signal IBM i PVV repository.</p>
-<p>The --table argument specifies sandbox.ser, which contains the lookup table
-used for the SAVF global checksum. I described its extraction in my
-previous SAVF checksum article.</p>
-<p>check verifies the SAVF checks and PVV. fix calculates PVV, writes the
-four stored values, repairs the separate SAVF checks, and verifies the output
-in a new file while preserving the intended native change.</p>
-<p>The offline matches establish the calculation. The following controls test how
-restore consumes the stored value, whether edited native code survives, and
-whether IBM i executes the changed control flow.</p>
-<p>In the P7QPM831 test program, I changed one stored PVV byte but left the
-protected program data unchanged. I repaired only the SAVF checks. CPC3703
-denotes normal restore completion in the baseline and corrected controls.</p>
-<p>The stale restore created an object, which I then saved again. The calling
-process returned status 255, while the substituted restore messages recorded
-the actual object counts:</p>
-<p>The resaved object still contained the incorrect stored value. Writing the
-independently calculated value restored normal completion. The mismatch was
-therefore detected and changed the command outcome, but did not prevent object
-creation in this control.</p>
-<p>The RISCPVV1 test program measured native-code preservation without changing
-behavior. I replaced one instruction with a different instruction that copies
-the same register value:</p>
-<p>The saved creation material—the input IBM i can use to recreate native
-code—remained unchanged. To distinguish preserved native code from code
-recreated from that material, I repaired PVV and the SAVF, restored the object,
-and saved it again. The executable payload was eight native records joined in
-graph order after removing each record’s final eight-byte saved-space pointer,
-which is metadata rather than executable payload.</p>
-<p>All 1,120 executable bytes matched between the modified and resaved streams;
-the original differed at the edited instruction. The 40-bit segment-identity
-prefixes within those trailing pointers changed as expected when
-IBM i materialized the object; their 24-bit in-segment offsets did not. The
-executable payload and repaired PVV remained unchanged.</p>
-<p>PVVPASS, which I call CrackMe here, provided the visible control. This
-disposable fixture compared its argument with silentsignal, printed
-pwd is ok for a match, and printed wrong otherwise.</p>
-<p>I compiled it as a native Integrated Language Environment (ILE) C program with
-DBGVIEW(*NONE), OPTIMIZE(40), and ACTGRP(*CALLER), then saved it without
-compression.</p>
-<p>The relevant saved instructions are below in reconstructed DAD style. Register
-5 holds the current input byte. Register 0 holds the current expected byte.</p>
-<p>The first CMPI sets CR0.EQ from the input byte. The instructions before
-CMPL do not change CR0. SETTAG affects the tag state, not the condition
-registers. CMPL 1,1,5,0 sets CR1.EQ from the comparison of the input and
-expected bytes.</p>
-<p>The branch at 0x1E75B1F2E2001F94 tests CR1.EQ and reaches the failure block
-when the bytes differ. The next branch tests CR0.EQ and reaches success when
-the input byte is zero. Equal nonzero bytes continue the loop.</p>
-<p>The encoded displacements make the control flow explicit:</p>
-<p>The saved text supports that mapping: silentsignal is at logical offset
-0x69B0, pwd is ok at 0x69C0, and wrong at 0x69D0. The success block
-selects the text at r30+0x10; the failure block selects r30+0x20.</p>
-<p>The repaired program printed pwd is ok for both nope and x. A fresh save
-of the repaired object still contained 60000000 at the instruction site
-identified from the object structure.</p>
-<p>IBM’s documented
-Restore Object List (QSRRSTO) API
-has a different authority model from the Restore Object (RSTOBJ) command.
-IBM has documented its default public authority as *USE since the
-2006 Backup and Recovery APIs manual.
-That permits calling the API; it does not supply the user-space, save-file,
-library, or target-object authorities required for a restore. Callers without
-the *SAVSYS save-system special authority must satisfy those documented
-authority requirements, as USERB1 did within its test library.</p>
-<p>For the end-to-end control, I rebuilt CrackMe from the retained source and the
-same compiler settings. I resolved the patch location from the new SAVF. The
-rebuilt program contained the same 40860048 mismatch branch at native record
-1 offset 0xB4. I created baseline, branch-edited/stale-PVV, and
-branch-edited/repaired-PVV variants; all three had valid SAVF checks.</p>
-<p>With the repaired SAVF loaded into save file TESTSAVF in the USERB1 library
-and the target absent, RSTOBJ failed with CPD0032 (not authorized to the
-command) and created no program. To test the API separately, I used a small,
-locally written USERB1-owned program that called QSRRSTO directly and restored
-PVVPASS into the USERB1 library. Both the caller and a small USERB1-owned
-wrapper that recorded the job context before and after invoking the caller were
-USRPRF(*USER) and USEADPAUT(*NO), so they neither adopted their owners’
-authority nor used authority adopted higher in the call stack. In the same job,
-the wrapper used IBM’s Retrieve Job Attributes command (RTVJOBA) to report
-current user USERB1 immediately before and after the API call.</p>
-<p>Under this authority context, the repaired variant produced the CrackMe output
-reported above. Its resave retained 60000000 at native record 1 offset
-0xB4, and its 1,032-byte executable payload matched the repaired input after
-the final eight-byte saved-space pointer was removed from each native record.</p>
-<p>The stale-PVV API control restored with the original branch and printed
-wrong instead. This was one end-to-end test within USERB1’s authorized object
-scope: command denial, API restore, execution, and resave.</p>
-<p>I then rebuilt MEMDUMP entirely as USERB1, applied the native edits to its
-saved representation, and repaired PVV and the SAVF checks. Running as USERB1,
-I called QSYS/QSRRSTO; it created the MEMDUMP program in the USERB1 library
-as a USER-state, USER-domain program owned by USERB1, with USRPRF(*USER) and
-USEADPAUT(*NO). A fresh save retained both modified instruction sites. The
-repaired input, the USERB1-restored resave, and the distinct program object used
-for the memory-read test had byte-for-byte identical 1,496-byte executable
-payloads.</p>
-<p>The native code controls above used USER state. I also tested the separate
-state, domain, and signature boundaries.</p>
-<p>The repaired SYSTEM-state fixture passed the offline reconstructed PVV check,
-but the live restore failed the digital signature requirement:</p>
-<p>I also traced the complete 16-bit state field. The relevant LIC branches reduce
-to this classification before the signature service is called:</p>
-<p>The flag is an input to the later signature path, not the final restore result
-by itself. Canonical SYSTEM state is 0x0080, and INHERIT state is 0x0000;
-both produce flag 1. The activation resolver separately treats 0x0000 as
-INHERIT, selects SYSTEM only for 0x0080, and sends 0x0001, 0x8000, and
-other noncanonical values to USER. I found no state value that both takes the
-flag 0 path and activates as SYSTEM on this route.</p>
-<p>The 0x8000 state value is not SYSTEM state. It restored and activated as
-USER in the live control. The same hexadecimal value appears as the two-byte
-domain contribution for SYSTEM domain, but that is another field.</p>
-<p>Under the tested conditions, externally modified USER-state native code
-bypassed a compiler-generated pointer-validation sequence and performed a
-memory access that the original compiled code could not. CrackMe independently
-established execution of modified native bytes; the controlled MEMDUMP
-runtime test established this consequence.
-The compiler-generated path used LQ to load the 128-bit pointer and record
-its tag status, TXER to check that status, and _SETSPPFP (Set Space Pointer
-from Pointer) before the memory access. At native section offset +0x220C, I
-replaced the first two instructions with a direct native load and branch:</p>
-<p>The source had copied the supplied 64-bit address into this r31-relative
-slot; the LD loads it into r27, and the branch continues at +0x2238. The
-later LBZ at +0x22B8 performs the byte read through r27. With the same
-supplied address, the unmodified MEMDUMP failed with
-MCH3601 (pointer not set). The modified code bypassed the generated validation
-sequence and, when invoked as USERB1, returned the exact expected 32 bytes from
-a known-address USER-domain buffer belonging to a cooperating QSECOFR job. The
-target address was supplied by the cooperating QSECOFR job; obtaining such an
-address independently is a separate prerequisite.</p>
-<p>For the supported saved-program format, the derivable HMAC key makes PVV a
-recomputable consistency check. With an editable SAVF and an authorized restore
-path, recalculating PVV and the SAVF checks preserved the tested USER-state
-native changes. Separate controls enforced trusted signatures for the tested
-SYSTEM and INHERIT variants and blocked USER-state access to SYSTEM-domain
-storage.</p>
-<p>PVV was the missing piece between editing saved native POWER instructions and
-preserving them through IBM i restore so that the modified code could execute.
-Reconstructing it turned that obstacle into a repeatable research workflow:
-CrackMe demonstrated changed native control flow, while MEMDUMP showed its
-practical consequence in a controlled, known-address USER-domain read. The PVV
-reconstruction is not by itself a vulnerability or a signature bypass; the
-pvv-ibmi release accompanying this article lets other researchers reproduce
-the calculation and use the same workflow, while restore authorization,
-trusted signatures, and domain enforcement remain separate boundaries.</p>
+                <p>Tom Ritter1, Fatih Kilic2, Frederik
+    Braun1, Elisa Luo3, Geoffrey M.
+    Voelker3, Stefan Savage3, Christoph
+    Kerschbaumer1</p>
+<p>1Mozilla Corporation  ·  2University
+    of Toronto  ·  3UC San Diego</p>
+<p>Web browser fingerprinting has become a key tracking mechanism on
+      the modern web, yet its real-world effectiveness and which of the
+      existing mitigations offer value at scale remain insufficiently
+      understood.</p>
+<p>In this paper, we present a large-scale study of browser
+      fingerprinting based on real-world telemetry from almost 25 million
+      Firefox release users. This dataset enables us to quantify user
+      uniqueness at population scale and identify which characteristics
+      contribute most to this uniqueness.</p>
+<p>Our analysis shows fingerprintability is largely driven by a small
+      set of high-impact characteristics and their combinations, rather
+      than the accumulation of many independent measurements. Building on
+      these insights, we propose and evaluate fingerprinting protections
+      based on their impact on uniqueness and cohort structure, and design
+      data-driven mitigations.</p>
+<p>These protections, shipped in Firefox 143, reduce the fraction of
+      uniquely identifiable users from 75% to 46% while maintaining web
+      compatibility, demonstrating that practical reductions in
+      fingerprintability are achievable in a mainstream browser.</p>
+<p>Here's what we want to present to you with this paper and the
+      broader scope of our work.</p>
+<p>Fingerprinting test sites have a seemingly endless list of
+          measurements they can pull from your browser. If a user has a
+          unique fingerprint, it is typically not because of a single
+          measurement, but it is also not because of 20 or 30
+          measurements. It is a small number of metrics that make
+          users unique.</p>
+<p>In fact, it's very close to the
+            80/20
+            rule. Specifically, of all the users seen as unique by
+            Fingerprint Pro (the most discerning fingerprinter we model) -
+            80% of them are unique after only 8 metrics - while the
+            fingerprinter collects a total of over 50 metrics. Signifyd
+            collects more metrics, but identifies fewer users as unique:
+            80% of the users it sees as unique will be identified after 9
+            metrics despite collecting over 80.</p>
+<p>Whenever someone cites a single percentage when describing "How
+          many users are unique" - you should be suspicious. Because
+          this collapses multiple different populations that
+          behave very differently.</p>
+<p>Firstly, as a baseline, your operating system is always going
+            to be exposed to a fingerprinter. We are always working within
+            the constraint of web compatibility, and lying about the
+            user's operating system breaks shortcut keys and gives
+            you the wrong downloads among other problems. So if
+            we know the website is going to learn your real OS
+            anyway, we can use it to segment the population and analyze it
+            separately.</p>
+<p>And when you do you see that each operating system behaves
+            differently because they have different important metrics.
+            Admittedly, it's very difficult to give a concise summary of
+            work and also provide four sets of numbers - so even we fall
+            prey to the trap of providing a single number, as we did in
+            the prior paragraph. But every time we have a single
+            percentage, somewhere we have that number broken down by
+            operating system, and in doing so, you will see that each
+            behaves differently.</p>
+<p>It's so, so easy to take all the results for a metric and just
+          calculate Shannon entropy - it's a standard yardstick in this
+          literature. But as we show - a high Shannon entropy does not
+          reliably predict fingerprinting impact.</p>
+<p>Previous analyses calculated how many people were unique, but
+          they did not analyze the other people - the ones who
+          weren't. All those other people might be 1 million users who
+          share one fingerprint or 500,000 distinct fingerprints shared by
+          2 people each - that's quite the difference.</p>
+<p>We use the
+            Simpson
+            Index (aka the
+            Herfindahl–Hirschman
+            Index) to quantify that difference and compare different
+            sets of cohorts (shared fingerprints). This lets us compare
+            how effective different fingerprinting defenses are based not
+            just on how much uniqueness they eliminate but how much they
+            collapse groups of users into each other.</p>
+<p>For example, two different protections can each lower the share
+           of unique users by about 2.1 percentage points. But one improves
+           the cohort score by 56%, while another raises it by only 13%. 
+           Judged on uniqueness alone, two defenses can look equally
+           effective; while the cohort improvement varies significantly.</p>
+<p>Protections are not uniformly impactful, and the variation is
+          not small. As an example, clamping the available screen
+          resolution takes 25.3 percentage points off cumulative macOS
+          uniqueness but between 0 and 3 points off the other three
+          platforms. Averaged across all users, that 25-point drop 
+          shrinks to 3.5 - a protection that matters enormously to one
+          platform can look marginal in the aggregate.</p>
+<p>This is yet another reason why it's so important to segment and
+          analyze data on a per-operating-system basis.</p>
+<p>Correlating fingerprinting values with users' hardware and other
+          characteristics let us identify why certain measurements differed
+          between users. Knowing the root cause lets us build
+          protections that reach much further, and protect small groups of
+          users who would otherwise stand out as a minority.</p>
+<p>Addressing these differences has already produced more consistent
+          outputs for
+          image
+          rendering,
+          Web
+          Audio, and
+          mathematical
+          operations on Android, with more root causes being investigated.</p>
+<p>Breakage from a strict mode is delayed, and the delay hides the cause.
+          Turning on a stricter mode is a one-time act - but the broken website
+          arrives later and nothing connects the two. From the user's
+          perspective, this website doesn't work in Firefox and they have
+          no idea why and are frustrated. Report after report we see
+          people posting for help, confused - despite having taken
+          specific action to enable a hidden setting opting them into
+          strict fingerprinting protections.</p>
+<p>The web is vast, and even the most innocuous change is likely to break
+          something somewhere. Some breakage can be anticipated, which helps
+          design, testing, and detection. The other breakage gets fixed only if a
+          chain of luck holds: someone has to recognize the breakage, report it,
+          reproduce it on the right hardware, and get it to the right
+          person.</p>
+<p>Commercial fingerprinters evolve continuously, and they borrow
+          openly from the community that studies them. Sites built to
+          teach people about fingerprinting - CreepJS among them - get
+          picked up and used outright by fingerprinting products.</p>
+<p>So we have been deliberately conservative. There are analyses
+          this dataset would support that we have not run, data we could
+          have released that we have not, and offensive angles on this
+          work that we have not pursued. That is a choice rather than an
+          oversight: we would rather leave a question open than make it
+          easier to build a better fingerprinter.</p>
+<p>This interactive test re-implements individual measurements as close
+      as possible to how Firefox's own collection code performed them,
+      runs in your browser, and compares each result against the published
+      aggregate data. For every characteristic you can see your value and how many
+      of the ~25 million measured browsers share it - overall and within
+      your operating system.</p>
+<p>The test runs entirely in your browser. All comparisons happen
+        locally, against our static reference files.
+        No data is stored or submitted to us.</p>
+<p>If the test, or anything else on this site, looks wrong, please
+      report it as an issue on GitHub.
+      For a problem with the test, include the diagnostics from its
+      Copy diagnostics button, or, if you would rather
+      not post your measured values publicly, email them to
+      tom@ritter.vg.</p>
+<p>The extended version of the paper is available as a PDF.</p>
+<p>The paper's appendices contain a wealth of data locked behind a
+      reasonable page limit and PDF formatting. This full data page
+      carries all of it - every rank for every operating system and
+      all three modeled services, the complete protection chains,
+      and the paper's figures regenerated at print resolution.</p>
+<p>Our measurements come from Firefox telemetry, specifically the 
+      user-characteristics ping, a dedicated telemetry ping.
+      Unlike normal telemetry pings that are sent regularly, this ping
+      must be explicitly enabled (which has happened twice, once in 2025
+      and once in 2026), and sends one data report before becoming dormant
+      again.</p>
+<p>This ping carries no client ID, only a UUID unique to the ping used
+      to de-duplicate users. It cannot be keyed to any other telemetry
+      submissions. It is submitted over Oblivious HTTP
+      (OHTTP): a relay operated independently of Mozilla forwards the
+      encrypted submission, so the relay can see the sender's IP address but
+      not the contents, and Mozilla receives the contents but not the IP
+      address. Access to the collected data was restricted to four authorized
+      Mozilla employees. The data was retained for 90 days and has since been deleted.</p>
+<p>In the fingerprint lists, the fingerprints cannot be recreated from
+      a website measuring user characteristics, due to the way the telemetry
+      was collected. After being generated, the files were shuffled to a new ordering,
+      and any locale occurring fewer than 100 times was anonymized.</p>
+<p>In the aggregate tables, any value observed fewer
+      than 100 times within a single per-OS population is withheld - so
+      the published data describes cohorts, never individuals.</p>
+<p>In the canvas comparison, raw canvas renderings are provided, but they
+      are devoid of any connection to other user data. Any unique canvas rendering
+      is not provided; only the hash.</p>
+<p>For verification and exploration, the code used to process the data and 
+      perform different analyses is available for review. It additionally contains
+      the specific fingerprinting scripts captured, reverse engineered, and
+      modeled for the paper.</p>
+<p>Far more can be asked of this dataset than we have asked. Some of it
+      we chose not to pursue, some of it we simply did not think of, and
+      some of it is a better fit for someone who is not us.</p>
+<p>There is a discussion board for proposing follow-up analyses. Two
+      kinds are worth posting:</p>
+<p>This Firefox telemetry collection is opt-out and carries no client
+      identifier for this ping. See the paper for the full methodology and
+      its limitations.</p>
+<p>Found a bug on this site? Report it on
+      GitHub.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://blog.silentsignal.eu/2026/11/10/Beyond-the-compiler-Making-IBM-i-run-modified-native-code-PVV/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://fingerprinting.study/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
