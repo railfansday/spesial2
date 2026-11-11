@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training a coding model to paint watercolours with TRL and OpenEnv</title>
+    <title>Article: The iOS Crash We Could Not Reproduce</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9827.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,272 +15,100 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Training a coding model to paint watercolours with TRL and OpenEnv</h1>
+        <h1>Article: The iOS Crash We Could Not Reproduce</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/articles/ios-crash-sigbus-debugging-experiment/en/headerimage/ios-crash-sigbus-debugging-experiment-header-1793282827397.jpg" alt="Article: The iOS Crash We Could Not Reproduce" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/articles/ios-crash-sigbus-debugging-experiment/en/headerimage/ios-crash-sigbus-debugging-experiment-header-1793282827397.jpg" alt="Article: The iOS Crash We Could Not Reproduce" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On 23 August, Surya
-Narreddi posted a beautiful video
-of watercolours painted by a language model. The model writes JavaScript through
-p5.brush, a library that "adds natural
-drawing tools to p5.js". The video went viral fast, over 1.5M views at the time of
-writing.</p>
-<p>The video came with a blog
-post explaining the training
-behind an earlier and narrower stage of the project, close-up flowers rather than the
-full compositions in the video, sadly without open artifacts yet. His site says a full
-technical report is coming, so ensure you follow him. The original idea is his, coming from the art and design side, where his skills are way beyond mine. My attempt is on the engineering side, reproducing the recipe in the open with every piece published.</p>
-<p>Note: for the context behind the project, told by Surya himself, watch this
-video of his thesis.</p>
-<p>In this article I try and reproduce his idea with TRL and
-OpenEnv. The reference pool dataset, the RL
-environment, the training scripts and the trained models, all open.</p>
-<p>The whole pipeline runs on Hugging Face, end to end:</p>
-<p>Once the two Spaces are up, the recipe is one command. Duplicate the
-environment and the
-scorer model, set two
-environment variables for the reward mix, and launch:</p>
-<p>The rest of this article is the story of getting there, and every piece is in the
-repo.</p>
-<p>I have followed the original blog step by step, and only changed something when strictly needed. Every idea of my own went into a list instead of into the experiment, and that list became "What I would try next" at the end, next to the full list of published artifacts. If you have already read his post, the framing and
-the reward design will be familiar. The new material is the open implementation, the
-hand-rated pool, and three reward mixes trained and compared, and it starts at The RL
-environment you need to build.</p>
-<p>The paintings look loose, imperfect, handmade, at a moment when image models produce perfect (statistically average) pictures. My guess is that this contrast is a big part of why the video went
-viral. It reminded me of the early days of generative AI art, when the point was
-to explore the medium. DeepDream (2015) was a debugging tool that people turned into art, works like Edmond de
-Belamy (2018) came from artists probing
-what a GAN could do, and artists like Mario Klingemann spent those years making dreamy portraits with neural networks.</p>
-<p>This project feels closer to those early days. In his thesis, Surya describes the path
-that led here. He started by prompting text-to-image models, where the prompt is the
-only lever you can pull, and more detail buys more control only up to a point. Training
-the model itself goes further. The
-other half of the idea is the medium. The model writes a program of about 150
-lines of JavaScript that paints the image. That model output is code. You can read it, edit it and run it
-again, and the decision behind each brushstroke is visible. And the style comes from a
-restriction where the model is only allowed ten of the library's methods. More on that below.</p>
-<p>In that same period, Anna Ridler
-photographed thousands of tulips, hand-labelled every one, exhibited the dataset itself
-as the artwork, and later trained a model on it. I found her work through the references
-AI agents brought back while building this project and loved it because this
-project does something very similar by curating a set of images by hand, and then training against them.</p>
-<p>Most of the recent RL work on language models uses rewards you can verify. For example, math problems with a known answer, code that passes tests, or graders that are right or wrong and cheap to run. This project is closer to the older exception, RLHF, where the model learns a reward model from human preferences.</p>
-<p>Here the reward is aesthetic preference. There is no correct answer. The real question
-of the project is whether you can do RL over taste.</p>
-<p>The reward, as his blog defines it and as the RL environment I built implements it:</p>
-<p>HPSv3 is an open 7B preference model. Give it an image and a text description, and it returns
-a score for how much a person would prefer that image. It was trained on a large set of
-human choices between pairs of images, so its score is an average of many people's taste. The pairwise judge is
-Qwen3-VL-30B-A3B-Instruct, a
-general vision model called through HF Inference Providers. The pairwise judge sees the candidate
-painting
-next to four references randomly selected from the pool, guided by a written description of what to weigh (bleeds, translucent washes, soft edges),
-each comparison in both presentation orders, and its score is the share of comparisons
-the candidate wins. Its only standard is the pool, so its score is my taste, as encoded
-in those ratings.</p>
-<p>Those are the weights Narreddi converged on. The pool defines taste here. That moves the work from tuning hyperparameters
-to building the set that decides what is beautiful.</p>
-<p>I trained three runs with this reward. They differ only in how the weight splits between
-the two model judges:</p>
-<p>I started with hps-only to validate that the pipeline could learn at all. Once the reward was going up and the metrics were healthy, there was no reason to run it longer, so I launched the two longer runs instead. The question that the longer runs ask is how much of HPSv3's power can you hand to the pairwise judge? The more weight the judge carries, the more
-the reward means my taste instead of everyone's, and the harder it should be to climb. Incidentally, if you push it far enough or your style is too far from the average, the model could stop entirely.</p>
-<p>Fortunately, it did not stop and both runs with the pairwise judge on learned too. The hand-rated pool
-can steer the policy, at least as far as the metrics and the final paintings show. The
-numbers are below.</p>
-<p>Disclaimer. If we use a frontier model, it can already generate the JavaScript code that paints watercolour from a prompt. That's the starting point. The work here is about teaching a smaller model to do it combined with a person's own artistic preferences.</p>
-<p>The environment wraps everything that sits between the model and the reward, including the JavaScript library that the model uses for painting, the system prompt that restricts it, the headless Chromium that renders each sketch, and the gate that rejects cheats.</p>
-<p>The library does more of the work than it seems.
-p5.brush, by
-@acamposuribe, simulates a medium rather than drawing
-shapes: pigment bleeds past the edges of a fill, paper has texture, strokes have mass,
-flow fields drag brushwork around. When the model calls brush.fillBleed(0.25) it is deciding how far the ink
-runs.</p>
-<p>Note. The author of p5.brush had been trying to teach a machine to paint long
-before any of this. In 2022 he made a generative art series that hides a diary about
-teaching p5.js to draw like a child: "It is barely able to use the crayons [...] It
-cannot follow simple commands. I'm done for today, very infuriating." The series was
-meant to have three pieces, and he made two. When Surya's video went viral, he
-quoted it, sharing that diary
-and saying this work is the third piece arriving on its own.</p>
-<p>p5.brush exposes 47 methods. The prompt allows 10: scaleBrushes, noStroke, fill, noFill, fillBleed, fillTexture, beginShape, vertex, endShape and circle. What the other thirty-seven add, lines, hatching, custom brushes, would break the watercolour look. With these ten the model can only paint filled shapes, and the library adds the bleed to every one of them.</p>
-<p>His blog post saved me a lot of time I could have wasted iterating on the prompt. 
-A long API reference makes the model
-invent methods that do not exist, and his 200 GEPA iterations converged on a strict
-allowlist with no documentation. I saw the same failures and wrote the allowlist by
-hand. My only addition to that recipe is one sentence: paint
-each petal two or three times, a big pass first and a smaller, more opaque one inside
-it. This small change made my outputs a lot more colorful.</p>
-<p>Note. If it's the first time you hear about
-GEPA, it is an automatic prompt optimizer.
-A language model reflects in plain words on where the current prompt failed and
-proposes a better one, and the loop repeats.</p>
-<p>The gate is the final piece. The sketch has to compile, use the library instead of direct p5 calls, put real pigment on the canvas, and not try to trick the scorer, for example by writing text on the canvas.</p>
-<p>The pool consists of 178 paintings divided into
-two tiers based on my personal preferences, love and okay. All of them are actually generated by a model. Four open-weight models,
-called through Inference Providers, wrote p5.brush sketches, each one working from a
-real, openly licensed photo of a hibiscus from iNaturalist. A vision model gave written
-feedback on every sketch, over three refinement iterations. Every final render was then rated one at a time, by me, and 178 made the cut.</p>
-<p>Here I chose four different families of models to test their different styles. These four were the open models that produced a valid sketch every time in a quick reliability check, and two other candidates were dropped for failing it. If you want to produce your own pool, you might choose others.</p>
-<p>The tiers do real work in the reward. When the pairwise judge draws four references,
-half come from love and half from okay, so the policy always faces some rivals it
-can sometimes beat, and a win pays the same against either tier. This is one of my few
-deliberate changes: the original compares against its top tier only, and I kept the
-easier tier in the draw so a weak early policy still gets signal.</p>
-<p>No human-made painting is in there, which is a real limitation. p5.brush is a niche
-library, and the human work that exists in it with accessible code is a handful of pieces, nowhere near what a training corpus
-would need, as his blog also notes.</p>
-<p>The interesting idea here, as I've already discussed previously, is that the model will learn to imitate what the pool contains. If we point the environment at a different dataset, the reward would automatically change without touching a single line of code. For the dataset I generated and openly share, I also include the source sketch.</p>
-<p>If we look closer at the judges, the two of them answer different questions. HPSv3 decides whether it is a flower, and
-the pairwise judge decides whether it is well painted in the style I chose.</p>
-<p>Before anything worked, there was a long stretch of flat reward curves. If you've tried to reproduce a research paper/blog without open artifacts, you probably can relate. Every run
-tested what I thought was a reasonable theory about what was wrong. A run takes a lot
-of time, so I queued the next one while still going through the last one's results. As always, starting from something easier that works and then building on top of that was the answer.
-A simple control task, with no browser and no judges, was the first attempt that learned, and the reason was that my learning rate was just too low.</p>
-<p>Another change that cost me time to find was adjusting the LoRA parameters correctly. The usual target_modules list assumes a dense model, and Qwen/Qwen3.5-35B-A3B is a mixture of experts that names most of its projections differently, so the adapter was training ten layers out of forty. I solved this by changing it to all-linear, which reaches every linear layer. The routed experts in this architecture are fused tensors that even all-linear leaves frozen, but everything else gets an adapter, and that was enough to learn.</p>
-<p>The fix was four changes in TRL's GRPOTrainer:</p>
-<p>These four changes unlocked the first successful run (hps-only), with the reward clearly improving.</p>
-<p>With that configuration, all three runs learn. Both judge runs were launched for 200 steps and stopped at 110, with the reward still climbing slowly. A step takes fifteen to eighteen minutes, and the comparison between mixes was already stable, so I stopped both to save compute. Mean group reward over the first and final third of each run:</p>
-<p>The three curves line up with how much weight my taste carries. The more the judge
-weighs, the lower the start and the noisier the climb. judge-led spent its first thirty steps nearly flat
-before it moved. It is the same move that solved the debugging. Shrink the problem until
-something learns, then add the hard parts back one at a time.</p>
-<p>The pairwise judge term itself climbed in the two runs that used it. The model wins more
-comparisons against the pool as training advances, which is the claim hps-only could
-not make. No group in any run collapsed to identical rewards, the GRPO failure mode that
-kills the gradient. For the curious, the per-metric curves (HPSv3, paint coverage,
-entropy) are in the
-repository as CSV.</p>
-<p>The full launch command, the hardware and the two environment variables that turn this
-into the other two runs are in the
-recipe.</p>
-<p>In every run, the first thing the model learned was to stop producing bad
-paintings, the near-blank canvases and shapeless washes that score under 0.3 in total
-reward. In
-hps-only, three quarters of the rise in the group mean comes from bad paintings
-becoming rare. In the judge runs the collapse is even steeper: rollouts under 0.3 fall
-from 99 to 16 across judge-led's thirds, and from 37 to 4 in hps-led.</p>
-<p>This is why the obvious visual, the best painting of each step, shows almost no difference in
-hps-only. It moves +0.034 across the run while the median moves +0.155. The
-learning is visible in the middle of the distribution.</p>
-<p>What the pairwise judge changes is the top. In hps-only, paintings got more
-reliable without getting better. The quality of the good ones added just +0.03 to the
-group mean, and once HPSv3 saw petals around a centre and a stem, it stopped asking for
-more pigment. With the judge on, the other half of the story appears. Better here means closer to
-the pool, so closer to what I rated as "good" or something I liked more. That added +0.12 in judge-led and +0.16
-in hps-led, the best of each step rose too, and
-paint coverage doubled in both runs (0.11 to 0.23, and 0.13 to 0.30) where hps-only
-barely moved it. With a reference left to beat, a good painting can still get better,
-and the model starts being rewarded for using more pigment.</p>
-<p>One more finding. The model ignores an explicit instruction, and it is right to. The
-system prompt asks for fifteen to thirty filled shapes. If we look at the real mean, it is between 7 and 9, and
-n_shapes barely correlates with reward in any run (+0.000, −0.14, +0.07). The policy
-is not rewarded for obeying that sentence, so it does not obey it.</p>
-<p>There is also a ceiling on the hps-only route. If every rollout matched its good
-ones, that run's mean would sit at 0.771. Whether more steps would break it is
-an open question.</p>
-<p>The paintings also show something that the tables miss. Within each run, they all look
-similar. As training advances, the rewards inside each group get closer together, and the
-median paintings in the opening video look like takes of the same flower. That is GRPO
-doing what it is designed to do with a pool built from one subject. The pool decides
-what counts as variety, the same way it decides what counts as quality. If the reward
-only pays for matching one flower, the model learns to paint that one flower. More diverse output would need a
-more diverse pool, and building one is more curation work. Surya's newer compositions are an example of this. Alex Yango's animal
-paintings are the same recipe with
-different choices in the pool. This is the biggest difference between an aesthetic
-reward and a maths grader. Behind the number there is a very human job, deciding what
-belongs in the reward set. Jason Liu's essay on
-taste says the general version in one
-line. AI shifted the bottleneck from making to noticing.</p>
-<p>Surya closes his blog with some of his favourites. Instead of picking mine, below is a
-wall with the 178 paintings the reward scored highest across the two judge runs, the
-same number the reference pool holds, in no particular order. Open it and pick your own.</p>
-<p>To choose, you looked at many and kept a few, and that is exactly the job that built the
-reward of this project. Every painting of every run, with its sketch and its reward, is
-in the rollouts datasets, and browsable in this gallery.</p>
-<p>Since the reward was partly based on my taste, it is fair to close with my verdict as a viewer. To my
-eye, judge-led is the run that ends up the most diverse and the most artistically
-interesting. hps-led paints convincing watercolours, but its best ones share a soft,
-wet-on-wet look that is almost a style of its own. hps-only converges the hardest, and
-most of its paintings settle on the same colours. You can judge for yourself in the
-gallery, which has every painting of
-every run, sortable by step and by reward.</p>
-<p>This project is mostly infra. A run needs a trainer, two Spaces, an inference router and
-a websocket to stay healthy for hours straight, and every piece that fails quietly turns
-into a wrong number somewhere else. Half the work is checking that the number you read
-matches what actually happened.</p>
-<p>Failures of the infrastructure were entering the reward as zeros. A render that
-timed out or a scorer that did not answer scored the same as a bad painting, 0.0 inside
-the group. Across all my runs that was about 1.5% of rollouts, and in the worst run it
-reached 5.2%. That trains the model on noise, so those paths now
-return None and the rollout is excluded from the group.</p>
-<p>I also found a bug in OpenEnv, and sent the fix upstream. The client keeps one
-persistent websocket, and a socket closed by the far end stayed cached, so every later
-call failed even though the environment was healthy. It cost me two half-finished runs
-to find it. The fix is submitted
-upstream, and the runs launched with
-it have been running clean since.</p>
-<p>The reward of a step depends on which references it drew. The pairwise judge
-samples four references per step, so every step faces a different set of rivals, and
-some draws are simply harder. GRPO itself is mostly safe, because advantages are
-computed inside the group and a hard draw moves the whole group together. The curve I
-was reading was not safe, and some of what looked like a bad step was just a hard draw.
-The image above is one example. Step 12 scored half a point below step 11 mostly because
-it drew the hardest references of the run, while the paintings themselves look close.</p>
-<p>Rounded numbers, and only for the runs that finished.</p>
-<p>A step is eight rollouts and takes fifteen to eighteen minutes, of which 70 to 80% is
-rendering. A single render takes 69 to 96 seconds against a 90 second deadline. Part of that is
-expected, the Space has no GPU, so Chromium renders the WEBGL canvas in software and
-p5.brush's bleeds and textures are heavy pixel work. Even so, I expected it to be
-faster, and I have not found the full cause.</p>
-<p>A scorer can cost more than the training that uses it: HPSv3 has to be up for the whole
-run, so pause the Space, or set its sleep timer, when the run ends.</p>
-<p>Everything runs on HF
-Jobs, with the environment as
-a Docker Space and metrics in
-trackio.</p>
-<p>The rule of this project was to reproduce the recipe with every resource open, not to
-improve it, so a list of untried ideas piled up along the way. These are the ones I
-would actually try, in order of how much evidence there is.</p>
-<p>Multi-step, and letting the model see what it paints. This is the first thing I
-would try. The original blog trains single turn, so I trained single turn, and in this
-setup the model paints with its eyes closed. No image ever goes in, and the only
-feedback it gets is one number. The evidence that a feedback loop works is the pool
-itself. The reference paintings came from models iterating three rounds under a vision
-critic, and the later rounds are better. The material that defines the reward was made
-with a loop the policy never gets.</p>
-<p>Smaller models. There is evidence that 35B is more than needed. In my side
-experiments a 4B already wrote valid sketches that passed the gate. If a 4B can learn
-this, the cost of the experiment drops by an order of magnitude.</p>
-<p>Other ideas on the list are SFT on the pool sources before starting RL, rewarding pigment
-explicitly, moving the judge's reference mix from easy to hard as the run advances until
-only love remains, widening the ten-method allowlist for more visual range (my
-attempts on this crashed more sketches and broke the watercolour look), and checking how consistent the pairwise judge really is by
-scoring the same image twice.</p>
-<p>And the method is not specific to flowers. Alex Yango painted animals with the same
-mechanism, and Brendan Hogan
-trained canvas animations
-against a pool of hand-rated clips. I had also played with something similar before using Simon
-Willison's pelican
-benchmark, where code is
-rendered to an image and scored.</p>
-<p>And underneath all of it sits the question this project cannot close. 178 paintings
-made by models define what this trained model considers beautiful. The pool is the bottleneck,
-and it is the part of the pipeline with no principled answer.</p>
-<p>For anyone reproducing this, there are two deliberate divergences from Narreddi's
-recipe, both argued earlier in the article:</p>
-<p>The rest, all-linear for the LoRA, infrastructure failures returning None instead
-of 0.0, stopping the judge runs at step 110, are decisions I had to make along the way
-because his blog does not specify them. His implementation is not published, so
-I cannot tell whether they match his choices or diverge from them.</p>
-<p>The per-rollout numbers in this article can be recomputed from the published datasets.
-Nothing here depends on any Space staying switched on.</p>
-<p>The method and original idea are Surya Narreddi's. The library is Alejandro Campos Uribe's.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>QCon AI Boston (July 8-9, 2027): Agents. Context. Evals. Security. See how other teams make decisions.
+
+                            Register Now</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>Agentic AI architecture extends microservices and cloud-native architectures with AI agents that work with context, memory, and protocols such as MCP and A2A. The article covers bounded-context integration, task-dependent coordination strategies, new security risks, and observability needs. It expects gradual adoption alongside existing architectures, with platforms absorbing common components.</p>
+<p>Aditya Mulik explains how Walmart Global Tech deployed multi-agent LLM workflows across 4,700 stores for nightly batch inventory forecasting. He discusses tackling production hurdles - schema violations, cross-department data mismatches, and network drops - via MCP grounding and loop agents, while slashing cloud inference costs from $100k+ to $10k per month shifting from PTUs to pay-as-you-go.</p>
+<p>Vanessa Formicola shares how technical leaders can move beyond "wishful architecture" by practicing holistic socio-technical engineering. She discusses why engineering leaders must account for organizational maturity, reward structures, geopolitical climate, and team dynamics, framing the staff-plus role as designing the conditions for technology to thrive rather than just picking tools.</p>
+<p>Oli Lane and Julian Wreford share how Gearset replaced guesswork in distributed asynchronous queues with OpenTelemetry tracing. They explain why traditional metrics fall short, how to implement user-centric SLOs based on latency distributions, and share practical debugging tips to help senior developers, software architects, and engineering leaders improve system reliability and team culture.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+Articles
+The iOS Crash We Could Not Reproduce</p>
+<p>Nov 11, 2026
+								
+								
+								
+									
+									10
+									min read</p>
+<p>Some production crashes announce themselves with a clean stack trace. This one did not. It appeared in a large-scale consumer iOS application, affected only some executions, and resisted every local reproduction attempt. The final code change was small, but reaching it required turning a vague SIGBUS report into a controlled set of experiments. This article walks through the investigation and the threading contract behind HTML import in NSAttributedString.</p>
+<p>Most production crashes I investigate start with a familiar routine. I read the crash report, look for the stack frame closest to the failure, try to reproduce the path, and then work backward toward the root cause. This incident did not fit that pattern.</p>
+<p>The crash showed up in a large-scale consumer iOS application. It affected only a subset of executions and appeared at unpredictable times. Exact production metrics are confidential, but the incident was serious enough to require a focused investigation and an expedited hotfix.</p>
+<p>Neither developers nor QA engineers could reproduce it consistently. We could repeat the customer flow without seeing anything unusual. The crash report included a SIGBUS signal and Foundation frames related to attributed string processing, but it did not point to a clear line in our Swift code.</p>
+<p>SIGBUS is a low-level invalid memory access signal, not a diagnosis. It can come from several conditions, so it would have been wrong to assume from the signal alone that a specific variable had been released or reused. The evidence narrowed the search area, but it did not establish the cause.</p>
+<p>That left a wide search space. I considered object lifetime, SwiftUI view model ownership, shared mutable state, unsynchronized work, and Foundation behavior. Management needed an answer quickly, and I initially had about a week to investigate and prepare a fix.</p>
+<p>I started with the checks that usually help with this kind of failure. I enabled Zombie Objects, added exception and symbolic breakpoints, reviewed ownership around the affected screens, and inspected the asynchronous paths that prepared their data.</p>
+<p>I also made defensive improvements while I was in that part of the codebase. I tightened observable object ownership, reviewed whether several reference types really needed identity semantics, clarified synchronization, and made UI-related concurrency more explicit with async and await and MainActor isolation.</p>
+<p>Those changes improved the code. The first hotfix also produced a noticeable reduction in the overall crash rate. But the original crash signature continued to appear in production, and customers were still reporting the behavior tied to the incident.</p>
+<p>The initial improvement looked encouraging because the aggregate crash rate moved in the right direction. It did not prove causation. Changes to lifecycle handling and synchronization can affect task scheduling, object retention, and timing. A timing-sensitive failure can become less frequent even when the underlying contract violation is still present.</p>
+<p>That distinction became central to the investigation. We had improved the application, but we had not shown that we had removed the defect. The target crash still existed, and the remaining investigation window had narrowed to only a few days.</p>
+<p>The turning point was not another breakpoint or a more detailed stack trace. A QA engineer who also used the production application found that she could trigger the crash by repeating the affected flow. It was still intermittent and sometimes took four or five attempts, but that was enough.</p>
+<p>For the first time, I had a practical test oracle. If a new build still crashed on that device, the change had not addressed the problem. If repeated attempts stopped producing the failure, the change deserved deeper validation. The device changed the work from production forensics into an experiment.</p>
+<p>My first experiments still focused on the screens closest to the visible failure. I cleaned up their code, adjusted ownership, reviewed asynchronous work, generated an IPA, and sent it to the QA engineer.</p>
+<p>After several attempts, that build crashed again. The result was negative, but it was useful. Until then, I had been making reasonable changes without a reliable way to know whether they mattered. A reproducible failure made every rejected hypothesis informative.</p>
+<p>The loop became simple: change one area, build an IPA, install it on the affected device, repeat the customer flow, and record whether the crash returned. Across the investigation, I shared roughly nine or ten experimental builds.</p>
+<p>I also explored potential solutions through developer communities, including Stack Overflow, the Apple Developer Forums, and LinkedIn iOS development groups. However, the application's source code and internal debugging artifacts were confidential under company policies, so I could only discuss the problem at a general technical level without sharing proprietary information. While these communities offered opportunities to explore possible causes, they could not directly inspect or conclusively diagnose the issue. I therefore continued investigating through controlled experiments within our development environment.</p>
+<p>I changed the question. Instead of asking which code looked suspicious, I asked which code had to remain for the crash to survive. I removed one view or behavior at a time, generated a new build, and tested the same flow on the affected device.</p>
+<p>After six or seven elimination builds, the failure surface narrowed to one file. Nothing in that file looked obviously unsafe, so I repeated the process inside it. Several more experiments reduced the problem to one operation.</p>
+<p>The line converted HTML data into an attributed string:</p>
+<p>The code had no force unwrap, unsafe pointer, manual memory management, or obvious shared state. At the call site, it looked like a normal Foundation conversion. That ordinary appearance had kept it low on the original list of suspects.</p>
+<p>The affected flow involved two important views of the application. Each view displayed a static disclosure section near the bottom, containing legal and informational text formatted as HTML. Although the content itself was static, it included interactive elements such as hyperlinks and phone numbers that users could tap to open external web views or initiate phone calls.</p>
+<p>The application received this disclosure content as HTML and converted it into an attributed string before rendering it on the screen.</p>
+<p>Because the disclosure section was relatively small and worked correctly during most executions, it initially appeared unlikely to be responsible for the crash. Attention naturally focused on the larger architectural components and asynchronous screen-loading operations.</p>
+<p>The critical issue was that HTML-to-attributed-string conversion could be invoked from an asynchronous screen-preparation path without an explicit guarantee of main-thread execution. This mattered because Foundation's HTML importer has a threading constraint that was not enforced at the call site.</p>
+<p>Apple documents an important constraint for HTML import through NSAttributedString: when the options specify HTML as the document type, the importer should not be called from a background thread. Apple says the method may try to synchronize with the main thread, fail, and time out. The broader attributed string documentation also notes that WebKit handles HTML conversion, which matters because this path is not just a pure data transformation.</p>
+<p>Our problem was therefore not that the screens displayed attributed text. The unsafe condition came from creating HTML-backed attributed strings from an execution context where the main thread was not guaranteed.</p>
+<p>The API did not make that requirement obvious at the call site. It accepted a Data value and returned an attributed string, so it looked like a straightforward transformation. The implementation carried a platform constraint that the surrounding asynchronous architecture had to enforce.</p>
+<p>Timing-dependent defects can survive many successful executions. Two users may receive equivalent HTML and call the same Swift function, yet reach the importer under different scheduling conditions. One execution may occur safely while another reaches the same code from background work during screen preparation.</p>
+<p>This also explained why the defensive hotfix reduced the observed frequency without removing the signature. Lifecycle and synchronization changes changed timing. They did not eliminate the unsupported execution context.</p>
+<p>The practical lesson was clear: changing the probability of a concurrency failure is not the same as removing its cause. For this incident to be considered resolved, the targeted crash signature and the reproducing flow both had to confirm the fix.</p>
+<p>The immediate repair was to perform the HTML conversion on the main actor. Fixing only the original call site would have addressed the visible incident, but it would not have prevented the same mistake elsewhere in a large codebase.</p>
+<p>I searched for every place where the application converted HTML into an attributed string. Then I introduced a shared helper that made the execution requirement part of the API instead of an instruction each developer had to remember. The following code is a simplified and anonymized representation of that design:</p>
+<p>The UI-facing caller also stayed isolated to the main actor:</p>
+<p>Existing call sites were routed through this helper. The design centralized the Foundation dependency, reduced duplication, and created one place to document and test the threading contract. More importantly, it turned the requirement from a convention into a code-level boundary.</p>
+<p>This did not mean all screen preparation moved to the main actor. Networking, decoding, and other suitable work could remain asynchronous. Only the operation with the framework constraint, along with the UI state that consumed its result, needed explicit main-actor isolation.</p>
+<p>I sent the corrected build to the QA engineer and asked her to repeat the flow on the device that had exposed every earlier attempt. The failure no longer appeared. I then asked for additional testing across both affected views and nearby behavior before promoting the change to the hotfix branch.</p>
+<p>After release, production monitoring showed a dramatic reduction in the targeted crash. Exact figures cannot be disclosed, but this outcome differed from the first hotfix in the way that mattered: the specific production signature no longer appeared at a meaningful rate.</p>
+<p>The investigation ended with three validations rather than one. The known device stopped reproducing the issue, every related call site used the shared helper, and production monitoring confirmed the expected change.</p>
+<p>The most useful lesson was broader than one Foundation API. When evidence is incomplete, a debugging process has to create new evidence. A device that reproduced the crash intermittently was more valuable than a long list of plausible code changes because it allowed each hypothesis to fail clearly.</p>
+<p>The incident also changed how I evaluate framework abstractions. A Swift initializer may look safe while hiding behavior inherited from Objective-C, Foundation, UIKit, WebKit, run loops, or older platform design. Swift concurrency makes execution context easier to express, but it does not automatically make every underlying API safe for concurrent use.</p>
+<p>Finally, a successful repair should make the same defect harder to reintroduce. The shared helper mattered because it protected future call sites, not only the two views involved in the incident.</p>
+<p>The final code change was small. The hard part was reaching it through incomplete crash information, an unreproducible flow, misleading early improvements, time pressure, and proprietary artifacts that could not be shared outside the organization.</p>
+<p>Once a single device reproduced the failure, the investigation stopped depending on intuition. Repeated builds narrowed the problem from two screens to one file and then to one ordinary-looking Foundation call. The root cause was HTML import running without the main-thread guarantee required by its implementation.</p>
+<p>When a stack trace cannot identify the bug, the next step is to design an experiment that forces the code to reveal it. In this incident, systematic fault isolation provided the evidence that ordinary debugging could not.</p>
+<p>Equal Experts helps organizations harness AI, modernize technology, and build better software through expert engineering, collaboration, and innovative delivery practices. Learn more.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/train-to-paint-with-code" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/articles/ios-crash-sigbus-debugging-experiment/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

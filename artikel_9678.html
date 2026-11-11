@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Palette: teaching a small model to build decks in your design language</title>
+    <title>Code From Your Phone with Codex: Complete Beginner Walkthrough</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9678.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,69 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Palette: teaching a small model to build decks in your design language</h1>
+        <h1>Code From Your Phone with Codex: Complete Beginner Walkthrough</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/63890e3843d8b0797a0ad606/5pHD09UHuAK-6OyKGKimD.png" alt="Palette: teaching a small model to build decks in your design language" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/0iu1pHRMnqOT3GqhiW0OP3lK20h1-7682bvf.png" alt="Code From Your Phone with Codex: Complete Beginner Walkthrough" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/63890e3843d8b0797a0ad606/5pHD09UHuAK-6OyKGKimD.png" alt="Palette: teaching a small model to build decks in your design language" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/0iu1pHRMnqOT3GqhiW0OP3lK20h1-7682bvf.png" alt="Code From Your Phone with Codex: Complete Beginner Walkthrough" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Ask a frontier model for a slide deck and you'll get a good one. Ask for ten and they start to look alike: the same tasteful defaults, the same house style, a faint "AI-generated deck" look. That's fine until you want the deck to look like your template. Frontier models have their own house style, and no amount of prompting stops them drifting back to it. And sometimes the content is confidential and can't leave your systems at all.</p>
-<p>Both of those point to a model you own: open weights, running on your own infrastructure, trained on your own design language. The catch is that small open models, the kind you'd actually self-host, are bad at this. Their decks come out broken: titles that vanish into the background, text running off the slide, shapes stacked on top of each other.</p>
-<p>Palette tests one bet: that a small open-weight model, trained on synthetic data in your design language and checked by a harness, can compete with frontier systems while you keep ownership of the result. We fine-tuned a 20B model to build decks the way people do: a designer plans the deck and a coder draws each slide. Its training data follows the IBM Design Language, and on PresentBench it ranks first on two of the three domains we measured. This post covers how we synthesized the data, trained the model and built a harness around it.</p>
-<p>A slide deck looks simple, but making one asks a model to do three things small models are bad at.</p>
-<p>It lays out the slide without seeing it. The model doesn't draw slides; it writes code that places every element at an x, y, width and font size. Whether a 75-character title fits on two lines at 56pt is arithmetic the model does in its head, and it only finds out it was wrong after the code renders. Small models get this wrong often, which is where overlapping shapes and text running off the slide come from.</p>
-<p>It makes two kinds of decisions at once. Deciding what each slide says and how to show it (a chart or a table? what to cut?) is editorial judgment. Placing it precisely is geometry. A single pass has to do both across 10–20 slides, while keeping the palette, type and layout consistent.</p>
-<p>There's no data showing how decks get made. Plenty of finished decks exist, but not the rationale behind the design choices or the code that produced them.</p>
-<p>Nobody makes a deck in one pass. You decide the story first (how many slides, what each one says, which gets a chart and which gets a table) and only then build each slide. Palette splits the work the same way, into two roles served by a single LoRA adapter:</p>
-<p>Each role now makes one kind of decision: the designer handles the editorial judgment, and the coder handles the geometry. The brief between them is readable and editable, so a person or an agent can change one slide's layout without regenerating the deck. And because every slide's context is fixed before any code is written, the coder calls run in parallel, one per slide, which makes the coding stage about 6–7× faster.</p>
-<p>We trained the adapter with LoRA rather than full fine-tuning: it teaches a format and a skill on top of a capable base without disturbing what the base already knows, and it made each experiment cheap. One lesson: coder examples are about 5× longer than designer examples, so a naive mix undertrained the designer until we oversampled its examples 5×.</p>
-<p>There's no public corpus of plans, design decisions and slide code, so we generated one with a large open teacher. Each deck starts from a recipe that sets its genre, length, layouts and any user directives, so we control what the data covers. Plans range from tidy outlines to raw content dumps, so the model learns to cut and condense. We generated around 1000 decks covering roughly 10,000 slides.</p>
-<p>Every example also carries the reasoning behind it, written as a counterfactual: the trace weighs an alternative and says why it was rejected, so the model learns the rule behind a choice, not just the choice. The designer reasons about content and form. For example:</p>
-<p>"Revenue for four quarters, with one clear upward trend. I considered a table, but the point of this slide is the trend, not the exact figures, so a bar chart makes it visible at a glance."</p>
-<p>"The title is 62 characters. At 44pt it would wrap to three lines and run into the chart below, so I set it at 36pt, which fits on two lines and leaves room above the chart."</p>
-<p>The teacher alone doesn't make the data good; the loop around it does. Every synthesized deck is rendered and checked for overlaps and overflow by the same checker the harness uses at inference. Broken slides are repaired, and their reasoning is rewritten as the same kind of counterfactual, covering what the original layout got wrong and why the fix works. Each mistake the checker catches becomes a better training example.</p>
-<p>The hardest problem was faithfulness. The worst failure is a slide with facts that weren't in the input, and we found that a prompt rule can't prevent it. If a brief asks for a six-by-five table but carries only three bullets, the coder has to invent the rest.</p>
-<p>What fixed it was reference decks, not the rules: fixing a reference reliably changed the teacher's output, while adding a rule rarely did. The teacher sees a few reference decks in its prompt and copies them far more than it follows instructions.</p>
-<p>Users often want finer-grained control over specific design choices: a chart instead of a table, a particular color, a darker cover. Palette lets them ask for these with directives, short instructions written directly in the plan and wrapped in [[ ]]:</p>
-<p>The designer builds each directive into the brief, and the coder follows it when drawing the slide. Without the directive, the model would reasonably show these milestones as a table; with it, the model draws a timeline instead.</p>
-<p>The model follows directives because it was trained to. The data recipes include directives from 12 categories, a few of which are shown below, each phrased several different ways, so the model learns the intent rather than a fixed phrase.</p>
-<p>Figure 1. An illustration of the same plan without (left) and with (right) the [[make this a timeline]] directive.</p>
-<p>Even a well-trained model sometimes produces a broken slide: a title in the same color as the background, or two boxes stacked on top of each other. So Palette doesn't return the model's output directly; every deck goes through a harness first.</p>
-<p>Figure 2. The designer drafts the brief, the coder writes each slide's code in parallel, and the harness checks and repairs every slide before the deck is returned.</p>
-<p>First, simple rules fix known mistakes, such as a malformed color code that would otherwise turn every slide black. Then each slide is rendered and measured: a geometry checker flags text that overlaps, gets clipped or runs off the slide. Flagged slides go to a separate editor model, which rewrites that slide's code.</p>
-<p>The key rule is that a rewrite is kept only if the checker confirms the slide improved; otherwise the original stays. That makes the harness safe to run on every deck. It can fix a slide, but it can't make one worse.</p>
-<p>Figure 3. An illustration of a repair. As generated (left), each card's title is stacked on top of its description; the harness detects the overlaps and reflows the cards into a 2×2 grid (right).</p>
-<p>To measure its effect, we generated each PresentBench deck once and scored it with and without the harness. Across 131 decks, the harness adds 3.5 points on average.</p>
-<p>We evaluate on PresentBench, which scores generated decks on five criteria: fundamentals, visual design, completeness, correctness and fidelity. PresentBench provides a source document rather than a plan, so for these runs a separate frontier model drafted each plan from its document, and Palette built the deck from that plan. We report three domains; baseline numbers are from the PresentBench paper.</p>
-<p>Figure 4. PresentBench scores by domain. Palette (blue) against NotebookLM, Manus 1.6 and five other systems (gray). Palette ranks first on Economics and Education, third on Talk, and second on the three-domain mean.</p>
-<p>Palette does best where structured content and numeric accuracy decide the score, ranking first on Economics and Education. On Talk, where decks are narrative and speech-driven, two closed systems score higher and Palette places third. Across the three domains it places second, 1.1 points behind NotebookLM (59.7 vs 60.8) and ahead of the rest of the field, as a single 20B open-weight model.</p>
-<p>PresentBench measures whether a deck is good, but not whether it follows a specific design language. We're not aware of a benchmark that does, and it's a gap we hope to help close.</p>
-<p>The harness already computes cheap, verifiable signals: does the slide render, does anything overlap or overflow, does every fact trace back to the brief. Today we use them to repair output after generation. Next, we want to use the same checks as rewards for reinforcement learning, so the model stops making these mistakes in the first place. Because the coder works one slide at a time, each slide is a short, independently checkable rollout, a natural fit for GRPO-style training.</p>
-<p>We also want to close the gap on figure-heavy decks by extracting figures from source documents (e.g. with Docling) and placing them with the harness. And we're exploring a lighter way to bring your own templates: re-skinning output from one or two of your existing .pptx files, without retraining.</p>
-<p>Building Palette taught us a few effective methods that extend naturally to other tasks whose output has a structure you can check in code, from charts and diagrams to UI layouts:</p>
+                <p>Developer & PhD Researcher in AI · 20+ Years in Web, Data & Growth · Helping Developers Work Smarter with AI</p>
+<p>Developer & PhD Researcher in AI · 20+ Years in Web, Data & Growth · Helping Developers Work Smarter with AI</p>
+<p>Developer & PhD Researcher in AI · 20+ Years in Web, Data & Growth · Helping Developers Work Smarter with AI</p>
+<p>A coding task can need your attention while you are away from your computer. The agent may be waiting for a command approval, a decision about scope, or a review of the changes it made.</p>
+<p>Codex in the ChatGPT mobile app lets you handle those parts from your phone. You choose a connected computer and project, send the task, follow its progress, and inspect the result. The code still runs on the selected computer.</p>
+<p>In my demo, I use this setup with an image-generator project. I ask Codex to explain the code, suggest an improvement, write a plan, and implement it. Codex reports eleven passing offline tests, then I ask for a browser preview so I can check the interface too.</p>
+<p>Below is the complete setup and review workflow, including the screenshot workaround for an app running at localhost. Start with a small change and a project you can verify.</p>
+<p>Get the apps from the official ChatGPT download page. Open Codex on your computer and make sure your project is available there before pairing.</p>
+<p>OpenAI's current remote setup guide lists Mac and Windows hosts, with iOS and Android clients depending on rollout. The phone steps here show my iPhone. Some app versions still call the feature Remote instead of Codex. A workspace admin may also need to enable Remote Control. Check the supported setup and requirements if your menus differ.</p>
+<p>You start this setup in the desktop app. Installing only the Codex CLI or IDE extension won't give you the pairing screen.</p>
+<p>Scan your own code. The code in my recording is hidden.</p>
+<p>On your phone, scan the code with the camera. Open the ChatGPT link, check the account and workspace, and approve the connection. Complete any passkey, SSO, or multi-factor authentication prompt it shows.</p>
+<p>Each pairing connects a particular device to a particular computer. Repeat setup if you want another phone to control another host. You can manage paired devices in the computer's Connections settings. Official pairing instructions</p>
+<p>Enable Keep this PC awake, or the equivalent option, if available. Leave the desktop app open and your computer connected to power. A sleeping or offline computer can't do the work you send it.</p>
+<p>Now open Codex in the ChatGPT mobile sidebar. Your connected computer should appear. In the video, I also use Face ID or the device passcode to protect access on my phone.</p>
+<p>My mobile home screen has All, Cloud, and a filter for my computer, followed by saved chats.</p>
+<p>Choose your connected computer for this walkthrough.</p>
+<p>Select your computer to use its project files and installed tools. Cloud runs work in a separate cloud environment; it doesn't automatically have the files sitting on your laptop. For that setup, see my Codex Cloud tutorial. Both options are available through the Codex mobile workflow, subject to account and workspace availability.</p>
+<p>Start a new chat and select a project. You may also see Don't work in a project, but selecting the folder you want to change makes this tutorial easier to follow.</p>
+<p>Before sending anything, check the computer and project names. It's easy to open a familiar chat and forget which machine it belongs to.</p>
+<p>Open the model controls to choose a model and reasoning effort. In my recording, I use High. You can begin with the available default; matching my exact model isn't necessary.</p>
+<p>Next, open the approval settings. My version shows:</p>
+<p>The approval options shown in my demo. Host and workspace policies still apply.</p>
+<p>I use Approve for me in the video. Choose the narrowest access that works for your task, and read a requested command before approving it. Automatic review doesn't make every action harmless.</p>
+<p>For your first attempt, you can make the request more specific:</p>
+<p>Start by understanding the project before asking for changes.</p>
+<p>You can follow progress and expand activity entries to inspect commands. In my recording, Codex looks for AGENTS.md, the file where a project can keep instructions for coding agents. It then summarizes the code and how to run it.</p>
+<p>Read the suggestions and choose one manageable change. Asking for every improvement at once makes the result much harder to review on a phone.</p>
+<p>In the demo, I ask for a plan with an achievable goal. Codex proposes shared input checks and faster loading of saved image-generation history. The plan includes a goal, scope, checklist, and Done when conditions.</p>
+<p>A small scope gives you something concrete to check afterward.</p>
+<p>Here's a reusable version of that request:</p>
+<p>You can also enable Plan mode from the plus menu. Pursue goal is useful for an outcome that needs several rounds of work. A written checklist alone doesn't mean you've started a persistent goal. My Codex goal guide explains that workflow.</p>
+<p>While Codex works, use Queue for a follow-up that can wait. Use Steer when you need to correct the current direction. For example, “Keep this change inside the settings page” belongs in the current work, not after a large rewrite. OpenAI explains these controls in its remote engineering guide.</p>
+<p>The result in my recording has two parts: Codex reports that all 11 offline tests pass, and it says browser UI verification is still outstanding. Read both. A passing test report gives you evidence about the checks that ran; the unfinished browser review tells you what to do next.</p>
+<p>Passing tests and checking the interface are separate parts of the review.</p>
+<p>I ask Codex to start the project. It runs on the computer at localhost, using port 8765 in this example.</p>
+<p>Opening that address on the phone doesn't open the computer's app. Localhost means the device opening the address. On your phone, it points back to your phone.</p>
+<p>My workaround is to ask Codex for screenshots. Try:</p>
+<p>In the recording, Codex uses a headless browser, a browser running without a visible window, to capture the app. The images appear in the chat, where I can open and zoom into them.</p>
+<p>Check whether buttons fit, text is readable, and the layout works on a narrow screen. Screenshots show appearance; ask for interaction checks too. If Codex lacks browser tools on your host, it needs that setup before it can capture the app.</p>
+<p>Open Changes to inspect the diff: the lines added, removed, or edited. Use Files when you need more context. Ask Codex to explain anything you don't understand before committing.</p>
+<p>If you expected an existing repository, first check that you selected the correct folder. For a new project, open a terminal in that project's root and run:</p>
+<p>Before the first commit, check .gitignore so secrets such as .env files, dependencies, and generated output stay out of Git. Then ask Codex:</p>
+<p>A commit saves a checkpoint in your local Git history. Pushing sends commits to a remote repository such as GitHub. Deploying publishes the application. Treat them as separate steps, so you know exactly what you've approved.</p>
+<p>Type / in the composer to see the commands your version supports. The most useful starting points are /plan for planning, /review for checking changes, /side for a side question, and /status for session details. Availability depends on your app, account, and host. Mobile command reference</p>
+<p>Attach a screenshot when describing a visual problem. “This button overlaps the title” is much easier to act on when Codex can see it.</p>
+<p>Rename chats around the task, pin active work, and archive finished chats from the three-dot menu. A name like “Fix mobile menu” is easier to find later than “New chat.”</p>
+<p>If your computer is missing, check that the desktop app is running, connections are enabled, and both devices use the same account and workspace. Update both apps and pair again if needed.</p>
+<p>If a session disconnects, check the computer's power and network first. Keeping the phone awake won't help if the host has gone to sleep.</p>
+<p>If you can't find Codex or Remote, check feature availability and your workspace's Remote Control settings. Signing out can also turn Remote Control off; enable it again after signing in. OpenAI keeps the connection troubleshooting steps in its setup guide.</p>
+<p>The part I would repeat is the review sequence: give Codex a specific task, check its plan, read what it tested, and inspect the result before committing. On a phone, keep the change small enough that you can make those decisions carefully. If a diff needs a larger screen, leave that review for your computer.</p>
+<p>How to Use Codex Cloud: From GitHub Setup to Your First Pull Request</p>
+<p>Developer & PhD Researcher in AI · 20+ Years in Web, Data & Growth · Helping Developers Work Smarter with AI</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/palette-deck-building" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/code-from-your-phone-with-codex-complete-beginner-walkthrough?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

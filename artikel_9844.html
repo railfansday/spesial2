@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I deleted all my SSH keys</title>
+    <title>Google, Partners Disrupt 1.3 Million-Device-Strong XCPE Botnet</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9844.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,64 +15,56 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>I deleted all my SSH keys</h1>
+        <h1>Google, Partners Disrupt 1.3 Million-Device-Strong XCPE Botnet</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt40a50320ed3d3a77/6aeb310312acd3feff711f6e/rogue_AO_bot_Chris_Light_Alamy.png?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Google, Partners Disrupt 1.3 Million-Device-Strong XCPE Botnet" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt40a50320ed3d3a77/6aeb310312acd3feff711f6e/rogue_AO_bot_Chris_Light_Alamy.png?disable=upscale&width=1200&height=630&fit=crop" alt="Google, Partners Disrupt 1.3 Million-Device-Strong XCPE Botnet" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I’ve been using ed25519-sk keys with YubiKeys since practically the moment they were available. But because of some specific use-cases (and because, frankly, YubiKeys are expensive) I’ve had a few traditional on-disk keys hanging around for a while just waiting for me to finally decide to get rid of them.</p>
-<p>This post documents how I’m using various secure enclaves (YubiKey, TPM, Apple Secure Enclave) to hold/encrypt SSH key material and achieve the goal of not having any unprotected key material living on-disk.</p>
-<p>Probably. I don’t intend to imply that this post is the only way that anyone should be doing SSH keys. Using a passphrase will encrypt the key with bcrypt & AES which keeps it protected even if the on-disk keyfile leaks somehow.</p>
-<p>And with a functioning ssh-agent, the passphrase should only need to be entered once per session, with the decrypted key material being held in RAM after that point.</p>
-<p>So yes, the ’traditional’ method is probably fine for most threat models. But I’m still keen to move to hardware-backed keys anyway, mostly for the satisfaction.</p>
-<p>When I say ‘hardware-resident’ keys, I mean keys that use a secure enclave or purpose-built hardware like YubiKeys to store or protect the key material.</p>
-<p>The theoretical benefit here is that the hardware used to generate the SSH key is needed in order to use the key. There’s no mechanism that allows leaking or exfiltrating keys that generated using this method. Any material that does exist on-disk is useless without the hardware.</p>
-<p>I’m going to try three different hardware methods for achieving this, which I think will cover all of my needs:</p>
-<p>With a YubiKey (5 and newer), SSH keys can be directly enrolled into the device using ed25519-sk (where the -sk stands for “Security Key”). This doesn’t require any additional software beyond OpenSSH itself.</p>
-<p>To store a new SSH key on a YubiKey, insert it and run:</p>
-<p>The application tag set in the command is arbitrary and can be set to whatever memorable string you prefer to differentiate between multiple SSH keys if you want to create multiple keys on the same YubiKey.</p>
-<p>If you have ykman installed, you can now inspect the list of credentials enrolled in the device:</p>
-<p>If ykman complains that you haven’t set a FIDO PIN on the YubiKey yet, you can do this with ykman fido access change-pin.</p>
-<p>Note that you don’t actually need ykman to enrol or use SSH keys with a YubiKey but it does make managing the device more convenient.</p>
-<p>Once the key has been created, you can retrieve the public key from disk:</p>
-<p>This key can be used like any other SSH public key – added to authorized_keys on a host, copied with ssh-copy-id, or pasted into services that depend on SSH like Git forges.</p>
-<p>You will also find a ~/.ssh/id_ed25519-sk file on disk (without the .pub extension). Note that although this looks like a private key, it doesn’t actually contain the key material. This is just a handle to find the relevant key on the hardware device.</p>
-<p>To configure the key for authentication, it can be enrolled with ssh-add like a regular key, or specified directly in ~/.ssh/config:</p>
-<p>From here, you can now SSH into the destination host as with a regular key. SSH will ask you to tap the YubiKey to confirm presence when the SSH command runs.</p>
-<p>When using an ed25519-sk key created with the default settings as above, you will be asked to confirm your presence whenever the key is used by physically touching the YubiKey.</p>
-<p>It’s probably a good idea to keep this default, but if you have a specific use-case that requires unattended key usage, you can generate a no-touch-required key as follows:</p>
-<p>When using a no-touch-required key, although it isn’t possible for a malicious actor to exfiltrate the key even with root access to the host the YubiKey is plugged into, a malicious actor with access could use the key without requiring any presence detection or human interaction. So do make sure this is actually suitable for your risk appetite before doing it.</p>
-<p>To use a no-touch-required key for unattended authentication to remote servers, you need to prepend the entry in the authorized_keys file on the destination host with no-touch-required, otherwise OpenSSH’s default security settings will reject the key.</p>
-<p>YubiKeys are nice, though fairly expensive. It would be useful if we could use the TPM we already have on our host to protect key material instead. Well, it turns out we can!</p>
-<p>Unfortunately this does require additional software, but it’s a fairly minimal Golang package – ssh-tpm-agent. It can be installed with Go directly from GitHub, but is natively packaged by Ubuntu and I’m working on packaging it for Fedora.</p>
-<p>To create a TPM-backed SSH key with a PIN, run:</p>
-<p>The process will ask you where to store the key. From here, once again we have a keypair with a .pub file that we can use in authorized_keys or copy however we wish.</p>
-<p>To use the TPM-backed key we need to use the TPM-aware SSH agent provided by the ssh-tpm-agent package. If you installed the native Golang package rather than something vendored by your distribution, you can enable the systemd socket unit for the agent as follows:</p>
-<p>To ensure the socket for the agent can be discovered by SSH processes run within your shell session, add the following to your .bashrc or the equivalent for your shell:</p>
-<p>Again, we can now use this key to authenticate to servers as if it were any other traditional on-disk key.</p>
-<p>If you want this key to be available unattended, or to services that don’t use a full shell such as systemd mount units, you can create a new key without a PIN (pass -N "" to the ssh-tpm-keygen command) and specify the socket path in ~/.ssh/config instead of relying on SSH_AUTH_SOCK (although this relies on the socket address being predictable – i.e. your UID being stable):</p>
-<p>Note that ssh-tpm-agent does not account for the values in the TPM Platform Configuration Registers (PCRs) which record the state of the booted system – firmware versions etc, so changes of hardware/firmware/OS will not cause the system to refuse to unseal the key (unlike, say, something like BitLocker). So ensure that using a PIN-free key is appropriate for your risk model before doing so.</p>
-<p>You will notice though that the private keyfile held on disk uses a .tpm extension this time. This is where an important caveat of the TPM method comes in – Unlike the YubiKey approach, the private key material is actually being stored on disk here. This is because TPM devices do not natively support enrolling SSH keys. So what is happening is that the private key material is being stored on disk in encrypted form, and the TPM is being used to decrypt it.</p>
-<p>This is still a device-bound credential as the key cannot be used without the TPM device even if the keyfile is leaked or exfiltrated but it is a relevant distinction compared to device-resident credentials such as -sk keys.</p>
-<p>As of macOS Sequoia, the Smart Card Auth system within macOS is able to natively handle SSH keys as identities.</p>
-<p>To export a handle to disk that allows OpenSSH to use the key from the secure enclave, you can do:</p>
-<p>When prompted for a pin during export, you can leave it blank as it isn’t used here. A public key and private key handle file will be created on-disk in the ~/.ssh directory.</p>
-<p>Note that the command above will export a key handle for all of the SSH keys you have enrolled in the Secure Enclave (you can create many if desired by repeating the process above). I wasn’t able to find a way to export individual key handles despite Apple’s docs suggesting that you should be able to with KEYCHAIN_CERTIFICATES. Your best bet will be to use a clear label using the -l flag when creating the key so you can easily find the handle for it after it has been exported to disk.</p>
-<p>Once we have our pubkey and handle file, we can process these as we normally would – copying the public key to an authorized_keys file on a remote host or adding it to whatever services we prefer.</p>
-<p>To use SSH keys from the Secure Enclave, we need to set SSH_SK_PROVIDER in our shell. We can add this to ~/.zshrc:</p>
-<p>After a restart of the shell, the key will work like any other – though you may need to specify it directly as in my case it wasn’t being autodiscovered by macOS’s SSH agent:</p>
-<p>If you run your Mac in what Apple calls ‘clamshell mode’ (i.e. a laptop with the lid shut), then the initial create-ctk-identity command will fail with an error like this:</p>
-<p>Unfortunately it seems that keys created with -t bio do actually require full TouchID in order to generate or use – unlike other operations such as unlocking the Safari Keychain or using Apple Pay which fall back to a user password when in clamshell mode.</p>
-<p>There is an option to use -t none to create a key without presence confirmation enabled at all. This carries the same risk as I discussed in the section about using YubiKeys unattended so you’ll have to decide whether it works for your risk model.</p>
-<p>If, like me, you use the machine in clamshell mode basically all the time there are some alternative options that still retain presence detection though:</p>
-<p>With a mix of these three approaches, I’ve finally been able to deprecate on-disk keys from all my setups.</p>
-<p>Hopefully some of the info in this post is helpful to people! It’s nothing that can’t already be found online but I’ve gathered it into one place mostly for my own convenience.</p>
-<p>The main gotcha to be aware of with hardware-resident keys is that they’re, well, hardware resident. Hardware malfunction/loss/change can render keys unusable. So it’s probably better to make sure you at least have multiple keys. Remember, authorized_keys can take as many keys as you care to put in it so redundancy is the best move here I think.</p>
+                <p>Android device manufacturer Videostrong allegedly ran the operation, which infected set-top boxes and IoT devices with a backdoor to create infrastructure for criminal activity.</p>
+<p>Google and industry partners disrupted the XCPE botnet, a cybercriminal operation that planted a backdoor in more than 1.3 million Android-based set-top boxes, turning consumer devices into infrastructure for malicious activity.</p>
+<p>The operation, attributed with "high confidence" by Google's Threat Intelligence Group (GTIG) to Android device manufacturer Videostrong Technology Co., involved deliberately embedding the XCPE backdoor malware in multiple device models and brands since at least 2024, according to a blog post published earlier this week by GTIG.</p>
+<p>Rather than simply exploiting vulnerable devices, however, the manufacturer allegedly built a system that allowed criminal affiliates to access compromised hardware and deploy their own malicious software, Google said.</p>
+<p>"Videostrong monetized the backdoor by selling access to criminal affiliates and loading those affiliates' malware modules onto infected devices," according to the post. "These secondary modules were conducting ad-fraud; silently enrolling infected devices into residential proxy networks; and loading additional malware onto XCPE-compromised devices."</p>
+<p>Related:Attackers Crash Claude's 'Office Party' Flaw to Run Malicious Code on Linux</p>
+<p>Google and its partners, which included Japan's National Police Agency, Lumen, HUMAN Security, Plume, Synthient, and TrendAI, took legal action against Videostrong to disrupt the domains and servers it used to control the botnet, install affiliate malware modules, and operate the command-and-control (C2) infrastructure used by those modules.</p>
+<p>Because the affiliate modules "each have diversified distribution channels for their modules beyond XCPE," Google assessed that disrupting their C2 infrastructure "will sever access to at least 10 million additional compromised devices," according to the post.</p>
+<p>Google has also cut ties with Videostrong and banned the manufacturer, along with any future subsidiaries or affiliates, from building or selling certified Android devices or supplying software to other certified vendors. Videostrong did not immediately return Dark Reading's request for comment on Wednesday.</p>
+<p>Most devices infected by the XCPE botnet were Android TV set-top boxes. However, the botnet also included other Android-based IoT devices, including telehealth equipment, karaoke machines, and digital signage systems, according to Google.</p>
+<p>This wider exposure of IoT devices is reflected in Bitdefender's "2026 IoT Security Landscape Report," released this week. The findings recorded 5.4 billion security events and 6.2 billion vulnerability observations across devices behind approximately 10.4 million monitored routers between January and September 2026. While these figures represent detected activity and identified device vulnerabilities rather than confirmed compromises, they underline the scale of the threat facing connected devices and the potential attack surface they present to businesses.</p>
+<p>Related:'Aokigahara' Stealer Targets 'Developer Keyrings' & AI Assistants</p>
+<p>While most of Videostrong's interactions with victim devices involved installing, uninstalling, and configuring malware modules, operators also carried out so-called "sensitive actions," according to Google. These include capturing live screenshots; injecting keystrokes; exfiltrating sensitive information, such as account and device details, package inventories, and system logs; and executing shell scripts and commands, including those used to establish reverse shells on infected devices.</p>
+<p>Although the operation primarily targeted consumer devices, it has significant security implications for businesses and enterprise organizations. XCPE demonstrates how compromised IoT equipment can be turned into criminal infrastructure, providing attackers with residential proxy networks that help conceal malicious activity, evade IP-based security controls, and facilitate fraud.</p>
+<p>Related:BeyondTrust Remote Support Zero-Day Continues Trend of Exploited Edge Bugs</p>
+<p>"By turning 1.3 million devices into residential proxies, threat actors fuel the exact infrastructure used to attack high-value API endpoints," says Mark Mazur, field chief technology officer (CTO) for mobile application security firm Approov.</p>
+<p>Because attacks launched through the botnet can originate from legitimate consumer IP addresses, standard security defenses such as geo-blocking, ASN blocking, and IP reputation filters "are practically useless against them," he says.</p>
+<p>"They are creating infrastructure, largely based on IoT devices, that can power sophisticated credential stuffing and API abuse campaigns," Mazur adds.</p>
+<p>The malware's ability to execute remote commands, conduct network reconnaissance, and maintain persistent access also raises concerns about connected devices deployed in corporate and healthcare environments. Digital signage, televisions, and telehealth equipment, for example, could provide attackers with an opportunity to explore networks or establish a foothold if compromised devices are connected to inadequately segmented networks. Google has not confirmed that any such activity has occurred, however.</p>
+<p>Google requires original equipment manufacturers (OEMs) to undergo a comprehensive suite of compatibility and security tests to participate in the Android ecosystem. However, Videostrong was able to evade these checks by "employing obfuscation techniques" that exploited a weakness in the review process, according to Google. The malicious code was loaded after the device's first boot, allowing it to bypass the initial security checks.</p>
+<p>Calling Videostrong's actions "an unacceptable breach of trust," Google said it has since strengthened its review processes to protect the integrity of Android TV firmware and "better safeguard against similar activity in the future," according to the post.</p>
+<p>As an additional protective measure, Google encouraged consumers to be wary of applications offering payment in exchange for "unused bandwidth" or "sharing your Internet," as these could turn their set-top boxes and other IoT products into part of a residential proxy network.</p>
+<p>"These applications are primary ways for illicit proxy networks to grow, and could open security vulnerabilities on the device's home network," according to the post.</p>
+<p>Google also urged Android users to stick to trusted app stores, review the permissions requested by third-party VPN and proxy applications, and ensure built-in security protections such as Google Play Protect are active.</p>
+<p>Finally, Google called on mobile platforms, ISPs, online marketplaces, and other technology providers to continue sharing threat intelligence and implementing security best practices to identify malicious backdoors, illicit proxy networks, and other harmful software to prevent similar botnet operations from emerging in the future.</p>
+<p>Elizabeth Montalbano is freelance writer, editor, and journalist with 30 years of professional experience and a master's degree from Arizona State University. Her areas of expertise include enterprise technology, cybersecurity, business, and culture. During her long career, Elizabeth has lived and worked as a full-time journalist in Phoenix, San Francisco, and New York City. She specializes in news coverage and analysis, using her years of experience to look at the current state of cybersecurity with a critical gaze. She currently resides in a village on the southwest coast of Portugal, where in her free time she enjoys surfing, hiking with her dogs, growing plants, and playing and performing as a singer and musician.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>From Shadow AI to Rogue Agents: Securing the AI You Can't See</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Prompt Injection 101: What It Is and How to Stay Ahead</p>
+<p>The Long Tail Is Now the Front Line: Reducing Frontier-AI & Third-Party App Risk</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://blog.infected.systems/posts/2026-11-03-i-deleted-all-my-ssh-keys/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/endpoint-security/google-13-million-device-strong-xcpe-botnet" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
