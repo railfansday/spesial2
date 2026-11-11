@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How I built a free 3D landing page with Next.js, Three.js and GSAP</title>
+    <title>How to Estimate the Recall of AI Agents with Capture-Recapture</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9730.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How I built a free 3D landing page with Next.js, Three.js and GSAP</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
+        <h1>How to Estimate the Recall of AI Agents with Capture-Recapture</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fy0on3k0vw9p7x8vp932g.jpg" alt="How I built a free 3D landing page with Next.js, Three.js and GSAP" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fy0on3k0vw9p7x8vp932g.jpg" alt="How I built a free 3D landing page with Next.js, Three.js and GSAP" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I wanted a landing page where the product is the hero: not a photo of a can, but a real 3D can you can grab and turn. The result is Juicy, a one-page site for a made-up juice brand. Four cans sit on a wheel. Scroll, press an arrow key or click a button, and the wheel turns a quarter, the next flavour comes to the front, and the whole page takes on its colours.</p>
-<p>This post walks through the decisions that made it work, with the real code from the repo.</p>
-<p>All versions are pinned exactly in package.json:</p>
-<p>My first instinct was one big Three.js scene with four cans on a rotating group. I went the other way: four small canvases, one per can, placed around an ordinary div, and the div is what rotates.</p>
-<p>That keeps the 3D work tiny (each canvas renders one model), keeps the layout in Tailwind where it is easy to change, and lets GSAP rotate the wheel like any other element.</p>
-<p>Each can gets a slot at 12, 3, 6 or 9 o'clock:</p>
-<p>The wheel itself is a 300vh square, so only the can at 12 o'clock is in view and the other three wait off screen:</p>
-<p>Note the dir="ltr" on the wheel. More on that in the RTL section.</p>
-<p>The rotation lives in one hook. It refuses to start a new turn while one is running, and it only updates the active can when the tween finishes:</p>
-<p>Relative values ("+=90") mean GSAP never has to know the absolute angle, so the wheel can turn forever in either direction.</p>
-<p>A trackpad fires dozens of wheel events for one swipe. A throttle of 800 ms turns that into one quarter turn. The keyboard handler also steps aside when someone is typing in a field (the page has a small sign-in form):</p>
-<p>isActive comes from an IntersectionObserver hook, so the wheel only listens while it is on screen.</p>
-<p>Each canvas is set up for a single object: device pixel ratio capped at 1.5, ACES tone mapping, sRGB output, a transparent background so the page colour shows through, and a lower power preference on phones. drei's PresentationControls lets you drag the can and snaps it back when you let go:</p>
-<p>That comment is a real lesson: a <Html> loading fallback inside the canvas looked tidy, but it crashed when Suspense swapped it out. The loader now lives in the DOM, outside the canvas.</p>
-<p>The cans are four .glb files in public/assets/3d/can/. All four start downloading as soon as the carousel mounts, so turning the wheel never waits for a model:</p>
-<p>When a model arrives, the hook clones the scene (so each canvas owns its own copy) and pushes the material towards polished metal:</p>
-<p>Only the can at the front reports "loaded". The page waits for that one, hides the loader, then fades the wheel and the fruits in. Nobody sees a half-built scene.</p>
-<p>The cans sway gently while you look at them. That runs every frame, so it lives in React Three Fiber's useFrame, driven by delta so the speed is the same at 60 Hz and 120 Hz. On phones the sway is damped to 30%:</p>
-<p>My rule of thumb: GSAP for things that happen because the user did something (a turn, a text swap), useFrame for things that never stop.</p>
-<p>drei's <Environment preset="forest" /> is one line, but it downloads the HDRI from a third-party host at runtime. I put the same file (Poly Haven's Forest Slope at 1k, CC0) in public/ instead, so the page makes no outside request and still works if that host is slow:</p>
-<p>The product text fades in when the flavour changes. The hook keeps a handle on the running tween and kills it before starting another, so fast clicking never stacks animations:</p>
-<p>The fruits fly from the centre to their places for the new flavour and back to the centre for the old one. Each fruit's tweens run inside a gsap.context, and ctx.revert() in the cleanup undoes them when the component re-renders or unmounts:</p>
-<p>The page colour needs no GSAP at all. A CSS transition on body does it:</p>
-<p>The page ships in English (/en) and Arabic (/ar). next-intl handles the routing, and the locale layout sets lang and dir on <html> on the server, so the Arabic page arrives right to left in the first byte of HTML:</p>
-<p>Two things went wrong the first time, and both are worth knowing if you mix RTL with a spatial scene:</p>
-<p>Fonts come from next/font/google: Anton for the big wordmark and Cairo for Arabic text, both free.</p>
-<p>Open http://localhost:3030. With Docker instead:</p>
-<p>There is no .env to create: every file the page loads, the models and the lighting included, ships in the repo.</p>
-<p>To swap a flavour, rename its id in src/types/juice.ts, and yarn typecheck lists every file you still need to update.</p>
-<p>The repo is MIT, so take it apart, reuse the wheel, or swap the cans for your own product. If you build something with it, I would like to see it.</p>
-<p>If you need more than a landing page, the same team makes full Next.js apps (website, dashboard and NestJS API) in English and Arabic: websites from $39, dashboards from $49 and full stack packages at $149, paid once. They are at aniq-ui.com.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>A fisheries estimator from the 1890s, tested on 294 CUAD contracts, landed within 2 points of true recall for most agents with a 10% hand audit.</p>
+<p>The post <a href="https://towardsdatascience.com/how-to-estimate-the-recall-of-ai-agents-with-capture-recapture/">How to Estimate the Recall of AI Agents with Capture-Recapture</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/aniqui/how-i-built-a-free-3d-landing-page-with-nextjs-threejs-and-gsap-m8c" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://towardsdatascience.com/how-to-estimate-the-recall-of-ai-agents-with-capture-recapture/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

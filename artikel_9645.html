@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOWeb 15</title>
+    <title>Cómo convertir la foto de una firma en un sello PDF transparente con Python</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9645.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,33 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>TOWeb 15</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
+        <h1>Cómo convertir la foto de una firma en un sello PDF transparente con Python</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fpoybmmzik1rmyz24zs0p.png" alt="Cómo convertir la foto de una firma en un sello PDF transparente con Python" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fpoybmmzik1rmyz24zs0p.png" alt="Cómo convertir la foto de una firma en un sello PDF transparente con Python" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Rewritten as a native Mac & Windows app, with AI and MCP
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/toweb?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1303317?app_id=339">Link</a>
-          </p></p>
+                <p>Una foto de firma tiene dos problemas antes de poder ir en un PDF. El papel no es blanco ni está iluminado de forma uniforme, así que pegar el JPEG tal cual deja un rectángulo gris sobre la línea de la firma. Y lo que pegues, el PDF lo guarda de dos formas muy distintas: como una anotación que cualquier lector puede arrastrar o borrar, o como parte de la página. La pestaña Scan y la opción Flatten comments del editor de PDF de la aplicación de escritorio de osFoundry hacen los dos trabajos. Abajo se reconstruye cada paso con Python, numpy, Pillow y PyMuPDF, con números medidos en este Mac. El código es mi propia versión de la idea, no el código fuente de la aplicación.</p>
+<p>La foto de prueba está generada, no es una foto real de móvil: un JPEG de 1280 × 940 con una firma cursiva sobre papel, con una caída de brillo desde una esquina y grano de papel. Así el problema es reproducible, pero es un ejemplo, no una medición de móviles reales.</p>
+<p>La forma obvia de quitar el papel es luminancia < T. En la foto de ejemplo, la luminancia del papel va de unos 202 (el 1 % más oscuro) a 235, y la tinta es mucho más oscura, así que algún T entre ambos parece bien:</p>
+<p>El nivel de luz es la foto multiplicada por 0.9, 0.8 y 0.7, como si se hubiera tomado en una habitación más oscura. «Píxeles de papel tomados como tinta» cuenta los píxeles fuera de un recuadro 40 px más ancho que la firma por cada lado, de un total de 917,666 píxeles en esa zona. T=190 está limpio con 1.0 y marcó 91,293 píxeles de papel en blanco con 0.9. Cualquier T fijo funciona con la luz para la que se ajustó y falla con la siguiente foto.</p>
+<p>En lugar de comparar con una constante, se estima el brillo del papel en cada píxel y se mide cuánto más oscuro es el píxel. Un filtro de máximo sobre una copia pequeña de la imagen elimina la tinta (la tinta es oscura, así que el máximo la ignora) y un desenfoque suaviza el resultado:</p>
+<p>El píxel de salida conserva el color de la foto y usa alpha como transparencia, así que un bolígrafo azul sigue azul y un sello rojo sigue rojo. En la última columna de la tabla anterior, la misma función marcó 0 píxeles de papel en todos los niveles de luz, y la firma sale con 26,526 píxeles con alpha superior a 0.05 con 1.0 y entre 26,511 y 26,544 en los otros tres niveles.</p>
+<p>El parámetro sens hace el papel del control Ink sensitivity de la aplicación (que empieza en 50), pero cómo se traduce a un umbral aquí es decisión mía. Con la misma foto:</p>
+<p>Con 100, la zona muerta es tan pequeña que el grano del papel empieza a contar como tinta, el mismo problema de motas que el control de la aplicación está para corregir. La extracción completa tardó de 61 a 65 ms para una foto de 1280 × 940 en este Mac, así que puede repetirse en cada movimiento del control.</p>
+<p>Escribir el resultado en un PNG con canal alfa y ponerlo en un PDF da dos resultados posibles, según la llamada de PyMuPDF que uses. Con el acuerdo de ejemplo y un recuadro de firma de 150 × 28.7 pt:</p>
+<p>Tras add_stamp_annot, la página tiene 1 anotación (tipo Stamp) y ninguna imagen. Borrar esa anotación con page.delete_annot se lleva la firma: el número de píxeles oscuros en el rectángulo de la firma pasa de 1,453 a 0. Tras doc.bake, la página tiene 0 anotaciones y 1 imagen, el bake tardó 2.0 ms, y borrar anotaciones después no quita nada (1,440 píxeles oscuros antes y después). El texto de la página sigue siendo seleccionable y extraíble, porque bake solo añade la imagen.</p>
+<p>El archivo que guardó la aplicación tras Flatten comments se ve igual al leerlo con PyMuPDF: 0 anotaciones, 1 imagen con máscara alfa, de 1032 × 198 px, dibujada en un rectángulo de 150 × 28.7 pt, unos 495 dpi en la página. El original de 87,708 bytes pasó a 101,785 bytes. Mi propio archivo con el sello salió mucho más grande (922,521 bytes, 922,681 tras el bake), porque escribí un PNG a tamaño completo y dejé que PyMuPDF lo guardara tal cual, así que en un script conviene reducirlo antes al tamaño impreso.</p>
+<p>El resultado es una imagen en la página. No demuestra quién la colocó y nada en el archivo detecta una edición posterior. Para eso hace falta una firma digital real (una firma PKCS#7 sobre el archivo), que es otro mecanismo. Para los formularios que solo piden una firma en la línea, un PNG alfa integrado en la página es lo mismo que una firma impresa y escaneada, sin el papel.</p>
+<p>Todo lo anterior se ejecuta con uvx --with pymupdf --with numpy --with pillow python -I script.py. La aplicación es gratuita en la página de descarga de osFoundry, y el editor trabaja con archivos en el equipo, en línea con su enfoque local-first.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/toweb" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/bestaitools-es/como-convertir-la-foto-de-una-firma-en-un-sello-pdf-transparente-con-python-4b9i" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

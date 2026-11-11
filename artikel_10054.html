@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Inkling by Thinking Machines</title>
+    <title>The AI bubble can wait, but your exit plan can&#x27;t</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10054.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Welcome Inkling by Thinking Machines</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
+        <h1>The AI bubble can wait, but your exit plan can&#x27;t</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/thinkingmachines-inkling/thumbnail.png" alt="Welcome Inkling by Thinking Machines" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5220460.jpg?imageId=5220460&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="The AI bubble can wait, but your exit plan can&#x27;t" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/thinkingmachines-inkling/thumbnail.png" alt="Welcome Inkling by Thinking Machines" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5220460.jpg?imageId=5220460&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="The AI bubble can wait, but your exit plan can't" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Inkling now comes in smaller size 🤗 Inkling-Small is out by Thinking Machines Lab. We have updated this post with performance, and deployment configurations for the Inkling-Small and the Inkling-Small-NVFP4 variants. Here’s the collection with all the Inkling models. We made it easier for you to deploy Inkling-Small with one-click on Inference Endpoints (getting up to 160 TPS). We also ship a real-time voice and image demo where you can interact with the model.</p>
-<p>Inkling is a large (1T params!) open model to natively accept image, text, and audio inputs.</p>
-<p>TLDR; Inkling by Thinking Machines is out on Hugging Face. Inkling is a huge multimodal LLM that understands all modalities (image, audio, text), has agentic capabilities, and supports 1M context. It comes in full BF16 and a well-calibrated NVFP4 variant, and includes speculative MTP layers for faster inference. There’s day-0 support in transformers, SGLang, vLLM, and llama.cpp. Thinking Machine Labs also released Inkling-Small with 276B total and 12B active parameters, as well as support for MXFP8 and NVFP4 weights, with the same architecture as Inkling.</p>
-<p>Inkling is the first large open model with ~1T parameters and 1M context window to natively receive image, text, and audio inputs, trained on 45 trillion tokens of text, images, audio and video. It’s focused on reasoning across modalities such as audio, images, and text; and is intended for domain adaptation via fine-tuning. We’ve tinkered with this model to build some demos and explore the architecture, and we think it’s great for building a new wave of multimodal reasoning apps.</p>
-<p>Inkling is a decoder-only multimodal Mixture-of-Experts model with 975B total and 41B active parameters. There are a lot of things going on, so let’s break each part down:</p>
-<p>Here’s a quick glance of the architecture.</p>
-<p>Relative attention: Instead of RoPE, which is the usual method to inject positional information in transformers models, Inkling uses relative attention to encode position information. Each attention layer learns position directly in the attention logits. Aside from key-query-values, there's a fourth projection producing a per-token, per-head relative feature R. This projection tensor is then tweaked with distance information (distance between the key and the query vector) and propagated into the attention module.</p>
-<p>Hybrid attention: The decoder layers alternate between global attention (attending to the full context length at once) and sliding window attention (attending to a fixed context window in a sliding fashion). The architecture has a pattern of 5:1 sliding window to global attention layers. This hybrid attention scheme provides efficiency in computation. The final layer uses global attention to help build feature-rich representations.</p>
-<p>Short convolution: The model uses a distinctive short 1D convolution, or SConv over the hidden states. SConv reads the current token and the previous W-1 hidden states, with W being the sliding window size. The intuition here is that SConv helps with local attention while freeing the attention and MoE modules from local representations.</p>
-<p>MoE with shared experts sink: In Inkling, the router scores both routed experts and shared experts. Top-k selection is performed over 6 experts, plus 2 shared experts always active.</p>
-<p>Vision understanding: The model includes a simple hierarchical MLP patchifier consisting of several linear layers. Each layer merges pixels progressively, until the final layer produces one embedding per patch.</p>
-<p>Audio understanding: The architecture employs a discretized mel spectrogram, where each of the audio chunks (of 100 ms) are converted to the mel scale and then classified into the exact mel spectrogram bin.</p>
-<p>The multimodal towers are relatively simple modules, unlike other models that employ separate encoders for each modality. Each image patch passes through the image embedding tower and the audio chunk is passed through the audio embedding tower to get both media embeddings. Image inputs also include an additional temporal dimension for video processing. We expect this capability to be useful for downstream fine-tuning, but we haven’t evaluated out-of-the-box video performance. The tower folds the patch grid, a small local block of neighboring tokens is stacked into the channel dimension and goes through hMLP. The audio waveform is converted to mel scale, which is then classified into a discrete mel bin. These mel bin values are embedded in the audio embedding tower and the embeddings are then summed to construct the final audio input.</p>
-<p>Inkling comes with day-0 transformers support and is supported in major inference engines like SGLang and vLLM.</p>
-<p>This model is huge. The bf16 checkpoint requires 2 TB of VRAM, while the nvfp4 version requires 600 GB of VRAM. You can try the model through serverless inference routers like Inference Providers, or use ggml quants for local deployment with llama.cpp.</p>
-<p>The easiest way to infer with transformers directly is to use the any-to-any pipeline. You can use either the 16 bit "thinkingmachines/Inkling" on Hopper or later GPUs, or the quantized NVFP4 checkpoint "thinkingmachines/Inkling-NVFP4" on Blackwell Nvidia GPUs. Make sure to have the latest version of transformers (5.14.0 was released today) (pip install -U transformers).</p>
-<p>After initializing the pipeline, you can pass in the prompt as follows.</p>
-<p>Going one level lower, you can use Auto classes. For inference, you can use the AutoModelForMultimodalLM class for models and AutoProcessor class for processors. For different reasoning tasks, the tokenizer takes in a reasoning_effort argument. Existing options for reasoning effort are "none", "minimal", "low", "medium", "high", "xhigh", and "max".</p>
-<p>For multimodal inference, you can use the same classes. We provide example snippets for each different modality in the model card.</p>
-<p>Inkling also takes in audio input. Below is an example inference snippet, which still uses the same AutoModelForMultimodalLM class.</p>
-<p>For more realistic parallel deployment in a cluster of several nodes, please refer to the Slurm section below.</p>
-<p>SGLang is one of the fastest deployment frameworks for Inkling at the time of release, as it includes a custom model implementation. The launch command below shards the model across 8 GPUs and serves an OpenAI-compatible API on port 30000.</p>
-<p>Match --tp-size to your GPU count. Add --mem-fraction-static (e.g. 0.85) if you need to leave more headroom for the KV cache.</p>
-<p>vLLM is strong for production serving. A single vllm serve command downloads the weights from the Hub, shards the model across your GPUs with tensor parallelism, and starts an OpenAI-compatible server on port 8000. You can view the vLLM Recipe for the model here to customize to your hardware.</p>
-<p>In practice, you might need multiple nodes and a distribution tool like SLURM (see below). Key parameters are --tensor-parallel-size to the number of GPUs on your node, and use --max-model-len to cap the context window if you hit KV-cache memory limits.</p>
-<p>You can infer with this model using several inference providers through Hugging Face. You can see all the code snippets to consume here. Below you can see how to use with the OpenAI client.</p>
-<p>Using the “:auto” suffix routes to your preferred provider in your settings; you can also use “cheapest” or “:fastest” as well. For this release, we cover the inference costs for 2 hours within the release for everyone.</p>
-<p>Note: audio support in Inference Providers is work in progress and will be added shortly.</p>
-<p>You can use llama.cpp to run quantized versions of the model on limited hardware. Unsloth have quantized the model down to 1-bit precision, reducing VRAM consumption by 95% over the original model.</p>
-<p>This starts an OpenAI-compatible server running at http://localhost:8080/v1 that you connect to in your preferred tool or clients. Heading there, you can start chatting with the model, and set it up with your favorite MCPs, pass in images or files conveniently and more!</p>
-<p>Llama cpp also ships with a built-in UI that supports tools, mcp, and agentic workloads. Checkout Inkling running at 1-bit precision in the llama app:</p>
-<p>Inkling GGUFs are also runnable in Unsloth Studio with dynamic 1-bit GGUFs which retain ~74.2% of top-1% accuracy whilst being 86% smaller.</p>
-<p>Pi is a minimal coding agent harness you can use with different language models. You can use Pi with either an inference engine server endpoint, such as llama.cpp, or with Inference Providers on Hugging Face by adding this to your ~/.pi/agent/models.json after installation.</p>
-<p>Then you can start Pi in your project directory by calling pi and you’re good to go! In this demo, we give the model a hard math reasoning problem and it uses tools in pi to solve it.</p>
-<p>Inkling is focused on broad multimodality reasoning and low token consumption, so try it out with document processing or audio tasks.</p>
-<p>MTP adds extra layers to the model that predict several tokens at once, not just the next one. During inference, the extra layers act as “drafters” for speculative decoding, speeding up generation without compromising performance. With MTP, you get the exact same generated outputs, multipliers in generation speed-up at small memory cost in VRAM (due to serving the drafter). Thinking Machines also provides an MTP drafter with this release.</p>
-<p>We have prepared a small suite of reasoning questions from expert-level sources and university entrance exams. We have taken photos of the screen with watermarks in the screenshot to challenge the model. The model has solved all of them on high one, failed one in highest and medium reasoning efforts, so we provide a link to the model answers for you to check out how the model sounds and provide the number of tokens the model has taken to solve each of them. Note that we provide no system prompts in these vibe evals, and these reasoning questions should often be run with a good system prompt. The vibe eval images and results live here.</p>
-<p>We have vibe-evaluated the model on some audio reasoning examples from BigBenchAudio and a few multilingual audio examples of GlobeAudio (Russian and Chinese multi-choice questions asking the last word in transcription). The BigBenchAudio examples we tested consist of logical statements and questions that either ask for formal fallacies (whether an argument can be logically deduced from the context given in audio) or object counting (stating multiple distinctive objects in the audio, asking for the total count of a certain one). Although this benchmark is initially made for speech-to-speech reasoning, we just want to see audio reasoning capabilities of this model. For GlobeAudio, the questions are relatively straightforward, so we ran with reasoning efforts of 0.1. We ran the first example of each language within GlobeAudio. All tests pass on all questions and efforts, except for second formal fallacy example on lowest effort, so we only provide the number of tokens spent in each question against reasoning effort. Vibe eval results and audio files live here.</p>
-<p>If you would like to use Inkling for post-training, Thinking Machines have built tinker, a managed tool for post-training open weight models. Their cookbook includes examples for fine-tuning, distillation, and reinforcement learning.</p>
-<p>We post trained Inkling with tinker and OpenEnv, an agentic RL environment tool. We used the ECHO algorithm that trains a model to predict the environment without a verifier, applying next-token cross-entropy loss to tokens produced by the environment, alongside the usual policy learning on agent actions. This teaches the policy an implicit world model without requiring a separate model, teacher, or additional rollouts. Check out the example.</p>
-<p>If you’re working with Transformers Reinforcement Learning we suggest using Inkling as a teacher model in a knowledge distillation setup. For example, take advantage of Inkling’s document understanding abilities to improve the performance of a smaller (on-device) model. In this example, we use the transformer reinforcement learning library and the GOLD algorithm to distill knowledge. GOLD is handy here because it matches token logits between different tokenizers, so you can distill to any model on the hub.</p>
-<p>Below you can find each Inkling checkpoint as well as their VRAM requirements.</p>
-<p>To deploy Inkling on a cluster, we provide SLURM scripts serving with transformers API, as well as how to query the endpoint with different modalities. You can adapt these scripts to vLLM or SGlang by updating the commands. These scripts live here.</p>
-<p>You can deploy an Inkling-Small NVFP4 checkpoint using Inference Endpoints. We provide a pre-tested configuration to deploy it on 8 RTX PRO 6000s with an aggregated VRAM of·768 GB, giving large space for KV cache, costs $ 22 per hourly uptime (scales to zero when unused). To deploy, run hf endpoints catalog deploy --repo thinkingmachines/Inkling-Small-NVFP4 using the Hugging Face CLI or alternatively, head to https://endpoints.huggingface.co/new/thinkingmachines/Inkling-Small-NVFP4. With this setup, you can get 140 TPS (single user inference, prepared for multi-user support with continuous batching)</p>
-<p>Once the endpoint is up, you can query as follows.</p>
-<p>Releasing a natively multimodal model (text, vision, and audio) open-weights is a huge step forward for the open-source AI ecosystem! Having variable and controllable thinking effort built into a MoE architecture makes Inkling a really attractive foundation for fine-tuning. Excited to test out the smaller 12B active parameter variant for local agent workflows at https://geometrydashsubzero.io</p>
+                <p>Infrastructure spending outruns measurable returns, with supplier finances key to judging when trouble arrives</p>
+<p>The AI bubble isn't about to burst, Forrester reckons, although businesses should prepare for a correction that could upend their suppliers, contracts, and prices.</p>
+<p>Spending on infrastructure has raced ahead of measurable returns, the analyst says, yet the financial strength of the companies funding the build-out is what keep Forrester from predicting an imminent crash.</p>
+<p>"Fears that an AI bubble is about to burst are premature," said Forrester emerging technology veep Brian Hopkins.</p>
+<p>"About nine-tenths of the money building today's AI computing infrastructure comes from large, healthy technology companies paying out of their own cash flow. The risk is concentrated in a few places: a small number of builders under real financial strain, and circular financing deals with the AI labs."</p>
+<p>Conveniently, Forrester has developed an AI Bubble Model to help technology leaders monitor the risks and prepare.</p>
+<p>Its latest report, "An AI Bubble Burst Is Not Imminent," notes what many in the IT industry, including The Register, have been saying for a while: that the hyperscale operators are committing a record share of revenue into capital expenditure to bring online more infrastructure to support AI development and use.</p>
+<p>At the same time, the boost in productivity doesn't justify this supplier capacity build-out. Forrester calculates that the infrastructure investments break even only if AI raises US GDP by 5 percent by 2035. Published estimates suggest productivity improvements could provide about two percentage points of that uplift, leaving roughly $1.3 trillion to come from other sources of value.</p>
+<p>A recent report from management consultants Bain & Company came to similar conclusions, estimating the AI industry needs to generate $6 trillion in annual revenue by 2031 to keep funding all the infrastructure it needs, and this will require new uses beyond simply enhancing employee productivity.</p>
+<p>Forrester also claims that the forces making AI abundant also make parts of the market unstable, and says that enterprise users should take heed of how prices collapsed as major providers like Anthropic slashed token costs in response to competition from open source models.</p>
+<p>If demand disappoints as new capacity comes online, suppliers could cut investment, merge, change prices, or discontinue products. Customers could find themselves rebuilding AI plans around suppliers and services that no longer exist.</p>
+<p>Forrester advises businesses to track whether their AI projects deliver measurable value and limit their exposure to vulnerable suppliers – with its help, of course.</p>
+<p>Companies can judge how things are going by looking at the gap between suppliers' contracted business and revenue actually recognized, along with how they fund their build-outs. If a vendor leans more on outside investment and customer prepayments, as Oracle and CoreWeave have, this is a red flag to cut back dependencies on them, Forrester says.</p>
+<p>Enterprises should also stress-test AI plans against scenarios such as a key vendor announcing end of support in 12 months, and an AI model supplier defaulting on payments to its compute vendor and cutting back service-level agreements for enterprise workloads. Companies should know in advance which AI use cases to drop, what data and workloads need to be moved, and at what cost.</p>
+<p>But Hopkins sounded a further note of caution: "Oversupply on its own won't decide whether a correction comes. Demand will, and that's the biggest unknown, because it depends on enterprises finding lasting value in AI beyond simple productivity gains."</p>
+<p>Organizations shouldn't pull back, he insists. They should keep investing where AI delivers value that can be demonstrated, closely monitor the financial health of the companies building AI computing, and be ready for corrections.</p>
+<p>Recently, the International Monetary Fund started ringing alarm bells that financial markets are increasingly exposed to an AI-driven correction that could lead to widespread economic disruption.</p>
+<p>Earlier this year, the Bank for International Settlements also raised concerns that the current situation with the AI industry bore the hallmarks of historical economic bubbles and presented a risk to global economic stability. ®</p>
+<p>How much damage can a rogue agent do in 35 seconds? Asking cos that’s how long it might take to shut one down</p>
+<p>New regulator will require modelmakers to test and allow inspection, but not much more</p>
+<p>PARTNER CONTENT: 300+ AI applications delivering surges in core metrics and annual cost reduction of over CNY100m</p>
+<p>Sheets, Whiteboards, and Data artifact types bring Claude closer to a productivity suite</p>
+<p>Altman, Torvalds, Yen. One has got his head screwed on. The others could do with some grounding</p>
+<p>Newer server processors pack more cores into fewer boxes, creating a need for network speed</p>
+<p>Chips boast up to 256 cores, clocks up to 5.3 GHz, and IPC gains of 20 to 31 percent, just not all on the same SKU</p>
+<p>Cores, clocks, memory, and interconnects all perfectly balanced for a singular mission: keeping instinct fed.</p>
+<p>Inference biz pins latest breach on cloud provider and LLMJacking miscreants</p>
+<p>A mountain of CVEs, a certificate cleanup, and yet more work for Microsoft's patching teams</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>OpenVDDK is reportedly already being used in production, at scale</p>
+<p>Combining the NetBSD kernel with the Alpine Linux userland</p>
+<p>Canonical has a long way to catch up, but it knows who it's chasing</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/thinkingmachines-inkling" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/ai-and-ml/2026/11/09/the-ai-bubble-can-wait-but-your-exit-plan-cant/5308415" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

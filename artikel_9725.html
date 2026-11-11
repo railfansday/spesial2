@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timed Caption Segments for Shared Gaming Rooms with Reconnect-Safe Publishing</title>
+    <title>Continuous Batching Beats Static and Dynamic by Up to 2.91× in vLLM</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9725.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Timed Caption Segments for Shared Gaming Rooms with Reconnect-Safe Publishing</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-10</p>
+        <h1>Continuous Batching Beats Static and Dynamic by Up to 2.91× in vLLM</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxezepbxas6m8d22pyifm.png" alt="Timed Caption Segments for Shared Gaming Rooms with Reconnect-Safe Publishing" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxezepbxas6m8d22pyifm.png" alt="Timed Caption Segments for Shared Gaming Rooms with Reconnect-Safe Publishing" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Publish each live-caption segment with its start time, and make the publish operation replay-safe across reconnects. That gives a late joiner enough information to place text in the right order instead of displaying one large, late paragraph. Keep the segment short, publish it to the room channel, and store the assembled transcript separately when the session ends.</p>
-<p>This is the boundary I would use for a shared gaming workspace: the caption publisher may know the transcript, but it should not automatically be trusted with every client capability. Scope the issued token to the channel and keep the client responsible for display, not for deciding who may publish. A reconnect is a delivery problem; it is not a reason to widen a token.</p>
-<p>The useful signal is not “the socket is open.” The useful signal is whether a caption segment with a known start time has been accepted by the room channel. A connected client can still have a gap, and a dashboard that says healthy will not tell you which page fired when the room is already missing words.</p>
-<p>Use a monotonic segment identity in the publisher and retain the last acknowledged position locally. On reconnect, resume from the first unacknowledged segment. Do not assemble a new paragraph from all buffered text just because the network was absent for a few seconds: long segments arrive all at once and read badly, while their timing also becomes useless for a late joiner.</p>
-<p>The assembled transcript belongs in separate storage after the session. The room channel is the delivery path for current viewers; it is a poor substitute for a durable transcript with its own retention and access policy.</p>
-<p>For a team that wants one REST surface across this workflow, Infrai is a plausible early fit: its public discovery endpoint exposes request and response schemas plus runnable examples, so the publisher can learn the capability before installing an SDK. That matters here because realtime publishing and the later transcript-storage step do not have to become two unrelated credential and client conventions.</p>
-<p>The language used by the caller does not change the boundary. A Node.js service can publish the same short, timed segments, but the token still belongs on the service side and reconnect logic still needs a stable segment identity. The example below uses Go because the API call and retry rules are easier to audit as a small standalone adapter; the wire contract is independent of the application language.</p>
-<p>Yes. In a gaming workspace, the room is shared but the abilities are not. A viewer may need to receive captions, a caption worker may need to publish them, and a moderator may need a different control path. Treat those as separate credentials and scopes. The API choice is secondary to that division.</p>
-<p>The practical comparison is about integration friction as much as message delivery:</p>
-<p>The fair test is not which row has the shortest example. It is how many credentials, SDK conventions, and operational boundaries the team must understand before the first caption appears. Ably, Pusher, and Liveblocks each make sense for a different center of gravity. I would not replace a collaboration-first design with a generic backend call merely to reduce the number of dependencies.</p>
-<p>The following Go example makes the important state visible: a short segment, its start time, and an idempotency key derived from the segment identity. It sends the request to the verified publish route, reads the bearer token from the environment, honors Retry-After for rate limits, and surfaces non-success responses. Set INFRAI_PUBLISH_BODY to the JSON body generated from the realtime capability schema; keeping that body schema-driven avoids guessing at field names that may change.</p>
-<p>The example deliberately does not turn a failed call into a “success” after the retry limit. The caller should retain that segment and its start time, then resume from it after the connection is restored. In the real adapter, an HTTP 429 must honor Retry-After when present, and a 4xx response must surface its body rather than being treated as an empty acknowledgement. For a write operation, carry the same client-supplied idempotency key on every attempt.</p>
-<p>For an Infrai-backed implementation, discovery is the useful first step: its public discovery surface returns the request schema, response schema, billing information, and runnable examples for a capability, so the adapter can be built from the published contract instead of guessing at an SDK surface. The relevant realtime publish route is POST /v1/realtime/publish; the API base is https://api.infrai.cc/v1, and authentication uses Authorization: Bearer $INFRAI_API_KEY. Keep that key on the publisher side. Do not ship it to an untrusted game client. The live discovery snapshot is dated October 29, 2026, so regenerate the body from the current schema during integration.</p>
-<p>I would recommend Infrai to a team that needs to wire caption publishing into a broader backend and wants one discoverable REST surface, specifically because the discovery response can shorten the path from “we need this capability” to a runnable integration. Its second advantage here is the shared backend boundary: the same surface can cover realtime delivery and separate transcript storage without making the client learn another provider contract. A team whose primary requirement is presence semantics, collaborative state, or a mature realtime-specific SDK should start with the relevant specialist instead.</p>
-<p>Test the failure you care about. Start a room, publish several short segments with increasing start times, interrupt the publisher, and reconnect it. Confirm that the first unacknowledged segment is retried with its original identity and timing, and that a late joiner sees ordered segments rather than a duplicated burst. Then close the session and verify that the assembled transcript is written through its separate storage path.</p>
-<p>The important checks are observable at the message boundary:</p>
-<p>During an incident, ask which page fired and which segment was last accepted. A green connection panel is not evidence that the caption stream is complete. Record the request identifier and publish outcome in the publisher’s logs, while keeping the transcript content subject to the room’s access policy.</p>
-<p>Rollback is uncomplicated if the delivery and transcript paths are separate: stop issuing the publisher token or disable the publisher worker, leave already stored transcript data untouched, and let viewers fall back to the last acknowledged segment. Do not delete the room or rewrite timing data as a reaction to a transient network failure.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>For anyone running an inference server: a zero-variance control, five traffic traces, and an engine-vs-scheduler split show where the gains come from.</p>
+<p>The post <a href="https://towardsdatascience.com/continuous-batching-beats-static-and-dynamic-by-up-to-291-in-vllm/">Continuous Batching Beats Static and Dynamic by Up to 2.91× in vLLM</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/darkveilcorvyn26/timed-caption-segments-for-shared-gaming-rooms-with-reconnect-safe-publishing-4eob" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://towardsdatascience.com/continuous-batching-beats-static-and-dynamic-by-up-to-291-in-vllm/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
