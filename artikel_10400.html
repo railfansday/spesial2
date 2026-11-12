@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mixture of Experts (MoEs) in Transformers</title>
+    <title>Prompt Management in TypeScript: LangSmith vs Git vs 3 Open-Source Registries</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10400.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,80 +15,60 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Mixture of Experts (MoEs) in Transformers</h1>
+        <h1>Prompt Management in TypeScript: LangSmith vs Git vs 3 Open-Source Registries</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/moe-transformers/thumbnail.png" alt="Mixture of Experts (MoEs) in Transformers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_30801a8838.png" alt="Prompt Management in TypeScript: LangSmith vs Git vs 3 Open-Source Registries" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/moe-transformers/thumbnail.png" alt="Mixture of Experts (MoEs) in Transformers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_30801a8838.png" alt="Prompt Management in TypeScript: LangSmith vs Git vs 3 Open-Source Registries" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Over the past few years, scaling dense language models has driven most progress in LLMs. From early models like the original ULMFiT (~30M parameters) or GPT-2 (1.5B parameters, which at the time was considered "too dangerous to release" 🧌), and eventually to today’s hundred-billion–parameter systems, the recipe was simple:</p>
-<p>More data + more parameters gives better performance.</p>
-<p>Scaling laws reinforced this trend, but dense scaling has practical limits:</p>
-<p>This is where Mixture of Experts (MoEs) enter the picture.</p>
-<p>If you're already familiar with MoEs and want to jump straight into the engineering work done in transformers, you can head directly to Transformers and MoEs.</p>
-<p>A Mixture of Experts model keeps the Transformer backbone, but replaces certain dense feed-forward layers with a set of experts. An “expert” is not a topic-specialized module (e.g., "math expert", "code expert"). It is simply a learnable sub-network. For each token, a router selects a small subset of experts to process it.</p>
-<p>Different tokens activate different experts, based on their hidden representations.</p>
-<p>Model capacity depends on total parameters, but inference speed depends on active parameters.</p>
-<p>For example, take gpt-oss-20b. It has 21B total parameters, but uses 4 active experts per token, out of a total of 32 experts. Considering the shared components plus the active experts, this model uses ~3.6B active parameters per token. Running this model on an M3 Ultra Mac, which has a memory bandwidth of about 800 GB, we could estimate generation speed as ~ 800 / (3.6 * 2) in bfloat16, where each parameter takes 2 bytes. This yields about 111 tokens per second. The actual performance number we get is ~115 tok/s, which is very close to the back-of-the-envelope calculation.</p>
-<p>This super fast speed confirms the model works approximately as a 3.6B parameter one, but it has the same capacity (or quality) as a 21B parameter model.</p>
-<p>(Note: speed would be even faster if we used kernels for the native mxfp4 quantization the model uses).</p>
-<p>Given a fixed training FLOP budget, MoEs often outperform dense counterparts.</p>
-<p>This means faster iteration and better scaling efficiency.</p>
-<p>Experts provide a structural boundary in the computation graph. Since different tokens engage different experts, we can parallelize across experts (we discuss this later in Expert Parallelism).</p>
-<p>Recent major MoE releases of open models that happened in the past few weeks include Qwen 3.5, MiniMax M2, GLM-5, or Kimi K2.5.</p>
-<p>The trend accelerated after the success of DeepSeek R1 in January 2025, building on earlier systems like DeepSeek V2. Another early MoE was Mixtral-8x7B, released in December 2023.</p>
-<p>Closed labs use MoEs too. ChatGPT has long been rumored to use a sparse architecture, and the open gpt-oss models certainly do.</p>
-<p>If you want to learn more about MoEs in general, we strongly suggest reading this blog and watching our recent YouTube video on routing.</p>
-<p>Most tooling in the ecosystem, including model loading, device placement, quantization, and backend execution was originally designed for dense models. MoEs challenge these assumptions.</p>
-<p>Making MoEs first-class citizens in transformers means redesigning parts of the loading pipeline, execution model, and distributed abstractions, not just adding new model classes. We’ll focus on how the transformers library has evolved to support sparse architectures across:</p>
-<p>AutoModelForCausalLM.from_pretrained("model_id") downloads and loads model weights into a PyTorch model. For dense models, loading is relatively straightforward where each tensor in the checkpoint maps one-to-one to a parameter in the runtime module.</p>
-<p>For MoEs, it’s more complicated. In most MoE checkpoints, each expert is serialized independently. If you peek inside the DeepSeek-V3 checkpoint index, you’ll see keys like:</p>
-<p>Each expert has its own set of weight matrices, essentially 256 (0 to 255 total, taking DeepSeek-V3 as an example) small feed-forward networks saved side by side. At runtime, however, GPUs execute optimized kernels. Modern MoE kernels such as grouped GEMMs and fused MoE implementations are designed to process all experts in a single operation, not by looping over them one at a time.</p>
-<p>To do that efficiently, they require expert weights to be packed into a single contiguous tensor.</p>
-<p>Bridging this gap systematically is what the weight loading refactor enables.</p>
-<p>With the introduction of a generic WeightConverter, the mental model shifted from:</p>
-<p>A checkpoint already matches my runtime layout; loading is mostly a key-by-key copy.</p>
-<p>A checkpoint is just a serialized source of tensors. Loading is a conversion pipeline that transforms them into the runtime layout we want.</p>
-<p>The central abstraction introduced by this refactor is dynamic weight loading via a WeightConverter.</p>
-<p>Primitive operations (chunk, concatenate, etc.) are composable. Two that are particularly useful for MoEs:</p>
-<p>MergeModulelist merges a list of tensors into a single tensor. For example, you can compose MergeModulelist with Concatenate to stack the experts in a MoE and pack them into one tensor.</p>
-<p>SplitModulelist splits a tensor back into a list of tensors. For example, you can split a stack of experts back into individual experts.</p>
-<p>The refactor improves not just what conversions exist, but how they’re scheduled.</p>
-<p>The loader scans checkpoint keys once, matches them against converter patterns, and groups tensors per converter. Once a key is identified as needed, it’s registered as a future and materialized via a thread pool. Conversion operations run only once their dependencies are ready. For example, MergeModulelist waits until all experts for a layer are loaded.</p>
-<p>This avoids repeated scans and reduces memory peaks.</p>
-<p>To evaluate the improvements introduced by the new weight-loading pipeline, we benchmarked the v4 vs v5 versions of transformers. The focus is on loading speed of large MoE models, which is often a bottleneck in training and inference.</p>
-<p>HF_ENABLE_PARALLEL_LOADING: Enables parallel shard loading via threads.</p>
-<p>HF_DEACTIVATE_ASYNC_LOAD:Disables the new async pipeline (v5 escape hatch).</p>
-<p>Model: Qwen/Qwen1.5-110B-Chat
-GPU: 1× A100 (80GB)</p>
-<p>It’s the combination of Single-pass routing, Async materialization, and Conversion-aware scheduling which together avoid unnecessary materialization and memory peaks while enabling expert packing and projection fusion at load time.</p>
-<p>With this refactor we can now create the runtime module structure first and then convert the weights into the structure. We can now optionally attach quantization within the conversion pipeline, making quantization part of the weight loading pipeline itself. This is crucial because quantizing “per expert” only makes sense once experts exist in a predictable packed layout.</p>
-<p>This end to end pipeline was not possible earlier and now it comes to the users as an exposed API.</p>
-<p>Once experts are packed into a single runtime tensor, another question arises:</p>
-<p>How do you actually route through them efficiently?</p>
-<p>In a Mixture of Experts model, each token is routed to different experts. This means the runtime must dispatch tokens to their selected expert weights, execute the projections efficiently, apply the routing weights and then collect and reorder the results.</p>
-<p>This is what the Experts Backend system (introduced in PR #42697) addresses. The Experts Backend introduces a pluggable execution architecture that decouples expert computation from the model implementation. Instead of hardcoding one dispatch strategy inside each MoE model, the system allows expert layers to dynamically select a backend at runtime.</p>
-<p>This is implemented via a decorator pattern:</p>
-<p>The decorator wraps expert classes and dispatches computation to the selected backend automatically.</p>
-<p>eager which loops over the selected experts and applies projections per expert. This is used for correctness reference and debugging.</p>
-<p>batched_mm uses the torch.bmm API. This duplicate selected expert weights per token and performs a single batched GEMM. This backend is very well suited for small batch, GPU-heavy workloads where memory is available.</p>
-<p>grouped_mm uses torch._grouped_mm API. Here we sort tokens by expert ID, group them, and then perform a single grouped GEMM. This backend shines with large batches or memory-constrained setups.</p>
-<p>Mixture of Experts (MoE) models can have hundreds of billions of parameters (far more than what fits on a single GPU). Expert parallelism (EP) addresses this by distributing experts across multiple devices. Each device loads only its assigned subset of experts, computes for those experts and then participates in result aggregation. This approach scales models to far larger parameter counts without increasing computation cost because each token activates only a few experts.</p>
-<p>Expert parallelism is enabled via enable_expert_parallel:</p>
-<p>Where N evenly divides the total number of experts, and possibly matches the number of GPUs in your node.</p>
-<p>When enable_expert_parallel=True, the model switches from the standard tensor-parallel (TP) plan to an expert-parallel (EP) plan with specialized sharding strategies.</p>
-<p>GroupedGemmParallel: This splits the expert weights along the expert dimension (dim=0). Here each device loads only num_experts / num_devices.</p>
-<p>RouterParallel: This remaps global expert indices to local indices, masks out experts not assigned to the current rank, ensures each device computes only with its local experts and uses an all-reduce to combine partial outputs across devices.</p>
-<p>MoEs are excellent for scaling inference, but training them is significantly more complex.</p>
-<p>MoEs have a Massive parameter count, the distributed expert communication is complicated, there are routing in-stabilities that need to be handled. To address this, we collaborated with Unsloth to enable significantly faster Mixture-of-Experts training:</p>
-<p>We leverage the Expert Backend abstraction, standardize around PyTorch’s torch._grouped_mm API and use custom Triton grouped-GEMM + LoRA kernels. Unsloth builds on top of the Transformers (and TRL) optimizations to push performance further.</p>
-<p>For full details, we recommend reading: Unsloth’s official guide</p>
-<p>As sparse architectures continue to evolve, we want the transformers library to evolve with them. If you’re building with MoEs or experimenting with new sparse ideas, we’d love to hear from you. Let us know what abstractions, kernels, or workflows you’d like to see next in transformers.</p>
-<p>The enable_expert_parallel flag hiding the complexity of GroupedGemmParallel + RouterParallel behind a single config is a great DX win — distributing experts across devices used to require a lot of custom plumbing.</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>Every prompt registry we tested can change a prompt in a running TypeScript app, roll it back, and give production and staging different versions. LangSmith's prompt hub, Langfuse, Phoenix and AcruxCore all passed those three tests. The real differences show up elsewhere: which template syntax each one accepts, how many npm packages it pulls in, how long a change takes to reach the app, and what happens when the registry is down.</p>
+<p>We tested all of this with one small app and one prompt, which has a condition and a loop. Git files served as the baseline. Every number below comes from a recorded run.</p>
+<p>Most teams start with prompts in code: a template string, or a .txt file next to the code that uses it. That works until a product manager wants to change one sentence, and the change has to wait for a full release.</p>
+<p>A prompt registry moves the text out of the deploy. The app fetches the prompt by name and by a label such as production. You change which version the label points to, and the app picks up the new text without a deploy.</p>
+<p>LangSmith's prompt hub is the best-known registry, but it is not the only one. Several of the LangSmith alternatives also manage prompts, and three of them are open source and self-hostable: Langfuse, Phoenix and AcruxCore. We covered how those tools handle tracing in Self-Hosted LangSmith Alternatives: 4 Tools Tested on One TypeScript Agent. This article covers prompts only.</p>
+<p>Every tool got the same prompt, support-reply. Its template takes three variables: a customer name, a plan, and a list of help articles. It has one condition: a priority line appears only for premium customers. It also has one loop: one line per help article. In Jinja2 syntax, the template looks like this:</p>
+<p>One help article contains the text Settings > Export. We included it on purpose, to catch any tool that HTML-escapes > into &gt;.</p>
+<p>Every tool then ran the same sequence from a TypeScript script:</p>
+<p>Each tool used its own documented TypeScript SDK. The four registries passed all six steps. The rest of this article covers how each one got there, and what it cost.</p>
+<p>Keeping prompts in the repository costs almost nothing. The template sits in prompts/support-reply.njk, and nunjucks, the JavaScript port of Jinja2, renders it:</p>
+<p>The autoescape: false line matters. Our first version called nunjucks.renderString() directly, and the test failed. The default environment HTML-escapes its output, so Settings > Export reached the model as Settings &gt; Export. Escaping is correct for web pages and wrong for prompts.</p>
+<p>Git gives you full Jinja2, code review on every prompt change, and history in the same place as the code. What it can't do is change a prompt in a running app. Every edit, and every rollback, waits for a deploy.</p>
+<p>LangSmith stores a prompt as a serialized LangChain object (ChatPromptTemplate), not as plain text. LangSmith's own documentation says you must use the LangChain npm package to pull prompts in TypeScript (Manage prompts programmatically). So a plain TypeScript app that uses the openai package still needs langchain and @langchain/core:</p>
+<p>Those three packages installed 23 packages and 70 MB. Most of the size is @langchain/* (27 MB) and js-tiktoken (22 MB).</p>
+<p>Templates. In TypeScript, LangChain accepts f-string and mustache templates. Mustache sections ({{#docs}}…{{/docs}}) handled our loop. Mustache has no ==, though, so the premium check became an is_premium boolean computed in code. We also tried templateFormat: "jinja2", which LangChain's Python package supports. In TypeScript it threw DEFAULT_PARSER_MAPPING[templateFormat] is not a function.</p>
+<p>Labels and rollback. production and staging are reserved tags, and the documentation moves them in the UI. The langsmith JavaScript client has no public method that moves a tag. Our script called the same REST route the SDK uses internally (POST /api/v1/repos/-/<name>/tags). It worked, but it is not a documented API.</p>
+<p>Caching. The SDK caches prompts for 300 seconds by default. In our test, a running app saw the new version 300 seconds after we moved the tag.</p>
+<p>Langfuse's TypeScript client is one package, @langfuse/client. It installed 5 packages and 8 MB:</p>
+<p>Creating a version, moving a label and reading by label are all public SDK calls: prompt.create, prompt.update and prompt.get (Get started with prompt management).</p>
+<p>Templates. The documentation shows only {{variable}} substitution. But compile() calls the mustache library, so sections worked for our loop. The type signature accepts only string values, so passing a list needed a cast. The Langfuse UI colours the section tags red, and it lists title and body as the prompt's variables, not docs or is_premium. We would not depend on behaviour the documentation doesn't promise. When we sent the Jinja2 version instead, Langfuse returned the {% if %} and {% for %} tags unchanged, with no error. The model would have received them as text.</p>
+<p>Caching. The cache time is 60 seconds by default (Caching). Our app saw the change after 62 seconds. Langfuse is also the only client with a fallback option: a prompt string the SDK uses when it cannot reach the server on a cold start.</p>
+<p>Phoenix's TypeScript client fetches a prompt by name and tag, and toSDK() converts it into the message format the openai package expects. Phoenix templates only replace variables, so the condition and the loop have to run in your code before rendering:</p>
+<p>That is 16 lines, against 6 to 8 for the other registries. All the extra lines are template logic that now lives in the app.</p>
+<p>Templates. Phoenix offers MUSTACHE, F_STRING and NONE formats (Prompts reference). Even in MUSTACHE mode, though, rendering is a plain replacement of {{name}}. When we sent mustache sections, they came back unchanged, with no error.</p>
+<p>Errors. getPrompt() catches every error, logs it and returns null. You can see this in the client source, src/utils/getPromptBySelector.ts. A missing prompt and an unreachable server look the same to your code, which is why the snippet checks for null.</p>
+<p>Size and caching. The client installed 57 packages and 90 MB. Most of that is OpenTelemetry, which comes in through its @arizeai/phoenix-otel dependency. The client has no prompt cache, so every render is a network call. That is also why a label change showed up immediately: 0 seconds in our test.</p>
+<p>AcruxCore stores Jinja2 templates and renders them on the server with nunjucks. The SDK sends the variables and gets back finished messages:</p>
+<p>The template from the test section works as it is, condition and loop included, with no is_premium flag computed in code. A label is called an alias here, and promoteAlias() moves it (Manage prompts via the SDK). The SDK installed 3 packages and 12 MB. Most of the 12 MB is one OpenTelemetry package, @opentelemetry/semantic-conventions.</p>
+<p>Templates. Jinja2 only. When we committed the mustache version, AcruxCore rejected it at commit time with Template parse error: unexpected token: #. That is a clear error, but it also means that moving mustache prompts from LangSmith or Langfuse requires rewriting them.</p>
+<p>We sent the same two templates, a Jinja2 one and a mustache one, to each tool's own renderer:</p>
+<p>The rows that matter most are the ones where the tags were left in the output, because those failures produce no error. The model receives raw template syntax, and the only symptom is a strange answer. Whatever tool you pick, test one prompt with logic in it before you move the rest.</p>
+<p>Putting logic in the template is not automatically better. It lets someone change the condition without a deploy. It also lets them break the condition without a deploy. Keeping logic in code, as Phoenix forces you to do, puts every branch under code review and in your tests.</p>
+<p>A registry is a new runtime dependency, so we tested an outage. The app reached each registry through a local proxy, and we switched the proxy off. A separate process then started while the registry was still unreachable.</p>
+<p>LangSmith, Langfuse and AcruxCore keep serving the last good version while the registry is down, even after the cache time has passed. The risk is a cold start: a new container or a serverless function that boots during the outage. Langfuse's fallback option is the built-in answer to that. With the other tools, keep a copy of each prompt in your code as a fallback, which brings back part of the Git setup.</p>
+<p>Keep prompts in Git if engineers make every prompt change and your deploys are quick. Set autoescape: false, and you get Jinja2, reviews and history for free.</p>
+<p>Use LangSmith's prompt hub if you already use LangChain, or already trace with LangSmith. If your app doesn't use LangChain, budget for the extra dependency and for the tag moves that only the UI supports.</p>
+<p>Use Langfuse if you want a small client, a local compile(), and a fallback for cold starts. Keep to {{variable}} substitution unless you are comfortable relying on mustache behaviour that the documentation doesn't promise.</p>
+<p>Use Phoenix if you already use it for tracing, or if you prefer all template logic in code. Remember the null check, and that every render is a network call.</p>
+<p>Use AcruxCore if you want real conditions and loops in the template and rendering on the server. Expect one network call per new set of variables, and a personal API key for writes.</p>
+<p>Before you choose, run one of your own prompts with real logic in it through the tool's SDK, not through its playground. Two of the four registries we tested failed on template syntax without any error, and an SDK run is where you would see that.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/moe-transformers" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/prompt-management-in-typescript-langsmith-vs-git-vs-3-open-source-registries/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build a Reliable Analytics Pipeline Before Moving to a Data Warehouse</title>
+    <title>Generating Web-Ready Images With AI: Formats, Sizes, and srcset Done Right</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10927.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,93 +15,93 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Build a Reliable Analytics Pipeline Before Moving to a Data Warehouse</h1>
+        <h1>Generating Web-Ready Images With AI: Formats, Sizes, and srcset Done Right</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_banncyh_1fb6d2c246.png" alt="Build a Reliable Analytics Pipeline Before Moving to a Data Warehouse" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Optimizing_AI_Images_for_the_Web_160c66a320.png" alt="Generating Web-Ready Images With AI: Formats, Sizes, and srcset Done Right" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_banncyh_1fb6d2c246.png" alt="Build a Reliable Analytics Pipeline Before Moving to a Data Warehouse" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Optimizing_AI_Images_for_the_Web_160c66a320.png" alt="Generating Web-Ready Images With AI: Formats, Sizes, and srcset Done Right" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Category: Databases / Back-End Development</p>
-<p>Meta description: Build a reliable analytics pipeline with SQL. Learn to handle duplicate records, late updates, data quality tests, and reporting before warehouse migration.</p>
-<p>A dashboard can load quickly and still report the wrong number. A retried import might count an order twice. An update might arrive after the daily report has run. A join might multiply rows without producing a database error.</p>
-<p>For developers moving application data into analytics, these problems deserve attention before platform selection. A larger warehouse can process an incorrect query faster, but it cannot decide what your metrics should mean.</p>
-<p>This tutorial walks through a small order-reporting pipeline. You will define the grain of a dataset, handle repeated deliveries, select the latest record version, and test the output before exposing it to a dashboard.</p>
-<p>“Show daily sales” sounds specific until someone asks which date, currency, or order status counts.</p>
-<p>What is the current total value of paid orders, grouped by order date?</p>
-<p>Orders whose latest version has a paid status</p>
-<p>Integer minor units; the sample uses USD cents</p>
-<p>Later order versions can revise earlier dates</p>
-<p>Current-state reporting, not an as-of ledger</p>
-<p>That final distinction matters. If an order changes from paid to refunded, this report removes it from the paid-order total on its original order date. It does not record a refund event on the refund date.</p>
-<p>An accounting-style report would need a different model, usually based on transactions or adjustments. A table of current order states cannot answer every historical question.</p>
-<p>A useful pipeline has three responsibilities:</p>
-<p>●     Raw storage preserves incoming records and ingestion metadata.</p>
-<p>●     Staging models normalize types, identify duplicates, and apply source ordering rules.</p>
-<p>●     Reporting models express business definitions at a documented grain.</p>
-<p>Keep these responsibilities distinct even if they initially live in one database.</p>
-<p>For example, raw data might contain five deliveries of an order update. Staging resolves those deliveries to one current order. Reporting then groups qualifying orders into daily totals.</p>
-<p>This separation gives failures a location. If the raw layer is missing an update, changing the dashboard query will not fix the extraction process.</p>
-<p>For a refresher on the statements used to create, populate, and query these layers, see SitePoint’s guide to SQL commands.</p>
-<p>The following SQL uses PostgreSQL-compatible syntax and fictional records. Run it in a disposable development database.</p>
-<p>The dataset contains three deliberate challenges:</p>
-<p>●     Order 101 moves from pending to paid.</p>
-<p>●     Its paid version is delivered twice.</p>
-<p>●     Order 102 changes from paid to refunded.</p>
-<p>A naive sum of every row marked paid returns 27,500 cents. Under our metric contract, the correct result is 12,500 cents: the latest paid versions of orders 101 and 103.</p>
-<p>The difference comes from record semantics, not query performance.</p>
-<p>Use a window function to select the newest version of each order:</p>
-<p>The order of operations is essential. If you filter for paid records before ranking versions, order 102’s refunded version disappears before the query can consider it. The earlier paid version then looks current.</p>
-<p>This example assumes the source supplies a monotonically increasing version per order. The ingestion identifier breaks ties between repeated deliveries; it does not establish which business update is newest.</p>
-<p>If two deliveries share an order ID and source version but contain different values, treat that as a source-contract violation. A deterministic tie-breaker makes the result repeatable, but it cannot determine which conflicting payload is correct.</p>
-<p>A successful SQL execution only proves that the database accepted the query. Add checks for the assumptions the report depends on.</p>
-<p>For example, this query identifies conflicting payloads for the same source version:</p>
-<p>When the project grows, dbt data tests provide a way to organize assertions about uniqueness, nulls, relationships, accepted values, and custom business rules. Custom tests can return the records that violate an assumption.</p>
-<p>Tests should also cover behavior, not only table shape. Extend the fixture with a late-arriving older version and confirm that it does not replace the latest state. Add an exact repeated delivery and confirm that the totals remain unchanged.</p>
-<p>The views above recompute their results from all available raw records. That makes the demonstration easy to understand, but repeatedly scanning the full history may become expensive.</p>
-<p>An incremental pipeline needs additional rules:</p>
-<p>●     Track which order IDs changed in the incoming batch.</p>
-<p>●     Recompute current state for those IDs using their available history.</p>
-<p>●     Replace or merge their modeled rows instead of blindly appending.</p>
-<p>●     Rebuild the affected reporting groups.</p>
-<p>If an update changes an order’s date or currency, both the old and new reporting groups need attention. Refreshing only the new group leaves a stale amount behind.</p>
-<p>Do not assume that “yesterday’s partition” contains every record that changed yesterday. An update received today can affect an order created months ago.</p>
-<p>Apache Airflow’s best-practice guidance discusses designing tasks for retries and repeatable inputs. Regardless of scheduler, make the batch boundary explicit and advance checkpoints only after the required output has been committed successfully.</p>
-<p>Hard deletes need their own policy too. If a source silently removes a record, a pipeline that only imports changed rows will not discover the deletion. Use deletion events, tombstones, or periodic reconciliation according to the source’s capabilities.</p>
-<p>You do not need an orchestration platform, transformation framework, and new warehouse to validate one metric.</p>
-<p>Prototype schemas, transformations, and reporting queries</p>
-<p>When a separate development or analytics database is sufficient</p>
-<p>Organize SQL models, dependencies, documentation, and tests</p>
-<p>When transformations become a maintained project</p>
-<p>Schedule dependent jobs and manage retries</p>
-<p>When several pipeline steps require coordinated execution</p>
-<p>Lint SQL using the project’s configured dialect</p>
-<p>When shared SQL needs consistent review standards</p>
-<p>Choose storage separately from orchestration. A scheduler does not decide how facts should be modeled, and a transformation framework does not guarantee source completeness.</p>
-<p>Before adopting a warehouse, measure query duration, concurrency, freshness requirements, and interference with application traffic. For some workloads, precomputed results are enough to improve reporting responsiveness; SitePoint’s materialized-view tutorial explains that approach in PostgreSQL. Refresh behavior and acceptable staleness still need an explicit policy.</p>
-<p>A migration becomes easier to evaluate when the team can show a small working pipeline, documented metrics, representative queries, and known failure cases.</p>
-<p>For teams evaluating data warehouse consulting services, those artifacts make a useful review brief. Ask for concrete decisions about source ordering, historical changes, reconciliation, access controls, and recovery procedures, together with the assumptions behind any cost estimate.</p>
-<p>Keep the review focused on observable outcomes. For example:</p>
-<p>●     Can a failed batch be replayed without changing correct totals?</p>
-<p>●     How are conflicting source versions detected?</p>
-<p>●     Which reports change when an old order is updated?</p>
-<p>●     Can a dashboard total be traced back to source records?</p>
-<p>●     Who owns freshness alerts and recovery?</p>
-<p>These questions also help an internal team review its own design. The important deliverable is a system whose behavior can be explained and tested.</p>
-<p>A dashboard total needs context about when its underlying data became usable.</p>
-<p>Track the latest successful ingestion, transformation, and validation separately. A recent extraction timestamp does not prove that downstream models finished building.</p>
-<p>Likewise, a quiet source can make an event timestamp look old even when ingestion is healthy. Combine source activity with pipeline execution metadata before deciding that the data is stale.</p>
-<p>Define the serving behavior when checks fail. You might keep the last validated result available with a visible freshness warning rather than replace it with an unverified total. Store the successful version if that is the policy: a live view over changing raw data does not preserve a previous validated snapshot.</p>
-<p>A trustworthy analytics pipeline begins with a precise question and a testable data model.</p>
-<p>Define the reporting grain, preserve incoming records, resolve source versions before filtering, and verify that retries do not alter correct results. Then measure whether the workload needs a different storage platform.</p>
-<p>Those foundations make a future warehouse migration easier to reason about and make the dashboard useful before that migration begins.</p>
+<p>AI-generated images are becoming an important part of modern web development. Developers use them for website banners, product visuals, blog illustrations, backgrounds, and other digital content. However, creating an image is only the first step. Preparing it for efficient web delivery is equally important.</p>
+<p>Unoptimized images can increase page size, consume unnecessary bandwidth, and delay page rendering. These problems can affect Core Web Vitals, especially Largest Contentful Paint (LCP), which measures how quickly the largest visible content element appears.</p>
+<p>This guide explains how to optimize AI-generated images using practical techniques, including image resizing, modern formats, Node.js automation, responsive delivery, and performance testing.</p>
+<p>Images often represent a significant portion of a webpage's total download size. When developers upload large images without processing them, visitors may experience slower loading times, particularly on mobile networks.</p>
+<p>Large image files that take longer to download.</p>
+<p>Incorrect dimensions for different screen sizes.</p>
+<p>Missing image dimensions that cause layout shifts.</p>
+<p>Excessive compression that reduces visual quality.</p>
+<p>Unnecessary downloads caused by poor responsive configuration.</p>
+<p>A consistent optimization workflow helps address these problems while maintaining the intended visual appearance.</p>
+<p>Before preparing an image, determine where it will appear on the website. A full-width hero banner requires different dimensions from a product thumbnail or a small article illustration.</p>
+<p>These are suggested dimensions, not fixed requirements. The actual size depends on the website layout and the devices being supported.</p>
+<p>When preparing source visuals, developers can compare different AI image tools to understand how image generation workflows handle aspect ratios, output dimensions, and visual details.</p>
+<p>Regardless of the generation method, keep an original high-quality version. This master file can be used to create smaller versions without repeatedly compressing an already optimized image.</p>
+<p>Choosing an appropriate image format can reduce file size while maintaining acceptable visual quality.</p>
+<p>AVIF: Provides efficient compression for many photographs and detailed illustrations.</p>
+<p>WebP: Supports lossy and lossless compression, transparency, and animation.</p>
+<p>JPEG: Remains useful for photographs and environments requiring broad compatibility.</p>
+<p>PNG: Suitable for screenshots, lossless graphics, and images that require transparency.</p>
+<p>No format is automatically the best choice for every image. Developers should compare the resulting file sizes and inspect image quality before selecting a format.</p>
+<p>For technical details, consult the MDN Web Docs guide to image file formats.</p>
+<p>Manually resizing multiple images can become time-consuming. Automation provides a consistent way to generate different image dimensions and formats.</p>
+<p>Sharp is a Node.js library that supports resizing, compression, and image conversion.</p>
+<p>The script generates WebP and AVIF versions at several widths.</p>
+<p>The quality values are starting points. Adjust them after checking the output for compression artifacts, loss of detail, and unnecessary file size.</p>
+<p>For additional configuration options, refer to the official Sharp documentation.</p>
+<p>Responsive image delivery allows browsers to select an appropriate image based on available resources and screen layout.</p>
+<p>The HTML srcset attribute provides multiple image candidates, while sizes describes the expected rendered width.</p>
+<p>The browser uses the available image candidates and layout information to select a suitable resource.</p>
+<p>Make sure the sizes attribute accurately reflects the actual website layout. Incorrect values can cause browsers to download larger images than necessary.</p>
+<p>Responsive delivery is particularly useful when the same visual appears in different layouts across desktop, tablet, and mobile devices.</p>
+<p>The HTML picture element allows developers to provide alternative image formats with a fallback.</p>
+<p>The browser selects a supported source, while the img element provides fallback behavior and alternative text.</p>
+<p>Always verify that the referenced files exist and that their dimensions match the intended layout.</p>
+<p>Images without defined dimensions can cause page content to move while resources are loading. This can negatively affect Cumulative Layout Shift (CLS).</p>
+<p>Include width and height attributes whenever possible:</p>
+<p>The browser can use the dimensions to reserve the appropriate space before the image finishes loading.</p>
+<p>Images below the initial viewport can also use native lazy loading:</p>
+<p>However, avoid lazy-loading the main hero image when it contributes to LCP. Important above-the-fold images should be loaded promptly.</p>
+<p>Reducing file size should not significantly affect the visual details required by the website.</p>
+<p>This is particularly important for images containing:</p>
+<p>A practical quality-checking process includes:</p>
+<p>Compare the optimized image with its original version.</p>
+<p>Inspect the image at its actual display dimensions.</p>
+<p>Test the output on mobile and desktop screens.</p>
+<p>The smallest file is not necessarily the best option. A slightly larger image may provide noticeably better visual quality.</p>
+<p>After implementing the optimization workflow, test the actual website rather than relying only on exported file sizes.</p>
+<p>Open Chrome DevTools and select the Network panel. Filter requests by images and reload the webpage.</p>
+<p>Mobile devices receive appropriately sized images.</p>
+<p>The browser downloads unnecessary image files.</p>
+<p>Modern formats are being served correctly.</p>
+<p>Important images load without unnecessary delays.</p>
+<p>Image dimensions match their display requirements.</p>
+<p>You can inspect the image source selected by the browser using:</p>
+<p>For websites containing multiple images, inspect each relevant element.</p>
+<p>Finally, run an audit using Google PageSpeed Insights. It can help identify oversized images and other performance issues.</p>
+<p>The web.dev guide to optimizing LCP also provides useful technical guidance for diagnosing loading delays.</p>
+<p>Remember that image optimization is only one part of website performance. Server response times, caching, CSS, and JavaScript execution can also influence page loading.</p>
+<p>Uploading original images without checking their dimensions.</p>
+<p>Assuming one image format always provides the best compression.</p>
+<p>Using incorrect responsive image settings.</p>
+<p>Lazy-loading important above-the-fold images.</p>
+<p>Ignoring the actual image selected by the browser.</p>
+<p>Measuring file size without checking visual quality.</p>
+<p>A proper testing process helps identify these issues before they affect visitors.</p>
+<p>No. AVIF often provides efficient compression, but results depend on image content, encoding settings, and quality requirements. Comparing both formats is the best approach.</p>
+<p>Four to six sizes may be sufficient for many websites. The ideal number depends on the layout, responsive breakpoints, and supported devices.</p>
+<p>Yes. Reducing the size of the main content image, providing responsive versions, and avoiding unnecessary loading delays can improve LCP when that image is the largest contentful element.</p>
+<p>No. Lazy loading is useful for images outside the initial viewport. Important images near the top of a webpage should generally load promptly.</p>
+<p>The fundamental optimization techniques are the same as those used for conventional images. However, generated visuals may contain complex textures and fine details that require careful inspection after compression.</p>
+<p>AI-generated images can improve website design, but efficient delivery requires more than simply exporting and uploading a visual.</p>
+<p>Choose suitable dimensions, compare modern image formats, automate processing, and implement responsive delivery. Include image dimensions to prevent layout shifts, prioritize important visual elements, and test the results across different devices.</p>
+<p>By following these practices, developers can maintain visual quality, reduce unnecessary downloads, and create faster, more reliable website experiences.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/build-a-reliable-analytics-pipeline-before-moving-to-a-data-warehouse/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/generating-web-ready-images-with-ai-formats-sizes-and-srcset-done-right/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Best Queue Design for User Reminder Retries, Dead Letters, and Email Failures</title>
+    <title>Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9733.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,37 +15,81 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Best Queue Design for User Reminder Retries, Dead Letters, and Email Failures</h1>
+        <h1>Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method.</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fnae79vpry4q1ytw4q77s.png" alt="Best Queue Design for User Reminder Retries, Dead Letters, and Email Failures" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2026-08/steam-bread-baking-.jpg" alt="Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fnae79vpry4q1ytw4q77s.png" alt="Best Queue Design for User Reminder Retries, Dead Letters, and Email Failures" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2026-08/steam-bread-baking-.jpg" alt="Is a gas oven bad for bread?: Why a gas oven may be interfering with your go-to steaming method." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Short answer: use a queue as the delivery system for user reminders, make every email or webhook consumer idempotent, and send repeatedly failing work to a dead-letter queue that operators can inspect and redrive.</p>
-<p>The effective cost is the whole operating bill: queue calls, downstream email or webhook sends, engineering time, duplicate-send risk, and recovery time. A low per-operation price cannot rescue a design that makes an operator reconstruct lost reminder state at 03:00.</p>
-<p>This is the uncomfortable boundary: acknowledging before the provider call can lose a reminder, while acknowledging afterward can produce a duplicate. Idempotency closes that gap. I've been paged by missed jobs and duplicate deliveries; the runbook question is always the same: can we prove what happened for one delivery key without guessing?</p>
-<p>Retry only failures that can plausibly clear. Honor Retry-After on HTTP 429, add exponential backoff and jitter, and cap attempts. Permanent validation failures belong in the dead-letter queue immediately; exhausted transient failures go there after the retry budget. A DLQ is not storage. It is a quarantine lane with an owner, an alert, inspection data, and a redrive procedure.</p>
-<p>For Infrai, a pull worker uses POST /v1/queue/consume and acknowledges completed work with POST /v1/queue/ack. Push delivery instead requires a public HTTPS consumer endpoint. Teams with private workers should stay with pull consumption. I recommend trying Infrai for the reminder-delivery layer when a small team wants queue access through plain HTTP without installing or tracking a vendor SDK; its consistent REST conventions under one key also reduce integration work when the same service later needs another backend capability.</p>
-<p>The catch is real. Infrai has no native fan-out topic, so a shipment update that drives email, webhook, and analytics processors must be published explicitly to separate queues. Its standard queues still require idempotent consumers. Delays cannot exceed seven days, messages cannot exceed 256KB, retention tops out at 30 days, and acknowledged messages are deleted rather than retained for Kafka-style replay. Choose a specialist when those boundaries define the workload.</p>
-<p>Then add the hidden lines. How many SDKs and credentials must be maintained? Can an operator locate poison work without a database query? Does redrive preserve the delivery key? Will retention support the investigation window? What does a duplicate email cost the support team? I'm not sure which of those dominates in your system; workload traces and incident records settle that, and your mileage may vary.</p>
-<p>Use the following table as a boundary check, not a universal ranking.</p>
-<p>Stick with SQS or Cloud Tasks when cloud-native policy and telemetry are already the lowest-friction path. Pick RabbitMQ when routing control justifies owning the broker. Use Temporal for multi-step workflows or joins, which Infrai does not provide. PostgreSQL can be a reasonable first queue at modest scale, but only if the team accepts owning claim, retry, quarantine, and observability behavior. Kafka is the better category when replay and independent consumer groups are requirements rather than nice-to-haves.</p>
-<p>The queue vendor cannot make an external email send exactly once. Build the consumer contract first: stable key in, durable state check, provider call with the same key, state transition, then acknowledgement. Keep the email body out of the queue when it approaches the payload limit; enqueue a reference to durable data instead.</p>
-<p>This runnable Go example first reads Infrai's public queue.create discovery contract, so the integration can inspect the current request schema instead of copying guessed fields. It then compresses the consumer pattern into memory so the ordering is visible. Production code should put AlreadySent and MarkSent in a transactional durable store. The fake downstream provider returns 429 once, including a retry delay, then accepts the send. A duplicate delivery after success is skipped. The discovery call is read-only; queue writes should use Authorization: Bearer <key> with a key read from INFRAI_API_KEY, an explicit method, status checks, and an idempotency key where the discovered capability declares it.</p>
-<p>The example sleeps because it is executable documentation. A real worker should return control to the queue with a delayed negative acknowledgement rather than occupy a process while waiting. Keep the retry counter in message metadata or durable delivery state, and retain the last status code plus a bounded response excerpt for diagnosis. Do not store credentials or full customer content in that record.</p>
-<p>For a multi-channel shipment update, publish distinct jobs with distinct keys to the email and webhook queues. This explicit fan-out costs more queue operations than a topic, but it also gives each channel its own concurrency, retry budget, and DLQ. That separation is often worth more than shaving a call from the bill because a webhook outage cannot exhaust email worker capacity.</p>
-<p>Before release, send one known job, force one retryable 429, and confirm the provider receives a stable idempotency key on both attempts. Deliver the same queue message again after success and verify that the consumer acknowledges it without sending again. Next, force a permanent validation failure, confirm it reaches the DLQ with its delivery key and attempt history, correct the underlying data, and redrive only that item.</p>
-<p>Rollback means stopping the new producer path while allowing known-good workers to drain, not switching delivery back into the scheduler. Cron tasks are limited to 900 seconds and paused schedules do not backfill missed triggers, so long work should remain “cron enqueues, worker consumes.” Expect second-level trigger jitter; reminder promises should not depend on exact subsecond execution.</p>
-<p>If a reminder must wait longer than seven days, keep its due state in the system of record and use cron to enqueue it inside the supported delay window. If an incident investigation requires replay beyond 30 days, mirror the immutable event to a log designed for retention. Those are architecture changes, not retry settings.</p>
-<p>If this boundary fits your system, start with the Infrai documentation and validate the queue schema against one real reminder workload before committing the integration.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Adapted from King Arthur Baking Company’s Big Book of Bread</p>
+<p>One of the most crucial steps for making crusty artisan-style bread comes at the very end: steaming.</p>
+<p>Baking bread with steam is critical for achieving expansive, open-crumbed loaves with a golden, crisp crust. If you bake bread in a dry oven, the crust quickly sets, which prevents the dough from expanding to its full potential; this, in turn, leads to loaves with a denser crumb. If you introduce steam at the start of the bake, the crust remains moist and pliable and the loaf can stretch and expand before the crust sets, resulting in a lighter, more open crumb.</p>
+<p>What’s more, steam also helps gelatinize starches on the loaf’s exterior, which helps it brown and creates an especially crispy, flavorful, and shiny loaf. (Learn more: A guide to baking bread with steam at home.)</p>
+<p>There are many different ways to steam your bread, all of which are designed to introduce moisture to the oven during the first part of baking. The most common method involves setting a large cast-iron skillet below your baking stone or steel when you preheat the oven. After you load your bread into the oven, you immediately pour a cup or so of warm water into the preheated cast-iron skillet and quickly close the door so the steam doesn’t escape.</p>
+<p>This method works great, with one exception: It’s not effective in a gas oven.</p>
+<p>If you have a gas oven, it’s very hard to add sufficient steam. By design, gas ovens vent out effluence, meaning whatever steam you add is very quickly vented out of the oven chamber. This is particularly true if you steam your bread by pouring hot water into a cast-iron skillet, as outlined above. All the water quickly dissipates, and there’s not enough moisture left to enhance the crust.</p>
+<p>But all is not lost. There is a workaround.</p>
+<p>If you’re steaming bread in a gas oven, you need to use a preheated covered baker, such as a Dutch oven. Instead of adding an additional water source, the lidded vessel traps the steam that escapes from the loaf as it bakes, becoming a kind of self-steaming oven. Because the steam is sealed in, the gas oven won’t vent it out.</p>
+<p>You can use a Dutch oven for a round, boule-shaped loaf, or any other form of covered baker, like the Brod & Taylor Bread Steel for elongated, bâtard-shaped loaves. (There’s also a round version of the Bread Steel available.)</p>
+<p>For more guidance on this method, see our previous blogs, Bread baking in a Dutch oven and For crispy, crackle crusts, put a lid on it.</p>
+<p>When you load your dough into the oven, slip a few ice cubes between the parchment beneath your loaf and the pan to give the loaf an extra initial burst of steam. Just don’t skip the parchment beneath the dough. Otherwise, the extra water from the melting ice may cause your bread to stick to the pot.</p>
+<p>Cover photo and food styling by Martin Philip.</p>
+<p>Top tips from the Things Bakers Know podcast.</p>
+<p>Mini pies may be the secret to a stress-free celebration.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>A baker’s guide to our new T85 Baker's Reserve Bread Flour.</p>
+<p>Don’t fall for this classic sourdough starter trick.</p>
+<p>A tactical guide to managing your sourdough baking (while still having a life).</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/suttonhawkins6723/best-queue-design-for-user-reminder-retries-dead-letters-and-email-failures-b2g" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/09/10/is-a-gas-oven-bad-for-bread" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

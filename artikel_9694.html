@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Levo</title>
+    <title>Offline voice replies on a $35 Raspberry Pi: LinnetTTS integration in Python</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9694.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Levo</h1>
+        <h1>Offline voice replies on a $35 Raspberry Pi: LinnetTTS integration in Python</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fogqto5dylqxu91x223f2.png" alt="Offline voice replies on a $35 Raspberry Pi: LinnetTTS integration in Python" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fogqto5dylqxu91x223f2.png" alt="Offline voice replies on a $35 Raspberry Pi: LinnetTTS integration in Python" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Your AI agent finds what's safe to delete on your Mac
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/levo-3?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1308172?app_id=339">Link</a>
-          </p></p>
+                <p>A Pi voice assistant usually comes in four pieces: wake-word catches "Hey Assistant", VAD detects when someone is talking, KWS or streaming ASR converts the speech into a command, and something answers with a voice.</p>
+<p>LinnetTTS shipped on 2026-11-04. 41M params, on-device, Rust runtime, no PyTorch at inference. It runs comfortably on a Raspberry Pi 4 (Pi Zero 2 W also handles it, but on the edge). This tutorial shows how to pip install it and plug voice replies into your Pi voice assistant in one sitting.</p>
+<p>If you built the Pi 4 voice pipeline from my earlier tutorial, this article closes the loop.</p>
+<p>Adding offline TTS is not just a drop-in replacement for cloud TTS. It changes three things on a Pi:</p>
+<p>On licensing: LinnetTTS is an open-source on-device TTS runtime (Apache-2.0) with openly available model weights under a free license that permits commercial use; voice cloning and model training are licensed separately.</p>
+<p>For this tutorial we use the built-in linnet-en-f1. Custom voice cloning is a separately licensed service from VoxRT and not part of the free tier.</p>
+<p>soundfile is for writing WAV files, sounddevice is for real-time playback through ALSA.</p>
+<p>PyPI wheels available: manylinux 2.17 x86_64 and aarch64, macOS Apple silicon. Pi 4 on 64-bit Raspberry Pi OS is aarch64, so you get a wheel. On 32-bit Pi OS there is no wheel, so reflash to 64-bit or build from source.</p>
+<p>Pi 4 with 2 GB or more RAM is recommended. The model resident is about 160 MB, plus Python, plus your voice-assistant stack. A 1 GB Pi 4 can work but is tight.</p>
+<p>Important: the model files are not in the wheel. Download the weights release from GitHub releases tag weights-v1:</p>
+<p>Run on Pi 4: python synthesize.py produces hello.wav with the female voice reading "Hello from your Raspberry Pi." Short sentences complete quickly in batch mode.</p>
+<p>Batch (model.synthesize) returns the full audio array when generation is done. Simpler code, one call, you own the array. Good for pre-generated phrases, voice samples saved to disk, or tests where latency does not matter.</p>
+<p>Streaming (session.prime + chunk iteration) yields chunks every 80 ms so playback can start before the full sentence is generated. First audio arrives after the prime pass plus one step. On a Pi 4 that is usually tens of ms. Good for real-time assistant replies, live chatbot voices, or any UX where the user is waiting for the first sound.</p>
+<p>For the Pi assistant integration below we use streaming, because the alternative (waiting for the whole reply to generate before playing it) adds perceivable delay to confirmation messages.</p>
+<p>Batch mode is fine for pre-generated phrases. For a real-time assistant you want streaming: the user hears first audio within the first prime pass, not after the whole generation finishes.</p>
+<p>Playback on Pi 4 via sounddevice is the easy route:</p>
+<p>The first chunk arrives after the prime pass (voice latent load + text processing + context decode). On Pi 4 that is a few tens of ms. After prime, chunks stream every 80 ms of wall-clock time or faster (the model runs faster than real time on Pi 4).</p>
+<p>If prime latency matters to you, the v0.2 API caches voice preparation inside load_voice, so prime itself only runs text rows. That optimization alone cuts cold-path first-audio by 2 to 3 times across our test configurations (Core i9 desktop, iPhone 13 Pro Max, iPhone 11, Snapdragon 662 Android).</p>
+<p>If you built the pipeline from my "Pi 4 voice assistant" tutorial, this is a simple add-in.</p>
+<p>Add a TTS reply for confirmation or feedback:</p>
+<p>Keep model and voice pre-loaded at startup. Re-initializing per command adds prime overhead to every reply.</p>
+<p>Verified public numbers exist only for Pi Zero 2 W: 59 to 60 ms per step on 4 cores (75% RTF, real-time with margin), confirmed via an independent sustained 30-minute test. Pi 4 is architecturally higher in clock speed and cores, so we expect comfortable margin. A specific Pi 4 RTF measurement is still pending.</p>
+<p>In practice: if Pi Zero 2 W can sustain LinnetTTS, Pi 4 can do it comfortably. For confirmation in your own deployment, measure prime time and step time on your target configuration, and decode vcgencmd get_throttled once a second if the workload is sustained and always on.</p>
+<p>Thermal nuance: Pi Zero 2 W in a closed case without airflow can get close to the soft limit (80°C) under sustained TTS load. Pi 4 with a stock heatsink or active cooling is usually fine. On production deployments log get_throttled sticky bits (bits 16-19) to catch throttle events that fire between polling samples.</p>
+<p>A few things that trip people on the first run:</p>
+<p>Wheel install fails. Check your Python version (3.9+ required) and your Pi OS architecture (uname -m should be aarch64 on 64-bit Pi OS). 32-bit Pi OS does not get a wheel. Reflash the SD card to 64-bit, or pick the 64-bit image in Raspberry Pi Imager.</p>
+<p>"File not found" when loading model. The paths in linnet_tts.Model(...) are relative to where you run the script, not where the script lives. Either cd to the directory with local/ in it before running, or use absolute paths.</p>
+<p>Silent playback. If the streaming code runs but you hear nothing:</p>
+<p>Audio stutters or drops. Usually CPU contention. Check if wake-word, VAD, and KWS are running at the same time. On Pi 4 this is typically fine, but if you see stutters, log vcgencmd get_throttled once a second to catch throttle events (bits 16-19 are sticky and catch events your per-second poll would miss).</p>
+<p>Browser demo (the same LinnetTTS v0.2 with priming optimization): Hugging Face Space</p>
+<p>Model card and weights download: huggingface.co/VoxRT/linnet-en-35m</p>
+<p>GitHub repo (source, docs, streaming contract): github.com/VoxRT/LinnetTTS</p>
+<p>If you have a Pi 4 deployment running LinnetTTS sustained, what is the cooling config? Open case with fan, sealed case, passive heatsink only? Real-world thermal data on these setups is still thin.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/levo-3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/voxrtio/offline-voice-replies-on-a-35-raspberry-pi-linnettts-integration-in-python-4la6" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

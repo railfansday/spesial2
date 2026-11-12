@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node.js Event Alerts: Using Email and SMS APIs for Gaming Marketplace Sellers</title>
+    <title>The AI-Native Organization: Smaller Teams, Faster Execution, Fewer Roadmaps</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9731.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,56 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Node.js Event Alerts: Using Email and SMS APIs for Gaming Marketplace Sellers</h1>
+        <h1>The AI-Native Organization: Smaller Teams, Faster Execution, Fewer Roadmaps</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Flx7aq4og4rss7kdep9rp.png" alt="Node.js Event Alerts: Using Email and SMS APIs for Gaming Marketplace Sellers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/pAMyHxJV6xhiL5Kwc8mHI3lR7Ai1-a583b4d.png" alt="The AI-Native Organization: Smaller Teams, Faster Execution, Fewer Roadmaps" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Flx7aq4og4rss7kdep9rp.png" alt="Node.js Event Alerts: Using Email and SMS APIs for Gaming Marketplace Sellers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/pAMyHxJV6xhiL5Kwc8mHI3lR7Ai1-a583b4d.png" alt="The AI-Native Organization: Smaller Teams, Faster Execution, Fewer Roadmaps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Short answer: put one notification job behind the order event, render email and SMS from the same order snapshot, and make each provider attempt idempotent. The important Node.js decision is not which API has the nicest SDK. It is how much integration work the team will own around retries, delivery state, sender authentication, and consent.</p>
-<p>For a gaming marketplace seller receiving a new-order alert, I would start with email as the durable detail channel and SMS as a short, urgent signal. The order service should publish an event; a notification worker should decide which channels are eligible; channel adapters should translate that decision into provider-neutral requests. Keep the order transaction away from network calls. A seller should not lose an order because an HTTP request to an email or SMS API was slow.</p>
-<p>The system needs a small set of invariants before it needs more SDK code:</p>
-<p>That last point matters more than a green response from an API. A 202-style acceptance usually means a remote system accepted a request for processing; it does not prove that a seller saw the message. Treat submission and delivery as different facts, and consume callbacks or status polling according to the chosen integration.</p>
-<p>The event should carry an immutable snapshot for the first message:</p>
-<p>The phone number is in an international representation, and the two destinations still require separate policy checks. A phone number alone is not proof that SMS is permitted; an email address alone is not proof that a transactional message is permitted. Consent and suppression records should be explicit rather than inferred from a profile field.</p>
-<p>The decision axis here is integration effort. “Less code” is a poor measurement if it leaves the team to invent a delivery ledger, callback verification, or retry policy later. I compare the shapes by ownership boundaries:</p>
-<p>For one marketplace application, direct adapters behind a narrow interface are usually the smallest defensible shape. For several products, an internal gateway can pay back its extra deployment only when the shared policy is real: common suppression, common audit requirements, or common template ownership. A hosted abstraction can reduce integration effort, but its contract becomes another dependency to test and monitor. None of these shapes removes the need to distinguish request acceptance from eventual delivery.</p>
-<p>Do not put send_email() or send_sms() in the HTTP handler that creates an order. The handler should write the order and an outbox record in one database transaction. A publisher then emits the event, and a worker claims notification jobs with a lease. If the process dies after sending but before marking the job complete, the lease expires and the job is retried. That is why the stable notification key and duplicate-tolerant downstream behavior matter.</p>
-<p>The following Python sketch shows the boundary without tying the design to an SDK. In a Node.js service, the same pieces map to an outbox publisher, a queue consumer, and two HTTP adapters. The important order is policy, idempotency, bounded request, state transition, and telemetry.</p>
-<p>The sketch deliberately leaves TemporaryChannelError and PermanentChannelError abstract. A timeout, connection reset, rate limit, and remote server failure are candidates for retry, subject to a bounded policy. An invalid destination, an explicit suppression, and a rejected sender identity should become actionable terminal states. Blindly retrying every exception is how a transient incident becomes duplicate seller alerts.</p>
-<p>Use exponential backoff with jitter and a deadline, not an infinite loop. A practical initial policy can allow 5 attempts over 30 minutes, but those numbers are an operational choice: choose them from seller urgency, queue capacity, provider limits, and the lifetime of the order event. Store the next-attempt time and reason. That makes a queue-depth alert explainable instead of merely alarming.</p>
-<p>The limitation is operational ownership. A direct adapter keeps the contract visible, but the team must maintain sender authentication, callback handling, test doubles, suppression rules, and on-call alerts. A gateway reduces repeated code only after several consumers share those rules; before that point, it adds another service, deployment, and failure boundary.</p>
-<p>Email authentication belongs at the sender boundary. SPF publishes which hosts are authorized to send for a domain; it does not by itself describe the whole email authentication story. Keep the sending domain, return-path behavior, DKIM configuration, and DMARC policy in an owned runbook, and test them before production traffic. SMS needs its own sender registration, destination normalization, content restrictions, and opt-out handling. These are different delivery surfaces, even when the application calls them from one worker.</p>
-<p>I would reject a single “send notification” function that accepts arbitrary channel details and returns a Boolean. It compresses policy, transport, and delivery state into one call, so callers cannot tell whether a message was suppressed, accepted remotely, or lost after a timeout. It also encourages the order endpoint to own a network dependency.</p>
-<p>That shape is valid for a prototype with no durable order state and no operational promise. It is a poor fit for a marketplace, where a seller can act on the alert and where duplicate messages have a visible cost. A direct call can also be valid for a one-off administrative tool that a human reruns deliberately. That exception should not define the event path.</p>
-<p>The production boundary should expose facts rather than optimism: the order event was published, the channel job was claimed, the remote submission was accepted, and later delivery was reported or expired. Log the event ID, notification key, channel, attempt number, remote ID, latency, and classification. Do not log full message bodies or phone numbers by default. Alert on age of the oldest pending job, terminal failures by reason, callback verification failures, and the gap between submissions and final status.</p>
-<p>Integration effort is therefore a measurable ownership decision. Count the adapters, state transitions, callback paths, test fixtures, runbooks, and on-call signals the team will maintain. The smallest safe Node.js implementation is the one that keeps those boundaries visible while allowing email and SMS to fail independently.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Product Builder, hands on AI Developer. Spent a good part of the last 15 years building eCommerce Marketplaces (Zalando, eBay, Flipkart).</p>
+<p>Product Builder, hands on AI Developer. Spent a good part of the last 15 years building eCommerce Marketplaces (Zalando, eBay, Flipkart).</p>
+<p>Product Builder, hands on AI Developer. Spent a good part of the last 15 years building eCommerce Marketplaces (Zalando, eBay, Flipkart).</p>
+<p>This is a time of the year where every organization is working out the structure that makes sense for them. And this year, every firm clearly has significant changes planned.</p>
+<p>A big contributor is AI. Tools have evolved massively since the start of the year (coding tools, org harnesses, best practices), and many of us now run org structures that don’t match what’s possible today. That may be slowing us down.</p>
+<p>But with Coding tools evolving the way they have, a lot of the “how” has collapsed.</p>
+<p>Claude already is writing about 90% of Claude Code’s code.</p>
+<p>Traditionally non-technical users like Marketers and Finance have also warmed up to pushing code using org provided and self owned harnesses.</p>
+<p>As a part of this study, we have looked at a broad range of technology firms, from the large, like Amazon and Microsoft, to Shopify and Linear, as well as smaller labs like Every - and how they have evolved over the year to adapt to this new reality</p>
+<p>A few common patterns across organizations include</p>
+<p>Salesforce is experimenting with one-person and three-person teams. So is Meta, with three- to five-member teams. Every has redesigned the construct into “two-slice” teams: a single person running an entire product.</p>
+<p>“We have four software products, each run by a single person.” — Dan Shipper, The Two-slice Team, Feb 13, 2026 (tweet)</p>
+<p>Most companies have realized that the shorter the distance between idea and execution, the lower the friction. And with agents, people can have virtual team members rather than actual ones, which avoids the need for a full setup.</p>
+<p>Companies have also started experimenting with consolidation of roles into common profiles.</p>
+<p>For example, LinkedIn has started its builder program, where individuals in very small teams own end-to-end accountability, from customer focus to outcomes.</p>
+<p>https://careers.linkedin.com/pathways-programs/entry-level/apb</p>
+<p>Anthropic has stopped talking about roles, and talks more about Archetypes. They have also stopped bucketizing the roles of designers, product managers - and meld everyone into a common job title - MTS (member of technical staff), with designers pushing code, developers PM’ing and PM’s developing.</p>
+<p>Over time, when designers and PM’s write code, engineers design and plan what to release - the functional hats everyone wears is more and more likely to transform into what each person brings to the table (growth, consumer sense, building and architecting)</p>
+<p>When speed of decision making is key, having committees decide on the right approach is clearly a drag on time. We see firms with founder leaders taking a stronger stance.</p>
+<p>For example, Ramp has mentioned that “everyone is a builder” and they expect nothing else from anyone in the organization.</p>
+<p>Tobi talks about the expectation from teams on AI adoption, decisive leadership.</p>
+<p>Harnesses are the organizational brain and actioning engine, and which practically operate through the equivalent of chat. For example, Ramp’s Inspect and Shopify’s River allows anyone in the companies to be a builder and get what they want done (Create creatives, run a campaign, develop code).</p>
+<p>No intermediaries for capabilities that are not consumer facing.</p>
+<p>Therefore - teams beyond engineering are coding. Whether it’s marketing or finance, all teams have started pushing code.</p>
+<p>that owns a problem end to end for a fixed stretch. Meta is moving from teams of 10–20 to pods of 3–5. LinkedIn forms engineer, designer and PM trios for about a quarter. Roles are a lot more fluid, sure engineers write more of the code that customers see and ensure scale. But designers, PM’s and other roles also operate on code / so design as a function is not sacrosanct to designers, neither is code sacrosanct to developers. This is a slow pivot towards archetypes - from the existing role-based functions</p>
+<p>In this new structure, The pod owner answers for the end metric itself, whether that’s revenue, retention or customer time saved, and everything else, agents included, is just how they get there.</p>
+<p>A small platform team runs the company harness: Ramp’s 5-person Inspect team, Shopify’s River and Stripe’s Minions. The Harness acts as everyone’s virtual teammate - operatable through slack or any channel of choice. This allows for multiplayer real-time development, as well as non-engineers being able to get work done on code with limited human intervention or gatekeeping.</p>
+<p>With teams incentivised to ship fast, that works well, until a major stability, security or compliance issue kicks in. Non-negotiable functions are gatekept (to the essential degree), and reviewed by agents (and humans) above a certain risk level. Even at Shopify, a human still reviews every production PR.</p>
+<p>Design, growth and marketing move between pods instead of sitting inside them. They codify everything they can, and check it into the codebase for all engineers to use. But they still get involved in the most important phases of each project.</p>
+<p>With all teams now focused significantly on outcomes and speed of delivery, it’s impossible for everybody to keep track of the latest developments in the market. That’s why there is typically also a frontier team. Its members may not be allocated full-time, but they are responsible for synthesizing what’s going on in the world and systematically bringing it into the organization. Examples are Every’s frontier team, Meta’s Agent Transformation Accelerator and Ramp’s Glass, built so the company “learns things once”.</p>
+<p>Naturally, the next key question is how planning takes place. Are roadmaps still relevant? Are they quarterly or weekly? Are they built around goals?</p>
+<p>Microsoft’s Copilot chief Jacob Andreou put it bluntly: “the reality is a six to twelve month roadmap doesn’t really exist.” Notion’s 2026 roadmap lists no features at all, only a principle about responding quickly to major changes. “Ditch fixed roadmap” was a callout from Slack CPO Rob Seaman.</p>
+<p>On Claude Code, Boris Cherny sets a three-to-six-month vision and the PM works back from it. Linear keeps roughly a six-month direction but reprioritises weekly, because when building is cheap it’s easier to build the wrong thing.</p>
+<p>Meta’s pods moved to four-week sprints instead of six-month planning cycles. HubSpot went from annual planning to six-week sprints. Tobi Lütke now calls Shopify’s own six-week review cycle “way too limiting”.</p>
+<p>Plans are tested by shipping, not by review meetings. Most Claude Code features launch as research previews. Ramp lets teams ship to an early-access tier whenever they want, and reviews only before general release.</p>
+<p>Clearly, every organization is different. Sometimes commercial teams and tech teams are separate. But a few things hold:</p>
+<p>In the end, it’s clear that org structures will keep changing, and likely more often than once a year. What’s most important is for the organization to stay agile to changing needs. It’s going to be a wild ride.</p>
+<p>Graphic only (numbers not cited in the text)</p>
+<p>6 User Mindsets That Should Shape Your B2B Onboarding Strategy</p>
+<p>Product Builder, hands on AI Developer. Spent a good part of the last 15 years building eCommerce Marketplaces (Zalando, eBay, Flipkart).</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/aldencross6847/nodejs-event-alerts-using-email-and-sms-apis-for-gaming-marketplace-sellers-3oh7" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/the-ai-native-organization-smaller-teams-faster-execution-fewer-roadmaps?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
