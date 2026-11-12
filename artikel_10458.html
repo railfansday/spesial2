@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Practical Introduction to the Twitch Helix API</title>
+    <title>Everything you wanted to know about Nvidia but were too afraid to ask</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10458.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,85 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>A Practical Introduction to the Twitch Helix API</h1>
+        <h1>Everything you wanted to know about Nvidia but were too afraid to ask</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_f3896b48634e39d03f6b8cff1c56ac685471b9569a17d6e494a115a0aedae7f0_fddd643d0b.jpg" alt="A Practical Introduction to the Twitch Helix API" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_f3896b48634e39d03f6b8cff1c56ac685471b9569a17d6e494a115a0aedae7f0_fddd643d0b.jpg" alt="A Practical Introduction to the Twitch Helix API" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Behind almost every Twitch tool you have ever seen, the stat trackers, the moderation bots, the stream overlays, the alert systems, sits one interface: the Twitch Helix API. Twitch is unusually generous with public data, and Helix is the door to it. If you have ever wondered how third-party sites know who is live, what a channel's viewership looks like, or details a Twitch profile page does not even display, this is the machinery.</p>
-<p>This article is a practical overview of Helix for developers who have not used it yet: what it offers, how its authentication works, what people build with it, and where the sharp edges are.</p>
-<p>Helix is Twitch's current REST API, served from api.twitch.tv/helix. It replaced the old "Kraken" API, which was fully retired in 2022, so any tutorial still showing Kraken endpoints is a sign to keep scrolling. Helix covers users, streams, channels, games and categories, clips, chat, moderation actions, subscriptions, and events, with JSON in and JSON out.</p>
-<p>Two things distinguish it from many platform APIs. First, a large share of it works without any user's permission, because the data is public by Twitch's own definition. Second, it is paired with EventSub, a push system that notifies your application when things happen (a stream goes live, a user follows, a message arrives) instead of forcing you to poll. Most serious Twitch tools use both: Helix for lookups, EventSub for live events.</p>
-<p>Authentication is where most newcomers stall, mainly because Twitch offers several OAuth flows and tutorials rarely say which one you actually need. The short version:</p>
-<p>Every request needs a Client ID, which you get by registering an application in the Twitch developer console (two-factor authentication on your account is required first). Requests carry the Client ID and a bearer token together; forgetting the Client ID header is the classic mystery 401.</p>
-<p>App access tokens come from the client credentials flow, a single server-to-server request with your ID and secret. They have no user attached and that is fine, because public reads, user profiles, live streams, top games, clips, need no user context. For most read-only tools, this is the only flow you ever touch.</p>
-<p>Tokens expire, so real applications cache them with their reported lifetime and refresh on a 401 rather than assuming a token lives forever.</p>
-<p>A tour of the endpoints that power most tools:</p>
-<p>Users. Give the users endpoint a username and it returns the account's public record: display name, profile image, description, Affiliate or Partner status, and the account's exact creation timestamp. That last field is interesting because Twitch does not display it anywhere on a profile, yet it is one of the platform's most useful trust signals, moderators use account age to spot throwaway accounts, and streamers use it to filter giveaway entries. The creation date alone powers a small subcategory of tools: free account age checkers, such as Twitch account age checker, are essentially this one endpoint with a clean page around it, taking any public username and returning the creation date, age, avatar, and broadcaster status. It is a good illustration of how far a single well-chosen Helix field can go.</p>
-<p>Streams. The stream's endpoint reports who is live right now, with titles, categories, thumbnail URLs, and viewer counts. This is the backbone of every "is my favorite streamer live" notifier and every directory-style site, and polling it over time is how stat trackers chart viewership history.</p>
-<p>Games and categories. Top games, category search, and metadata. Combined with streams data, this is how analytics sites rank categories and how tools answer "how crowded is this category right now."</p>
-<p>Clips and videos. Clip metadata, view counts, and creation tools. Highlight compilers and clip-sharing bots live here.</p>
-<p>Helix enforces a points-based rate limit per Client ID, and every response tells you where you stand through Ratelimit-Limit, Ratelimit-Remaining, and Ratelimit-Reset headers. Well-behaved tools read those headers and back off before hitting zero; badly behaved ones retry 429s in a loop and wonder why things get worse. For lookup-style tools the practical fix is caching, data like account creation dates never changes, so there is no reason to ask twice.</p>
-<p>A few more edges worth knowing before they bite:</p>
-<p>Usernames change, IDs do not. Store user IDs, not logins, or your saved data will eventually point at the wrong person.</p>
-<p>Missing users are not errors. Looking up a nonexistent username returns a successful response with an empty data array, so handle the empty case explicitly.</p>
-<p>Batching exists. The users endpoint takes up to 100 logins in one call, which matters the moment your tool checks lists instead of individuals.</p>
-<p>Secrets stay server-side. The client secret identifies your application; calling the token endpoint from browser code hands your app's identity to anyone who opens devtools. Public-facing tools put a small server between the browser and Twitch.</p>
-<p>The reason Twitch's third-party ecosystem is so large is that the barrier is so low: one public API, generous free access, and a platform where small questions genuinely matter to people. That is why the space is full of narrow tools that each answer one thing well, when was this account created, is this channel live, how fast is this category growing, which clips popped this week. Most of them are a weekend of work on top of one or two endpoints, and some of them grow into real products.</p>
-<p>If you want to start, the path is short: register an application at the developer console, request an app access token, and call the users or streams endpoint for something you actually care about. The official documentation at dev.twitch.tv is current and well maintained, which is not something every platform can claim. Pick one piece of data Twitch collects but does not display, put a clean interface on it, and you are following the same recipe as most of the Twitch tools you already use.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p><p class="wp-block-paragraph">If you’re not in the tech world, you might only have been vaguely aware of Nvidia—and CEO Jensen Huang’s <a href="https://www.fastcompany.com/91576571/nvidia-ceo-jensen-huang-leather-jacket-sothebys-auction-new-steve-jobs-black-turtleneck" rel="noreferrer noopener" target="_blank">leather jackets</a>—until he admitted to having an affair with a woman <a href="https://www.fastcompany.com/91638546/the-jensen-huang-spy-scandal-is-becoming-a-white-house-problem" rel="noreferrer noopener" target="_blank">accused of being a Chinese spy</a>. On November 12, a day after revelations of a second affair, this one with an Nvidia executive, Huang resigned. Here’s why the company’s future could affect the entire <a href="https://www.fastcompany.com/section/artificial-intelligence" title="AI">AI</a> industry.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-what-nvidia-does">What Nvidia does</h2>
+
+
+
+<p class="wp-block-paragraph">Nvidia is at the center of the AI boom, as the world’s largest supplier of chips used in AI data centers. By some estimates, the company controls <a href="https://siliconanalysts.com/analysis/nvidia-ai-accelerator-market-share-2024-2026" rel="noreferrer noopener" target="_blank">80% of the market</a>. As of November 3, it was the <a href="https://www.forbes.com/sites/fionariley/2026/11/03/nvidia-regains-title-of-worlds-most-valuable-company-as-apple-shares-slide/" rel="noreferrer noopener" target="_blank">most valuable company in the world</a>, with a market cap of around $5 trillion. By the morning of November 12, as Nvidia&#8217;s stock continued to plummet, that figure dropped to $4 trillion. (Huang&#8217;s own net worth <a href="https://www.forbes.com/sites/fionariley/2026/11/12/nvidia-sinks-11-at-open-after-jensen-huang-resigns-pushing-market-cap-below-microsoft/" rel="noreferrer noopener" target="_blank">had fallen $7.4 billion</a> by that point.)</p>
+
+
+
+<p class="wp-block-paragraph">Huang and cofounders Chris Malachowsky and Curtis Priem <a href="https://www.fastcompany.com/91640747/jensen-huang-may-be-out-at-nvidia-the-rise-and-fall-of-one-of-the-key-figures-in-the-ai-boom" rel="noreferrer noopener" target="_blank">launched the company in 1993</a>. They started making graphics processing units, better known as GPUs, for video games. In 2006, they rolled out a platform that enabled other uses for GPUs. In 2012, researchers used the company’s chips to train AlexNet, a <a href="https://www.fastcompany.com/90402503/the-10-most-important-moments-in-ai-so-far" rel="noreferrer noopener" target="_blank">breakthrough AI program</a> that taught computers how to recognize images. By the time that ChatGPT launched, Nvidia’s tech was fundamental to AI development.</p>
+
+
+
+<p class="wp-block-paragraph">A large data center might have tens of thousands of Nvidia GPUs that run calculations to train AI models and generate responses when you type a question into ChatGPT or Claude. Training a new AI model could sometimes involve as many as 100,000 GPUs running at the same time for months. After the model is trained, the GPUs are used for “inference,” or applying the trained model to, say, rewrite your email or draw a cartoon of your cat. Inference also requires huge numbers of GPUs given that millions of people use AI at the same time. (In the U.S., around 60 million people use AI chatbots every day, according to a Pew survey this summer.)</p>
+
+
+
+<p class="wp-block-paragraph">Nvidia systems also include CPUs (central processing units) that coordinate tasks and run operating systems in data centers, along with networking equipment that lets GPUs communicate. Its software coordinates the GPUs.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-huang-s-downfall">Huang&#8217;s downfall</h2>
+
+
+
+<p class="wp-block-paragraph">It&#8217;s not clear when Jensen Huang started his affair with Alice Huang (no relation), a woman who U.S. intelligence officials reportedly suspect of being a Chinese spy. The Chinese government has denied that she is a spy.</p>
+
+
+
+<p class="wp-block-paragraph">Alice Huang, also known as Huang Le, was a senior executive at Megaspeed International, a Singapore-based company that became an Nvidia customer. Megaspeed <a href="https://www.nytimes.com/2025/10/09/technology/nvidia-chips-china-megaspeed.html" rel="noreferrer noopener" target="_blank">reportedly smuggled Nvidia&#8217;s chips into China</a>, bypassing U.S. sanctions. The U.S. first restricted the export of Nvidia&#8217;s chips to China in 2022, citing the risk that China could use them for military development and to compete in AI. Alice Huang reportedly helped move <a href="https://www.tomshardware.com/tech-industry/policy/alice-huang-reportedly-instrumental-in-securing-over-usd7-5-billion-of-nvidia-ai-gpu-imports-during-three-year-relationship-with-jensen-huang-helped-move-240-000-banned-chips-into-china-mostly-h100-and-h200" rel="noreferrer noopener" target="_blank">$7.5 billion</a> worth of Nvidia chips to China.</p>
+
+
+
+<p class="wp-block-paragraph"><em>The New York Times</em> first <a href="https://www.nytimes.com/2026/10/29/us/politics/nvidia-china-jensen-huang-trump.html" rel="noreferrer noopener" target="_blank">reported on the relationship and the spy allegations on October 29</a>, and Jensen Huang initially said that it was an ordinary business relationship, not an affair. On November 6, the <em>Financial Times</em> <a href="https://www.ft.com/content/a55a2a22-4479-4f93-a445-6147a5c6d790?syn-25a6b1a6=1" rel="noreferrer noopener" target="_blank">reported that it was a romantic relationship</a>. Two days later, Jensen Huang sent an email to Nvidia employees admitting that it had been an affair.</p>
+
+
+
+<p class="wp-block-paragraph">On November 11, reports emerged that Huang also had an affair with one of his employees at Nvidia, <a href="https://www.businessinsider.com/kimberly-powell-nvidia-exec-tied-to-jensen-huang-2026-11" rel="noreferrer noopener" target="_blank">reportedly Kimberly Powell</a>, the company&#8217;s vice president of healthcare. On November 12, as pressure mounted from Nvidia&#8217;s board, Huang announced his resignation.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-why-jensen-huang-can-t-easily-be-replaced">Why Jensen Huang can&#8217;t easily be replaced</h2>
+
+
+
+<p class="wp-block-paragraph">It&#8217;s <a href="https://www.fastcompany.com/91639582/how-key-person-risk-derails-companies-and-poses-problems-for-nvidia-amid-jensen-huang-scandal" rel="noreferrer noopener" target="_blank">not simple for someone else to step into Huang&#8217;s shoes</a>. He was directly involved in decisions that most executives would delegate, from managing in detail how Nvidia&#8217;s products were built to how salespeople talked to customers. A typical CEO might have five or 10 direct reports; Huang had as many as 60 direct reports. He reportedly sent hundreds of emails a day.</p>
+
+
+
+<p class="wp-block-paragraph">He had an <a href="https://x.com/business/status/2119633671300730893" rel="noreferrer noopener" target="_blank">unusual level of control</a>—and no plan in place for <a href="https://www.fastcompany.com/91433678/most-companies-are-one-resignation-away-from-a-leadership-crisis" rel="noreferrer noopener" target="_blank">succession</a>. After Huang resigned, Nvidia CFO Colette Kress was named interim CEO while the board searches for a replacement. It&#8217;s not clear what will happen next. But it&#8217;s possible that the company&#8217;s strategic decisions about products, manufacturing, and customers could slow down. Huang oversaw how Nvidia&#8217;s full system was integrated, not just its GPUs. The next leader may not have the same vision for the product. Relationships with customers might deteriorate. There might be internal struggles for control.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-a-circular-business-model-and-potential-fallout-for-ai-companies">A circular business model—and potential fallout for AI companies</h2>
+
+
+
+<p class="wp-block-paragraph">Nvidia sells its technology to companies like Microsoft, Amazon, and OpenAI. (OpenAI and others also use it indirectly by leasing space in third-party data centers.) But Nvidia is also investing heavily in the artificial intelligence ecosystem. It committed $30 billion to OpenAI’s financing round and guaranteed up to $105 billion for an Ohio data center that would serve OpenAI. It sells GPUs to AI infrastructure company CoreWeave, but has also <a href="https://www.gurufocus.com/news/9194004/coreweaves-4-billion-debt-plan-faces-an-nvidiasized-risk?utm_source=yahoo_finance&amp;utm_medium=syndication&amp;utm_campaign=headlines" rel="noreferrer noopener" target="_blank">invested in the company</a>, including a $2 billion investment in January. Nvidia also agreed to purchase up to $6.3 billion of CoreWeave’s unused computing capacity over the next several years and has struck similar deals to buy cloud computing services from its customers. Meanwhile, it has partnered with Apollo, BlackRock, and other asset managers to mobilize financing for AI infrastructure.</p>
+
+
+
+<p class="wp-block-paragraph">Anthropic, which has plans to file for its IPO next week, is also tightly entangled with Nvidia. Nvidia committed to invest up to $10 billion in the company in 2025; Anthropic committed to use up to 1 gigawatt of Nvidia computing capacity. Nvidia was reportedly considering billions of dollars in credit guarantees for a new data center for Anthropic. It also had reported plans to invest up to $10 billion in Anthropic&#8217;s IPO.</p>
+
+
+
+<p class="wp-block-paragraph">All of this meant Nvidia was helping prop up demand for its own technology, making it harder to gauge how quickly AI would have grown on the strength of the underlying economics alone. Huang personally spearheaded these investments and partnerships, and it’s unclear whether his successor will be as willing to finance Nvidia’s customers. That uncertainty could slow some of the AI industry’s planned expansion.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/a-practical-introduction-to-the-twitch-helix-api/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.fastcompany.com/91641238/everything-you-wanted-to-know-about-nvidia-but-were-too-afraid-to-ask" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StableBar</title>
+    <title>如何讓 Claude Code 把進度回報到 osFoundry 的 team session</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9677.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>StableBar</h1>
+        <h1>如何讓 Claude Code 把進度回報到 osFoundry 的 team session</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Favt6lo2cop7q58tawnne.png" alt="如何讓 Claude Code 把進度回報到 osFoundry 的 team session" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Favt6lo2cop7q58tawnne.png" alt="如何讓 Claude Code 把進度回報到 osFoundry 的 team session" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            A native, open-source menu bar for macOS
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/stablebar?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1311460?app_id=339">Link</a>
-          </p></p>
+                <p>做完之後，Claude Code 會在你的 repo 裡修一個問題，同時有一個 osFoundry 的 team session 在等它的結果。開始之前，它會用 read_session_mail 讀 session 的 mail，看看 team 要它做什麼。工作期間，它用 set_status 維持一行最新的狀態，讓 session 裡的 agent 知道它在哪個 repo、哪個 branch、做哪個任務。到了關鍵時間點，它會用 post_session_note 貼一則 note。你不用開終端機，就能在 session 的 Team mail 分頁看到這些 note，掛在 Claude Code 的名字下面，並標示「outside assistant」。</p>
+<p>執行它，接著在 Claude Code 裡執行 /mcp，選 osfoundry，再選 Authenticate。瀏覽器會開啟 osFoundry，讓你選擇 workspace。之後這些工具就會以 mcp__osfoundry__… 的名稱出現在 Claude Code 裡。</p>
+<p>在 osFoundry 打開標頭的鑰匙圖示，進入 Connected 分頁，選取 Claude Code 的連線。在 Projects 底下選擇放著該 team session 的 project，按 Add to project。現在這個連線看得到 project 裡的 session，但還不能寫入任何一個。</p>
+<p>同一個面板再往下是「Agent, Team, and Loop sessions」。選 Team session，從「Choose a session in this agent's projects」挑出 session，把角色設為 Contributor，然後按 Save role。Toast 會顯示「Session role saved」，席位會以一行的形式出現。</p>
+<p>範例：Claude Code 以 Contributor 身分加入 Release desk team session</p>
+<p>這裡用 Contributor 就夠了。Viewer 可以讀 session 的狀態和 mail，但不能貼文。Runner 還能把 run 排進佇列，而一個只負責回報進度的角色沒有理由這麼做。</p>
+<p>沒有東西叫它做，Claude Code 就不會貼任何東西。在 repo 的 CLAUDE.md 加幾行就行了：</p>
+<p>set_status 還需要先有一個 profile（它的說明寫著「Claim a profile first.」）。Claude Code 會在第一次執行時用 claim_connected_profile 處理掉。</p>
+<p>如果想讓讀取類工具和狀態列不再跳出權限確認，就在 .claude/settings.json 裡允許它們：</p>
+<p>post_session_note 是刻意沒放進去的。Note 會直接出現在整個 team 面前，所以 Claude Code 每貼一則之前都還是會先問你。</p>
+<p>撰寫本文的這台電腦上沒有安裝 Claude Code，所以下面的 session 是模擬的範例。工具名稱和參數名稱都來自實際運作的 server，前面加上 Claude Code 會自動補的 mcp__osfoundry__ 前綴。Repo、session、agent、PR 編號和回覆都是示範內容。</p>
+<p>這次執行裡有兩個容易忽略的細節。第二次 set_status 只送了 task。說明寫著「Omitted fields keep their value; null clears one」，所以 repo 和 branch 維持原值，而最後一次呼叫則把三個欄位都清空。少了最後這一步，狀態會一直顯示 Claude Code 還在那個 branch 上，即使它早就去做別的事了。</p>
+<p>在你這一端，note 都在 session 的 Team mail 分頁裡。在 Agents 打開 session，選 Team mail。Claude Code 的 note 會出現在它的名字下面，旁邊標著「outside assistant」和「→ broadcast」，因為 note 不是寄給某一個特定 agent 的。@release 的回覆則是寄給 Claude Code。分頁開著時，清單每 5 秒更新一次。</p>
+<p>範例：Release desk session 的 Team mail，有兩則 Claude Code 的 note 和一則 @release 的回覆</p>
+<p>狀態不會出現在 Team mail 裡。它是給 agent 看的：在同一個 project 有席位的 agent 列出 agent 清單時，會在 Claude Code 的 handle 旁邊看到它。想確認 Claude Code 真的有設定狀態，就回到 Connected 分頁，選取這個連線，打開 Recent activity。每次呼叫占一行，包含工具名稱、決定和時間，顯示最近十筆。</p>
+<p>範例：Claude Code 連線的 Recent activity，裡面有它的 set_status 和 post_session_note 呼叫</p>
+<p>Note 是訊息，不是觸發器。工具說明寫著它「does not trigger an automatic run」。Session 的 agent 會在下一次執行時讀到它，這樣 Contributor 就沒辦法光靠貼文來啟動工作。</p>
+<p>信箱的範圍是刻意收窄的。read_session_mail 只回傳寄給這個連線的 note 和它自己貼出的 note，而且「Internal agent analysis is excluded.」Claude Code 看得到 team 對它說了什麼，但看不到 agent 是怎麼得出結論的。</p>
+<p>狀態是自行回報的，而且只留在 project 裡。osFoundry 不會拿它去和 git 比對，說明也寫著它「shown only to agents seated in a project with you, never workspace-wide」。請以那些可能會跑去動同一個 branch 的 agent 為對象來寫狀態，任何私密內容都不要放進去。</p>
+<p>除非 Claude Code 把東西寫進 note 或狀態，否則什麼都不會離開你的電腦。Repo、diff 和測試輸出都留在本機。Server 自己的 initialize 回應也寫著「Local-only data is unavailable to cloud clients」，反過來也是一樣的道理。</p>
+<p>下一步，可以試試已經按排程在跑的 loop session。在那裡給 Claude Code 一個 Contributor 席位，讓它在每次開工時先讀 mail，loop 的 agent 就能在兩次 run 之間留問題給它。Agent Mail 說明 note 如何在 agent 之間傳遞，而 Connected 分頁 則是席位和活動紀錄所在的地方。</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/stablebar" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/bbt-zh/ru-he-rang-claude-code-ba-jin-du-hui-bao-dao-osfoundry-de-team-session-21ap" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
