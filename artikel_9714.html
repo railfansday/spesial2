@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)</title>
+    <title>AWS&#x27;s Official Emulator vs LocalStack: 160 Rust Crates, Fidelity Scores per Release, and a Telemetry Default</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9714.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
+        <h1>AWS&#x27;s Official Emulator vs LocalStack: 160 Rust Crates, Fidelity Scores per Release, and a Telemetry Default</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://www.spring.org.uk/images/work-6.jpg" alt="The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ftnoqjbyfpeff9d0vjjrm.png" alt="AWS&#x27;s Official Emulator vs LocalStack: 160 Rust Crates, Fidelity Scores per Release, and a Telemetry Default" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.spring.org.uk/images/work-6.jpg" alt="The Best Break Schedule For Lifting Mood And Reducing Fatigue (M)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ftnoqjbyfpeff9d0vjjrm.png" alt="AWS's Official Emulator vs LocalStack: 160 Rust Crates, Fidelity Scores per Release, and a Telemetry Default" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Thousands of workers tested different break schedules. One stood out for all the right reasons.</p>
-<p>Thousands of workers tested different break schedules. One stood out for all the right reasons.</p>
-<p>• Read members-only articles
-• Adverts removed
-• Cancel at any time
-• 14 day money-back guarantee for new members</p>
-<p>Psychologist, Jeremy Dean, PhD is the founder and author of PsyBlog. He holds a doctorate in psychology from University College London and two other advanced degrees in psychology. He has been writing about scientific research on PsyBlog since 2004.			
-				View all posts by Dr Jeremy Dean</p>
+                <p>Posted on Nov 12
+•
+Originally published at dispatch-blog.hashnode.dev</p>
+<p>The most widely used local AWS stack on GitHub was never made by AWS. LocalStack, a Python project created in October 2016, has collected 65,119 stars by pretending to be a cloud on a laptop. This month, AWS finally answered with its own entry: aws/aws-emulator, a Rust workspace created on September 11, 2026, that was already at version 1.0.322 by November 11. It passed 1,700 stars within days of surfacing, hit the Hacker News front page with 618 points and more than two hundred comments, and immediately raised the only question that matters for a working engineer: does an official emulator change how you test cloud code, or is it a decade too late?</p>
+<p>This article reads the repository, the README, the release notes, and the project's own gap tracker, then compares what AWS built against the incumbent on the axes that decide a real adoption: architecture, packaging, fidelity disclosure, and cost. Everything below comes from the project's public artifacts, not from a press release.</p>
+<p>AWS Emulator is a local program that serves AWS API endpoints. It has no graphical interface. You start it, point the AWS CLI or an SDK at its endpoint through environment variables, and run your code as usual. Requests never leave your machine, you need no AWS account, and AWS charges nothing for it — you pay only when you deploy to real AWS.</p>
+<p>The repository metadata tells its own story. The workspace is written in Rust, licensed CC0-1.0 (public domain dedication, with the vendor/ directory under Apache-2.0), and holds one crate per AWS service — 160 service crates at the time of writing. The router binary mounts every service on a single HTTPS endpoint at 127.0.0.1:9297 with a self-signed certificate.</p>
+<p>Two boundaries are stated up front and worth taking seriously. The emulator is for building and testing only: AWS says not to use it for production workloads, and not to use it to test security. An emulator that accepts a request is not evidence that real IAM would.</p>
+<p>The repository layout is the architectural bet. Each service lives in services/service-<name>/ with a smithy-model/<name>.json file — the Smithy model that drives the wire protocol — a build.rs that generates the service declaration from that model, a service.rs for request routing and refusal overrides, a state.rs holding that service's in-memory state, and an ops/ directory with one file per operation.</p>
+<p>That shape matters because it turns fidelity into a generation problem instead of a hand-coding problem. The wire format, the error shapes, and the refusal cases come from the same models AWS publishes for its real APIs, and the handwritten part is concentrated where emulators actually diverge: state transitions and validation order. When the emulator cannot honor a request, the codebase has a named concept for it — a refusal — rather than a shrug.</p>
+<p>Server mode is the familiar shape. On Linux you install the RPM or Debian package and run aws-emulator. On Windows and macOS you run it in a container built from a short Dockerfile. Then you point your tools at it:</p>
+<p>Embedded mode is the more interesting one for Rust teams. You add the emulator as a dev-dependency, and each test gets its own isolated in-process instance. There is no endpoint URL, no certificate, and no environment variable to manage; the test wires the emulator's HTTP client straight into the SDK client.</p>
+<p>The trade-off is build cost. Embedded mode compiles the emulator's service crates into your test binary, and the README is blunt about the numbers: a full source build wants Linux on x86_64 or aarch64, a C compiler alongside Cargo, and at least 100 GB of free disk for target/. The project recommends reusing one CARGO_TARGET_DIR across projects, caching target/ or using sccache in CI, and pinning the emulator to a release commit.</p>
+<p>Every emulator promises compatibility. This one publishes its own divergence ledger. The repository's issues/ directory holds 6,545 tracked files under things-that-do-not-work/ — one file per known gap, named with a timestamp and a plain description like cloudfront-createdistribution-accepts-configurations-aws-rejects — and moves each one to things-that-now-work/ when it is fixed. Every release ships a single asset, scores.json.gz, a little over a megabyte of per-service fidelity scores.</p>
+<p>The release cadence backs the ledger up. Version 1.0.292 and 1.0.293 both shipped on November 10, and 1.0.322 followed on November 11. The release notes are not feature announcements; they are lists of fidelity fixes:</p>
+<p>This inverts the usual relationship with an emulator. Instead of discovering a divergence when your test passes locally and fails in the pipeline, you can check the score file and the gap list before you commit a service to your test plan. AWS even documents a workflow for checking whether your specific project is expected to work.</p>
+<p>The incumbent is not standing still, and the community is not naive about the newcomer. The Hacker News thread mixed genuine interest with pointed skepticism. One commenter wrote "RIP LocalStack" and admitted they would not be unhappy to see it go; others immediately named alternatives they already trust, including Floci and the Testcontainers modules. Another noted the repository had racked up on the order of thirty thousand commits in roughly three weeks and looked heavily AI-generated — which, one Amazon engineer in the thread argued, is rather the point: agentic development runs on closed, simulated environments, and an emulator with a published gap list is exactly the kind of harness an agent can grind against.</p>
+<p>The honest comparison comes out like this:</p>
+<p>One detail deserves attention before you install anything: the emulator reports usage telemetry to AWS unless you turn it off. AWS states the records are minimized, never include request or response contents, code, credentials, or personal data, and are not shared with third parties. If your organization disables telemetry as policy, there are four switches:</p>
+<p>Embedded mode takes Telemetry::Off in its options, as shown earlier. The README also asks anyone who builds a tool on top of the emulator to disclose the telemetry to their own users and provide an off switch — a clause worth knowing before you embed it in a test framework.</p>
+<p>AWS clearly built this for the agent era. The README's first quick start is not a package manager command but an AI coding agent skill, installable with one command, requiring AWS CLI version 2.35.0 or later:</p>
+<p>That placement is a statement of intent. A local, deterministic, account-free AWS is the missing sandbox that lets a coding agent provision, mutate, and tear down infrastructure-shaped state without touching a bill. The ten-year-old community wish for an official emulator being granted now, in this form, is consistent with the HN thread's sharpest observation: it became worth building when it became training and testing infrastructure for agents.</p>
+<p>Stay on your current setup if your pipeline is stable on LocalStack or Testcontainers, if you send patches to your tools, or if your services are among the emulator's 6,545 tracked gaps. Evaluate AWS Emulator now if you write Rust and want per-test in-process isolation, if you work on Linux and want a single binary, or if a published fidelity score per release answers a question your CI keeps asking. Either way, read the gap list for the services you actually use, set EMULATOR_TELEMETRY to your policy's value, and pin a release. The ledger is public — use it before it uses you.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.spring.org.uk/2026/10/workday-change.php" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/chenyuan20509/awss-official-emulator-vs-localstack-160-rust-crates-fidelity-scores-per-release-and-a-2jk5" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

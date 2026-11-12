@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance evolution of route lookup on Linux</title>
+    <title>I deleted all my SSH keys</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9913.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,84 +15,64 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Performance evolution of route lookup on Linux</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
+        <h1>I deleted all my SSH keys</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://media-bernat-ch.b-cdn.net/images/covers/en/blog/2026-linux-performance-ipv4-ipv6-route-lookup.9293adda723305.jpg" alt="Performance evolution of route lookup on Linux" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media-bernat-ch.b-cdn.net/images/covers/en/blog/2026-linux-performance-ipv4-ipv6-route-lookup.9293adda723305.jpg" alt="Performance evolution of route lookup on Linux" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In pre­vi­ous ar­ti­cles, I ex­plained how the Linux ker­nel im­ple­ments IPv4[1] and
-IPv6[2] rout­ing ta­bles, and I showed the per­for­mance im­prove­ment of route
-lookups from Linux 2.6.32 to 4.16 for IPv4[3]—in­clud­ing the im­pact of
-the Melt­down and Spec­tre mit­i­ga­tions[4]—as well as from Linux 2.6.39 to 4.18
-for IPv6[5]. This ar­ti­cle up­dates the num­bers through Linux 7.3 and
-in­ves­ti­gates the per­pe­tra­tor re­spon­si­ble for the per­for­mance re­gressions! 🕵️‍♂️</p>
-<p>I ran the fol­low­ing bench­marks on an AMD EPYC 8024P[6], a Zen 4c
-CPU[7], rented from Scale­way[8], run­ning at 2.4 GHz with CPU boost dis­abled. I
-com­piled the ker­nels with GCC 10.2: this ver­sion can com­pile older ker­nels as
-well as the cur­rent ones.</p>
-<p>In Linux 4.15, Wei Wang im­proved the lookup per­for­mance by re­plac­ing the
-read-write lock with an RCU and a spin­lock in com­mit 66f5d6ce53e6[9]. In Linux 4.18, David Ah­ern im­proved the data struc­tures used by route lookup[10]. In
-Linux 5.9, Brian Vazquez re­moved ex­pen­sive in­di­rect calls in com­mit
-55cced4f813b[11].</p>
-<p>The ma­jor 200 ns re­gres­sion in­tro­duced in Linux 6.5 wiped out all these
-im­prove­ments. This ver­sion im­ple­ments a mit­i­ga­tion for “Spec­u­la­tive Re­turn
-Stack Over­flow[12],” a vul­ner­a­bil­ity af­fect­ing AMD pro­ces­sors, in com­mit
-fb3bd914b3ec[13]. This mit­i­ga­tion adds about 20 cy­cles on each func­tion re­turn.
-It was back­ported to older ker­nels (5.10, 5.15, 6.1, and 6.4). To keep the
-re­sults leg­i­ble, I dis­abled the mit­i­ga­tion for these ver­sions with
-spec_​rstack_​overflow=​off on the ker­nel com­mand-line.</p>
-<p>You can check the vul­ner­a­bil­i­ties im­pact­ing your CPU and their mit­i­ga­tions with
-lscpu. Some mit­i­ga­tions may de­pend on the mi­crocode or on the
-firmware.1</p>
-<p>The mi­crocode was out of date on my ma­chine as I for­got to in­stall the
-amd64-microcode pack­age. As it only im­pacts TSA[14], our bench­mark is
-un­af­fected. Spec­tre v2 mit­i­ga­tion did not en­able au­to­matic IBRS[15], be­cause
-of SEV-SNP be­ing en­abled in the firmware[16]. With au­to­matic IBRS, the
-im­pact of SRSO should be smaller. ❦</p>
-<p>The 30 ns im­pact of the mit­i­ga­tion for SRSO in Linux 6.5 is smaller than for
-IPv6 be­cause IPv4 route lookups tra­verse fewer func­tions: around 4 func­tion
-calls for IPv4 com­pared to 25 for IPv6.</p>
-<p>In Linux 5.11, I in­tro­duced a re­gres­sion in com­mit c0c5a60f0f13[17] af­ter
-fix­ing the be­hav­ior of net.​ipv4.​conf.​all.​ignore_​routes_​with_​linkdown!2
-As a re­sult, the ip_​ignore_​linkdown()[18] func­tion spends
-around 5 ad­di­tional cy­cles to re­turn a re­sult as it needs to fol­low three
-ad­di­tional point­ers. fib_​lookup()[19] even­tu­ally calls it in the
-fol­low­ing code[20]:</p>
-<p>De­spite ipvX in its ti­tle, the com­mit only changes the be­hav­ior of the
-IPv4 code. The IPv6 ver­sion over­writes the value of each de­vice in
-addrconf_​fixup_​linkdown()[21]. ❦</p>
-<p>If we re­order the con­di­tions, we avoid call­ing ip_​ignore_​linkdown() for the
-most com­mon case where the link isn’t down:</p>
-<p>Here’s the dis­tri­bu­tion of lookup times be­fore ap­ply­ing the patch[22] on top of
-net-next:3</p>
-<p>Linux 7.5 will be the first sta­ble re­lease in­clud­ing this fix. ❦</p>
-<p>The lighter shade de­picts the cu­mu­la­tive dis­tri­bu­tion func­tion. Af­ter ap­ply­ing
-the patch, the me­dian im­proved from 132 to 126 cycles:4</p>
-<p>At 2.4 GHz, one cy­cle is about 0.42 ns. ❦</p>
-<p>To re­duce the im­pact of mit­i­ga­tions, you can dis­able all of them with
-mitigations=​off, dis­able only a spe­cific one like with
-spec_​rstack_​overflow=​off, or pro­tect against only some at­tack vec­tors[23] with
-mitigations=​auto,no_​user_​kernel, start­ing from Linux 6.17.</p>
-<p>The im­pact is also quite dif­fer­ent de­pend­ing on the CPU. For ex­am­ple, on a Xeon
-W-2295[24], an In­tel desk­top CPU from 2020, the im­pact of the mit­i­ga­tions is only
-a few cy­cles for IPv4, and less than 3% for IPv6. The main con­trib­u­tor is the
-mit­i­ga­tion for the In­di­rect Tar­get Se­lec­tion[25] vul­ner­a­bil­ity, which is fixed
-since the Sap­phire Rapids[26] ar­chi­tecture.</p>
-<p>If we set aside the re­gres­sions in­tro­duced by the mit­i­ga­tions against CPU
-at­tacks[27], the per­for­mance of IPv4 is de­clin­ing slowly over time while IPv6 has
-im­proved in the past and is cur­rently sta­ble. If rout­ing per­for­mance is
-im­por­tant, you have sev­eral op­tions: choose a dif­fer­ent CPU like an AMD Zen 5
-CPU[28], a fourth gen­er­a­tion Xeon CPU[26], or maybe an ARM Neo­verse V2[29];
-dis­able some or all the mit­i­ga­tions; by­pass rout­ing with XDP/eBPF;5 or
-off­load rout­ing[30] to the net­work card.</p>
-<p>This re­quires avoid­ing bpf_​fib_​lookup()[31], which re­lies on
-the same ker­nel lookup. ❦</p>
-<p>Maytham Al­su­dany[32] re­viewed a first draft of this ar­ti­cle. Any er­rors are still mine!</p>
+                <p>I’ve been using ed25519-sk keys with YubiKeys since practically the moment they were available. But because of some specific use-cases (and because, frankly, YubiKeys are expensive) I’ve had a few traditional on-disk keys hanging around for a while just waiting for me to finally decide to get rid of them.</p>
+<p>This post documents how I’m using various secure enclaves (YubiKey, TPM, Apple Secure Enclave) to hold/encrypt SSH key material and achieve the goal of not having any unprotected key material living on-disk.</p>
+<p>Probably. I don’t intend to imply that this post is the only way that anyone should be doing SSH keys. Using a passphrase will encrypt the key with bcrypt & AES which keeps it protected even if the on-disk keyfile leaks somehow.</p>
+<p>And with a functioning ssh-agent, the passphrase should only need to be entered once per session, with the decrypted key material being held in RAM after that point.</p>
+<p>So yes, the ’traditional’ method is probably fine for most threat models. But I’m still keen to move to hardware-backed keys anyway, mostly for the satisfaction.</p>
+<p>When I say ‘hardware-resident’ keys, I mean keys that use a secure enclave or purpose-built hardware like YubiKeys to store or protect the key material.</p>
+<p>The theoretical benefit here is that the hardware used to generate the SSH key is needed in order to use the key. There’s no mechanism that allows leaking or exfiltrating keys that generated using this method. Any material that does exist on-disk is useless without the hardware.</p>
+<p>I’m going to try three different hardware methods for achieving this, which I think will cover all of my needs:</p>
+<p>With a YubiKey (5 and newer), SSH keys can be directly enrolled into the device using ed25519-sk (where the -sk stands for “Security Key”). This doesn’t require any additional software beyond OpenSSH itself.</p>
+<p>To store a new SSH key on a YubiKey, insert it and run:</p>
+<p>The application tag set in the command is arbitrary and can be set to whatever memorable string you prefer to differentiate between multiple SSH keys if you want to create multiple keys on the same YubiKey.</p>
+<p>If you have ykman installed, you can now inspect the list of credentials enrolled in the device:</p>
+<p>If ykman complains that you haven’t set a FIDO PIN on the YubiKey yet, you can do this with ykman fido access change-pin.</p>
+<p>Note that you don’t actually need ykman to enrol or use SSH keys with a YubiKey but it does make managing the device more convenient.</p>
+<p>Once the key has been created, you can retrieve the public key from disk:</p>
+<p>This key can be used like any other SSH public key – added to authorized_keys on a host, copied with ssh-copy-id, or pasted into services that depend on SSH like Git forges.</p>
+<p>You will also find a ~/.ssh/id_ed25519-sk file on disk (without the .pub extension). Note that although this looks like a private key, it doesn’t actually contain the key material. This is just a handle to find the relevant key on the hardware device.</p>
+<p>To configure the key for authentication, it can be enrolled with ssh-add like a regular key, or specified directly in ~/.ssh/config:</p>
+<p>From here, you can now SSH into the destination host as with a regular key. SSH will ask you to tap the YubiKey to confirm presence when the SSH command runs.</p>
+<p>When using an ed25519-sk key created with the default settings as above, you will be asked to confirm your presence whenever the key is used by physically touching the YubiKey.</p>
+<p>It’s probably a good idea to keep this default, but if you have a specific use-case that requires unattended key usage, you can generate a no-touch-required key as follows:</p>
+<p>When using a no-touch-required key, although it isn’t possible for a malicious actor to exfiltrate the key even with root access to the host the YubiKey is plugged into, a malicious actor with access could use the key without requiring any presence detection or human interaction. So do make sure this is actually suitable for your risk appetite before doing it.</p>
+<p>To use a no-touch-required key for unattended authentication to remote servers, you need to prepend the entry in the authorized_keys file on the destination host with no-touch-required, otherwise OpenSSH’s default security settings will reject the key.</p>
+<p>YubiKeys are nice, though fairly expensive. It would be useful if we could use the TPM we already have on our host to protect key material instead. Well, it turns out we can!</p>
+<p>Unfortunately this does require additional software, but it’s a fairly minimal Golang package – ssh-tpm-agent. It can be installed with Go directly from GitHub, but is natively packaged by Ubuntu and I’m working on packaging it for Fedora.</p>
+<p>To create a TPM-backed SSH key with a PIN, run:</p>
+<p>The process will ask you where to store the key. From here, once again we have a keypair with a .pub file that we can use in authorized_keys or copy however we wish.</p>
+<p>To use the TPM-backed key we need to use the TPM-aware SSH agent provided by the ssh-tpm-agent package. If you installed the native Golang package rather than something vendored by your distribution, you can enable the systemd socket unit for the agent as follows:</p>
+<p>To ensure the socket for the agent can be discovered by SSH processes run within your shell session, add the following to your .bashrc or the equivalent for your shell:</p>
+<p>Again, we can now use this key to authenticate to servers as if it were any other traditional on-disk key.</p>
+<p>If you want this key to be available unattended, or to services that don’t use a full shell such as systemd mount units, you can create a new key without a PIN (pass -N "" to the ssh-tpm-keygen command) and specify the socket path in ~/.ssh/config instead of relying on SSH_AUTH_SOCK (although this relies on the socket address being predictable – i.e. your UID being stable):</p>
+<p>Note that ssh-tpm-agent does not account for the values in the TPM Platform Configuration Registers (PCRs) which record the state of the booted system – firmware versions etc, so changes of hardware/firmware/OS will not cause the system to refuse to unseal the key (unlike, say, something like BitLocker). So ensure that using a PIN-free key is appropriate for your risk model before doing so.</p>
+<p>You will notice though that the private keyfile held on disk uses a .tpm extension this time. This is where an important caveat of the TPM method comes in – Unlike the YubiKey approach, the private key material is actually being stored on disk here. This is because TPM devices do not natively support enrolling SSH keys. So what is happening is that the private key material is being stored on disk in encrypted form, and the TPM is being used to decrypt it.</p>
+<p>This is still a device-bound credential as the key cannot be used without the TPM device even if the keyfile is leaked or exfiltrated but it is a relevant distinction compared to device-resident credentials such as -sk keys.</p>
+<p>As of macOS Sequoia, the Smart Card Auth system within macOS is able to natively handle SSH keys as identities.</p>
+<p>To export a handle to disk that allows OpenSSH to use the key from the secure enclave, you can do:</p>
+<p>When prompted for a pin during export, you can leave it blank as it isn’t used here. A public key and private key handle file will be created on-disk in the ~/.ssh directory.</p>
+<p>Note that the command above will export a key handle for all of the SSH keys you have enrolled in the Secure Enclave (you can create many if desired by repeating the process above). I wasn’t able to find a way to export individual key handles despite Apple’s docs suggesting that you should be able to with KEYCHAIN_CERTIFICATES. Your best bet will be to use a clear label using the -l flag when creating the key so you can easily find the handle for it after it has been exported to disk.</p>
+<p>Once we have our pubkey and handle file, we can process these as we normally would – copying the public key to an authorized_keys file on a remote host or adding it to whatever services we prefer.</p>
+<p>To use SSH keys from the Secure Enclave, we need to set SSH_SK_PROVIDER in our shell. We can add this to ~/.zshrc:</p>
+<p>After a restart of the shell, the key will work like any other – though you may need to specify it directly as in my case it wasn’t being autodiscovered by macOS’s SSH agent:</p>
+<p>If you run your Mac in what Apple calls ‘clamshell mode’ (i.e. a laptop with the lid shut), then the initial create-ctk-identity command will fail with an error like this:</p>
+<p>Unfortunately it seems that keys created with -t bio do actually require full TouchID in order to generate or use – unlike other operations such as unlocking the Safari Keychain or using Apple Pay which fall back to a user password when in clamshell mode.</p>
+<p>There is an option to use -t none to create a key without presence confirmation enabled at all. This carries the same risk as I discussed in the section about using YubiKeys unattended so you’ll have to decide whether it works for your risk model.</p>
+<p>If, like me, you use the machine in clamshell mode basically all the time there are some alternative options that still retain presence detection though:</p>
+<p>With a mix of these three approaches, I’ve finally been able to deprecate on-disk keys from all my setups.</p>
+<p>Hopefully some of the info in this post is helpful to people! It’s nothing that can’t already be found online but I’ve gathered it into one place mostly for my own convenience.</p>
+<p>The main gotcha to be aware of with hardware-resident keys is that they’re, well, hardware resident. Hardware malfunction/loss/change can render keys unusable. So it’s probably better to make sure you at least have multiple keys. Remember, authorized_keys can take as many keys as you care to put in it so redundancy is the best move here I think.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://vincent.bernat.ch/en/blog/2026-linux-performance-ipv4-ipv6-route-lookup" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://blog.infected.systems/posts/2026-11-03-i-deleted-all-my-ssh-keys/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

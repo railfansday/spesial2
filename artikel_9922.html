@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rendering in batches with glimmer and Datastar</title>
+    <title>Go Turns 17</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9922.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,294 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Rendering in batches with glimmer and Datastar</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
+        <h1>Go Turns 17</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
             
             
             
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Anders Murphy recently wrote about faster streaming HTML with batches and aggregates. The idea is simple. When the server streams HTML to a page, it should collect the changes and render once for the whole batch. Similarly, it makes sense to avoid rendering the same thing twice for two different pages to avoid resending the data that the client already has.</p>
-<p>I've been building glimmer and glimmer-datastar to do reactive server side rendering for jolt, and ran into similar problems. This post covers how both libraries have been reworked to facilitate batch processing, and how these changes are used in the newsroom app.</p>
-<p>The first version did the obvious thing which is to wake up every stream that reads the ratom on a write to do a render. The naive approach works fine with a few pages that do occasional writes, but it doesn't scale with load because the cost ends up being writes * pages.</p>
-<p>The fix here is to decouple writes from render requests. A write only needs to mark the streams that read the ratom as dirty, then a separate render loop can run on a fixed timer specified by :tick-ms. And every dirty stream ends up being rendered exactly once each time it wakes up with all the changes that have been batched up since the last time:</p>
-<p>The loop sleeps out whatever is left of the tick before rendering, allowing every change that arrives to land in the same batch. Meanwhile, an idle loop simply parks on a channel without incurring any additional cost.</p>
-<p>The effect on a burst with ten open streams and a hundred swap!s in a row is fairly dramatic as one would expect:</p>
-<p>Before, the server had to do a thousand renders, most of which were thrown away. With ticks in place, the render count depends on the number of pages and how long the burst lasts rather than how many writes it contains. Incidentally, glimmer's GUI side already worked this way since a component's watcher holds a pending flag to ensure that a burst of changes queues a single deferred render on the UI thread.</p>
-<p>A tick produces at most one frame per stream, and each stream sends its frames through a channel with a sliding buffer of one. If a client hasn't taken the last frame by the time the next one is ready, the old frame is discarded so that the client always gets the latest update. This way a bad connection can't back up the render loop or build up an unbounded queue of stale HTML.</p>
-<p>Since ticks batch renders, it makes sense for writes to be batched as well, as an opt-in. This is done using tx! to queue a thunk that runs on the loop thread at the start of the next tick, and before a render happens:</p>
-<p>Writes and renders have to take turns, so that a render can't observe a partial update. If you pass a :batch-fn, it receives all of a tick's thunks together, so you can run them in a transaction, and calling tx! returns a promise of the thunk's result.</p>
-<p>While ticks cut renders per page, there is also waste across different pages to consider. If a hundred people are looking at the same 300-row board, rendering it a hundred times per tick produces a hundred identical strings.</p>
-<p>To address that, glimmer-datastar provides its own hiccup renderer in jolt.datastar.html. The head of the vector is a component of [row item], and its HTML is cached under the vector itself, so the key is the function plus its arguments. The whole board can now render once per change with every page showing it sharing the result.</p>
-<p>As always, the tricky part is knowing when a cached entry is stale, since components read ratoms as well as their arguments, glimmer now has capture for this case:</p>
-<p>It runs a function and returns its result along with every reactive cell the function read. The cache stores each entry with those cells and the values it saw in them, and once any of those values changes, that indicates a need for a cache refresh. And on a hit, the cache simply reads the cells again.</p>
-<p>The cache also admits an entry only when it's asked for more than once, so components that render once and never again don't push out ones that render every frame. It evicts by generation, which is roughly LRU without needing per-entry bookkeeping on the hit path.</p>
-<p>On a 4-core machine, with 100 streams showing the 300-row board and one row changing per tick, a tick takes:</p>
-<p>The cache is the big win here while render threads level off, so two is the default.</p>
-<p>And capture also fixes another problem unrelated to speed. Since a stream now knows exactly which cells its last render read, it only needs to watch those. A cell it stopped reading can be unwatched right away, rather than leaving a subscription behind that triggers extra renders later.</p>
-<p>With rendering no longer being the bottleneck, the wire becomes the main cost since a single row change to that 300-row board still sends a 40 KB page. One obvious solution here is to enable streaming compression which gets you part of the way. Using ring-chez-adapter's wrap-gzip compresses an SSE stream with a single deflate window across frames, so a frame that's almost identical to the previous one compresses to almost nothing. But that holds only while a frame fits in deflate's 32 KB window. Past that the saving mostly disappears, and even a one-row change costs 4316 gzipped bytes.</p>
-<p>So, we need to use patches to address the underlying problem. A component whose root element has an id, like [:tr {:id ...}], is a part of the page. Since each stream compares its new page with the last one, part by part, it only needs to send parts that changed. Then, on the frontend, Datastar swaps each one in by id. When the page changes around its parts, such as a row being added, text outside every part being edited, or the client missing a frame, the whole page still gets sent.</p>
-<p>Since the size of a patch depends on the change rather than the page, the comparison is cheap too. A cached component brings its parts as the same shared vector on every page, so the diff can skip it with an identity check. On my machine, this roughly halved the time for each tick going from 21.7 ms with whole frames to just 7.0 ms with patches. Using the delta is key for incremental view maintenance because only parts of the page that change have to be sent as updates.</p>
-<p>We're not done yet though, because another trick that can be applied is to use aggregates. Take a reaction like (reaction (count (filter open? @todos))). It recomputes from scratch on every write, so whether a single row or a thousand change, the reaction still costs a thousand.</p>
-<p>Glimmer's new glimmer.table borrows from DBSP. A table is a keyed collection cell, and a view over it maps or filters only the rows that changed. An aggregate whose operation has an inverse, like a count or a sum, simply takes the old row out and puts the new one in:</p>
-<p>Of course, batching only helps if you're not doing work for pages nobody is looking at. So, when a client goes away, the server closes the stream's channel. A transducer on that channel runs on close and unwatches every cell the stream was tracking, making it possible to garbage collect the connection right away. And a render that the handler answers with a redirect or an error, such as a 401 after sign-out, cleans up the stream the same way.</p>
-<p>I've always been interested in understanding how world news and events all connect to each other. There are many different things happening on any given day, and things that often seem like isolated events can often have shared underlying causes.</p>
-<p>Decision makers get fancy daily briefings prepared for them by analysts who review the events to produce a perfectly prepared report. So, I figured why can’t I have something like that too?</p>
-<p>And so, I built Newsroom which is a self-hosted news desk app to gather sources and write a daily briefing tailored to what I'm interested in. The app goes through hundreds of sources using a combination of RSS and web scraping. It then groups the news into categories and gets an LLM to build a graph of events and their connections to provide a basis for the report.</p>
-<p>It was a perfect project to exercise the library since it has a live sidebar showing the progress as each source is aggregated, and the model's progress as it streams.</p>
-<p>That kind of workload is the worst case for one-render-per-write. A run fetches its sources concurrently from several threads, and each source reports a result and a log line. Meanwhile, the model's progress updates many times a second while it streams. Every one of these events used to be a swap! on the run's status ratom, and every swap!, in turn, translated into a render of every page watching that reader's run.</p>
-<p>Now, the server asks for {:tick-ms 200} which prevents event flooding. However fast the status changes, an open page still renders at most five times a second, and a burst of sources finishing together all get packaged into a single frame. The whole change was just one line, since newsroom already asked for the same 200 ms through the old :rate-limit-ms option. What changed underneath though is that a tick now coalesces the writes instead of only spacing them out.</p>
-<p>Ticks can also split two related writes across frames to ensure correct order. A source used to set its state and then append its log line in a second swap!, so a page could show "ok, 12 items" in the source list before the log mentioned it. Now both go in one write:</p>
-<p>That's the same idea tx! enforces, done by hand where one function owns both writes. It also depends on glimmer's swap! being atomic, because sources call this from several threads at once.</p>
-<p>Each newsroom page has two live regions, the sidebar and the article, both running on separate streams. The sidebar reads the run status, which changes constantly during a run. The article reads only a counter bumped when a day is stored. Since a stream only watches what its last render read, the article doesn't need to repaint while a run is in progress.</p>
-<p>All readers have their own lanes in the form of a status ratom and a stored counter, so each reader's run only dirties their own pages. When a tab closes, or a reader signs out and the stream gets its 401, the stream drops its subscriptions.</p>
-<p>Incidentally, the same kind of batching also works for the database. Making the status of a run durable makes it possible to pick up where it was interrupted. But the same problem we talked about earlier came back from the other direction. Writing the status to SQLite on every swap! results in a database write per progress tick. So, Newsroom marks the run as unsaved instead, and a background thread writes the changed runs once a second:</p>
-<p>This is the same tick pattern of marking the state dirty, and doing a flush on a timer. A restart loses at most a second of the log without the worry of having IO pressure. And the final state can be written synchronously when the run ends.</p>
-<p>Each layer that I've discussed in this post removes a different kind of repeated work:</p>
-<p>The reactive model is key for all of this, because the dependency tracking used to decide what to re-render can also be used to infer what can be skipped.</p>
+                <p>Stories about how and why companies use Go</p>
+<p>How Go can help keep you secure by default</p>
+<p>A complete introduction to building software with Go</p>
+<p>Reference documentation for Go's standard library</p>
+<p>Tips for writing clear, performant, and idiomatic Go code</p>
+<p>Learn and network with Go developers from around the world</p>
+<p>Austin Clements, for the Go team
+      10 November 2026</p>
+<p>Today, November 10th, we celebrate the 17th anniversary of Go’s open source
+release!</p>
+<p>Over the past year, we released Go 1.26 in February and Go 1.27
+in August, alongside a steady stream of releases across our
+golang.org/x libraries and developer tools.
+Meanwhile, the pace of change across the software industry continues to
+accelerate, driven by shifting hardware, evolving security threats, and the
+rapid rise of AI-assisted development and agentic systems.</p>
+<p>In a tumultuous time for the industry, Go aims to be a steady hand on the
+tiller. Our goal is to keep Go grounded in its foundational principles of
+simplicity, reliability, efficiency, and an unwavering commitment to
+compatibility, while adapting to modern hardware, production
+workloads, and developer workflows. Increasingly, our investments serve a dual
+purpose: what helps human engineers write, understand, and maintain reliable Go
+code at scale also provides the guardrails and authoritative context that AI
+coding assistants and agents need to be effective.</p>
+<p>In the language itself, Go 1.26 and 1.27 addressed several long-standing
+restrictions in generics and everyday Go syntax, guided by years of real-world
+experience. When generics first landed in Go 1.18, methods could not declare
+their own type parameters, which sometimes forced awkward package-level
+functions and “inside-out” nested calls. Go 1.27 introduced generic
+methods on non-interface types (such as the new
+Rand.N method in math/rand/v2),
+allowing APIs to stay naturally organized on types and enabling readable method
+chaining. Together with support for self-referential type constraints in Go 1.26
+and broader type inference for generic function values in Go 1.27, generics in
+Go feel more complete and natural than ever.</p>
+<p>Alongside generics, two refinements to value construction make everyday Go code
+cleaner and more concise. Go 1.26 extended the built-in new function to
+accept an initial value expression, allowing new(42)
+or new("go1.26") without the ubiquitous newInt-style helper functions used
+to populate optional pointer fields in JSON and protocol buffer structs. And in
+Go 1.27, struct literal keys can refer directly to fields of embedded or nested
+structs, reducing boilerplate in composite literals.</p>
+<p>In the standard library, our focus has been on evolving Go’s “production stack”
+and eliminating subtle operational traps. Few packages are as central to that as
+encoding/json, which has been a mainstay of Go since before Go 1.0. While its
+core model has held up remarkably well for over 15 years, tighter JSON standards
+and security expectations have turned some of its original defaults into
+interoperability and security hazards, such as silently accepting invalid UTF-8
+or duplicate object keys and matching struct fields case-insensitively. At
+the same time, its buffered design prevented true streaming and limited
+performance. Addressing these issues while upholding Go’s compatibility promise
+for the millions of existing programs that depend on encoding/json meant
+designing a new major version of the package.</p>
+<p>Six years in the making, the new encoding/json/v2 and
+encoding/json/jsontext packages reached general
+availability in Go 1.27. Driven by Joe Tsai, Daniel Martí, and contributors from
+across the Go community, this modern JSON API brings safer,
+stricter defaults, flexible caller- and type-specified customization, and up to
+10× faster unmarshaling, while cleanly separating high-level semantic marshaling
+(json/v2) from low-level, reflection-free syntactic streaming (jsontext).
+Crucially, we didn’t leave existing code behind: the original
+encoding/json package is now implemented entirely in
+terms of v2 under the hood. Existing v1 callers get faster unmarshaling
+simply by upgrading, and packages using v1 and v2 interoperate seamlessly so
+that the ecosystem can migrate gradually without flag days.</p>
+<p>We’ve also brought new production diagnostics to Go’s concurrency primitives.
+Concurrency is one of Go’s greatest strengths, but goroutines accidentally left
+blocked on abandoned channels or locks can silently leak memory and CPU in
+long-running services, and traditional goroutine profiles cannot distinguish
+leaked goroutines from ones legitimately waiting for work. First previewed in Go
+1.26 and now generally available in Go 1.27, the new goroutine leak
+profiler (goroutineleak in runtime/pprof and
+/debug/pprof/goroutineleak in net/http/pprof) solves this for production
+services. Contributed by Vlad Saioc and Uber’s Programming Systems team,
+building on academic research with Aarhus University and Washington University
+in St. Louis, the profiler repurposes the garbage collector’s reachability phase
+to identify goroutines blocked on concurrency primitives that no runnable
+goroutine can ever reach. That allows it to pinpoint leaks in production with
+near-zero false positives and zero overhead when not in use.</p>
+<p>In net/http, closing an HTTP/1 response body with even a single unread
+byte—such as a trailing newline left behind by a JSON decoder—previously forced
+the client to tear down the underlying TCP and TLS connection. Go 1.27’s HTTP
+transport now automatically drains small unread response bodies in the
+background on close, turning a widespread latency
+footgun into up to a 5× speedup for sequential HTTP/1 requests while letting
+application code stay clean and simple.</p>
+<p>These releases also added several notable standard library APIs, including a
+native uuid package, a generic and type-safe
+errors.AsType, and an in-memory
+httptest.NewTestServer designed for
+virtual-time testing with testing/synctest. Existing
+packages saw significant speedups as well: io.ReadAll now
+runs twice as fast while allocating half as much memory,
+compress/flate compresses faster (speeding up gzip,
+zip, zlib, and png), and image/jpeg has a faster,
+more accurate encoder and decoder.</p>
+<p>Modern CPUs look very different from the hardware Go first launched on 17 years
+ago, with wide vector units and deep, non-uniform memory hierarchies. A major
+focus of our runtime and compiler work is ensuring Go programs make full use of
+modern silicon, both transparently when you upgrade your toolchain and through
+new APIs when you need explicit control.</p>
+<p>After debuting as an experiment in Go 1.25, the Green Tea garbage
+collector became the default in Go 1.26. By organizing object
+marking around contiguous memory spans rather than chasing pointers across the
+heap, Green Tea aligns with modern CPU memory architectures to reduce garbage
+collection overhead by 10–40% in real-world workloads—and by an additional ~10%
+on recent amd64 processors using AVX-512 vector instructions during scanning.</p>
+<p>Of course, the runtime shouldn’t be the only part of a Go program that can tap
+into vector hardware. Without access to Single Instruction, Multiple Data (SIMD)
+capabilities, compute-intensive software, from cryptography and media processing
+to data analytics and AI, leaves a significant portion of modern silicon dark.
+Until recently, the only way to light up that hardware in Go was by writing and
+maintaining per-architecture assembly. To change that, Go 1.26 and 1.27
+introduced two experimental SIMD packages: simd/archsimd,
+for low-level access to architecture-specific vector instructions on amd64,
+arm64 (NEON), and WebAssembly (wasm); and simd, a
+higher-level, width-agnostic API that provides portable, near-assembly
+performance across architectures with automatic fallback emulation.</p>
+<p>We’ve also attacked the cost of memory allocation from multiple angles. The
+cheapest heap allocation is the one that never happens: in Go 1.26, the compiler
+began allocating initial slice backing stores on the
+stack at append sites—even for slices that
+ultimately escape to the heap—eliminating the flurry of small heap allocations
+that typically accompany slice growth. And for heap allocations more broadly, Go
+1.27 introduced size-specialized memory
+allocation to speed up allocating the small
+objects (such as small structs, slices, and strings) that dominate allocator
+time. Generating dedicated fast-path allocator routines for size classes up to
+80 bytes made small allocations up to 30% faster and improved overall
+performance in allocation-heavy programs. Together with a ~30% reduction in
+baseline cgo call overhead in Go 1.26, these improvements make Go programs
+faster and leaner out of the box.</p>
+<p>Go’s approach to security spans the entire lifecycle of software: providing safe
+APIs by design, preparing cryptography for the future, and actively defending
+the live ecosystem as new threats emerge.</p>
+<p>To defend against store-now, decrypt-later attacks and support the industry’s
+accelerating timelines for quantum readiness, Go has continued expanding its
+post-quantum cryptography support. Go 1.26 enabled hybrid post-quantum key
+exchanges (SecP256r1MLKEM768 and SecP384r1MLKEM1024) by default in
+crypto/tls and added the crypto/hpke package
+(implementing RFC 9180 Hybrid Public Key Encryption, including post-quantum
+hybrid KEMs). Go 1.27 followed up with the new
+crypto/mldsa package, implementing the FIPS 204
+post-quantum ML-DSA signature standard and integrating it into crypto/x509 and
+crypto/tls.</p>
+<p>At the same time, we’ve continued hardening the standard library and runtime
+against subtle classes of vulnerabilities. Most key generation and signing
+functions across Go’s crypto/... packages now unconditionally draw from a
+secure system randomness source, closing off a classic footgun where
+non-cryptographic readers were accidentally passed in. Under the hood, Go 1.26
+also added 64-bit heap base address randomization to harden cgo binaries and
+introduced the experimental runtime/secret package for
+eagerly erasing sensitive cryptographic temporaries from registers, stack
+frames, and the heap.</p>
+<p>Securing Go deployments also requires rapid vulnerability and incident response
+in a fast-moving threat landscape. From the Go vulnerability database and
+govulncheck to our
+release infrastructure, we’ve invested heavily in ecosystem defense. In October,
+that preparation was put to the test during the eMudhra certificate key
+disclosure incident, when eight intermediate TLS and
+code-signing certificates chaining to a widely trusted root CA were discovered
+to use trivially weak private keys. Because Linux lacks a uniform OS-level
+certificate revocation mechanism, Go’s built-in TLS verifier is the frontline
+defense for millions of Linux services. Within seven and a half hours of initial
+notification, the Go Security team shipped a targeted block in our first-ever
+URGENT track security release (Go 1.27.3 and Go
+1.26.10) alongside an updated Go vulnerability database entry so govulncheck
+could flag affected binaries, giving Go users everything they needed to protect
+their deployments before the weak keys were publicly disclosed the next morning.</p>
+<p>Go has always been more than a compiler and standard library: it is an
+end-to-end platform for software engineering. Over the past year, our work in
+golang.org/x/tools, the
+gopls language server, vscode-go,
+and pkg.go.dev has focused on making that platform even
+more productive for both human developers and AI coding assistants.</p>
+<p>In last fall’s Go Developer Survey, the single biggest
+challenge developers reported was ensuring their code follows best practices and
+current Go idioms. As Go evolves while standing by its compatibility promise,
+older ways of writing code continue to work alongside newer, clearer, or faster
+alternatives, creating a natural drift in idioms over time. That drift has been
+compounded by AI coding assistants, which gravitate toward the older patterns
+that dominate their training data.</p>
+<p>Go 1.26 tackled this with a complete overhaul of the go fix
+command, returning the long-dormant tool to its pre-Go 1.0
+roots to apply dozens of automatic
+modernizers
+across entire codebases. What gofmt did for stylistic consistency, modernizers
+aim to do for idiomatic consistency. Available both as instant suggestions in
+gopls and as bulk, push-button upgrades in go fix, modernizers simplify
+existing code and help developers discover new language and library features. We
+now routinely consider whether new language and library proposals should ship
+with a modernizer of their own. Just as importantly, modernizers give coding
+agents an immediate way to bring generated code up to date, while helping shift
+the global corpus of open source Go code so that future models learn modern
+idioms from the start.</p>
+<p>Bespoke modernizers work well for the language and standard library, but a
+centralized team can never write them for every third-party module in the
+ecosystem. That’s why Go 1.26 also introduced the annotation-driven
+source-level inliner, the first step toward a “self-service”
+paradigm for automated code maintenance. Any package author can now annotate a
+deprecated function, type, or constant with //go:fix inline, and the inliner
+will safely migrate callers and references via go fix or in the IDE, carefully
+handling evaluation order, side effects, and name shadowing.</p>
+<p>In the editor, we’ve made four feature-packed releases of gopls over the past
+year (v0.21.0, v0.22.0,
+v0.23.0, and v0.24.0). In
+collaboration with the Dart team, we designed and proposed an open Language
+Server Protocol (LSP) extension for interactive
+refactoring, allowing language servers to ask
+for user input through dynamic, multi-step dialogs in any supporting editor. Now
+integrated into gopls and vscode-go, interactive refactoring powers
+customizable struct tag addition and removal, interface implementation
+(including generic interfaces) with live symbol search, and cross-package
+declaration moves. Beyond refactoring, gopls also gained generalized package
+renaming across directories, zero-configuration support for editing Go assembly
+files, subexpression hover inspection, completions and inlay hints for promoted
+fields, automatic govulncheck scanning when go.mod dependencies change, and
+continued enhancements to its built-in Model Context Protocol (MCP)
+server for AI coding assistants.</p>
+<p>Rounding out the developer platform, in May we launched the official
+pkg.go.dev API and followed up with support for
+go doc pkg@version in Go 1.27. Previously, developer
+tools and IDE integrations had to resort to fragile web scraping to query
+ecosystem metadata. Today, the pkg.go.dev API gives tool authors and AI coding
+agents a fast, authoritative service for querying module versions, package
+symbols, importers, and vulnerability data, while go doc pkg@version makes it
+easy to pull up documentation for any version of any package right from the
+command line.</p>
+<p>On the tooling front, we’re building on the pkg.go.dev API, gopls, and go fix to make Go’s developer tools even more capable for both human developers
+and coding agents. Following the strong community response to go fix and
+//go:fix inline, we’re exploring ways to expand self-service static
+analysis, enabling developers, package maintainers, and
+organizations to easily integrate custom analyzers and domain-specific
+best-practice checks directly into their development workflows. We’re also
+exploring ways to surface richer package health and quality signals on
+pkg.go.dev and through its API, helping developers and coding agents evaluate
+and choose trustworthy, reliable dependencies.</p>
+<p>In the language and libraries, Go 1.28 will resolve one of Go’s longest-standing
+language requests by allowing composite literals to omit redundant
+types whenever the type can be inferred from context, cutting
+visual noise in deeply nested configurations, API requests, and table-driven
+tests. And with recent generics refinements and hashing
+APIs in place, we’ve just accepted a
+swath of proposals for generic collection APIs—including sets,
+ordered maps, and more—which will land in golang.org/x/exp over the next few
+weeks so the community can try them out and share feedback ahead of future
+standard library inclusion.</p>
+<p>Under the hood, we’re working hard to graduate a large subset of the simd and
+simd/archsimd packages (covering amd64, arm64 NEON, and wasm) in Go
+1.28, with further expansions and arm64 scalable vector (SVE) support targeted
+for Go 1.29. Amid the global RAM crunch, reducing Go’s memory footprint is also
+one of our major priorities for the coming year.</p>
+<p>In the toolchain, Go 1.28 will increase build parallelism by writing compiler
+export data early and streamline static analysis by decoupling
+tool export data from the compiler. Looking further out, we’re
+working to support cgo builds without requiring a C toolchain,
+and we’re kicking the tires on WebAssembly’s early-stage stack-switching
+extension, which is already showing promising improvements in Go Wasm
+performance and binary size.</p>
+<p>Finally, ensuring Go stands the test of time means scaling not just our
+technology, but the open source project itself. Over the past year, some of Go’s
+most impactful advances, including encoding/json/v2 and the goroutineleak
+profile, were driven by or built in close partnership with contributors outside
+Google. To better support our growing ecosystem and contributor base, we’re
+working to bridge the gap between Go maintainers at Google and our broader
+community, and to diversify Go’s technical stewardship. That includes
+restructuring the proposal process to improve throughput, give
+the community clearer visibility into the process and input into prioritization,
+and formally involve community contributors in triage and review. Beyond
+proposals, we are building a clearer contributor ladder to empower proven
+contributors with greater autonomy, decision-making privileges, and maintenance
+responsibilities, and opening up maintainer summits and day-to-day
+communications to trusted contributors from our amazing community.</p>
+<p>Seventeen years in, Go is thriving because of the people who use it, build with
+it, and contribute to it every day. Thank you to everyone in the Go community
+for being part of this journey, and we wish you all the best in the year ahead!</p>
+<p>Previous article: A new Go API for JSON
+Blog Index</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://yogthos.net/posts/2026-11-10-glimmer-datastar.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://go.dev/blog/17years" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications</title>
+    <title>Transformers Model Integration Contracts</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9768.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,142 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
+        <h1>Transformers Model Integration Contracts</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6a725daa5ca641a21ab61956/OWGtXjnbBov-7SI_04o4z.png" alt="How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6a725daa5ca641a21ab61956/OWGtXjnbBov-7SI_04o4z.png" alt="How Specializing the Vocabulary of SLMs Can Cut Inference Cost by 77% in Real Applications" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Models specialized for a domain or a task by fine-tuning general open-source models, such as Qwen and Gemma, inherit a vocabulary built for many domains and general applications.</p>
-<p>In an essay grader we run in production, that vocabulary split the text the model writes most into many tokens. This article previews some results from the VocabX paper, which we will publish soon: how we specialized the vocabulary around the cost of each token rather than its frequency, and cut measured inference cost by 77% without changing the base model.</p>
-<p>The tokenizer is usually treated as a fixed property of the base model, inherited and left alone. For a model specialized in a single domain, it can be one of the largest cost levers, and it is set before any training step.</p>
-<p>One of the systems we run in production is an automated grader for Portuguese essays, built on Qwen3-4B. It receives the essay, the prompt and the supporting texts, and returns a JSON assessment with a grade and a comment for each competency.</p>
-<p>The model was already small, at 4 billion parameters, and had already been trained for the task. Its tokenizer, however, was still the original Qwen3-4B one, built for many languages and many kinds of text. In the grader, it was used for a single language, Portuguese, and a single response format. That had two costs: the text the grader writes on every request took more tokens than it needed, and at every generated token the model scored a vocabulary of 151,669 entries, including many this task almost never uses.</p>
-<p>We rebuilt that vocabulary with a method we call VocabX, keeping the same base model, the same data and the same training recipe. The numbers in this article come from the current version of the paper, still under review, and may change before publication.</p>
-<p>The leading language models read and write in tokens, and the tokenizer decides how text becomes tokens. The tokenizers of the leading general-purpose models are trained on large collections of text from many domains and languages, from source code to contracts to Chinese. For a general-purpose model, that choice makes sense.</p>
-<p>For a model used in a single domain, it creates two kinds of waste at once.</p>
-<p>The first is fragmentation. The tokenizer splits into many pieces exactly what the domain repeats most. In the grader, every response starts with the same JSON envelope, the same competency names, the same evaluation phrases. In contracts, it is the boilerplate clauses. In code, the identifiers. Each of these sequences costs several tokens where one would do, and the model pays for every one of them on every request.</p>
-<p>The second is excess. The vocabulary carries tens of thousands of entries the domain never uses, and the model computes a score for all of them at every token it generates. A model tuned to grade American school biology exams will almost never write in Chinese, yet it computes the probability of every Chinese-language token at every step. The vocabulary splits into many pieces what the domain repeats most, and carries entries the domain never uses.</p>
-<p>The natural reaction is to count tokens and try to reduce the count. But the count is not the bill.</p>
-<p>To see why a generated token costs more, it helps to look at how inference works. It has two phases. In prefill, the model processes the whole input in a single pass through the network: each weight read from GPU memory is reused for every input token, and the limit is compute. In decode, the model generates the response one token at a time, and each token needs a full pass. Each weight read is used only a few times, and the GPU spends most of its time waiting for data to arrive from memory: the limit becomes memory bandwidth.</p>
-<p>This effect is strongest exactly where we operate: small models served with moderate batches. Batching requests splits the weight reads across them and eases the problem, but does not solve it. At every decode step, the model also reads the KV cache, the attention memory that holds the context already processed and grows with it. In the case we measured, the grader, a generated token costs 7.4 times a token read, but the ratio varies with the hardware, the problem, the batch size, the context length and other factors, and it can be larger than that. In general, the direction holds: generating costs more than reading.</p>
-<p>Think of a shipping company that charges per box, but charges seven times more for outgoing boxes than for incoming ones. Reducing the total number of boxes helps. Reducing the outgoing boxes helps seven times more. A method that compresses input and output equally misses most of the possible savings.</p>
-<p>The third component of the bill is the vocabulary itself. The model's last layer, the LM head, turns the internal state into a score for every possible token. To do that, it holds one row of parameters per vocabulary entry. In a model the size of Qwen3-4B, that matrix accounts for almost 10% of the parameters. It is a share that large models absorb without noticing, but it weighs on a small model.</p>
-<p>And the cost is not paid only once. The input layer looks up only the row of the token being read, but the LM head reads and multiplies the entire matrix for every generated token. Since decode is already memory-bound, every extra row is more data to move at every step. An entry the domain never uses costs exactly the same as a frequent one. That is why adding tokens can lower the count and raise the bill at the same time. VocabX does not include this term in its selection criterion, but it controls vocabulary size in two steps: the sub-word merge replaces the base vocabulary with a smaller, domain-specific one, and macros enter under a fixed budget. In the grader, the output layer went from about 152,000 to about 65,000 rows.</p>
-<p>Adapting a model's vocabulary is not a new idea. Reference methods in the literature, such as fast vocabulary transfer (FVT), multi-word tokenization (MWT) and Liquid AI's in-place tokenizer expansion (in-place BPE), which continues BPE training from the original vocabulary, already reduce fragmentation. When we tested them on our problem, we found two limitations.</p>
-<p>They choose tokens by frequency, not by cost. An expression that appears often in the input is worth more to them than one that appears less often in the response, even if the second is the more expensive one to serve.</p>
-<p>They work on a single layer. They either adjust how words are cut into pieces, or merge whole phrases into one token. None of these three does both under the same criterion. And the grader's biggest waste was precisely in long, repeated spans such as the JSON envelope, which a sub-word method only reaches after merging each part, one by one.</p>
-<p>VocabX addresses both limitations, plus a third problem that appears on the obvious path to solving the first.</p>
-<p>First, we changed the question. Instead of asking how many tokens a candidate saves, we ask how much cost and time it saves. Each eliminated token is multiplied by the price of the field it appears in: system prompt, user message or model response. In the case we measured, the grader, a token saved in the response is worth 7.4 times one saved in the input, and the vocabulary is built accordingly.</p>
-<p>Second, we work on both layers at once. Back to the shipping company: you can cut boxes by packing each item better, or by recognizing that the same twelve-item kit ships every week and sending the kit in a single box. VocabX does both. At the sub-word layer, it rebuilds how domain words are cut into pieces. At the multi-word layer, it looks for whole spans that repeat, from short expressions to full lines and JSON envelopes, and turns each into a single token, which we call a macro token. Both layers are chosen under the same cost criterion, each with its own budget.</p>
-<p>To find these spans, we use five miners, automatic searches for spans that repeat across the corpus, each specialized in one kind of repetition: long words, whole lines, expressions, complete sentences, and structures with punctuation such as JSON and tags. Averaged over eight corpora, the last one contributed the most, and on code it alone accounted for 17.5 points. Without all five, token reduction on the grader would drop by 55.6 points.</p>
-<p>Third, we estimate what the sample cannot see. Choosing tokens by cost requires knowing how much each candidate still saves after the ones already chosen. Measuring that exactly would require reprocessing the entire corpus after every choice, tens of thousands of times. A common way to do this at scale is to measure on a sample of documents, and then a candidate absent from the sample gets zero gain.</p>
-<p>An expression that appears 37 times in 50,000 documents shows up in a 400-document sample only about 26% of the time. In a contracts corpus, only 16.6% of the candidates appear in a 400-document sample; the rest are never evaluated.</p>
-<p>A candidate's gain has two parts. One is how much it saves over the entire corpus, and that can be counted exactly, without a sample. The other is how much of that saving is not yet covered by the tokens already chosen, and only that part needs to be estimated. For candidates the sample cannot see, we use a statistical estimate based on the behavior of the ones it can see, instead of zero. A candidate that is rare in the sample but frequent in the corpus is back in the running.</p>
-<p>That change alone, with the same sample and the same budget, raised token reduction on a contracts corpus from 44.7% to 52.8%.</p>
-<p>To measure the real effect, we trained seven versions of the grader with the same base model, the same data, the same recipe and the same seed. The only difference between them is the tokenizer. All of them ran the same 500 requests on the same test machine, with an RTX 5090 GPU and the vLLM inference server, and cost was calculated from measured runtime.</p>
-<p>The model's response dropped from 350 to 101 tokens on average. Cost dropped 77.0%. Quality, measured by the bench score, which combines grading accuracy and the accuracy of screening off-topic or rule-breaking essays, rose from 0.703 to 0.810.</p>
-<p>Getting there required a course correction. The first version of the vocabulary fused each competency's grade with the surrounding JSON into a single macro token. It was the most compact option, but quality dropped: its bench score was 0.689, below the production grader's 0.703. With the grade inside the macro, each combination of grade and structure became a different variant of the same token, and the model chose both in a single step. Giving the grade its own token cost 2 extra tokens per response, raised the bench score to 0.810 and, in the measurement, was even cheaper: a 77.0% reduction, against 73.3% for the fused version.</p>
-<p>The lesson applies beyond the grader. Compression has a cost when the compressed span carries the very decision the model exists to make. The goal is not the cheapest possible vocabulary, but the cheapest one that preserves the tokens that matter.</p>
-<p>To find out whether the gain was specific to our case, we compared VocabX with the three reference methods on five public domains (contracts, medical papers, scientific papers, news and Python code) and three model families (Qwen3, Llama-3.1 and Gemma-3). All methods used the same mining and test documents, and the same vocabulary ceiling.</p>
-<p>VocabX compressed more than the strongest reference method in all fifteen combinations, by 1.2 to 9.3 points. In estimated inference cost, the pruned version of VocabX also led in all fifteen, with average margins of 10.2 points on Qwen3, 7.5 on Llama-3.1 and 13.6 on Gemma-3. On contracts, the pruned version reached 62.6% token reduction with 113,426 vocabulary entries, against 61.8% for the best in-place BPE configuration, which uses 207,803.</p>
-<p>VocabX does not make the model smarter. It makes the model stop paying for text it does not need to write piece by piece, and stop scoring a vocabulary it will never use. In our grader, that cut measured inference cost by 77%, with the same base model and the same training recipe.</p>
-<p>Specialization usually starts with data and weights. It can also start one layer earlier, in the vocabulary.</p>
-<p>The full method, the tables for every experiment and the discarded interventions will be in the VocabX paper, which we will publish soon.</p>
-<p>Explore Dharma AI on Hugging Face to try our demos, download our open models, and see how specialized AI systems outperform general-purpose models in real enterprise applications.</p>
+                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
+(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
+During training, it could peek at the answer it was supposed to predict.
+Nothing crashed, and the bug stayed in main for almost two months.</p>
+<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
+it on every one of them. This post is about that model and the tests built
+around it.</p>
+<p>Transformers supports over 750
+model types, and its test suite is big: 88,000+ CPU tests on main, plus
+200,000+ GPU tests in a daily run. Model tests are only part of it: we also
+test pipelines, training, distributed execution, quantization and attention
+kernels.</p>
+<p>The integration tests load real checkpoints and exercise the model's API on
+real hardware. Running all of that on every PR would mean keeping a lot of GPUs
+busy all day long, which isn't practical. By the time a scheduled run finds a
+regression, it may already be in main.</p>
+<p>Our approach is to shrink the model instead. We build a fixture: a small
+model made from the real checkpoint's configuration, with fewer and narrower
+layers but every kind of layer it has, and its tokenizer and processor files
+unchanged. It is published once, then reused. We run "fast integration tests"
+against it on a cheap CPU runner. In our
+CPU study,
+the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
+is 1,227 MB.</p>
+<p>This also covers very large models: some don't fit on our standard GPU
+runners, but their fixtures run on CPU.</p>
+<p>Model integrators already build tiny test models (Transformers' tiny-random-*
+checkpoints). We wanted a common recipe, and
+checks that go beyond loading the model and running a forward pass. The UMT5
+bug would have passed a forward pass just fine.</p>
+<p>Fixtures won't replace full integration tests, but on PRs they give us a
+chance to catch bugs before they reach main.</p>
+<p>transformers-mic is a proposed
+standard for packaging these tests. A Model Integration Contract (MIC) has
+three parts:</p>
+<p>The contract holds if running the usage path on the fixture still produces the
+baselines.</p>
+<p>A contract covers an architecture and a usage path, not a single checkpoint:
+compatible checkpoints can share a fixture, while each keeps its own expected
+results. We publish them in huggingface-mic.</p>
+<p>For example, the SmolLM contract generates from prompts such as "The capital
+of France is" and compares its token IDs with a recorded answer. After loading
+the model and tokenizer, the generation code is, simplified to one prompt:</p>
+<p>It also compares training loss, checks that gradients are finite and verifies
+that an optimizer step changes the weights. See the full
+usage.md.</p>
+<p>A fleet dataset
+on the Hub pins each MIC to a frozen revision, along with the package versions
+used to record its baselines. Each CI run records the fleet revision it
+used, so we can reproduce it later.</p>
+<p>On a PR, we pick MICs based on the files the patch changes.</p>
+<p>We replayed frozen MICs over five months of Transformers commits. The small
+UMT5 fixture flagged the regression from its introduction on July 30, 2026
+until its fix on September 28.
+Label log-probabilities differed from the reviewed baseline by 1.22 and training
+loss by about 0.20.</p>
+<p>One detail mattered: the contract used SDPA, the default attention path.
+Running only the eager attention variant missed the bug. A fixture only
+helps if it goes through the same code as the real checkpoint.</p>
+<p>We then reverted the fix on a proof branch in Transformers' CI. The check
+failed with the same differences, and the selected T5 contract's runner step
+took 13.4 seconds on CPU, excluding setup.</p>
+<p>The replay results
+and the CI demo
+have the measurements and reproduction details.</p>
+<p>The first recipe was simple: make the dimensions smaller and keep fewer
+layers. That wasn't enough for mixed architectures. Keeping two layers is no
+use if both use sliding attention and the full-attention layers disappear.</p>
+<p>We also keep the original weights file format. Otherwise we would skip the
+conversion code that runs when a user loads the real checkpoint.
+The full recipe
+has more detail.</p>
+<p>The Llama 4 Scout shrink report
+shows what this looks like on a big model. 108.6 billion parameters become 44.7
+million. The vision stack goes from 34 layers to 2 and the language stack from
+48 to 4, keeping the checked layer kinds and MoE routing style.</p>
+<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
+model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
+the candidate baselines. The LLM drafts; it doesn't approve. Changed
+expectations require human review.</p>
+<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
+<p>It drafts the contract, builds the fixture and records its baselines on your
+machine, asking you to review each step, and stops before uploading anything.
+For a new model, the draft comes from an LLM through Inference Providers, billed
+to your own account (--bill-to ''). The
+CLI docs
+cover the individual steps.</p>
+<p>We used agents to build MICs across model families. When they hit an edge
+case, we fixed the recipe itself rather than the one fixture, with help from
+model experts. The published models and remaining gaps are in the
+coverage space.</p>
+<p>With random weights, our Whisper fixture barely responded to changes in
+the audio. It ran, but that made it a poor test of the audio path.</p>
+<p>So we trained it on a few tones paired with words such as "red" and "green".
+We weren't teaching it speech recognition, just making audio changes visible
+in its outputs. In our weight-initialization study,
+the random Whisper fixtures caught 18 of 24 injected faults. The overfit
+fixtures caught all 24.</p>
+<p>That gives us two ways to build the weights:</p>
+<p>The Whisper result doesn't settle which is better. Those were synthetic
+faults, and we haven't found a real regression caught only by the overfit
+version. Both versions missed an assisted-decoding bug that the real Whisper
+checkpoint exposed.</p>
+<p>So we keep random weights when they pass the checks, and overfit when we need
+better sensitivity or readable answers. Training takes seconds, but it is one
+more step that can fail to converge, and one more thing to maintain. The comparison
+has the results for both.</p>
+<p>As of November 1, 2026, the MIC job in Transformers CI
+reports failures without blocking PRs. Whether it should block depends on
+things we haven't measured yet:</p>
+<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
+show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
+<p>Coverage is still partial, across model families and the APIs people use.
+When a regression slips through, we can add the missing usage path and replay
+it on the broken and fixed versions. We'll keep existing tests until their
+coverage is accounted for.</p>
+<p>Finally, we'd like to link original Hub model pages to their MICs, so a
+developer or an agent using a checkpoint could start from an example tested on
+that checkpoint, its environment and its expected outputs.</p>
+<p>Want to help? Pick an uncovered model from the
+coverage space, try
+the tmic workflow,
+and contribute a usage path or review a generated contract.</p>
+<p>MIC contract coverage of Transformers model types</p>
+<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
+<p>MIC contract coverage of Transformers model types</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/Dharma-AI/vocabx-vocabulary-specialization" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

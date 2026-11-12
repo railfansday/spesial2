@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your webhook can arrive twice. Your code should act once.</title>
+    <title>This fall, reach for this unlikely apple ingredient : Apple cider vinegar is a baker’s secret weapon.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9683.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,74 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Your webhook can arrive twice. Your code should act once.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-11</p>
+        <h1>This fall, reach for this unlikely apple ingredient : Apple cider vinegar is a baker’s secret weapon.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F91au0wiapl1wu5w9c9fb.jpg" alt="Your webhook can arrive twice. Your code should act once." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2025-07/Tarte-Tartin_2025_Lifestyle_ALT_H_1236.jpg" alt="This fall, reach for this unlikely apple ingredient : Apple cider vinegar is a baker’s secret weapon." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F91au0wiapl1wu5w9c9fb.jpg" alt="Your webhook can arrive twice. Your code should act once." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2025-07/Tarte-Tartin_2025_Lifestyle_ALT_H_1236.jpg" alt="This fall, reach for this unlikely apple ingredient : Apple cider vinegar is a baker’s secret weapon." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A webhook is a notification, not a promise that your handler will run once. If your application treats every delivery as new work, a retry can repeat an email, an entitlement change, or a provisioning job.</p>
-<p>Stripe explicitly documents that webhook endpoints can receive the same event more than once. That does not mean Stripe charges a customer again whenever it repeats a notification. Receiving an event and initiating a payment are different operations. This article is about what your application does after receiving the notification.</p>
-<p>The useful design question is simple: if this work runs again, what happens?</p>
-<p>Consider an illustrative SaaS application. A verified billing event arrives, and the application needs to update a local entitlement record. The handler checks whether it has seen the event, changes the entitlement, records completion, and responds.</p>
-<p>That sounds reasonable until the process stops between two of those steps.</p>
-<p>If it changes the entitlement and crashes before recording completion, a later attempt may repeat the change. If it records completion first and crashes before changing the entitlement, a later attempt may skip work that never happened.</p>
-<p>The problem is the gap between the effect and the record of that effect. Changing the order does not remove the gap.</p>
-<p>For a local database change, I would start by putting the relevant state change and its completion record in the same database transaction. PostgreSQL's transaction tutorial describes the all-or-nothing boundary: the transaction's updates become a unit. This only helps with work inside that transaction. It does not turn an unrelated email API into part of your database commit.</p>
-<p>Stripe's webhook guidance recommends checking signatures, returning a successful response quickly, and handling events asynchronously. Signature verification needs the raw request body, so do not let middleware transform it before verification.</p>
-<p>One design worth evaluating is a durable inbox. The receiving endpoint verifies the event and stores a receipt that a worker can process later. It acknowledges the notification after durable acceptance, rather than waiting for a slow business workflow.</p>
-<p>That is a suggested architecture, not a guarantee supplied by Stripe. You still need a working path from the inbox to a worker. If a queue is used, account for a crash after storing the receipt but before publishing the queue message. A durable row that nobody revisits is not a completed handoff.</p>
-<p>For a small system, a worker that claims pending inbox rows may be easier to reason about than coordinating two separate writes. Choose the mechanism your team can operate and recover.</p>
-<p>Two requests can arrive close together. Both can ask whether an event exists before either has inserted it. An application-level check alone leaves that race open.</p>
-<p>Use the database's constraint mechanism for the receipt identity. PostgreSQL's unique-constraint documentation explains uniqueness across a column or group of columns. Make the identifying fields non-null, and choose a key scoped to the provider and account context your application actually handles.</p>
-<p>A duplicate receipt should not create a second inbox job. But the original job may still be pending or failed. Deduplicating delivery is not permission to forget unfinished processing.</p>
-<p>Worker concurrency is another boundary. Decide how a worker claims a row, how another worker knows it is claimed, and how abandoned claims become eligible again. Those details depend on your database and queue. A boolean called processed is not a recovery design by itself.</p>
-<p>Stripe recommends tracking processed event IDs to identify duplicate deliveries. It also notes that separate Event objects can sometimes describe duplicates; its guidance points to the object ID and event type for identifying those cases.</p>
-<p>Do not turn that into a universal rule that every event concerning the same object is redundant. Different events can represent legitimate state changes. Define what one business operation means before choosing its deduplication key.</p>
-<p>For the entitlement example, distinguish setting a record to a known state from appending another grant. They have different repeat behavior. Also, Stripe does not guarantee event delivery order. An older notification must not blindly overwrite a newer state just because it arrived later. Where needed, use the provider's current object state and your application's transition rules rather than assuming arrival order is chronology.</p>
-<p>Before calling the handler ready, deliberately test duplicate delivery, two concurrent workers, and a crash around the commit boundary. Include a failed job that is retried after the receiving endpoint has already acknowledged it.</p>
-<p>If the effect is external, such as sending an email, test that boundary separately. Check whether the destination supports an idempotency key, what it covers, and how long it lasts. Without a shared transaction or a suitable destination guarantee, recording a successful send and making the send remain separate actions. Do not label that exactly-once processing.</p>
-<p>The goal is not to make retries disappear. It is to make repeated delivery and interrupted work ordinary cases your system can explain and recover from. Keep a durable receipt, keep unfinished work visible, and make each effect safe to retry within its actual boundary.</p>
-<p>Cover photo by Markus Spiske, free to use under the Unsplash License.</p>
-<p>I write about startups and AI on StartupWiki.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>As fall baking season settles in, you're probably reaching for apples — and the many flavor-packed ingredients they produce. Applesauce cooks down into tangy apple butter to be cradled in a flaky galette, while a drop of boiled cider can deliver supercharged apple flavor to crumb cake. But the baking ingredient you may be overlooking may be something you associate more with salad dressings and wellness tonics: apple cider vinegar.</p>
+<p>This tangy, apple-y vinegar is a secret ingredient in some of our favorite fall recipes, including cookbook author Claire Saffitz’s Cinnamon-and-Sugar Apple Pie. While lemon juice is the standard acid used in most fruit pie fillings, Claire opts for apple cider vinegar here to complement the filling’s flavors. “It helps as a flavor enhancer, and I also like that it’s apple cider in an apple pie. It’s a nice symmetry,” she mentions.</p>
+<p>Similarly, apple cider vinegar is used in the cooking liquid alongside sugar and butter to caramelize apples in a Classic Apple Tarte Tatin. The benefit is twofold: Vinegar’s acidity helps cut the sweetness of the caramel, and it prevents the apples from getting too mushy, instead maintaining their fork-tender texture.</p>
+<p>Pastry chef and cookbook author Natasha Pickowicz often leans into the jolt vinegar can add, including adding a few drops to her cake soaks for an additional layer of flavor. “Cake soaks should have a balance of tart, sweet, and savory notes — just like vinaigrette for your favorite salad,” she writes in her cookbook More Than Cake. It can add intrigue to layered cakes like this Golden Spice Cake or Pumpkin Layer Cake. In her cookbook, she also calls for a glaze spiked with apple cider vinegar to brush onto an apple tart after baking. It’s the finishing touch “to further emphasize the tart’s resolute apple-ness,” she writes.</p>
+<p>Apple cider vinegar doesn’t need to be limited to only apple desserts, either. In our Old-Fashioned Pecan Pie, we call for apple cider vinegar as a foil to the brown sugar filling’s cloying sweetness. A spoonful of apple cider vinegar may not announce itself boldly, but it makes a small splash for brighter, more balanced bakes.</p>
+<p>For more fall baking inspiration, check out our Fall Flavor Edit.</p>
+<p>Top tips from the Things Bakers Know podcast.</p>
+<p>Mini pies may be the secret to a stress-free celebration.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>A grocery store shortcut for bakery-worthy treats.</p>
+<p>It's got cinnamon-scented apples, rich vanilla cake, and a sheer sweet glaze.</p>
+<p>Eschew classic crust and enter a diverse world of beloved fruit desserts.</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/spran1/your-webhook-can-arrive-twice-your-code-should-act-once-lh8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/09/24/apple-cider-vinegar-recipes" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
