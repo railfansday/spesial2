@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adapting CPython for yk</title>
+    <title>Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9937.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,649 +15,73 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Adapting CPython for yk</h1>
+        <h1>Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/St00mBynNYpgz93MpL17G.png" alt="Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/St00mBynNYpgz93MpL17G.png" alt="Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Earlier this year I wrote a post on
-yk,
-which can automatically add JIT compilers to C interpreters. Since then weâve
-applied yk to more interpreters, fixed various bugs, and improved
-performance notably. Towards the end of October I showed some data where on our
-benchmark suite1 yklua is 2Ã faster than the PUC Lua interpreter it takes as a
-base.</p>
-<p>I was quite pleased with myself until someone brought me down to earth by
-asking âhow do you know if this works for large interpreters?â Itâs a fair
-question: PUC Lua is at least an order of magnitude smaller2 than CPython or CRuby and whoâs
-to say if it would work with much bigger interpreters? We had looked at CPython a year or so ago, but
-at that point yk was missing several obvious things that CPython would need, so
-we quickly moved on. A lot has changed since then, and a quick LLM experiment
-got far enough to suggest it would be worth looking again.</p>
-<p>Happily, having taken a deeper look, CPython not only works when adapted for yk
-as ykcpython3, but there are
-meaningful performance gains to be had â not only relative to normal CPython,
-but also relative to Pythonâs experimental JIT4. Roughly speaking,
-this is the result of 3-4 daysâ work on ykcpython directly; there was a separate
-week and a half of generic yk bug fixing necessary to get to the point that I
-could look at ykcpython itself.</p>
-<p>Here are the âfinalâ numbers from my brief odyssey on ykcpython and the AWFY
-benchmark suite:</p>
-<p>In this table cpython is ânormalâ CPython 3.15.1; cpython_jit is CPython
-3.15.1 with the experimental JIT turned on; and ykcpython is commit
-31b4d387.
-Times are in seconds (lower is better) with means and 99% confidence intervals bootstrapped from 30 process
-executions, running on a 64 core AMD EPYC 7773X Debian machine in performance
-mode (download the repeatable experiment and the raw
-data).
-On each row the fastest entry(s) are shown in bold.</p>
-<p>A simple summary of the table is: ykcpython is faster than cpython on every
-benchmark except DeltaBlue (where itâs about 2.5% slower); and faster than
-cpython_jit on 8 out of 13 benchmarks.</p>
-<p>The point of this post is not to pretend that ykcpython is in any way ready for
-people to use â it definitely is not! Nor is it to pretend that one can
-expect performance on a wider set of programs to be as good as the numbers
-above â it definitely wonât! My view is that benchmark suite performance
-is a hoop to jump through rather than an end in itself: a system which
-benchmarks well might perform poorly in the real world; but a system which
-benchmarks poorly nearly always performs poorly in the real world.</p>
-<p>Rather, I wanted to use this post as a way of showing what itâs like to adapt
-an interpreter for yk5: the stages I went through; and to give a sense
-of how the just under 450LoC I added were enough to achieve a meaningful
-effect. Luckily I had a sense that this might be a useful journey, so I was
-able to write enough stuff down to be able to flesh out this full post.</p>
-<p>If you havenât read the earlier yk
-post,
-hereâs a very brief refresher. Given a lightly modified C interpreter6
-as input, yk produces a VM with a meta-tracing JIT compiler as output7.
-yk doesnât aim to produce the fastest possible JIT compiling language
-implementation: rather, it aims to make the language implementation you know and love
-somewhat faster while retaining 100% compatibility. Put another way a âykifiedâ
-interpreter is a fork of the existing C version of the interpreter, with
-(hopefully!) a handful of adjustments.</p>
-<p>As with any meta-tracing JIT compiler, yk identifies hot loops in the guest
-language (e.g. Lua or Python), and traces the interpreter (i.e. records what
-the C code is executing while it is interpreting the guest language). It then
-optimises those traces and converts them to machine code.</p>
-<p>yk requires interpreters to tell it where potential loops in the guest language are via
-the YkLocation struct. Optionally â though if you want to get good
-performance, definitely necessary! â interpreter authors can add optimisation hints that
-embed knowledge about the language or its common idioms of use such as âat
-this point this seemingly dynamic value almost never changesâ. In general,
-working out where to put YkLocations is relatively easy, but working out where to
-put hints requires a much greater understanding of the interpreter, and careful
-measurement to understand which do and donât help.</p>
-<p>The challenge I face when adapting an interpreter for yk is that I rarely know
-the interpreter well, if at all. Rather than trying to do everything at once, I
-have learnt to start off as simple as possible: I try and do the minimum
-changes that lead to some traces being recorded and compiled to machine code.
-This can be trickier than it seems: Iâve got to understand the build system8, and work out where to put some semi-sensible YkLocations.
-Iâve also learnt to make sure that the languageâs test suite works from this very
-first step: keeping it working thereafter is not only much easier, but it
-lessens the number of times one attempts optimisations that are unsound.</p>
-<p>For a simple interpreter, you might get a basic JIT compiler from an
-interpreter with fewer than 10LoC (Lines-of-Code) changed. For somewhat bigger
-interpreters, a few more changes tend to be necessary. For example, yk doesnât
-like âthreadedâ interpreters that use goto between opcodes, because it
-doesnât give it enough opportunities to intercede and see whatâs going on.
-Fortunately, such changes are not generally too big.</p>
-<p>Since it had been a long time since I looked at CPythonâs internals9,
-I started with the part I was vaguely familiar with. As I later discovered, this is now called the âtier 1â interpreter.
-Quickly hacking in support for yk highlighted several missing things in yk
-(from basic atomic loads to
-not-implemented-bit-widths in sub,
-minor incompatibilities (e.g. reading an environment variable after a CPython
-test had wiped it), and flat out bugs
-(from stackmap fixes to
-not doing silly things after fork).
-Fixing all those took me around a week and a half; Iâm not going to talk about
-them in detail in this post, because theyâre generic fixes that arenât
-ykcpython specific.</p>
-<p>My adaption of the tier 1
-interpreter is deliberately
-minimalistic. Most of the changes in the 200LoC diff are small one-offs that
-arenât hugely interesting: we need CPython to use its (builtin but non-default)
-switch-based interpreter; and yk uses a shadow stack, so CPythonâs C stack
-resizing needs to take that into account too. The most interesting thing I did
-was to add YkLocations at backwards jump opcodes,
-which I expected to be enough for some half-sensible traces to be created.</p>
-<p>I wasnât expecting this first version of ykcpython to be faster
-than CPython â if nothing else, it contained almost no optimisation hints â but it was
-much slower than I expected. It was definitely creating traces, and they were
-executing correctly â the test suite passed, albeit taking more memory
-than Iâd like10 â but something clearly wasnât right.</p>
-<p>Fortunately, it didnât take very long to work out what. 4 years ago, CPython
-added support for quickening under the
-heading of âspecialisationâ. Quickening is a simple, clever technique for
-improving interpreter
-performance
-that rewrites âgenericâ opcodes (e.g. âadd objectsâ) to âspecialisedâ, faster,
-opcodes (e.g. âadd two intsâ) when possible, deoptimising back to the generic
-opcodes if necessary. I tend to think of quickening as giving a decent portion
-of the benefit of a JIT compiler without all the bother of generating machine
-code11. The problem for yk is that sometimes a programâs opcodes
-can transition between specialised and unspecialised opcodes a large number of times,
-and the simple way Iâd added yk support meant that each transition implicitly
-threw away the associated trace and created a new one. In most cases, traces werenât
-used long enough to overcome the cost of creating them.</p>
-<p>There are techniques which can overcome this problem, and I did briefly
-experiment with them, but I then recalled a conversation I had with some
-CPython developers last year. A quick look inside CPython confirmed my
-recollection: CPython contains a âtier 2â interpreter as well. This isnât a
-completely new interpreter; rather it is an alternative implementation of core
-parts of the main interpreter loop, mostly intended for CPythonâs experimental
-JIT compiler.</p>
-<p>A very quick experiment later suggested that the tier 2 interpreter was â at
-least at a basic level â a better fit for yk12. I thus ripped out
-the tier 1 support and added support for yk in the tier 2
-interpreter. Happily, tier 2
-support is even easier than tier 1 support, consisting of a mere 80
-LoC.
-To give you a quick idea of what yk support looks like, hereâs the part that
-attaches YkLocations13 to the (start of) loops:</p>
-<p>For the rest of this post, Iâm going to be using yk and the tier 2 interpreter as the
-starting point for ykcpython.</p>
-<p>When optimising any language implementation, itâs important to know where its
-performance sits in the wider performance landscape. To understand how
-ykcpython was doing, I used two other baselines: âstockâ CPython; and CPython
-with the experimental JIT. I configured cpython as follows:</p>
-<p>Note that Iâm deliberately using the same version of LLVM for both cpython
-and cpython_jit because the latter requires LLVM-21. ykllvm â the fork of
-LLVM used in yk â is based off a version of LLVM about 6 months
-later than LLVM-21. That might
-slightly distort comparisons, but itâs a small enough difference that the
-effects hopefully are fairly minor. Bearing that in mind, ykcpython is
-configured as follows:</p>
-<p>I used our fork14 of the AWFY benchmark
-suite, simply because I know how to run it without thinking.</p>
-<p>The next challenge is to define a metric, or metrics, to report performance.
-Every metric has the potential to mislead and
-many are difficult to understand. In my opinion, the least worst single metric
-is wall-clock time: how long does my program take to run from start to
-finish? This doesnât capture everything we want to know, but it captures a lot,
-and itâs easy to understand.</p>
-<p>Most importantly this metric implicitly includes start-up and warm-up
-time.
-In other words Iâm deliberately choosing a timing metric which tends to favour
-normal interpreters and âpenaliseâ JIT compilers. To somewhat offset that, we
-run each AWFY benchmark for 10 in-process iterations (i.e. run the whole
-benchmark in a for 0..10 loop) so that we also get some sense of how
-optimisation benefits longer-running programs.</p>
-<p>The big performance table at the start of this post uses a custom benchmark
-runner on an idle machine. All the timings from now on in the post are from me
-running time once as a normal user without being too careful if the machine
-is completely idle or not: when starting to optimise an interpreter, itâs not
-practical to wait an hour to benchmark every change on many benchmarks, when
-the effects are generally quite large15.</p>
-<p>There are various ways one can go about optimising an interpreter for
-meta-tracing, all of which have pros and cons: the sequence of optimisations
-Iâm showing here is just one way of going about things16.</p>
-<p>Letâs start with the mandelbrot
-benchmark
-on cpython:</p>
-<p>In other words, I ran the benchmark with 10 in-process iterations and a
-parameter of 500. The AWFY harness prints out how long each iteration took. As
-is common â but definitely not universal! â for an interpreter, cpython
-had fairly consistent times from one iteration to the next.</p>
-<p>For this benchmark, cpython_jit takes 6.746s (0.58Ã CPython) and ykcpython
-takes a whopping 13.70s (1.17Ã CPython)17:</p>
-<p>There are a couple of useful things to notice here. First, we can see warm-up
-occurring: ykcpythonâs first iteration is slower than subsequent iterations.
-Thatâs OK in my book: yk isnât really intended for programs running in a
-fraction of a second. Second, the 102% cpu and user time
-that is higher than wall-clock time are due to yk running trace compilation in threads.
-That allows the interpreter to continue executing, reducing perceived pauses.</p>
-<p>The first thing I do in this situation is look at the âhigh-level IRâ (HIR) of
-the traces that yk has produced to see if things look sensible:</p>
-<p>The logfile contains 11 traces, of which 1 is a âloopâ trace. In general,
-loop traces are where yk is most effective, and the non-loop traces are
-the price we have to pay to get the promised land of loop traces. In this
-case, a simple profile showed that most execution time is spent in the
-solitary loop trace, which is a promising start for yk.</p>
-<p>At this point, doing much more with the HIR than this high-level analysis is
-difficult, because the output is 20,772 lines of this sort of thing:</p>
-<p>Even if youâre used to this syntax and way of thinking, it can be incredibly
-hard to see the forest for the trees: thereâs just too much stuff. And that
-isnât just a problem for humans (or AIs) reading this: more HIR means more
-machine code which implies slower execution.</p>
-<p>My first port of call when optimising an interpreter is to tackle interpreter
-dispatch. When an interpreter is executing a program, it continually asks âwhat
-is the opcode of the current instruction? Is it an add or a sub or â¦?â
-and then it dispatches to the code that performs the appropriate action. Itâs
-probable that a large chunk of that 20KLoC of HIR is the interpreter loading an
-opcode from memory and checking what kind it is. ykâs trace optimiser has
-various classic compiler tricks up its sleeve, but in this case they donât
-really help, because in most cases between the same instruction being loaded
-twice from memory, some other code will be called that yk has to assume might
-have mutated that memory. This isnât unnecessary conservatism: Python programs
-really can mutate their functionâs instructions!</p>
-<p>I was particularly lucky because the tier2 interpreter uses âexecutorsâ which
-are traces of (optimised) instructions. Those instructions are immutable in the
-context of a given executor: should a Python functionâs instructions change,
-any associated executors will be invalidated. That means that we can attach a
-simple monotonically increasing integer code ID to a _PyExecutorObject and
-know that for a given code ID, an opcode at index I will always be the same.</p>
-<p>This allows us to use the single most effective optimisation hint in yk:
-idempotent functions. In essence, an idempotent function says âfor the same
-inputs this function will always produce the same outputâ18.
-âAlwaysâ here really means âalwaysâ! Idempotent is a very strong guarantee
-that yk cannot help you uphold: if you fail to do so, your system will go wrong
-in weird ways.</p>
-<p>Although yk provides a helper yk_idempotent_load function, we need something
-more specialised. Fortunately itâs not hard to write what we need:</p>
-<p>Unsurprisingly, the yk_idempotent attribute tells yk that
-idempotent_load_opcode is an idempotent function. That means that if, in a
-particular trace, the function is called with parameters that are constant
-values then yk can remove the idempotent function call and replace it with its
-output. The __asm__ line is there to encourage LLVM not to inline the
-function19 (if the function is inlined, yk no longer knows there is
-anything idempotent there).</p>
-<p>Using this requires changing just a few lines in the core
-interpreter loop. The most important
-lines are simply this:</p>
-<p>Promotion (e.g. yk_promote)20 says âthis variable is expected to be
-semi-constant: record its concrete value and specialise the trace to it, but
-insert a guard in case that value later changesâ. Imagine I have
-yk_promote(x) and when a trace is later recorded, x happens to be 3. The trace
-will record guard true (x == 3): if on later runs x is not 3, the guard
-will fail and the trace will deoptimise; if the guard succeeds we know henceforth
-that x is definitely 3.</p>
-<p>In other words, in the context of the traces weâre recording, yk will see calls
-to idempotent_load_opcode with constant arguments, allowing it to replace the
-function call with a constant result. The point of this isnât just to remove
-the cost of a load: rather, exposing constant data to ykâs trace optimiser allows it to
-do a much better job of optimising traces. The effect in this case is quite
-something:</p>
-<p>In other words, that simple change has not only made ykcpython 2.7Ã faster,
-but it is now 0.43Ã cpython and 0.74Ã cpython_jit! In other words, a simple
-PR that changes 30LoC has made this benchmark over twice as fast as CPython and
-25% faster than CPythonâs JIT. Another way of judging the effectiveness of this
-optimisation is that it has reduced the 20,772 lines of HIR output to 7,648
-lines21.</p>
-<p>However, before we get carried away, this isnât enough to make all benchmarks
-magically quicker. I have learnt from experience to rotate between benchmarks
-to avoid over-training22. In this case I decided to look at the
-deltablue benchmark, which I know from yklua can be a tough target.
-The situation in ykcpython turned out to be worse than I expected: cpython takes 7.67s,
-cpython_jit takes 6.20s, and ykcpython (with our idempotent change) takes
-37.51s. Ouch!</p>
-<p>My next port of call is to run YKD_LOG=2 which prints warnings if a trace
-canât be compiled. Sure enough:</p>
-<p>For now Iâm going to skip âtrace too longâ. In essence yk has a fixed limit for
-âthis trace looks to be so long that itâs probably not usefulâ. The limit was
-too low, so I increased it unilaterally
-before doing the work for this post. Exactly what the right value is I donât
-know. Indeed, I think that this crude heuristic probably needs replacing with
-something more sophisticated: doing that is a problem for another day.</p>
-<p>Letâs move onto the âunimplementedâ warning: I havenât got around to
-implementing complex atomic instructions yet, so as soon as one of those is
-encountered, yk has no choice but to give up on that trace entirely. If it
-happens to be a hot part of a benchmark, that can absolutely kill performance.
-In this case, happily, the atomicrmw warnings just so happened to come from
-functions which we really donât want to inline into the trace anyway.</p>
-<p>One of tracingâs virtues is that it aggressively
-inlines functions, but that can inline checks which fail too often on
-subsequent executions. For example, one function we inline by default is
-_PyObject_GC_Link which checks to see if enough objects have been allocated
-for garbage collection to be worth scheduling. If weâre unlucky, we may trace
-an iteration of a loop which happens to schedule garbage collection: in nearly
-every subsequent execution, the resulting guard will fail, and weâll take a
-somewhat slower path. The solution here is to mark such functions as
-yk_outline:</p>
-<p>Functions marked yk_outline become calls in a trace. There are probably a
-number of functions which should be marked as yk_outline, but I
-marked the two that happened to
-cause the aborted warnings and that also obviously we donât want to include
-in a trace anyway. Doing so improved execution time to 36.63s (about 2.5%
-faster), so theyâre clearly not the major cause of the slowdown in this case.</p>
-<p>Just when I was starting to fret, profiling execution showed that, to my
-surprise, deltablue was only spending about half its running time in
-JIT-compiled code, where one would expect it to be spending 90%+. It turns out
-that the main reason for this is that not all executors have a _JUMP_TO_TOP
-opcode and werenât being traced.</p>
-<p>My quick fix was to add a YkLocation at the first opcode in an executor. The
-one line fix does just that: it
-means that yk starts tracing as soon as it enters an executor. Doing so
-improves deltablueâs execution time to 8.64s (4.23Ã faster than before). Thatâs
-still 1.13Ã CPython, but itâs a lot better than before!</p>
-<p>At the time I made this change I didnât fully think about how adding a
-YkLocation at the start of an executor might interact with the YkLocation
-already added to _JUMP_TO_TOP. As luck would have it, I accidentally stumbled
-on a reasonable combination: _JUMP_TO_TOP tends to jump to the instruction at
-index 1. Still, I suspect that there might be a better way to add YkLocations
-to executors, but one canât solve every problem all at once: itâs time to move
-onto the next thing!</p>
-<p>Our earlier use of idempotent loads made such a huge impact on interpreter
-dispatch that itâs easy to overlook that it was a simple, shallow, change: it
-only optimised loading an instructionâs opcode kind. Instructions contain a
-number of other fields that are equally amenable to idempotent loading.</p>
-<p>There are various ways one can go about optimising these additional fields. I
-could, for example, have replaced the definitions of some static functions in
-header files. To keep things simple, I defined a macro which can generate the
-two-parameter functions we need, and then nobbled some other macros to call it
-at appropriate points. With the resulting change deltablueâs performance
-improves to 8.09s â weâre now within 10% of cpythonâs performance.</p>
-<p>As we saw earlier, not all functions are good candidates for inlining into a
-trace. yk has a very simple heuristic â stolen shamelessly from RPython/PyPy
-â which is to mark functions containing loops as âoutlinedâ. In other words,
-if C calls a function f() and f contains for (...) { ... } then yk
-will not inline calls to f.</p>
-<p>The fundamental reason not to inline functions-with-loops is that tracing
-unrolls loops, and that tends not to be a good idea. First, some loops execute
-vast numbers of iterations, which would cause counter-productively-long traces.
-Second, loopsâ iterations are often controlled by dynamic, ever-changing
-values: unrolling would specialise the trace to just one of those values, giving
-suboptimal performance on every other value.</p>
-<p>There are however a small number of functions in an interpreter which we
-actively want to unroll. Typically those functionsâ loops satisfy two
-properties: they only run a small number of iterations; and the number of
-iterations depends on an aspect of the userâs program that changes rarely. For
-example, a function called unpack_args(int num_args) which contains for (int i=0; i<num_args; i++) would be an excellent candidate, since it probably
-unpacks the same number of parameters every time it is called at the same place
-in a trace.</p>
-<p>yk thus provides a yk_unroll attribute, which informs yk that a function that
-might otherwise be outlined should in fact be inlined and its loops unrolled.
-Rather than slog through every function in CPython looking for candidates, I
-did a simple grep/sort in hir to see which (implicitly non-inlined) C functions
-appear most often in traces23:</p>
-<p>bcmp is the standard libc function: all of the other functions are in CPython itself.
-Not all of those functions will have loops in them, but the chances are that
-most do. What I do in such a situation is go down (or, depending how you look at it,
-up) the list and look at the code in each function. I did that for a couple of
-benchmarks to ensure I got some coverage of common functions.</p>
-<p>The two most commonly called CPython functions immediately looked like good candidates.
-_PyFrame_Initialize is the most obvious of the two, containing almost exactly
-the pattern I most like to match on:</p>
-<p>_PyFrame_ClearLocals is slightly trickier: it contains a while loop involving pointer
-arithmetic, but it didnât take me long to convince myself that it was a good
-candidate.</p>
-<p>Earlier we made _PyObject_GC_Link not inlineable, so we donât want to reverse
-that! Similarly, do_lookup looks values up in a dictionary, so we want to
-keep that outlined: it depends on an often-changing dynamic value.</p>
-<p>PyLong_FromSsize_t and PyLong_FromLong were harder to judge. These
-functionsâ inner loops depend on dynamic values, but my best guess is that they
-tend to be fairly stable in practice. I will be keeping an eye on these
-functions in the future, because I only have medium confidence that I made the
-right initial call.</p>
-<p>As these examples suggest, I am generally fairly cautious about adding
-yk_unroll: inappropriate placings can easily help one benchmark and make many
-others worse. I thus tend to only mark one or two functions as yk_unroll,
-benchmark, and then move on. In this case, I did 5 small PRs, with the end
-effect that json went from 11.52s to 10.85s.</p>
-<p>In general most function calls in C are direct: f() calls a function called
-f. However a minority of functions are indirect: f is a generic pointer
-whose value can be any compatible function. This is commonly used in
-interpreters to allow run-time dispatch to type specific code.</p>
-<p>By default, yk cannot inline through indirect function calls, because without
-knowing exactly what pointer is being called, it canât reliably reconstruct
-the path that execution took24. Fortunately, we already have
-the tool we need to solve this problem: yk_promote! If yk sees an indirect
-function call with a constant pointer it knows exactly what function is being
-called and can inline as normal. The common pattern I use is:</p>
-<p>yk_is_interpreting() is true during ânormalâ interpretation; false during
-tracing; and (because itâs a constant false) removed during tracing. In other
-words, yk_promote is only called during the tracing phase.
-yk_is_interpreting() is fairly fast (much faster than yk_promote()) so this
-idiom is a small but useful performance win.</p>
-<p>However, there is often a second problem. yk only puts the tracing machinery
-into a function if it can statically prove that it is reachable from a
-traceable path. Commonly, functions called from indirect calls cannot be
-statically proven to be traceable and thus they still leave an outlined call in
-the trace. We can solve that with the yk_indirect_inline function which tells
-yk âthis function can be reached from an indirect call and should be considered
-for tracingâ25.</p>
-<p>Profiling a couple of benchmarks quickly showed several potential candidates26. My
-experience is that not all indirect call sites are good targets for promotion:
-for example, of the interpreters Iâve looked at so far, inlining malloc and
-free indirect calls has rarely been profitable. However, I quickly alighted
-upon a couple of promising candidates.</p>
-<p>Letâs start with the less promising, but easier to explain, one: benchmarks
-like deltablue and json call len on lists and strings. Simplifying slightly,
-sq_length is a pointer to a function inside a CPython type, so this becomes
-an indirect call in traces. In the case of len([...]) the function thatâs
-ultimately called is list_length:</p>
-<p>where PyList_GET_SIZE boils down (slightly elided) to a simple load
-a->ob_size. Thatâs the sort of code that yk loves to see inlined in a trace!</p>
-<p>The resulting PR has to do a
-slightly annoying dance to make yk accept the yk_promote call. In essence, if
-yk_promote were to be statically inlined into a function which ykllvm
-determines doesnât need to be traced, odd things happen, and so ykllvm throws a
-static error. In this case, the function that âshouldâ contain the yk_promote
-can get inlined in multiple paths, one of which falls foul of this check. A
-hacky fix is to pull the promote out into a function which isnât statically
-inlined27. I then did a second PR to
-inline range construction and iteration.</p>
-<p>You may notice that in both of these PRs I have marked a much larger number of
-functions yk_indirect_inline than I have benchmark evidence for. The reason
-for this is a variant of something I mentioned above: my experience of indirect
-call sites is that either nearly all targets benefit from indirect inlining or
-none do. This clearly isnât an iron law of the universe, but what it means is
-that I tend to look at all the possible targets, and mark them as
-yk_indirect_inline if they look sensible. So far, I have rarely regretted
-doing so.</p>
-<p>Collectively these two PRs drive jsonâs performance down to 10.41s, though the
-effect on deltablue was too small to say anything either way. As I get further
-into optimising an interpreter for yk this is common: not all benchmarks
-benefit from all optimisations.</p>
-<p>At this point, youâve probably got a good sense of how I approach ykifying an
-interpreter. I raised a few more PRs before realising that I wasnât going to add
-much useful conceptually to this post: it was time to finish this stage of work
-off and write it up.</p>
-<p>Before I started this little journey, I wasnât entirely sure if yk would work
-at all â let alone âwellâ! â on an interpreter the size and complexity of
-CPython. The early stages didnât entirely dispel my worries: there were lots of
-missing pieces, and quite a few bugs, that needed fixing in yk for ykcpython to
-work at all. The fact that ykcpython does work, and works fairly well, is proof
-that at least one big, complex, interpreter can be ykified with relative ease
-â and that it can be surprisingly competitive on performance.</p>
-<p>Of course, I am lucky in many ways. yk already had decent foundations, thanks
-to several peopleâs hard work. The tier 2 interpreter in CPython made my life a
-lot easier than it might otherwise have been. Small benchmarks, like the ones
-Iâve used in this post, tend to flatter (meta-)tracing as a JIT compiling
-technique. And when it comes to ykifying interpreters, well, Iâve been round
-the block a few times.</p>
-<p>But I donât want to completely underplay things. 3-4 days isnât that long to
-spend on an interpreter like CPython. It will take a lot longer than that â
-even with the wonder of LLMs to speed up the journey â to do a thorough job
-and squeeze all the juice that ykcpython can expose to yk. Similarly, I have
-only looked at a handful of benchmarks: itâs unlikely that ykcpython will magically
-speed up a wide range of programs yet, as there will be many other parts
-of CPython that need to be considered for optimisation. A lot of this will
-not be rocket science, but it is work, and not all of it can yet be automated.</p>
-<p>I also havenât made any performance optimisations (yet!) to yk for ykcpython
-specifically (though I have fixed a couple of bottlenecks that I had previously
-been able to ignore). In particular, one thing I am entirely confident in is
-that ykcpython will generate HIR patterns that yk doesnât yet optimise
-effectively: fixing those will improve ykcpythonâs performance for free,
-possibly quite a bit. Even without that, ykcpython has highlighted additional
-bottlenecks in yk that had never previously been an issue: each time one of
-those is fixed, ykcpython will magically get faster.</p>
-<p>In a sense, this is one of the nice things that yk offers: improvements to yk
-nearly always benefit every ykified interpreter. Itâs why I could bring
-ykcpython up to speed in a short period of time: I wasnât writing a JIT
-compiler from scratch, I was reusing a generic toolkit. For example, the
-various missing pieces and bugs that ykcpython highlighted in yk will almost
-certainly make ykifying the next interpreter that bit easier â and hopefully
-future improvements to yk will benefit ykcpython even further!</p>
-<p>Acknowledgments: Edd Barrett and Lukas
-Diekmann did much of the original work on yk. Shopify
-and the Royal Academy of Engineering generously funded the underlying research.
-Chris Seaton was the person who made the work on yk possible.</p>
-<p>A combination of the AWFY and CBLG suites along with
-a few other âreal worldâ benchmarks we distilled down from other sources.</p>
-<p>A combination of the AWFY and CBLG suites along with
-a few other âreal worldâ benchmarks we distilled down from other sources.</p>
-<p>PUC Lua is written in a style unlike anything else Iâve seen. At first,
-I found myself overwhelmed by the deeply nested use of macros and
-widespread implicit conventions. As Iâve spent more time with it, Iâve come
-to deeply appreciate the beauty in the way its code is structured: not just
-the literal aesthetics of the code, but also how much thought has gone into
-making the code run fast.</p>
-<p>PUC Lua is written in a style unlike anything else Iâve seen. At first,
-I found myself overwhelmed by the deeply nested use of macros and
-widespread implicit conventions. As Iâve spent more time with it, Iâve come
-to deeply appreciate the beauty in the way its code is structured: not just
-the literal aesthetics of the code, but also how much thought has gone into
-making the code run fast.</p>
-<p>The experimental JIT might possibly be
-removed although the exact status of
-that is unclear to me.</p>
-<p>The experimental JIT might possibly be
-removed although the exact status of
-that is unclear to me.</p>
-<p>Also I hope this post might help agents do a better job in the
-future of ykifying interpreters. As things stand, they do spot some really
-clever opportunities, but they miss an awful lot of obvious ones, and they
-tend to overcomplicate the opportunities they do spot.</p>
-<p>Also I hope this post might help agents do a better job in the
-future of ykifying interpreters. As things stand, they do spot some really
-clever opportunities, but they miss an awful lot of obvious ones, and they
-tend to overcomplicate the opportunities they do spot.</p>
-<p>Technically any interpreter with LLVM IR. We have now tested that
-at least some C++ interpreters work, but whether (say) Rust interpreters work is
-a worry for the future.</p>
-<p>Technically any interpreter with LLVM IR. We have now tested that
-at least some C++ interpreters work, but whether (say) Rust interpreters work is
-a worry for the future.</p>
-<p>Another way of thinking of yk is that it is RPython (i.e. âPyPyâ) for
-LLVM IR. As that suggests, yk owes a deep debt to RPython, which is its
-major inspiration.</p>
-<p>Another way of thinking of yk is that it is RPython (i.e. âPyPyâ) for
-LLVM IR. As that suggests, yk owes a deep debt to RPython, which is its
-major inspiration.</p>
-<p>No-one enjoys looking at someone elseâs build system.</p>
-<p>No-one enjoys looking at someone elseâs build system.</p>
-<p>CPython and I go back quite some way. I think that I contributed
-some RISC OS patches to CPython, possibly via someone else, in 1997 or
-1998. The first commit I can definitely say I had something to do with was
-in 1999.
-CPython has changed an awful lot since then!</p>
-<p>CPython and I go back quite some way. I think that I contributed
-some RISC OS patches to CPython, possibly via someone else, in 1997 or
-1998. The first commit I can definitely say I had something to do with was
-in 1999.
-CPython has changed an awful lot since then!</p>
-<p>At the time of writing, yk never frees memory associated with
-traces. I have implemented most of the bits necessary to fix this, and just
-have to finish off the last part.</p>
-<p>At the time of writing, yk never frees memory associated with
-traces. I have implemented most of the bits necessary to fix this, and just
-have to finish off the last part.</p>
-<p>I had entirely forgotten about the existence of this in
-CPython, which is embarrassing, becuase Iâve advocated for its inclusion in
-various interpreters in the past. Not, I admit, with great success.</p>
-<p>I had entirely forgotten about the existence of this in
-CPython, which is embarrassing, becuase Iâve advocated for its inclusion in
-various interpreters in the past. Not, I admit, with great success.</p>
-<p>Though it threw up a few more missing parts and bugs in yk that I
-had to fix before I could be sure.</p>
-<p>Though it threw up a few more missing parts and bugs in yk that I
-had to fix before I could be sure.</p>
-<p>In case youâre wondering, this is very fast: a YkLocation is a
-word sized value with no other associated memory unless that location
-becomes hot. The idea here is to make sure that the common case of cold
-code has a very low cost.</p>
-<p>In case youâre wondering, this is very fast: a YkLocation is a
-word sized value with no other associated memory unless that location
-becomes hot. The idea here is to make sure that the common case of cold
-code has a very low cost.</p>
-<p>Technically a subset, because Havlak doesnât work out of the box
-with stock CPython.</p>
-<p>Technically a subset, because Havlak doesnât work out of the box
-with stock CPython.</p>
-<p>As the interpreter becomes more mature, and the effects of any
-optimisation become smaller, one does have to be more careful. ykcpython is
-not there yet!</p>
-<p>As the interpreter becomes more mature, and the effects of any
-optimisation become smaller, one does have to be more careful. ykcpython is
-not there yet!</p>
-<p>ykcpython imposes a constraint that most of us havenât experienced
-since ye olde days: it takes several minutes to link on my box. For those
-of us used to lightning-fast compilation, this can come as a bit of a shock
-to the system. Fortunately, as weâll see, a small number of small changes
-had big effects, so it wasnât quite as annoying as I first expected.</p>
-<p>I have a local patch which improves linking speed by over 2Ã, but
-Iâm not yet convinced itâs correct. I havenât used it for anything
-described in this post.</p>
-<p>ykcpython imposes a constraint that most of us havenât experienced
-since ye olde days: it takes several minutes to link on my box. For those
-of us used to lightning-fast compilation, this can come as a bit of a shock
-to the system. Fortunately, as weâll see, a small number of small changes
-had big effects, so it wasnât quite as annoying as I first expected.</p>
-<p>I have a local patch which improves linking speed by over 2Ã, but
-Iâm not yet convinced itâs correct. I havenât used it for anything
-described in this post.</p>
-<p>Weâve put a lot of work into making warmup costs in yk as low as
-possible, but theyâll never go to zero: the first iteration is 10% slower
-than the subsequent iterations because itâs doing work tracing and so on.</p>
-<p>Weâve put a lot of work into making warmup costs in yk as low as
-possible, but theyâll never go to zero: the first iteration is 10% slower
-than the subsequent iterations because itâs doing work tracing and so on.</p>
-<p>Itâs fine if the function mutates state inside it,
-provided (1) it always guarantees to produce the same outputs for the same
-inputs and (2) removing the call, and its mutations, doesnât affect overall
-correctness.</p>
-<p>Itâs fine if the function mutates state inside it,
-provided (1) it always guarantees to produce the same outputs for the same
-inputs and (2) removing the call, and its mutations, doesnât affect overall
-correctness.</p>
-<p>yk_idempotent implies noinline, but LLVM has a habit of
-ignoring such requests for no obvious reason. The __asm__ trick makes
-LLVM less likely (note my careful choice of words!) to ignore noinline.</p>
-<p>yk_idempotent implies noinline, but LLVM has a habit of
-ignoring such requests for no obvious reason. The __asm__ trick makes
-LLVM less likely (note my careful choice of words!) to ignore noinline.</p>
-<p>Oddly, this applies to a variable, not (just) its result. Itâs a
-long story.</p>
-<p>Oddly, this applies to a variable, not (just) its result. Itâs a
-long story.</p>
-<p>Itâs a coincidence that the HIR has also reduced by almost
-exactly the same factor. HIR instructions do not all have the same cost,
-and there are some forms of duplication in there that muddy the waters
-further (guard bodies, in case youâre really interested).</p>
-<p>Itâs a coincidence that the HIR has also reduced by almost
-exactly the same factor. HIR instructions do not all have the same cost,
-and there are some forms of duplication in there that muddy the waters
-further (guard bodies, in case youâre really interested).</p>
-<p>Put another way: to avoid falling foul of Goodhartâs
-Law.</p>
-<p>Put another way: to avoid falling foul of Goodhartâs
-Law.</p>
-<p>This isnât quite the same thing as saying they are the most
-frequently called, but itâs not a terrible proxy for that.</p>
-<p>This isnât quite the same thing as saying they are the most
-frequently called, but itâs not a terrible proxy for that.</p>
-<p>Imagine we call an unknown pointer P and we subsequently see
-that block B in function F has been traced: we canât tell if P==F, or
-whether P referenced an untraceable function G that then called F.</p>
-<p>Imagine we call an unknown pointer P and we subsequently see
-that block B in function F has been traced: we canât tell if P==F, or
-whether P referenced an untraceable function G that then called F.</p>
-<p>Note that yk_indirect_inline still respects
-the âdonât consider a function as traceable if it contains loopsâ
-heuristic, so one sometimes wants to use both yk_indirect_inline and
-yk_unroll together.</p>
-<p>Note that yk_indirect_inline still respects
-the âdonât consider a function as traceable if it contains loopsâ
-heuristic, so one sometimes wants to use both yk_indirect_inline and
-yk_unroll together.</p>
-<p>Working out what functions are âindirectly directlyâ called from a
-trace used to be a pain, but an LLM will now happily go away and return an
-accurate answer in a few minutes.</p>
-<p>Working out what functions are âindirectly directlyâ called from a
-trace used to be a pain, but an LLM will now happily go away and return an
-accurate answer in a few minutes.</p>
-<p>I havenât seen this problem before: it seems probable that
-ykllvm could be extended to avoid this hacky fix, but thatâs a problem for
-another day.</p>
-<p>I havenât seen this problem before: it seems probable that
-ykllvm could be extended to avoid this hacky fix, but thatâs a problem for
-another day.</p>
+                <p>A walkthrough of the streaming data loop in Strands Robots, one agent loop that records robot demonstrations, trains on them by reading straight from the Hub, and deploys the policy back to hardware, with the dataset in the same on-disk LeRobot format the whole way through.</p>
+<p>You have an agent that can already record a demonstration and push it to the Hugging Face Hub. Now you want to run that loop continuously: collect episodes through the day, train a policy on the growing dataset, deploy it, and pull the next batch back to improve it. Run that loop once and every piece works. Run it every day and you start paying for the same byte transfers over and over. The recordings you upload keep growing, each training run copies the whole dataset to the GPUs before it starts, and every new checkpoint ships out while the next batch of recordings comes back.</p>
+<p>The first post in this series introduced Strands Robots, an open source SDK from AWS (Apache 2.0) that exposes robot abstractions, simulation, and the LeRobot stack as AgentTools you compose into a single Strands agent. It covered the Robot() factory, recording a demonstration in simulation, running a policy, and deploying the same agent code to a physical SO-101. That factory resolves a name against a registry of arms, humanoids, mobile bases, and hands, so the SO-100 used throughout this post is one of many supported embodiments. The robot catalog lists every robot the factory knows about. LeRobot's dataset format is already used by over 90,000 datasets and models on the Hub from more than 8,000 publishers (LeRobot Project Pulse). A Strands Robots recording is one more of them, so anything built to read LeRobot data can read it without conversion. If you are new to Strands Robots, start there; this post assumes that setup.</p>
+<p>That post followed the agent loop in one direction, from a Hub dataset to a physical robot. This one follows the data the other way, from the first recorded frame back to the deployed policy, over Hugging Face Storage Buckets - a mutable, non-versioned, Xet-backed object-storage repository type announced in March 2026. A bucket sits beside your dataset repositories in the same hf:// namespace and uses the hf CLI you already have, so it becomes the working layer that holds your data between the day you record it and the day you train on it.</p>
+<p>Someone has to decide which episodes to keep, when the scene has drifted far enough to re-record, whether today's batch is enough to train on, and which checkpoint replaces the one on the arm. Each of those decisions comes up dozens of times over a collection campaign, and each one needs a look at what came back before the next command goes out. That is the work an agent is for. This post walks you through the data loop inside a single agent: record a demonstration into a Storage Bucket, store it so that each sync uploads only the bytes that changed, train by streaming the dataset straight from the Hub instead of downloading it, and deploy the checkpoint back to hardware with one keyword argument change. The runnable companion to this post lives at examples/notebooks/05_streaming_data_loop.ipynb.</p>
+<p>Where the first post recorded a dataset and pushed it to the Hub, the agent you build here records a LeRobotDataset from a natural-language prompt, syncs it into a Storage Bucket, and streams that same dataset back frame by frame, decoding camera video on the fly, with no local copy. You read it back in the same process that wrote it: the same Strands Robots Robot() that recorded the dataset streams it. Your trained checkpoint then deploys to that same Robot() with one keyword argument change, and the demonstrations it records on hardware return to the same bucket.</p>
+<p>Figure 1. The four stages share one backend. Robot("so100") records a LeRobotDataset through the shared DatasetRecorder; sync_dataset_to_bucket(...) syncs it into a Storage Bucket; stream_dataset(...) reads it back over the Hub with no full download; and the trained checkpoint deploys to the same Robot with mode="real". The on-disk format stays exactly as LeRobot wrote it.</p>
+<p>Because one Robot() both records a dataset and reads it back, collecting data and training on it are two methods on one object over one backend. The agent decides to run an episode and invokes one tool; the rollout then proceeds at the robot's control frequency until the episode ends, with the trained policy producing every action. The whole loop, in a handful of lines:</p>
+<p>What follows is what's actually happening inside that loop, step by step.</p>
+<p>That's it. Every stage in this post runs on a laptop with these three. What runs is the loop, not a working policy: the default path uses a mock policy, which records a valid dataset but not a useful one.</p>
+<p>You record new episodes through the day, each a continuous run of camera frames and joint state-action telemetry. LeRobot writes that as a small set of large files that grow as you record. Push them into a versioned dataset repository and every append becomes a commit, and every revision is retained. Collection wants the reverse: somewhere to write bytes and overwrite them in place. That is a Storage Bucket, which lives inside your Hugging Face workspace and uses the permissions you already have. There are no identity and access management (IAM) roles to configure, no cross-origin resource sharing (CORS) rules, and no upload service to maintain.</p>
+<p>Your agent records a LeRobotDataset in the same format LeRobot writes on hardware. Record the episode, then sync the finished dataset into a bucket. The prompt asks for the mock policy, a stand-in that produces joint actions without a trained model, so you can run the whole loop before you have a checkpoint to run:</p>
+<p>The sync writes to hf://buckets/{bucket}/{run_id}, where run_id defaults to the dataset directory name. The streaming read in Step 3 names the run too: the first two segments of the id are the bucket, and everything after them is the path inside it.</p>
+<p>sync_dataset_to_bucket(root, bucket, run_id=...) validates the dataset and syncs it through the hf CLI, decoupled from the recording lifecycle. The same capability is on DatasetRecorder.sync_to_bucket(bucket, run_id=...) if you drive an open recorder directly, and stop_recording(bucket=...) syncs at the moment you stop an active recording. The bucket is the working layer you write to through the day; for the versioned, published artifact you still call push_to_hub(). Both hold the same format.</p>
+<p>The episode is structurally complete, but the actions are placeholders, so it is not training data you would want. Swap in a real policy with create_policy("<hf_repo>") for actual grasping; the prompt, the format, and the bucket sync stay identical.</p>
+<p>To record on a physical SO-101, LeRobot's record CLI handles the leader-follower bring-up:</p>
+<p>The dataset lands on disk in the same format as the simulation recording, so the same sync call takes it to a bucket: sync_dataset_to_bucket("./recordings", "my-org/robot-fave", run_id="run-021") (or the hf sync ./recordings hf://buckets/my-org/robot-fave/run-021 CLI it wraps). Collection runs append into one place, and your published repositories only get the versions you choose to publish.</p>
+<p>Now that a dataset is in the bucket, the question is what the next sync costs you. Point two fixed cameras at an arm clearing the same table for eight hours and most of what you record is pixels you already have: the same lighting, the same chassis, the same background, across thousands of episodes. On a versioned repository it gets worse, because changing one frame in a multi-gigabyte video shard re-uploads the whole file.</p>
+<p>Buckets are backed by Xet, which deduplicates your uploads at the byte level using content-defined chunking. Chunk boundaries follow the content, so inserting a few bytes changes only the chunk it lands in instead of shifting every boundary after it. In Hugging Face's own measurements (HF Storage), content-defined chunking reduces data transferred per upload by about four times across the Hub, and on Enterprise plans billing is on the deduplicated footprint. Their bucket benchmarks show what that looks like on a single file. Starting from a 500 MB upload, changing 1% of the bytes and re-uploading moved 5.5 MB, changing 5% moved 27.5 MB, and changing 10% moved 55 MB. Without chunk-level deduplication, overwriting an object means sending all of its bytes again, whether or not they changed.</p>
+<p>How much that saves you depends on the file layout, and the Strands Robots recorder uses LeRobot's. Episodes go into Parquet shards (data/chunk-000/file-000.parquet) and per-camera MP4 shards (videos/observation.images.front/chunk-000/file-000.mp4), rolling to a new file only when the current one fills, at LeRobot's defaults of 100 MB for data Parquet and 200 MB for video MP4. So a sync after a day of recording uploads the new trailing shards plus the one partially-filled shard that grew, rather than the whole dataset. Sync the same bucket again tomorrow and Xet handles the deduplication.</p>
+<p>Figure 2. A sync uploads only what changed. The first sync of a fresh dataset uploads every chunk; after recording more episodes, Xet's content-defined chunking means the next sync uploads only the new chunks and skips the ones already stored.</p>
+<p>To train, you point GPUs at your dataset. Download it first and those GPUs sit idle until hundreds of gigabytes finish copying. Streaming straight from the Hub works here because of the shard layout from Step 2: a batch becomes a few byte-range reads over large shards rather than thousands of small fetches. LeRobot's StreamingLeRobotDataset turns that into a drop-in torch iterable, and Strands Robots exposes it through stream_dataset():</p>
+<p>Figure 3. Stream, don't download. The download path copies the whole dataset to local disk first, so the GPU waits; stream_dataset() reads batches straight from the bucket with nothing on local disk, so the GPU trains from the first batch.</p>
+<p>Nothing lands on local disk except the small meta/ folder of schema, statistics, and episode index. Camera frames are decoded from the remote MP4 shards as you iterate; state and action come from the Parquet shards. That loop reads one frame at a time, which suits inspecting an episode. To train, pass the reader to a DataLoader and iterate batches instead. The streaming dataset shuffles internally through a bounded reservoir buffer, so video decoding parallelizes across worker processes, and the training step itself is the ordinary PyTorch one:</p>
+<p>If you would rather not write the loop at all, LeRobot's own trainer reads through the same engine, so the dataset your agent collected trains without a line of new code. It takes a bucket through the same keyword argument the in-process reader uses:</p>
+<p>Buckets are streaming-only, so --dataset.repo_type=bucket requires --dataset.streaming=true and the config rejects the combination otherwise. Reach for stream_dataset() when you want the loop in your own process: validating an episode, replaying it in simulation, or feeding a custom evaluation loop. For proprioceptive-only streaming, drop_videos=True skips video decode entirely, which is what makes this work on an edge device with no torchcodec wheel. The recording and datasets guide documents that argument along with the delta_timestamps map it requires.</p>
+<p>Provider names are shared between running a policy and training one. create_trainer("lerobot_local") returns a Trainer that works like create_policy(), and a TrainSpec describes the run; the record-train-deploy loop then closes in a few lines:</p>
+<p>On a single NVIDIA L4 (g6.4xlarge), 500 optimizer steps of ACT (51.6M parameters, effective batch size 8) over a 120-frame episode completed in 133 seconds and wrote a checkpoint that create_policy() loads back through the same entry point used to run any other policy. Training time scales with dataset size, batch size, and step count, so treat this as one measured configuration rather than a benchmark. The "groot" and "cosmos3" providers target the same TrainSpec and Trainer lifecycle, so the surrounding loop is unchanged; each one validates its own required fields first, so a GR00T run needs a base_model and an embodiment tag, and a Cosmos 3 run needs a base_model and an SFT recipe. Call trainer.validate(spec) before train() and it returns the exact list of what a given backend is missing.</p>
+<p>Hugging Face's pre-warming caches bucket data at edge locations near the cloud and region where your jobs run, so your cluster reads locally and the dataloader stays ahead of the GPU. In Hugging Face's own bucket benchmarks, a warm content delivery network (CDN) read hit about 1,086 MB/s on a 10 GB payload against 780 MB/s cold, and roughly 1,124 MB/s warm at 100 GB, measured on an m5dn.24xlarge in us-east-1. The full comparison against plain object storage, upload as well as download, is on that dashboard. Choosing where that data lives is a Storage Regions setting on Team and Enterprise plans, as of this writing US and EU, with Asia-Pacific and Gulf Cooperation Council (GCC) regions announced as coming; outside those plans repositories are stored in the US.</p>
+<p>On macOS, import strands_robots puts Homebrew's ffmpeg on the loader path for you, so torchcodec decodes streamed video without extra setup.</p>
+<p>In this step you take the checkpoint you just trained, run it on a physical robot, and record the next round of demonstrations with it. This is the same agent code from the first post, with one keyword argument changed to mode="real":</p>
+<p>The checkpoint runs against the physical arm, and the demonstrations that arm records are saved to disk in the same LeRobot format you started with, ready to sync back to the bucket for the next training run.</p>
+<p>If your data already lives on Amazon Simple Storage Service (Amazon S3), none of the format work in this post changes. A LeRobotDataset is a directory of Parquet and MP4 shards, so it stores on Amazon S3 the same as anywhere else, and the recording, training, and deploy steps read that format wherever it sits. What a bucket adds is the Hub-native route: sync_dataset_to_bucket and stream_dataset(repo_type="bucket") target hf:// directly, so you get the sync and the streaming read with no separate storage path to wire up. Both paths run the same loop: Amazon S3 if that is where your data already sits, a bucket if you want the sync and the streaming read without provisioning storage first.</p>
+<p>Run the loop again tomorrow and you are recording into that bucket, syncing only the bytes that changed, and streaming those bytes to the GPUs without waiting for a download. The data never leaves the LeRobot format, and it never leaves the Hub.</p>
+<p>The full Strands Robots sample is on GitHub at strands-labs/robots in examples/notebooks/05_streaming_data_loop.ipynb. It walks you through the full loop cell by cell: record, render, sync to a bucket, stream back, train, and load the checkpoint. Every cell runs in simulation on the mock policy, so no GPU, no Docker, and no Hugging Face credentials are needed.</p>
+<p>Run the cells top to bottom. The recorded dataset lands under /tmp/nb5_dataset. To sync it to a bucket, set BUCKET = "my-org/robot-fave" in the first cell (after hf auth login); the neighboring RUN_ID names the folder inside the bucket, and the notebook streams back from f"{BUCKET}/{RUN_ID}". To train on a GPU, raise steps to 500 and set device="cuda". The agent-driven version of the same loop lives at examples/06_agent_collect_and_stream.py.</p>
+<p>The snippets here are a "hello world" of the Strands Robots data loop. Five things change once you run it against real data.</p>
+<p>Prompt injection. Supplying untrusted data to an agent can lead to prompt injection, where untrustworthy context is treated as LLM instructions. These agents actuate robots and now also write to and read from shared storage, so this is an important risk to track. Feed the agent only data from trusted sources. If not all input can be trusted, restrict the tools available to the agent so it cannot take safety-critical actions or overwrite bucket contents.</p>
+<p>Training data is a trust boundary. An agent that can write into the collection bucket can also write episodes that a policy later trains on, and that policy drives a physical arm. Keep the credential that writes collection data separate from the one a training job reads with, sync each run under its own run_id so an episode can be traced to the run that produced it and removed on its own, and treat the versioned dataset repository as the reviewed artifact, because the bucket keeps no revisions to audit against.</p>
+<p>Bucket credentials and scope. sync_dataset_to_bucket(...), stop_recording(bucket=...), and sync_to_bucket upload through the hf CLI using the token from hf auth login. Use a token scoped to the specific namespace you are writing to, prefer --private buckets for collection data, and keep the bucket distinct from the versioned dataset repository you push_to_hub and share.</p>
+<p>Overwrite in place keeps no revisions. A bucket overwrites in place and retains no revisions, which is what makes it a working layer and also means a repeated run_id replaces the run already stored there. Pass an explicit run_id per collection run, as in sync_dataset_to_bucket("./recordings", "my-org/robot-fave", run_id="run-021"). For anything you need to be able to return to, push_to_hub() to a versioned dataset repository, where every revision is retained.</p>
+<p>Only use trusted Hugging Face orgs. The local inference path loads Hugging Face models with trust_remote_code=True. Set STRANDS_TRUST_REMOTE_CODE=1 to opt in, and only load checkpoints from organizations you trust. When loading pre-trained weights from the Hub (e.g., via pretrained_name_or_path), verify the organization is trusted before loading. Model weights can contain arbitrary code (pickle-based checkpoints). Prefer safetensors-format checkpoints where available.</p>
+<p>The loop leaves a bucket, datasets under /tmp, and a checkpoint on disk. Bucket contents count toward your stored volume, so remove what you no longer need:</p>
+<p>Stop any training process still on a GPU instance, and stop the instance. If you ran the notebook, substitute its RUN_ID (nb5_demo by default) for cube_pick. Anything you published with push_to_hub() is in a versioned repository and is untouched.</p>
+<p>The Strands Robots documentation covers the robot catalog, simulation, policy providers, recording, and the mesh in depth. The recording and datasets guide documents the DatasetRecorder API, sync_dataset_to_bucket / sync_to_bucket, and stream_dataset in full.</p>
+<p>If you collect from more than one robot, give each one its own run_id and they write into the same bucket in parallel. The multi-robot mesh fans one agent out across those robots, so the same loop becomes a fleet collecting through the day into shared storage. A streaming reader reads one run at a time. The recording and datasets guide describes how to train across several of them.</p>
+<p>If you want a larger policy than ACT, the TrainSpec and Trainer lifecycle from Step 3 covers GR00T and Cosmos 3 behind their own provider names, so fine-tuning a VLA on the dataset you just streamed is the same calls with a different provider string and a base model. Running the result is where the paths diverge, because a VLA checkpoint deploys to hardware rather than to the simulator you trained from. For heavier simulation to generate that data, the Newton (sim-newton) and Isaac Sim (isaac) backends sit behind the same Robot() factory, so the agent code does not change as you scale up.</p>
+<p>Bucket streaming reached LeRobot through contributions from both the Strands Robots and LeRobot teams, upstream in LeRobot itself, so the datasets your agent collects are readable by every tool in that ecosystem. That runs both ways: the reader in Step 3 opens any of the LeRobot datasets already published on the Hub, so an agent can replay and evaluate against existing demonstrations before it records one of its own.</p>
+<p>Contributions are welcome under Apache 2.0. If you build something with this loop, open an issue with what worked and what didn't.</p>
+<p>Results of a internal benchmark on HF Storage Buckets</p>
+<p>Explore the robot data lifecycle with an interactive visual guide</p>
+<p>Explore robot demonstration data with an interactive dashboard</p>
+<p>What makes this architecture particularly compelling is that the agent isn’t just executing a task—it’s sitting inside a continuous data, learning, and deployment loop. Connecting data collection, streaming, training, evaluation, and deployment through one agent workflow opens up some fascinating possibilities for adaptive systems. At the same time, the trust boundaries around data, credentials, and agent actions become critical. This is where custom AI agent development and enterprise AI agent solutions need to be designed as complete systems rather than isolated agent features. I came across Mobisoft Infotech while exploring this space: https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+<p>¡Qué buena onda! Esta integración de Strands Robots con los Storage Buckets de Hugging Face está perrísima para automatizar todo el flujo de trabajo en robótica sin perder tiempo ni dinero. La verdad, la deduplicación de datos a nivel de bytes con Xet y el poder entrenar modelos mediante streaming directo desde la nube nos aligera un buen el trabajo con las GPU. ¡Es una chulada total para acelerar la recolección de demostraciones y el despliegue en hardware real sin complicarse la vida!  https://starzbet.mx/</p>
+<p>Results of a internal benchmark on HF Storage Buckets</p>
+<p>Explore the robot data lifecycle with an interactive visual guide</p>
+<p>Explore robot demonstration data with an interactive dashboard</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://tratt.net/laurie/blog/2026/adapting_cpython_for_yk.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/amazon/strands-lerobot-streaming-data-loop" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

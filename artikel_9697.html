@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>bonds chat</title>
+    <title>Track Indian startup funding with Python (stdlib RSS)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9697.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>bonds chat</h1>
+        <h1>Track Indian startup funding with Python (stdlib RSS)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdke95gvumcwjr68qk3kn.png" alt="Track Indian startup funding with Python (stdlib RSS)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdke95gvumcwjr68qk3kn.png" alt="Track Indian startup funding with Python (stdlib RSS)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Multiplayer AI that dies if you and your friends flake
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/bonds-2?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1312307?app_id=339">Link</a>
-          </p></p>
+                <p>"How much did Indian startups raise this week?" sounds like a question with one answer. It has at least three. The main Indian startup publications each publish a weekly funding roundup, and for the same week their totals disagree — because each uses a different date window, a different deal list, and a different way of handling currency.</p>
+<p>Rather than pick one roundup and trust it, you can track Indian startup funding with Python: we built a small script that pulls funding headlines straight from the publications' RSS feeds and writes them to a CSV. Every row keeps its source and link, so any figure can be traced back to the headline it came from. The columns are: date, source, company_guess, amount_as_reported, title, link.</p>
+<p>We probed a handful of feed URLs. Four returned HTTP 200 on 14 Nov 2026:</p>
+<p>Two returned 404: entrackr.com/feed and indianstartupnews.com/feed. Feed URLs rot, so check them before assuming a source went quiet.</p>
+<p>Feeds are also short-lived. At fetch time, ETtech and ISN held 50 items each, Inc42 24, YourStory 20, and the oldest matching row in our run was dated 3 Nov 2026. A feed is a rolling window, not an archive — run the script on a schedule and append, or history falls off the back.</p>
+<p>The whole thing is about 60 lines, standard library only — urllib, xml.etree, csv, re, email.utils — so there is nothing to pip install.</p>
+<p>Run it with python3 funding_feed.py > rounds.csv.</p>
+<p>The exclusion list exists because the first run without it also pulled weekly digests — one ETtech digest headline read "weekly funding falls to $12 million" — and rumour headlines using "in talks" or "looks to". A digest restates rounds that can also appear as single-deal headlines, so keeping both risks double counting.</p>
+<p>Amounts stay as text because publications convert currencies differently (more below). Storing amount_as_reported verbatim, plus the link, keeps the row faithful to the source; conversion happens later, under a rule we choose ourselves.</p>
+<p>An excerpt (first four columns; title and link trimmed for width):</p>
+<p>The run on 14 Nov 2026 produced 20 rows, exit code 0. Reading them closely:</p>
+<p>For the same week in early November 2026, the three publications printed three different totals. Inc42 said 20 startups raised $255 Mn for Nov 2-6. YourStory said $263 million across 23 deals for Oct 31-Nov 6. Indian Startup News said over $290.55 million across 22 startups for Nov 2-7.</p>
+<p>Windows. Nov 2-6, Oct 31-Nov 6, and Nov 2-7 are different windows, so a round announced on 31 October or 7 November lands in some totals and not others.</p>
+<p>Deal lists. ISN counted Braid, a $38M round for a company headquartered in The Hague, which Inc42 did not list. What counts as an "Indian startup" is itself an editorial decision.</p>
+<p>Conversions. ISN's weekly roundup put GIVA at "about Rs 955 crore", while ISN's own deal story said "about Rs 975 crore". Peppermint was Rs 100 crore in YourStory but Rs 101.4 crore in ISN's weekly. Only ISN printed a method: "Amounts in USD as reported; rupee rounds converted at announcement rates."</p>
+<p>Hence the design choice: store the amount as reported, keep the source link, and apply your own window, inclusion and conversion rules later — written down, so the total is reproducible.</p>
+<p>Why not feedparser? It works fine, but the standard library covers these four RSS 2.0 feeds, so the script has no dependency to install.</p>
+<p>Why is Entrackr missing? Its /feed URL returned 404 when we checked, as did indianstartupnews.com/feed; ISN's working feed is /rss.</p>
+<p>Why keep amounts as text? The same round is converted differently even within one publication: GIVA was "about Rs 955 crore" in ISN's weekly and "about Rs 975 crore" in ISN's deal story. Converting at ingest would hide that.</p>
+<p>If you try it, put it on a daily cron first and look at a week of rows before you trust any total you compute from them.</p>
+<p>Disclosure: posted from the Mantis team account under the LazyFounder organization; LazyFounder is founded by Tarun Kumar (lazyfounder.in). Drafted with AI from the run log and sources above, checked against them before posting.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/bonds-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/lazyfounder/track-indian-startup-funding-with-python-stdlib-rss-31og" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

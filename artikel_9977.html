@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JIT bitmap text rendering for microcontrollers</title>
+    <title>Newer Models, Same Advantage</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9977.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,157 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>JIT bitmap text rendering for microcontrollers</h1>
+        <h1>Newer Models, Same Advantage</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/69d815b52c6db28cfdfdd422/3HJgWuzAFymnAq6TqEdL7.png" alt="Newer Models, Same Advantage" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/69d815b52c6db28cfdfdd422/3HJgWuzAFymnAq6TqEdL7.png" alt="Newer Models, Same Advantage" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I've been working on vic-2350, a re-envisioning of an 80s home computer on an RP2350 microcontroller board.
-Of course, such a project needs text rendering.
-Though bitmap fonts are now out of favor, I chose them both for efficiency and because, at low resolutions, I prefer the aesthetic of a crisp, intentionally designed bitmap font over the blurry mush of antialiased font rendering.
-They still have a niche, if a narrow one.</p>
-<p>I also wanted proportional spacing and kerning, again because I love the aesthetic of early Macintosh and its predecessors.
-Most text rendering in RP2350 projects is based on a fixed character cell, as achieving good performance is tricky.</p>
-<p>This blog post presents a technique for extremely fast rendering of bitmap text on microcontrollers such as the RP2350.
-I've implemented it as part of my race-the-beam renderer, but the same technique would work when writing into a framebuffer as well.
-The core idea is a JIT to generate highly optimized code on the fly for rendering a string.</p>
-<p>Around the mid-80s, a split was happening in the way computers displayed text.
-The established technique was a fixed cell size, and hardware that looked up characters in a font ROM on the fly as the image was scanned out to the monitor.
-The advantage was very fast update and responsiveness with limited hardware.
-A lot of terminals worked this way, as did home computers.
-The downside was the lack of flexibility.
-In particular, only monospace fonts were supported.</p>
-<p>The newer technique was a bitmap framebuffer, as pioneered on a line of computers originating with the Xerox Alto, continuing through the Apple Lisa, and finally becoming popular with the Macintosh.
-The framebuffer was vastly more flexible, but required a lot more computing power to keep updated.
-In the early 80s, you would generally watch text progressively render.
-I should also mention, graphics modes were generally available on home computers, but they were typically lower resolution than text mode and a 1MHz 6502 (or similar) was just not powerful enough, so serious text-based programs like word processors and spreadsheets used text mode.</p>
-<p>Fast forward to the RP2350.
-It is capable of DVI video out with the help of the HSTX peripheral, but it is still entirely up to software to fill the video buffer.
-Some projects choose a framebuffer, but there's only 520kB of SRAM on the chip, so a framebuffer must be limited in either resolution or bit depth or both, and it would also be good for that RAM to be available to the app for other purposes.
-I've chosen instead to race the beam, filling a video buffer each scanline.
-That allows more visual richness and much lower latency, but is a hard performance constraint on the renderer.
-There's a budget of approximately 6 cycles per pixel.
-The lower we come in under budget, the more is available for rendering other graphical objects, and for other app functions.</p>
-<p>Rust is not capable of meeting the performance requirement, so I started writing ARM assembly language.
-The renderer, and much of vic-2350, is now written in symbolasm, a programming language I've created for extremely high performance Cortex-M33 programming.
-Employing a JIT speeds up rendering further.</p>
-<p>Rendering is often modeled as a pipeline, and the vic-2350 renderer is no exception.
-The interface between application and renderer is a display list. At heart, that's just what it says, a list of display objects. The display list is double-buffered; one is being rendered and scanned out, and the other is built by the application.
-At each vsync, if the app is ready, the display list is swapped.
-Building the display list is not computationally intensive, but of course the app might be busy doing other things.</p>
-<p>As the display list is of unknown size at compile time, it allocates.
-Display objects are packed into two vectors; one holds the display objects themselves, the other a list of indices into the first vector.
-A display object consists of a vtable, a bounding rectangle, and the object-specific payload.
-Allocation is acceptable because building the display list is not timing critical.
-Rendering is a different story.
-That said, it is important for the display list to be memory efficient, especially as there are two copies.</p>
-<p>Before presenting, the indices are sorted into ascending y0 order.</p>
-<p>During rendering, the renderer maintains an active list, which is just the subset of display objects that intersect the current scanline.
-At each scanline, objects for which y1 = y are deleted from the active list, and new objects with y0 = y are inserted, which is the reason for the sort earlier; it is exactly the order objects are inserted into the active list.
-The active list is kept in display object order.</p>
-<p>Then the renderer just calls the render method for each display object in the active list.
-I'll do a bit more optimization soon, tracking opaque spans and eliding rendering work for spans of pixels that will be overwritten later, but that's not fundamental to the text rendering as presented here.</p>
-<p>At the start and end of an object (when it's inserted and deleted) the renderer calls start and end methods on the display object.
-These methods can allocate scratch space and do other work to set up rendering of the object.
-There's a specialized bitmap allocator, which is both fast and deterministic.</p>
-<p>All this gives us everything we need to implement text rendering as an instance of display objects.</p>
-<p>The text object itself contains the string (1 byte per character), a pointer to the font, and foreground and background colors.
-RAM is precious, and more so for the display list because it's double buffered.
-In an earlier iteration of the renderer, I had an expanded version of the text stored in the display list, and that created unacceptable memory pressure when the screen was filled with text.</p>
-<p>The start method allocates scratch space for both the JIT code and a 1 bit per pixel intermediate buffer, and invokes the JIT compiler, expanding the string into code.</p>
-<p>The render method calls that code, which fills the 1 bit per pixel buffer, then runs a second pass to expand that 1 bit per pixel buffer into 16 bit per pixel RGB (565 format).
-This second pass runs at a sustained rate of 1.75 cycles per pixel.</p>
-<p>The font is stored in extremely packed format.
-All the "ink" for glyphs is stored in a wide bitmap image, same height as the font.
-The packing also makes sure no glyph straddles a 32-pixel chunk boundary, so one row of font pixels can always be read with a single 32 bit load.
-If a glyph has space on either side of the glyph, that's not stored in the packed bitmap; rather, the space is in the per-glyph metadata.</p>
-<p>In the spirit of micro-optimization, the packing algorithm also detects overlaps, as there's no requirement that pixels be unique to a single glyph.
-This optimization reduces the size of the font bitmap from 1140 to 960 bytes.
-Every byte counts, and more so as we add more fonts.
-The font bitmap needs to live in SRAM, as having it in flash could cause stalls during rendering at video rate.</p>
-<p>I especially liked the {][} sequence (near the start of the second row).
-Any glyph contained within another glyph doesn't need to be packed separately.
-There are a few examples, some surprising.
-For example, l is the left side of U, and 0 is identical to () with the space between them removed.</p>
-<p>The per-glyph metadata (not counting kerning) is conceptually four fields: the x position and width of the ink within the bitmap, the space on the left, and the advance.
-All this is tightly packed into a 32 bit integer.</p>
-<p>In the generated JIT code, registers are assigned as follows:</p>
-<p>In the simplest case, we add one glyph to the accumulator.
-The code looks like this:</p>
-<p>There's additional code to output a word when it's finished (stmia r1!, {r2}), and to handle cases when a glyph straddles a 32 bit boundary.
-These are documented in text.sy.
-But there is one trick I do want to mention here: the code as above has a result-use delay between the ldr and ubfx (unsigned bit field extract).
-This is solved by shuffling the order of instructions somewhat: the last instruction for glyph i is reordered to follow the first instruction (ldr) of glyph i + 1, filling the delay slot, and reducing the cycle cost from 4 to 3.</p>
-<p>Here's the inner loop of the code generator, focusing only on the case where the glyph doesn't straddle the accumulator.
-For each glyph, several values are packed into the g variable, then unpacked below: the offset within the packed font bitmap (which further breaks down into a bit offset and a word offset), the width of the inked part, the left side bearing, and the advance.</p>
-<p>Here's the compiled ARM assembly code from the above symbolasm code, along with cycle count analysis from the symbolasm analysis tool:</p>
-<p>The K flags indicate a possible delay in branches because the condition isn't known until the cycle before the branch.
-Here, 0/2 indicates 0 cycles if the branch is not taken, and 2 if it is.
-Neither of these can be optimized.
-The H flag indicates the instruction is 32 bits rather than 16 because of the use of "hi" registers (r8-r15).
-These are available in the LSP as well.</p>
-<p>Without a JIT, it would be possible to write text rendering as a loop, but in the proportionally spaced case, there'd be a huge amount of setup to work out the shift amounts, plus branching to handle cases like straddling a 32 bit boundary.
-Earlier implementations of the idea in pico-dvi-rs struggled to display a full screen of text.
-Of course, for fixed width text all that is known statically, so a tight loop without JIT is fine.</p>
-<p>The basic loop is 23 cycles per glyph for the JIT plus 3 cycles times height for the bitmap generation.
-There's an additional cost of about 20 cycles for JIT and 2 cycles times height per 32 bits of output width.</p>
-<p>This is astonishingly fast.
-The textdemo in vic-2350 takes about 21k cycles for the JIT and 42k cycles to run the JIT code.
-That adds up to about 2.6% of the available throughput of a single core of the RP2350.
-Expanding to 565 is actually about 3x more expensive.
-So it's fair to say it's as optimized as it can get.</p>
-<p>While this was designed for race-the-beam rendering, it would work just as well writing into a framebuffer, especially a one bit per pixel framebuffer.
-Just generate the code, run it for each scanline.</p>
-<p>It's tempting to cache the JIT output, but saving RAM is more important.
-The JIT output is about a 10x expansion over the input string.
-And, from the numbers above, it's clear that the cost of running the JIT is minimal.</p>
-<p>The name "just in time" is apt; in the implementation in vic-2350, the JIT compiler runs under 100µs before scanout of the video line.</p>
-<p>I wasn't able to find a direct performance comparison to an existing RP2350 text renderer.
-Probably the closest is dvhstx by Michael Bell and forked by Adafruit.
-That also ends up spending approximately 2-2.5 cycles total per pixel, but is limited to a 14x24 grid and also uses an RGB 222 mode, so its output bandwidth is only half as much (and this is where the lion's share of the time goes).</p>
-<p>Kerning is a very important refinement for text rendering, otherwise the spacing looks irregular.
-The general mechanism in OpenType fonts is quite complex.
-For this project, I wanted something simple and efficient, so dusted off an idea that was originally motivated by trying to do text layout on GPU.</p>
-<p>Basically, each glyph has two bitvectors, one each for the left and right side.
-To kern two glyphs, take the and of the right bitvector of the first glyph and the left bitvector of the second, then the popcount (number of 1 bits) of that, resulting in the number of pixels to kern.
-That's actually just the dot product of the two vectors, bits interpreted as 0 and 1.
-The kern tables require only two bytes per glyph, and kerning is super fast to evaluate.</p>
-<p>Even so, kerning evaluation is done at display list build time, not racing the beam.
-When the kern is nonzero, a special negative space character is inserted into the string in the text display object.</p>
-<p>For this font, I built the kerning table manually.
-Each bit is a specific feature, for example bit 0 represents the top right of the first glyph projecting out, and a corresponding lack of ink in the top left of the next glyph.
-So it is set for the right of T and Y, and also at the left of most lowercase letters and also A.
-It's not hard to imagine a tool that might help automate this, perhaps distilling kerning information prepared in other ways.</p>
-<p>I haven't done a real implementation yet, but I suspect this idea might scale to real fonts: instead of bits and an integer kerning amount, the vectors would store continuous values (reasonably quantized).
-An additional nonlinear step after the multiplication but before the sum may also help.
-Dot products are of course ridiculously efficient to compute on GPU, while doing index chasing through OpenType tables is not.
-But that exploration is for another day.</p>
-<p>This work is a refinement of the text rendering in pico-dvi-rs, which was hand-written.
-My draft of the JIT core was hand-written in Rust, then I used Claude to translate it to symbolasm and refine and optimize it.
-This blog is hand-written.</p>
-<p>The symbolasm compiler and analysis tool is heavily LLM assisted, though it too evolved from an initial hand-written version.</p>
-<p>I did a microtypography experiment that was a pretty cool result, but decided not to include it, partially because it would have increased the fraction of LLM content.</p>
-<p>Like most other people in the industry, I struggle with the balance between quality and the acceleration that LLMs provide.
-Claude is exceedingly good at the low level tasks of coding; it easily found an edge case in my draft of the JIT compiler.
-I find that when used judiciously, LLM can improve quality, and I strive for that.</p>
-<p>I wasn't able to find much precedent for JIT specifically for text rendering.
-Of course, there is a massive literature on JIT in general.
-On-the-fly code generation for bitblt was done for the Blit around 1982.
-See Bitmap Graphics SIGGRAPH 84 for more.
-An interesting detail is that they claim about 2500 characters per second; the raw performance of this on RP2350 hardware is almost 3 orders of magnitude greater, just counting the output to 1bpp (which is how the Blit's framebuffer was configured).</p>
-<p>Edit added later: David Fuchs pointed out [US Patent 6377261], filed in 1996, which compiled glyphs to machine code.
-It's highly optimized for speed, and has a lot in common with the idea here, but depends on a cache to be reasonably RAM efficient.
-Even so, it absolutely counts as prior art.</p>
-<p>This website's content is licensed under a
-                            
-                                Creative Commons Attribution 4.0 International License
-                            .</p>
-<p>All code used in this website is available under the Apache-2.0 license.</p>
+                <p>Three months ago, we published a paper on DharmaOCR and open-sourced one of the models. The objective was specific: optical character recognition engineered for Brazilian Portuguese.</p>
+<p>The training pipeline was built in two stages. The first was a supervised fine-tuning step, drawing on a broad collection of Portuguese-language files from different sources, formats, and levels of complexity. This stage aligned the model's weights to the specific vocabulary, syntax, and document structures of Brazilian Portuguese — concentrating representational capacity on the target language rather than distributing it across a broader multilingual space. The second stage applied Direct Preference Optimization: rather than training only on correct transcriptions, the model learned from comparative preference data between competing outputs, teaching it to consistently select the better extraction at inference time. This stage addressed a different problem: not accuracy, but stability. By suppressing the failure modes that cause generative models to produce repetitive or incoherent output, DPO reduced inference time and cost, and materially improved the reliability of what the model delivered in production.</p>
+<p>The combined result was a model that achieved the highest extraction quality score with the lowest degeneration rate on a Portuguese-focused benchmark. Both stages were necessary. The fine-tuning stage built domain competency; the DPO stage ensured that competency held under the conditions where models tend to fail.</p>
+<p>OCR models have been moving quickly. But the gaps that originally motivated DharmaOCR's design (in extraction quality on complex documents and in model stability under production conditions) have not closed. They have, if anything, become more instructive as the field has changed.</p>
+<p>The proliferation of multimodal generative models made language model-based OCR widely accessible, and the wave of fine-tuned OCR variants that followed reflects how fast that adoption has moved. That proliferation has not, however, changed the fundamental character of the technology. Every OCR system built on a generative model is probabilistic. Transcription errors are an inherent variable of this probabilistic technology. What differentiates models is how many errors they make and of what kind. That is determined by two things: the structure of the model (its architecture and parameter count) and how those parameters were trained for the task.</p>
+<p>Architecture and parameter count establish the ceiling on what a model can learn. Training determines how that capacity is allocated.</p>
+<p>This distinction is where specialization becomes a structural question rather than a design preference. When a model is trained on a restricted domain — a single language, a bounded document type, a specific task — All of its parameters are dedicated to that specific task. When a model is trained to cover a broader range of domains — a multilingual model handling N languages, for instance — those same parameters must be distributed across all of them. The distribution is not linear: the neuron superposition principle means individual parameters can encode multiple features simultaneously. But the division is real, and its consequences are real. A model covering more ground commits less to any given part of it.</p>
+<p>DharmaOCR was trained to accept that constraint in reverse. The model is not designed to be the best option for other languages, and was never intended to be. In exchange, every parameter available to the network could be oriented toward the specific vocabulary, morphology, and orthographic patterns of Brazilian Portuguese — the most directed possible use of the model's resources for that domain.</p>
+<p>That concentration is the structural basis of an inherent advantage over multilingual and broader-domain models. The advantage does not depend on having a larger architecture or a more sophisticated training procedure than competitors use — new architectures and new training techniques improve what any model can do. It depends on where those resources are directed: at one domain rather than spread across many.</p>
+<p>Three months later, newer models have arrived. Whether the case for specialization holds when those models are newer and more capable is a different question.</p>
+<p>Three months after the DharmaOCR paper appeared, two new OCR models attracted significant attention from the research community: Mistral OCR4 and Unlimited-OCR. Both represent genuine technical advances — new training techniques, new datasets, and strong results across multiple languages on a range of benchmark evaluations. They are the kind of models that raise the competitive standard for what OCR systems are expected to deliver.</p>
+<p>When we ran both against the DharmaOCR benchmark — an evaluation designed exclusively around Portuguese — the results were conclusive.</p>
+<p>DharmaOCR scored 0.925. Mistral OCR4 scored 0.798. Unlimited-OCR scored 0.7587.</p>
+<p>The difference is significant. Mistral OCR4 falls approximately 13 points below DharmaOCR; Unlimited-OCR falls more than 16 points below. Both were released after our model, both backed by substantial research resources. On a task where DharmaOCR's fundamental design decision was to concentrate entirely on Portuguese, the specialization advantage is measurable and significant.</p>
+<p>The benchmark is the central finding. What follows illustrates why the gap takes the specific shape it does.</p>
+<p>Processing non-trivial Portuguese documents reveals precisely where multilingual models tend to break. ENEM essays (Brazil's national high school examination) combine handwritten text with vocabulary, proper nouns, and cultural references that are specific to Brazilian Portuguese. They are exactly the kind of documents where language-specific training produces a return.</p>
+<p>Figure 1: ENEM essay manuscript used in benchmark evaluation with outputs of the each model. Misreads marked in red.</p>
+<p>Mistral OCR4, evaluated on documents of this kind, transcribed the name Chico Buarque (one of Brazil's most widely recognized musicians and poets) as "Chico Barque." Unlimited-OCR rendered the same name as "chico bique." Confronted with the phrase "O Brasil não exclui, assimila" ("Brazil does not exclude, it assimilates", a Chico Buarque quotation embedded in the same document) Unlimited-OCR returned: "a dose de chico bique, 'o Brasil no exclu, eliminila.'</p>
+<p>These are not random errors. A model with insufficient exposure to Brazilian Portuguese does not fail arbitrarily — it fails at precisely the vocabulary and proper nouns that distinguish Brazilian Portuguese from the broader multilingual corpus. Chico Buarque is not an obscure reference; the name is nationally recognized. Its systematic corruption across outputs is not an edge case. It is a diagnostic: evidence of where the model's training did not go.</p>
+<p>DharmaOCR, evaluated on the same documents, handles these cases correctly. The reason is direct: the model's training was concentrated on this linguistic space, orienting its resources toward the vocabulary and proper noun distributions that characterize Brazilian Portuguese rather than spreading them across many languages at once.</p>
+<p>The examples illustrate the benchmark rather than replace it. The benchmark establishes the magnitude of the gap; the examples show why it is concentrated in language-specific recognition rather than in general capability.</p>
+<p>Extraction accuracy, however, is only one dimension of production performance. Stability under visual difficulty is another — and operationally, it is the more consequential one to fail on.</p>
+<p>When a generative model encounters a document it cannot clearly resolve — small fonts, degraded scan quality, dense handwriting — it faces uncertainty in its input signal. Models trained primarily on next-token prediction objectives face a specific vulnerability here: when the visual signal becomes ambiguous, the model can continue generating from prior learned patterns rather than from the source document. The result is text degeneration — output that is repetitive, incoherent, and semantically disconnected from the page.</p>
+<p>Presented with a document with small fonts, Mistral OCR4 produces output with no connection to what is written.</p>
+<p>Figure 3: DharmaOCR output and Mistral OCR4 degenerated output</p>
+<p>This is not a low-quality transcription of the source. It is a failure of an entirely different category.</p>
+<p>The operational consequence is distinct from that of a transcription error. An incorrect transcription is wrong in a recoverable way — it stands in a relationship to the source document, and the error can in principle be identified and corrected. Degenerated output has no such relationship. It cannot be corrected because there is nothing to correct toward. For downstream processes that depend on structured OCR output — document classification, information extraction, compliance workflows — degenerated output is not inaccurate data. It is structurally unusable data. The efficiency that automation was meant to deliver is negated at precisely the point where output stops being information.</p>
+<p>Mistral OCR4 and Unlimited-OCR are good models with significant technical advances behind them. The degeneration behavior described here does not define them; it identifies a specific failure condition that their current training has not addressed for this domain. The question is what a training pipeline designed to address it looks like.</p>
+<p>In DharmaOCR, the answer is the DPO stage.</p>
+<p>Supervised fine-tuning concentrates the model's resources on the target domain — the stage that builds the linguistic alignment described above. But SFT trains on individual token predictions: the model learns to produce the correct next token given the context preceding it. Under visual complexity, this creates the condition that produces degeneration. If an early token in the output diverges from the source document, each subsequent prediction is conditioned on that divergent state, and the output continues to drift. Repetition loops and incoherent sequences are an inherent characteristic in this context — they are the predictable result of an objective optimized step by step without accounting for the coherence of the full extraction.</p>
+<p>DPO trains against a different signal. Where SFT trains token by token, DPO trains the model against the quality of complete outputs — teaching it to discriminate between competing responses based on the coherence of the full extraction rather than the accuracy of individual predictions. The effect is stabilizing: on documents where visual complexity would otherwise trigger drift, the model is less likely to commit to a divergent path, because its training penalized outputs that lost coherence at the extraction level.</p>
+<p>The result is what the original benchmark demonstrated: lower degeneration rates alongside higher extraction accuracy, on the same documents where models without this training stage lose coherence.</p>
+<p>The benchmark establishes what is true today. It is less precise about what will be true in two years.</p>
+<p>It is possible — and likely — that newer models will eventually outperform the current DharmaOCR even in Brazilian Portuguese. Architectures will improve. Training techniques will advance. Datasets will expand. The field moves toward higher capability at every level, and there is no reason to expect that trajectory to stop. This is expected, and it is welcome.</p>
+<p>What changes with each architectural generation is the ceiling on absolute performance. What does not change is the structural logic that determines which systems come closest to their ceiling in a given domain.</p>
+<p>Available resources — compute, parameters, training data — are finite. They must be directed somewhere. A system that directs them at a single domain will extract more from them in that domain than a system distributing the same resources across many. This relationship holds regardless of how capable the generalist model has become. The gap between specialist and generalist may evolve as architectures improve. The structural dynamic does not reverse. We explored this principle in more depth in an earlier piece on why specialization continues to produce an advantage as AI systems advance (Why Specialization Is Inevitable).</p>
+<p>This is what shapes how Dharma approaches what comes next. The objective is not to defend the current model's benchmark position. It is to remain at the frontier of emerging techniques — new architectures, new training methods, new approaches to alignment and evaluation — and adapt them toward the same end: a specialized system for Brazilian Portuguese OCR that makes the best possible use of available resources, at the lowest possible cost and the shortest possible inference time.</p>
+<p>Better tools do not work against specialization. They expand what it can achieve.</p>
+<p>Three months ago, we showed that concentrating a model's training on a specific domain produces a measurable advantage over generalist systems, including ones that are newer and better-resourced. That advantage held. The same principle will determine how DharmaOCR continues to evolve — not by staying fixed, but by applying whatever progress the field makes to a domain that remains fixed.</p>
+<p>Explore Dharma AI on Hugging Face to try our interactive demos, download our open-source models, and discover how specialized AI systems outperform general-purpose models in real enterprise applications.</p>
+<p>Extract text and tables from document images</p>
+<p>Extract text and tables from document images</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://linebender.org/blog/jit-bitmap-text/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/Dharma-AI/newer-models-same-advantages" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
