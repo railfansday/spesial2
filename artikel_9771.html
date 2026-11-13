@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Switch Mirroring Decisions Create Blind Spots in OT Network Monitoring</title>
+    <title>CWE-bench v2: More coverage, quality, and transparency</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9771.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,90 +15,30 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Switch Mirroring Decisions Create Blind Spots in OT Network Monitoring</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
+        <h1>CWE-bench v2: More coverage, quality, and transparency</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/9OnqSgeDBYY2oEQwFvCDThLlAbn2-xde399b.png" alt="How Switch Mirroring Decisions Create Blind Spots in OT Network Monitoring" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/cwe-bench/thumbnail.jpg" alt="CWE-bench v2: More coverage, quality, and transparency" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/9OnqSgeDBYY2oEQwFvCDThLlAbn2-xde399b.png" alt="How Switch Mirroring Decisions Create Blind Spots in OT Network Monitoring" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/cwe-bench/thumbnail.jpg" alt="CWE-bench v2: More coverage, quality, and transparency" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>OT Cybersecurity Architect & researcher with 13+ years in industrial cybersecurity, ICS/OT security, Zero Trust, and IT/OT convergence.</p>
-<p>OT Cybersecurity Architect & researcher with 13+ years in industrial cybersecurity, ICS/OT security, Zero Trust, and IT/OT convergence.</p>
-<p>OT Cybersecurity Architect & researcher with 13+ years in industrial cybersecurity, ICS/OT security, Zero Trust, and IT/OT convergence.</p>
-<p>Your OT sensor is licensed. It's healthy. The dashboard is full of assets, and the alerts are tuned. And the controller that runs your most critical line may still be invisible to it.</p>
-<p>Passive platforms learn only from the packets delivered to them. In most plants, those packets arrive through a switch port mirror (SPAN) or a network TAP, placed by someone who had to decide which links mattered. The switch doesn't care about that decision. It forwards frames according to its MAC address table, and a sensor cannot analyze traffic that never crosses a mirrored link.</p>
-<p>From the field. At a discrete manufacturing site, I compared our monitoring platform's inventory against the PLC projects and the switch MAC tables. Under a quarter of the assets were missing, which sounds tolerable until you ask why. Part of the answer was a vendor's cellular remote-access path: a working connection into the line that never touched the plant network, so no sensor could have seen it. The sensor wasn't broken. It had simply never been shown that traffic.</p>
-<p>Try this before you read further. Pick one production line. Count the assets your monitoring platform shows for it. Then open the line's controller project and count every controller, I/O adapter, drive, and gateway in the I/O tree. If the two numbers match, you can skim this article. If they don't, the rest of it explains where the difference went.</p>
-<p>The example below is a lab-style scenario with fictional addresses, built from documented switching behavior and common plant-floor designs. Later sections cover redundant topologies, devices hidden behind NAT and gateways, encrypted industrial protocols, and who is allowed to change mirror configuration.</p>
-<p>A switch learns which MAC address lives on which port and forwards each unicast frame only to that port. When two devices hang off the same switch, the frame between them never leaves that switch. A SPAN session copies frames from the source ports or VLANs you define to a destination port. Anything not sourced is not copied.</p>
-<p>Most OT monitoring deployments start the same way: the sensor goes in at the distribution layer, near the Level 3 boundary, mirroring the uplinks to each cell or area zone. That position sees north-south traffic well. It sees very little of what happens inside the cell.</p>
-<p>Suppose a sensor mirrors only the uplink from a line's access switch:</p>
-<p>Engineering workstation (Level 3) to line   PLC</p>
-<p>PLC to remote I/O adapters, same access   switch</p>
-<p>Laptop plugged into the line cabinet to   PLC</p>
-<p>The last row is the one that matters most. The most consequential activity in a cell, a program download or a forced output from someone standing at the cabinet, is exactly the traffic an uplink mirror cannot see.</p>
-<p>The sensor's configuration tells you almost nothing about its coverage. The switch's forwarding path, and where the copy is taken, decides what the sensor will ever receive.</p>
-<p>The lab has two switches. Distribution switch DS-01 sits at the Level 3 boundary. Access switch AS-L4 sits in the Line 4 control cabinet, connected to DS-01 through port Gi1/0/24. The sensor is connected to DS-01 port Gi1/0/48, and a SPAN session copies both directions of Gi1/0/24 to it.</p>
-<p>More on Figure 1: The sensor copies only the uplink. Program downloads, HMI writes, and cyclic I/O are switched locally on AS-L4 and never reach it.</p>
-<p>The engineering ground truth for Line 4 is 15 assets: one PLC, four remote I/O adapters, one HMI, one Modbus TCP-to-RTU gateway with six serial VFDs behind it, and two controllers inside an OEM filler skid that sits behind 1:1 NAT.</p>
-<p>After two weeks of collection, Figure 2 compares the sensor's view with that ground truth (illustrative values, not captured from a live environment). Only the PLC is fully visible, because engineering and historian sessions cross the uplink. Everything else is missed for one of four reasons:</p>
-<p>Learned from ARP broadcasts; its sessions   to the PLC stay on AS-L4</p>
-<p>IGMP snooping keeps cyclic multicast I/O   on AS-L4</p>
-<p>Never on Ethernet; at best implied by   unit IDs in gateway traffic</p>
-<p>Translated addresses only; the skid   network stays behind NAT</p>
-<p>The dashboard reports five assets on Line 4. One of fifteen has full protocol visibility. And a laptop plugged into AS-L4 that downloads new logic to the PLC would generate no detection, because none of that traffic reaches DS-01.</p>
-<p>More on Figure 2: Graded against engineering ground truth, Line 4 has full protocol visibility on 1 of 15 assets.</p>
-<p>A note on the I/O row: if IGMP snooping or the querier is missing, EtherNet/IP multicast I/O may flood every port, including the uplink, and the sensor will see it. That is not good news. It means cyclic control traffic is flooding links it should not touch, which is its own reliability problem.</p>
-<p>On Cisco IOS-based industrial switches (including Cisco IE and Rockwell Stratix families), the session is visible with:</p>
-<p>Confirm the source ports or VLANs, the direction (both, rx, or tx), and the destination. Then list what is not sourced. Syntax differs on Siemens SCALANCE, Hirschmann, and Moxa platforms, but the question is the same: which conversations physically pass through a sourced port?</p>
-<p>Compare that with the sensor's own ingest and drop counters. Cyclic I/O at short requested packet intervals produces constant packet rates, so oversubscription in OT is often steady, not bursty.</p>
-<p>The sensor inventory is not ground truth. The controller project's I/O configuration lists every adapter and module with its address. The access switch's MAC address table lists every device that is physically present:</p>
-<p>Any MAC in AS-L4's table that is missing from the sensor inventory is a confirmed blind spot. Any adapter in the PLC project that is missing from both is a different problem worth a walkdown.</p>
-<p>In an approved maintenance window, connect an engineering laptop to a known port on AS-L4 and perform a read-only action, such as going online with the controller without making changes. Then check whether the sensor logged the session. If it logged nothing, the line has no detection coverage for engineering activity that starts inside the cell. Coordinate with operations first, keep the test strictly read-only, and do not run it against safety instrumented systems without the owner's explicit approval.</p>
-<p>Local SPAN on AS-L4 (access ports or the   cell VLAN)</p>
-<p>Needs a destination port and a path back   to the sensor</p>
-<p>Adds load to production links; size it,   and keep it off control-critical trunks where possible</p>
-<p>Full-fidelity copy, no switch CPU   involved</p>
-<p>Insertion needs an outage; confirm   fail-open behavior with the vendor</p>
-<p>Prioritize by consequence, not convenience. The links carrying write-capable protocols to controllers that can hurt people, product, or equipment come first, even if they are the hardest to reach. Whatever you choose, validate it with Steps 1 through 4 before calling the line monitored.</p>
-<p>Plants build redundancy so the process keeps running when a link fails. Ring protocols such as MRP and DLR, parallel networks under PRP, and redundant uplinks all do that job well. None of them consider your sensor.</p>
-<p>In a ring, one port is held in a blocking state. When a link breaks, that port opens and traffic takes the other direction around the ring. If your mirror sources the port that used to carry the traffic, the copy stops while the process carries on normally:</p>
-<p>More on Figure 3: A single link failure opens the blocked port. Control traffic now bypasses SW-B, and the sensor attached to it receives nothing.</p>
-<p>The same pattern appears with PRP. Duplicate frames travel over independent LAN A and LAN B. A sensor on LAN A alone works until LAN A fails, and then it goes blind exactly when something unusual is happening.</p>
-<p>Partial capture also degrades analysis. Passive platforms reconstruct sessions to decode industrial protocols. If a sensor sees a Modbus write request but not the response, or sees only one leg of an EtherNet/IP connection, it may misclassify the activity or drop it from protocol analysis.</p>
-<p>The practical fixes are modest. Mirror at a point every path converges on, such as the controller's own link, or source the ring ports in both directions on more than one switch. Then test a planned ring break during commissioning and confirm the sensor keeps receiving the same conversations. Alert on a sudden drop in packets from a mirrored source, not only on the sensor's own health status.</p>
-<p>Some of the most important assets on a plant floor are hidden by design, and no amount of SPAN tuning on the plant network will reveal them.</p>
-<p>More on Figure 4: NAT'd skids, serial segments, and cellular remote access sit outside what any plant-network mirror can copy.</p>
-<p>OEM skids behind NAT. Machine builders often ship skids with a fixed internal address scheme and a 1:1 NAT device, so ten identical machines can coexist on one plant network. The sensor sees the translated addresses. The skid's internal controllers, drives, and safety devices, and every conversation between them, stay inside.</p>
-<p>Serial and fieldbus segments. Modbus RTU, PROFIBUS, and similar networks reach Ethernet only through gateways. At best the sensor infers devices from unit IDs or gateway mappings when someone polls through the gateway from above. Wireless field networks such as WirelessHART and ISA100 behave the same way behind their gateways.</p>
-<p>OEM cellular remote access. A vendor router with an LTE modem, installed for remote support, can carry traffic from the skid straight to the vendor without ever touching the plant network. No sensor anywhere in the facility will see it. In IEC 62443 terms, it is an undocumented conduit.</p>
-<p>These require a different method, not a better sensor:</p>
-<p>Detection rules get reviewed, tuned, and change-controlled. The SPAN session that feeds them usually does not. It lives in the switch config, owned by whoever maintains the network, and it changes whenever the network changes.</p>
-<p>A typical failure looks like this. During a planned outage, a technician replaces AS-L4 and moves the uplink from Gi1/0/24 to Gi1/0/23 on DS-01. The process restarts cleanly. The SPAN session still sources Gi1/0/24, which is now empty. The sensor keeps showing every Line 4 asset it learned before, because inventories retain devices for days or weeks. The dashboard looks normal while live coverage of the line is zero.</p>
-<p>My position: treat SPAN sessions, TAPs, and the switch ports that feed sensors as part of the security monitoring control, under the same change control as detection rules. In practice that means three things:</p>
-<p>This maps directly to the continuous monitoring requirement in IEC 62443-3-3 (SR 6.2) and the monitoring guidance in NIST SP 800-82 Rev. 3. A control that silently stops observing the system it monitors does not meet either.</p>
-<p>Getting the packets to the sensor is necessary, not sufficient. Industrial protocols are slowly adopting encryption: CIP Security wraps EtherNet/IP in TLS or DTLS, OPC UA supports Sign and SignAndEncrypt modes, and newer vendor engineering protocols increasingly run over TLS.</p>
-<p>That is good for integrity. It also means a passive sensor sees endpoints, timing, and volume, but may not see function codes. It can no longer tell a tag read from a program download.</p>
-<p>This is a trade-off security teams create themselves, so document it. Record which flows are encrypted, what the sensor can and cannot decode for each, and what compensates. Useful compensating sources include controller-side change and audit logs, syslog from controllers that support it, engineering workstation logs, and monitoring of controller mode or key-switch position.</p>
-<p>I would not accept an OT monitoring deployment on the strength of an asset count or a sensor health page. The deployment should demonstrate that representative conversations with critical controllers reach the sensor and are decoded. These are the sources for that work:</p>
-<p>Which ports or VLANs are copied, and in   which direction</p>
-<p>Whether mirrored copies are being dropped   before the sensor</p>
-<p>Which devices are physically present on   each port</p>
-<p>Controller   project and I/O configuration</p>
-<p>Ground truth for controllers, adapters,   modules, and drives</p>
-<p>What the sensor actually received and   processed</p>
-<p>Whether engineering activity inside the   cell is detected</p>
-<p>When the network changed underneath the   sensor</p>
-<p>Replace the asset count with a coverage measure. For each zone, divide the assets observed with full role and protocol visibility by the assets in engineering ground truth, and weight the result by consequence. Line 4 in this example scores 1 of 15, under 7 percent, while its dashboard showed five healthy assets.</p>
-<p>Repeat the validation after any network change in a monitored zone, after a ring failover test, and at least once a year.</p>
-<p>More on Figure 5. Coverage validation is a loop, not a commissioning task. Any change under the sensor restarts it.</p>
-<p>A passive sensor is only as good as the copy it receives. That copy has to include the right conversations, in both directions, through failover, and in a form the sensor can decode. Miss any one of those and the dashboard stays green while the line goes dark.</p>
-<p>So make coverage verification a standing part of design reviews and management of change. Pick a critical controller. List everything that talks to it. Then prove the sensor sees each of those conversations. It's a half-day exercise, and it will find the blind spot before an incident does.</p>
-<p>Author’s Note: All IP addresses, device names, and scenarios are fictional illustrations based on publicly documented switching behavior and common industrial network designs.</p>
-<p>OT Cybersecurity Architect & researcher with 13+ years in industrial cybersecurity, ICS/OT security, Zero Trust, and IT/OT convergence.</p>
+                <p>CWE-bench is designed to test the limits of frontier cyber capabilities. In our continued pursuit to push the horizon at Collinear AI, CWE-bench v2 opens up a public set of 100 tasks that anyone can run and evaluate their models on. The setup is the same as before. An agent gets a checkout of a real open-source repository and a short instruction, with the goal of finding and fixing a security weakness without breaking existing functionality. Scoring is fully programmatic, so results are deterministic and anyone can reproduce them without extra cost. All our programmatic checks have been curated with the help of LLM judge panels that shape them towards the direction of hardness and fairness. We also maintain a held-out set, so that we can keep tracking progress on tasks no model has seen. To evaluate your model on the held-out set, contact cyber@collinear.ai.</p>
+<p>Our goal is to be exhaustive. A defender has to anticipate the ways an attacker could get in, and get it right every single time. These 100 tasks cover 91 different CWEs, spanning a wide range of vulnerability classes. A model that does well here has to understand the multiple weakness surfaces that a potential attacker can exploit. Recognising a familiar pattern is not enough.</p>
+<p>As part of our meticulous effort to keep improving quality, for every task we checked that the following questions were true:</p>
+<p>Every task was also reviewed by hand. Open-sourcing the set is part of the same effort to improve quality. We welcome feedback on any task, and contributions to the public set.</p>
+<p>Results are tracked in two places on the Hub. The leaderboard on the CWE-bench dataset page covers open-weight models and updates on its own: labs and the community add a result by opening a PR on the model's repo with a results file (how). For the full comparison, including API-only models such as Gemini, Claude and GPT, see the CWE-bench leaderboard Space, where new models are added through a PR on the Space.</p>
+<p>Open-weight models, from the dataset page:</p>
+<p>All evaluated models, including API-only ones:</p>
+<p>Of the 11 models evaluated, Gemini 4 Argon leads with 67.8% pass@1 and 81.0% pass@4, just ahead of Claude Opus 5.5 (67.3% pass@1, 78.0% pass@4). 95 tasks are solved by at least one model, an indication that the tasks are indeed solvable. However, even the leader fails 19% of the set on every attempt, so the long tail is far from solved. The public set, the grader and the harness are open. Run your model, and tell us where it stands.</p>
+<p>On cost, DeepSeek V4.1 Flash (1017), Claude Opus 5.5 and Gemini 4 Argon form the Pareto frontier: DeepSeek reaches 57.0% pass@1 at $0.04 per rollout, Opus adds ten points at $1.83, and Gemini edges ahead at $3.92.</p>
+<p>Every task is a self-contained Harbor task (a Dockerized environment, an instruction, and a deterministic verifier), and the dataset ships a registry.json. Harbor can therefore run the whole benchmark straight from the Hugging Face repo, without cloning anything yourself:</p>
+<p>-k 4 runs 4 attempts per task, and the reported score is the mean reward over all 400 trials. The dataset is gated: accept its access conditions on the dataset page first. Harbor fetches the tasks with git, so also save your HF token to git's credential helper once:</p>
+<p>The tasks are also tagged rl-environment: the same environments and verifiers can provide rewards for training defensive agents, not just for evaluating them.</p>
+<p>Leaderboard for the CWE-bench v2 public set</p>
+<p>Leaderboard for the CWE-bench v2 public set</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/how-switch-mirroring-decisions-create-blind-spots-in-ot-network-monitoring?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/cwe-bench" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

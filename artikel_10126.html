@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSS-Tricks, Version 20</title>
+    <title>Is it agentic enough? Benchmarking open models on your own tooling</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10126.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,95 +15,205 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>CSS-Tricks, Version 20</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
+        <h1>Is it agentic enough? Benchmarking open models on your own tooling</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
-            <img src="https://css-tricks.com/wp-content/uploads/2026/11/screenshot.png" alt="CSS-Tricks, Version 20" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/11/screenshot.png" alt="CSS-Tricks, Version 20" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/is-it-agentic-enough/thumbnail.png" alt="Is it agentic enough? Benchmarking open models on your own tooling" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I’ve been bashing on updating this site’s design for the last couple of weeks. It’s high time things get a fresh coat of paint, right? The last version of CSS-Tricks was pushed five years ago. That’s ancient in web (and dog) years.</p>
-<p>It’s not like the site has simply sat all that time. We pushed lots of changes and shipped new features, particularly since 2024, but we never really got the paint brushes out of storage.</p>
-<p>Now, before there’s a chorus of “things don’t look thaaaat different” I want to say I’m rarely a fan of complete re-builds and tend to lean into iterative releases. And the new v20 theme is what I’d call an iterative rollup that’s worthy of a version bump.</p>
-<p>Let’s go over the most notable updates to see why.</p>
-<p>First and foremost, some of the biggest changes are what you don’t see. As you might imagine, this site has carried over plenty of pieces across 19 years. I decided to excavate the theme and definitely found some ghosts to bust.</p>
-<p>For example, the global compiled JavaScript file retained some scripts that just weren’t being used anymore. Things like handling embedded versions of the newsletter from before we began self-hosting the posts. There were relics that catered specifically to the Flexbox Guide for handling toggles back before we had proper HTML <details>. There was a jQuery lazy-loader thing that is well-covered by WordPress core now. We had some scripts for serving third-party ads that are no longer needed now that we’re self-hosting ads. Things like that. The overall JavaScript was nicely trimmed from 151.6 KB (55.3 KB gzipped) to 133.8 KB (48.1 KB).</p>
-<p>I also decided to formally retire the CSS-Tricks Forum. We put it in “archive mode” back in, like, 2018. None of those discussions are particularly valuable for today as they were over 10 years ago, so I deactivated the bbPress plugin that powered it and cleared out the database… and wow, that carved a whopping 400 MB from the ol’ database, not to mention it allowed me to drop several custom templates from the theme.</p>
-<p>There were more ghosts busted along the way and, to be sure, there are still some lurking around. But it’s way less scary poking around the theme directory now, and further cleanup should be a lot easier from here on out.</p>
-<p>Yeah, yeah, raise your hand if you’re still running Gulp. We are 🙋‍♂️. That’s not a bad thing in and of itself, but keeping it in a fixed state for all this time is not the greatest. I think we’re sporting a more modern workflow than before, even if there’s still room to grow. A smattering of the related commits:</p>
-<p>For years, I endured the same errors every time I fired up a new terminal. Those are gone and things run super cleanly, not to mention quickly. Very happy here.</p>
-<p>Oof, this is everyone’s favorite job, right?! Aside from being able to spot and fix a few unescaped custom field calls here and there, I decided to ask Claude to help me with a holistic audit. I prompted it to review recent WordPress security release notes and identify areas where the theme could be hardened to comply with what WordPress is doing.</p>
-<p>Whoa, you used AI? Yeah, I sure did. But for things like this where it could be my little gopher and allow me more time to do what I do best: front-end. I’m still able to make most of the patches myself based on the output recommendations, but it’s nice to have a gut-check for things where I’m clearly no expert, like security.</p>
-<p>I still use and like Sass very much. I mean, yes, I would like to be straight-up vanilla CSS everywhere, but I can’t tear myself away from partials in particular.</p>
-<p>The previous theme had a fairly nice “flat” structure — very few partial directories and most things all in the same top-level source. Totally cool. But an organization nut like me (you should see my house) has to have a place for everything to live. It ain’t perfect, but I’m happy with what I was able to put together without leveling the building in the process.</p>
-<p>There are some compromises. Like, /header should really be in /layout. The ordering is really important, though, and some of my ideals were simply not possible. I’m hoping to eventually work in some sort of Cascade Layers structure.</p>
-<p>I’m pleased as punch to see the overall size of CSS drop in the process. It went from 180 KB (31.7 KB) to 169 KB (24.6 KB). Not hugely significant, but not not significant either. I had to do a couple tricky things to cheat my way there, like serving all the form styles I’m about to talk about into a separate forms.css file and serving it just on pages where WooCommerce, Restrict Content Pro, and Gravity Forms are enqueued.</p>
-<p>Are you starting to notice a trend? We’re still talking about fairly invisible work. CSS-Tricks has so many nooks and crannies that it’s nearly impossible to make things perfectly consistent across the board. But because of those nooks and crannies, so many fixed values, magic numbers, one-off styles, and older utilities were hiding about. I decided to tackle a good chunk of that while reorganizing the Sass.</p>
-<p>For example, there are now semantic design tokens that abstract away one-off colors. So many grays, let me tell you. Now there’s a maintainable palette that’s referenced throughout. Same with fonts, font styles, and font sizes. Same with paddings and margins. It feels a lot better to make a change at the “system” level with confidence that the change is taking effect everywhere it needs to.</p>
-<p>But this is also where some clearly visible changes happened! Most notably, link styles are consistent all over the place with a small handful of intended and maintained variations. Not only is it more pleasing visually, but it improves accessibility throughout because the inherited styles default to proper visual cues that do not rely solely on color or opacity changes.</p>
-<p>Oh, and my favorite piece of this? Forms and tables have both been redone. That’s tough to do in a WordPress theme where these components don’t always come from one source. For example, forms could come from any one of the Gravity Forms, WooCommerce, or Restrict Content Pro plugins, and they all have their own stylesheets. Resetting those allowed me to bring a certain level of harmony in all those instances.</p>
-<p>OK, something even more visual. This is the first time CSS-Tricks has had more than one color scheme! It certainly could have been done a long time ago, but I’d also argue that the design hasn’t really called for a light/dark toggle over the last 8 years or so. It’s a nice blend of both light and dark elements that marry the best of both worlds no matter your theme preference.</p>
-<p>But I had to take a stab, right? The site has predominantly been dark despite the content being against a white background, so I treated things as though a “dark” mode already existed. The result is a creamy light theme that is largely just a change in background and component styles. And I used some of what I learned from the recent “toggle” debate to handle system, dark, and light themes with a single toggle.</p>
-<p>What hasn’t changed is the main content container you see in things like articles. That was already white, even in a “dark” mode, and I’m not confident that simply toggling it between white and black is the best approach. Something on the radar for sure.</p>
-<p>Oh, and it’s all wired up to a view transition that slides the new theme over the previous one.</p>
-<p>I hope you think the site’s header and footer are cute. Yes, cute. That’s what I was going for when adding a colorful series of dots as the backdrop.</p>
-<p>Sorta like a subtle candy texture, right? Or a colorful group of stars? I dunno, but I’m calling it “Jawbreaker” for lack of a better term and because it reminds me of the jawbreaker candy I loved as a kid. Naming still sucks.</p>
-<p>It’s all part of the same SVG. I really, really (really) wanted to random()-ly position dots around, but that would have taken a lot of empty individual elements (e.g., <i>) in the markup. Not my favorite. So, I generate the <circle> elements in PHP:</p>
-<p>I really, really wanted to random()-ize all the things, but inlining random coordinates on each <circle> was the way to go. Same deal with the inlined styles that set a fill, and sizing for each circle in the texture, and variables that set a --delay and --dur on the subtle animation that twinkles them in and out.</p>
-<p>I’ll have to look at generating the SVG using <defs> or whatever later since that pattern repeats in the footer, too.</p>
-<p>That’s carried through to the 404 page as well:</p>
-<p>If your browser supports border-shape and random() (only Chrome, I think), then the homepage gives you a blobby-blob shape behind the grid of author avatars. Hover it and it gets, you know, even blobbier.</p>
-<p>It takes an existing pattern I’m calling .gradient-card:</p>
-<p>…and sets a gradient on the component’s :before pseudo:</p>
-<p>That sits underneath the :after pseudo that’s translucent, allowing the :before‘s gradient to show through a smidge:</p>
-<p>The differing border-radius values allow :before to bleed outside, giving the impression of a border around the entire deal. That’s the basic shape. The border-shape is where things get blobby:</p>
-<p>Those variables? They’re mapped to shape()s. I grabbed the first one from Temani Afif’s blob generator:</p>
-<p>It’s called “static” because that’s the default state. Hover or focus on the component and it swaps out those points out with a “hover” version of the shape:</p>
-<p>Those variables? They’re mapped to random() values:</p>
-<p>So, the hover state is different on each page load. And we animate between the two:</p>
-<p>I’m pretty stoked on this one. The Almanac has grown, evolved, and just plain gotten great the past few years. But the primary page for it… not so great. It was definitely overshadowed by work on the pages inside it and never revisited beyond clickable cards to get to each feature subset.</p>
-<p>Now the page is a real index of the CSS features that gets you where you need to go quickly. Someone somewhere sometime did some sort of CSS periodic table. I forget where I’d seen that but the general idea sat with me and I thought I could pull it off. There’s nothing “tricky” about it but I love what the layout adds to the overall site.</p>
-<p>This is another area that sorely needed love. Our guides have always been a vertical stack of items. The book effect was definitely cool, but I started believing that leaning on it as the main visual hook was holding things back from being more functional. With something like 27 guides, we’re talking about a lot of scrolling with no clear idea of what you’re going to see as you go.</p>
-<p>Again, nothing “tricky” but I like the overall usefulness of the new layout. There’s a featured guide, a widget of newly added and updated guides, and a categorized grid of everything below that.</p>
-<p>The pages that show all of an author’s published articles got a little spruce-up, too.</p>
-<p>It’s a little change, really. The right sidebar was moved to the left and the author image and bio moved in, allowing the articles to creep up to the top. I hope to do more here since the small layout tweak opens up more opportunities.</p>
-<p>Also need to do the larger Authors index, but another time.</p>
-<p>This one’s just for those of us working in the WordPress editor. I don’t need a complete visual editor to get things done, but it is a nice affordance to have some of the front-end styles sneak into the editing UI for a better idea of what you’re working with.</p>
-<p>Using Lighthouse to measure things like performance, accessibility, and best practices is woefully fraught with caveats, but there’s no reason to chuck it completely. I find them more fun than fact and I don’t mind the recommendations for improving things.</p>
-<p>So, after a few runs and tweaks, here’s how things shook out theme-to-theme.</p>
-<p>I’m happy here. There are some things I just don’t have the control to fix when it comes to performance, so seeing v20 come in consistent with v19 is just fine by me. I’m happier with the boosts to accessibility and best practices. SEO? Meh. Don’t really care unless it’s hurting more important things like accessibility.</p>
-<p>Again, very happy. There’s little I can do with time to first byte but everything else seems to clock in at least marginally better. The total page weight is a clear win and that’s probably what I care most about here.</p>
-<p>Oh gosh, there’s a lot more but they’re mostly minor things that don’t bubble up to the front end. Sort of the same way browser changelogs have some generic line of “bug squashing” or whatever. In this case, it’s things like better post queries and breadcrumbs and function management and naming and… you get it.</p>
-<p>There’s definitely so much more to do. And plenty of things I’m sure I missed or broke along the way. That’s just life and those will have to come in another iterative release less worthy of a version bump. You can let me know what I muffed up in the comments.</p>
-<p>I hope you at least like where this is going!</p>
-<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
-<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
-<p>My CPU usage spikes up and the fan kicks in when I open this link. Tried opening it and closing it a few times to make sure that's the culprit.</p>
-<p>Got another report on that and am making little updates to help as I go. :)</p>
-<p>I'd tinker a bit more, but even just the looking around I've done so far almost froze my laptop.</p>
-<p>Love the new design, particualrly the footer. Great work!</p>
-<p>You mentioned updating the WordPress theme but didn't say if you're running a block theme (full site editing) or not. The people (me) want to know!</p>
-<p>Very true! Been rolling a classic-hybrid sorta thing. We never went full tilt into block theming but we do use some blocks and have custom blocks/patterns here and there.</p>
-<p>Hi. Kudos to the new site refresh. What are the tradeoffs of using a framework like Astro or Sveltekit vs WordPress</p>
-<p>Features! WordPress has everything a site like this needs right out of the box with a nice multi-author editing experience.</p>
-<p>And legacy. There’s no way we could recreate everything this site has across 8,000+ articles. CSS-Tricks is a perfect use case for WordPress.</p>
-<p>I like the new design overall, but could you please make headings font less narrow? It’s pretty hard to read, especially in the all-caps post titles and when skimming through a page to find the relevant section.</p>
-<p>I noticed a few avatar images are missing alt text but overall great work!!</p>
-<p>Great redesign! Even greater to see all the details around implementation after a long time.</p>
-<p>PS. Just an observation from first post of Chris (https://css-tricks.com/header-text-image-replacement/) that notice text saying “This comment thread is closed…” is invisible into background color.</p>
-<p>It’s nice to see CSS-Tricks get some fresh, colorful paint after several years of iron-gray! Nice “candy” texture too. But at the risk of being a Grinch, would it be more performant to use a static SVG and randomize its placement rather than its generation?</p>
-<p>A design take: the site currently makes extensive use of drop-shadows. I think the candy effect could be heightened if raised elements had the appearance of substance instead of levitation (a little like the scroll-to-top button).</p>
-<p>Your email address will not be published. Required fields are marked *</p>
-<p>Save my name, email, and website in this browser for the next time I comment.</p>
-<p>Notify me of follow-up comments by email.</p>
-<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
-<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
-<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
-<p>CSS-Tricks is powered by a small team of real-life humans.</p>
-<p>Handwritten. Twice a month. No spam. See past issues →</p>
+                <p>Benchmarking transformers revisions across different metrics</p>
+<p>This is a human-made, agent-focused blogpost.</p>
+<p>Coding agents increasingly work with our software instead of us: describe a task, and the agent picks the library,
+writes the calls, runs them, and debugs its own mistakes. When the library gets in the way, it will
+happily bypass it and rewrite the logic from scratch. This introduces a new concept in library development:
+the code should not only be correct and fast, but should be designed so that an agent can drive it effectively. A clunky API
+or stale docs annoy us developers, but it now also sends the agent down a longer, more expensive path.</p>
+<p>Most benchmarks just look at the final answer. We wanted the whole process instead: not just whether the agent got
+it right, but how much work it took to get there, and how that shifts across models, library revisions, and
+tasks. We measured exactly that, using transformers as our case study.</p>
+<p>Here, we will introduce a tool specific benchmark focusing on how the answer was found, and provide a simple 
+implementation of one such harness, running entirely on open models driven by the
+pi coding agent, with the full sweep of
+models × revisions × tasks fanned out across Hugging Face Jobs
+so every run sees identical hardware.</p>
+<p>But, how do you optimize software for agents?</p>
+<p>We're strong believers in the following two software principles:</p>
+<p>This remains the same within the realm of agentic-optimized tooling, and, for once, the two are directly tied to
+each other.</p>
+<p>You want your tool to exist for an agent: it needs to be discoverable. The API needs to be clear and the docs
+need to be extensive. They need to be structured in a way that the agent has rapid access to the useful files and
+examples. If you want your tool to work for an agent, then you should test it for agentic-use.</p>
+<p>We'll use transformers as an example throughout this blogpost: agents using it to solve ML tasks (classifying
+text, captioning images, transcribing audio), not contributing code to it; though the harness was designed to work
+with any tool that can be operated from the command line.</p>
+<p>Our intuition on transformers was that usage could be dramatically simplified
+with a few changes: a CLI, a Skill, and self-contained, task-specific examples. This is the same recipe
+recently applied to the hf CLI, redesigned to be agent-optimized,
+where agents used 1.3–1.8× (and up to 6×) fewer tokens. We wanted to know whether that kind of win generalizes, and
+whether it could be useful for transformers as well.</p>
+<p>Intuition is a powerful tool, but we wanted more evidence before we opened PRs that add several thousand lines of code to such a widely used codebase as transformers. We set out to measure what success looks like.</p>
+<p>Two agents can both produce the correct label for a sentiment-classification task,
+but one:</p>
+<p>Both reach POSITIVE (0.9999), and here are the two paths an agent actually took on this exact task:</p>
+<p>Both methods reach the same result. But they have very different profiles in cost, latency, token usage, and failures.</p>
+<p>If your evaluation only checks the final string, you're blind to these as well as
+whether a change you shipped to the library (a CLI improvement, better error messages, a
+Skill) actually helped agents.</p>
+<p>Our goal with this harness is to evaluate how much work
+an agent has to do to perform a given task, and whether changes to the library improve performance.</p>
+<p>A few words on how we'll evaluate agents here.</p>
+<p>We run every task under three variants (or "tiers"); three different ways an agent can come at transformers:</p>
+<p>These aren't nested: skill doesn't contain clone (it ships curated docs, not the source tree), and neither
+strictly contains the other, each gives the agent a different kind of help. As we'll see, a model can sometimes 
+do better on clone than on skill.</p>
+<p>Not all models driving agents are equal, and their difference changes what you should look at when running them.</p>
+<p>At one end, you have the largest, most capable open models. On reasonably common tasks,
+these should get the right answer, eventually. For them, task completion saturates near
+100% and stops telling you much about your tool; a more relevant benchmark is the effort
+it took the agent to get there: how many turns, tokens and seconds it took, and whether they walked a clean
+path or used deprecated APIs.</p>
+<p>Local models vary widely in size, and so do their abilities.
+Metrics such as "match %" are more relevant than for their larger counterparts,
+as you can see how model sizes/capabilities affect results on your specific
+tool.</p>
+<p>This harness not only provides guidance to library maintainers on how to improve a repository for agent interactions, it also helps assess how different agents and models perform on the tasks users care about.</p>
+<p>The harness scores every run on several axes, so that you can ask what actually matters
+for each class of model:</p>
+<p>All of it lands in a report you can directly examine:</p>
+<p>The live report: Overview, Coverage, and Results, all client-side.</p>
+<p>And because it captures the native agent trace of every run, numbers are just the beginning: you
+can read exactly what the agent did, command by command. The traces are shareable
+through the Hub's agent-traces viewer:</p>
+<p>A run rendered in the Hub's agent-traces viewer: MiniMax-M2.7 on the answer-question task.
+Open this trace on the Hub ↗</p>
+<p>Before the results, a quick recap of the setup. Each run varies four things: the model driving the agent,
+the transformers revision it runs against, the task, and the tier (bare / clone / skill).
+As discussed, we look at different metrics for the two different model categories.</p>
+<p>Since a large open model will usually get to the correct result, what you're really
+measuring is the effort it took to do so. Did it take ten turns or one? Did it follow
+an API path you deprecated because it trusted obsolete documentation? Did it hit an
+error you hadn't foreseen?</p>
+<p>The natural experiment is to fix one strong model and vary the tool's
+revisions: the successive git versions of transformers we test against, from released tags like
+v5.8.0 and v5.9.0 to the specific commit that introduces the CLI and Skill. We want to watch whether the load
+it puts on the agent goes up or down. We used the harness on transformers to check
+whether adding a dedicated CLI and Skill actually lightened the agents' work.</p>
+<p>For the three large models we used in our tests, the average time spent on all tasks indicates that the Skill commit
+results in less time spent working on the tasks:</p>
+<p>Median time per revision, by tier: the skill commit (green dot) is the fastest.</p>
+<p>On the other hand, in the experiments in which we cloned the repository, we can see a significant increase
+in token consumption due to the commit that introduced the CLI and examples, as we'll see in a moment.</p>
+<p>Median new tokens per revision, by tier: the clone variant jumps once the CLI lands in the repo.</p>
+<p>Reading the clone-variant traces explains why. The commit adds a command, but it also ships the
+CLI's implementation and a set of cli/agentic/*.py usage examples into the repository directly.</p>
+<p>On the clone variant the agent has a full transformers checkout in front of it, and roughly a third of the runs go read the new
+surface (the /cli/ tree and the example scripts) to learn the interface before calling it. This raises the
+median input from ~4k to ~6.4k tokens.</p>
+<p>The two charts are then two sides of one tradeoff: the commit buys the large models less time 
+(they reach for the CLI instead of debugging Python) at the cost of more
+tokens (they read the code that taught them the CLI). A tradeoff worth knowing about before merging PRs.</p>
+<p>One caveat works in the CLI's favor, though, which isn't benchmarked yet: the cost of reading it is amortized 
+with successive runs. Our setup is built for one-off experiments. Each run is a fresh agent that rediscovers 
+the CLI from scratch, so it pays the discovery cost every time. In real usage an agent learns the interface 
+once and then solves task after task within the same session, amortizing that cost across many requests. The
+token bump we measure here is closer to a worst case than to what a user would see day to day.</p>
+<p>Open models give us fine-grained control over the variables that matter most here: size, configuration, quantization,
+provider, training, and anything that would differ from one model to the next. They're also where a good tool surface
+matters most: a small model asked to "use transformers to do X" on a bare environment can
+guess an API that changed some releases ago, may do unnecessary tool calls, and can
+get the wrong answer.</p>
+<p>So here the experiment is the opposite of the above: hold the revision and sweep the model. This helps
+see which models actually take care of the task, not just by token count and time,
+but down to which ones can't reliably handle the tool calls. Our intuition is
+that the smaller the model, the harder both tool use and the task get; we ran the
+harness across a range of model sizes to test exactly that:</p>
+<p>Match % across models, by tier: the skill tier lifts the larger models but drops the smaller ones.</p>
+<p>which also seems to be correlated with the number of tokens ingested</p>
+<p>Median new tokens across models, by tier.</p>
+<p>A note on fair comparison: naively averaging across tasks is misleading when
+coverage is uneven (a model that only finished the quick tasks looks fast). The
+report has a "shared tasks only" toggle (across models and/or revisions) so
+you compare like-for-like, and a Coverage heatmap so you can see exactly which
+task × revision × model cells actually ran.</p>
+<p>Two things come together here: how to look past whether the agent succeeded to what it did and how it
+did it; as well as the first results we pulled out of the harness.</p>
+<p>Match %, tokens, and time tell you the cost of a run but don't tell you much about what happened under the hood.</p>
+<p>This is why we've introduced the concept of markers. A marker is a named pattern the profile (the
+small per-tool plugin that teaches the harness how to build and drive a given library) matches against
+a run.</p>
+<p>It is a one-line label for a behavior you care about, checked against the shell
+commands the agent ran, the code it wrote, the files it read, or its final
+answer. A run can fire several markers or none; the report shows how often each one fired,
+per model and per revision.</p>
+<p>For transformers we declare a handful but we'll only look at the two most relevant ones:</p>
+<p>These are what we watch to see whether a change actually shifted the agent's behavior. Interestingly here,
+the larger the model, the more it leverages the new context instead of using its memory; therefore leveraging
+the newly introduced CLI.</p>
+<p>CLI adoption by tier across models: only the skill tier reaches for it, and more so as models grow.</p>
+<p>CLI adoption is new: the CLI lands in a single commit, isn't in any model's training data, and is only
+lightly documented. The effect is clear: it's the Skill variant, the one that ships the CLI's
+documentation, that actually reaches for it, at 55.3%.</p>
+<p>Comparing the commit across model sizes, the CLI + Skill helps the bigger models: on the skill tier, Kimi and the other large agents reach for the CLI and finish in fewer turns. (On clone they spend more input tokens first, reading the new CLI code, as we saw above, so the win shows up in time and turns, not raw tokens.)</p>
+<p>Kimi-K2.6, GLM-5.1, and MiniMax-M2.7 across revisions</p>
+<p>But in some smaller-model settings, it appears to hurt performance. One plausible explanation is that small
+models lean on memorized API patterns, reproducing pipeline(...) snippets
+they've seen in their training data. The new concepts are then a larger
+surface for them to get wrong. You can watch this directly on the harness: lower
+match %, more retries, the cli marker barely firing. It is particularly striking on the Qwen3-4B model:
+the Skill barely changes its match rate yet its cost distribution is significantly affected.</p>
+<p>Almost all of that comes from the clone tier. The checkout now contains
+the CLI's implementation and cli/agentic/*.py examples, and the 4B agent reads them in bulk: its median new
+tokens jump from ~2.4k to ~23k, with time and output skyrocketing as well, for no gain in
+accuracy.</p>
+<p>Qwen3-4B across revisions. The CLI + Skill commit fans the cost distribution wide open, on the clone tier the agent reads the newly-shipped CLI source in bulk (~10× the new tokens), for no gain in match %. (repeat tokens stays flat: this setup uses no prompt caching.)</p>
+<p>Sometimes, though, the Skill breaks correctness outright. Reading the traces shows how, for example for Qwen3-14B: 
+adding the Skill drops its overall match rate from 67% (bare) to 43%, and on the simplest tasks the collapse is very
+visible: classify-sentiment goes from 100% on the clone variant to 0% with the Skill.</p>
+<p>Qwen3-14B on classify-sentiment, by tier: clone (blue) holds at 100% across revisions, but the Skill variant (green) collapses to 0% at the CLI + Skill revision.</p>
+<p>Looking at the traces, the model mistakes the CLI for a tool it can call directly (as in an agentic-harness
+tool, like web-search). The Skill is not an executable tool: it's documentation loaded
+into the agent's context, and the transformers CLI is only ever meant to be run from the shell (via bash); so this
+will not work.</p>
+<p>Qwen3-14B reads the Skill and, in 39 of its 56 Skill runs, either emits a transformers(command="classify", ...)
+tool call (a tool that was never registered) or, finding nothing like it among its read/bash/edit/write
+tools, concludes it can't run a model and gives up. Either way, rather than fall back to the one-line
+pipeline(...) that scored 100% on the clone checkout, it declares the task impossible.</p>
+<p>Qwen3-14B on classify-sentiment (Skill variant): it reasons that read/bash/edit/write can't run a model, and gives up.</p>
+<p>This is exactly what we built the harness to catch: the same change that speeds the large models
+ends up breaking the small ones, which seemed a bit counterintuitive to us at first and something we'd likely have
+shipped as-is. The takeaway for maintainers: agent-facing APIs should be evaluated across model sizes, because a
+new affordance can reduce work for strong models while adding ambiguity for smaller ones. It also hints at a fix:
+rather than hand-write a Skill and check it after the fact, you could generate and validate one against the weaker
+models up front.</p>
+<p>This is exactly what Upskill does: it turns a strong model's solution into 
+a Skill only when it measurably helps the smaller ones.</p>
+<p>The harness is one CLI, agent-eval. Install it, run a suite, fan it out across models × revisions on HF Jobs, and publish the
+report as a Hugging Face Space.</p>
+<p>Trusted local use only. The harness runs a coding agent with bypassed permissions and executes code from
+whatever revision you point it at, and traces can contain prompts, output, and local paths. See
+SECURITY.md before pointing it at code you didn't write or sharing results.</p>
+<p>The full, kept-current setup and usage instructions live in the README.</p>
+<p>Checking the final answer tells you whether an agent can use your library. It
+doesn't tell you what it costs: the turns, tokens, errors, and the path it took to
+get there. This harness measures that, across the revisions and models you pick.</p>
+<p>On transformers, it caught something we'd have shipped on faith: the CLI + Skill
+helps the largest open models and hurts the smallest ones. Worth knowing before merging!</p>
+<p>It's profile-based, and designed to be adaptable: point it at your own library, define
+a few tasks and their expected answers, get the same report. Code and tasks are in
+the repo, traces are on the Hub.
+Let us know if you use it for your project!</p>
+<p>This harness stands entirely on
+pi, Mario
+Zechner's coding-agent CLI: it drives every open-model run, and only needs an
+HF_TOKEN to serve a model, which is what made the open-model sweep practical at
+all.</p>
+<p>Thanks to the model builders and inference providers behind the models we
+swept. Across the board they performed well above what the bare baseline would
+suggest.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://css-tricks.com/css-tricks-version-20/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/is-it-agentic-enough" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

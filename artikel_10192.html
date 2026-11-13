@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hill-Climbing Agent Quality with Agents CLI Evaluation</title>
+    <title>How to Use Developer Time Tracking Data to Improve Sprint Planning and Estimates</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10192.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,105 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Hill-Climbing Agent Quality with Agents CLI Evaluation</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
+        <h1>How to Use Developer Time Tracking Data to Improve Sprint Planning and Estimates</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/image_41_fbdf25fbe6.png" alt="How to Use Developer Time Tracking Data to Improve Sprint Planning and Estimates" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/1_3.2e16d0ba.fill-1200x600.png" alt="Hill-Climbing Agent Quality with Agents CLI Evaluation" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/image_41_fbdf25fbe6.png" alt="How to Use Developer Time Tracking Data to Improve Sprint Planning and Estimates" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A live walkthrough of the Agents CLI eval loop, from a first run to regression tracking, model-backend experiments, and automated alerting</p>
-<p>Building an agent that works on a demo is a different problem from building an agent that stays working across model upgrades, tool changes, and new conversation shapes. The first takes a weekend; the second takes a loop. A team writes test cases, runs them, grades them, reads what failed, changes the agent, and runs the cases again. If the score goes up, the change was good. If it goes down, revert. Over weeks of this, the agent inches toward the ceiling of what the model, tools, and prompt can do together. The quality-engineering name for this is hill-climbing.</p>
-<p>The Agents CLI eval namespace was built around this loop. The commands are small and framework-agnostic: eval generate runs the agent against a dataset of cases, eval grade scores the generated traces, eval compare diffs two run results side by side, eval analyze clusters failures into themes, and eval optimize runs an automated hill-climbing pass on the agent's prompt.</p>
-<p>Below: baseline → regression → model swap → scheduling and alerting.</p>
-<p>The scaffold used throughout is the LangChain template that ships with Agents CLI v1.8.0. The setup is a single command:</p>
-<p>The scaffold ships with an eval dataset at tests/eval/datasets/basic-dataset.json, a config at tests/eval/eval_config.yaml, and a custom LLM-as-judge metric at tests/eval/response_quality.py. The config declares the metric to run:</p>
-<p>The metric grades each response on a 1-to-5 scale for accuracy, relevance, and clarity, using gemini-3.8-flash as the judge. The default dataset has a single trivial case, which is not enough for a hill-climb. The first thing we do is expand it to four cases that probe different behaviors:</p>
-<p>Four cases: a greeting, a weather question the mock tool handles with the hardcoded foggy response, a weather question for a city the tool defaults on, and an off-topic question that the agent has to decide how to handle. This is a small dataset by design; the hill-climbing loop pays off when the dataset is small enough to run on every change.</p>
-<p>With the dataset in place, we run eval generate to drive the agent against each case, then eval grade to score the resulting traces:</p>
-<p>Mean 4.0 out of 5 across four cases, with a standard deviation of 1.41. That stdev tells us immediately that the cases are not scoring uniformly, which is a healthier starting point than a flat 5.0 across the board. A flat 5.0 either means the agent is perfect (unlikely) or the dataset is too easy to show variation. 4.0 with real spread is a hill to climb.</p>
-<p>To demonstrate the loop, we introduce a realistic regression. A developer working across several agent projects accidentally pastes the wrong system prompt into our weather agent: a chef persona meant for a different codebase. In app/agent.py:</p>
-<p>The change compiles, the agent still runs, and nothing in the pre-eval pipeline (lint, unit tests, type checks) catches it. Re-running the same eval generate plus eval grade sequence produces:</p>
-<p>Mean 2.75, down from 4.0. The judge agrees with our intuition that a chef persona on a weather agent is a worse product than a general-purpose helpful assistant. The stdev also tightened from 1.41 to 0.96, consistent with the chef prompt pushing most cases toward the same mediocre range.</p>
-<p>A 1.25-point drop on a 1-to-5 scale is substantial, and the kind of regression that can slip through code review when the diff looks small ("one string literal changed"). The loop surfaced the change at all, with a specific number attached to it, before the agent reached production.</p>
-<p>Mean scores are a start; the per-case diff is where the hill-climb happens. eval compare reads two result files and produces a structured JSON diff:</p>
-<p>The output lists which keys changed and which stayed the same:</p>
-<p>The differences object has the full per-case breakdown with the baseline and candidate values side by side. For a hill-climbing workflow, we typically pipe the output through jq or a small Python script to extract the signal; the raw JSON is the complete evidence.</p>
-<p>Walking the two result files and lining up the scores per case shows where the regression landed:</p>
-<p>Three cases dropped, one held. The most important of the three is sf_weather: the chef persona pulled the model's attention away from the registered get_weather tool, so the agent stopped calling it and started making up weather values. Unit tests can't catch this: the code runs, the tool is still registered, but the model's behavior around it has shifted. Only an end-to-end eval that scores the response in context surfaces this.</p>
-<p>The mean drop by itself (−1.25) is a clear signal, but the per-case breakdown is what tells the developer where to look. A one-line system-prompt change propagated through three different cases in three different ways: greeting lost a point on tone, sf_weather lost two on tool usage, off_topic lost two on scope creep.</p>
-<p>A common hill-climbing question is whether a cheaper or faster model would do the job acceptably. For the LangChain template, the model is defined in app/agent.py:</p>
-<p>We swap gemini-3.8-flash for gemini-2.5-flash (restoring the helpful system prompt first), re-run eval generate plus eval grade, and compare the two result files. The mean drops from 4.00 to 2.75, the same magnitude as the chef-prompt regression, but the per-case breakdown tells a completely different story:</p>
-<p>The cheaper model matched 3.8-flash exactly on the greeting and rome_weather cases and lost a point on sf_weather (slightly less polished phrasing). The whole visible drop traces to off_topic, where the cheaper model refused with a hedge about the event "not having happened yet" (a training-cutoff artifact), and the judge marked it harshly.</p>
-<p>The lesson is that the summary number is misleading. Look only at the mean and you'd call gemini-2.5-flash as bad as the chef prompt. Look at the per-case breakdown and you'd call it a reasonable swap for most of the agent's workload, with one case (handling out-of-scope questions about recent events) exposing a real limitation. If the production distribution of user questions matches the first three cases more than the fourth, the swap is worth considering. If off_topic-style questions are common, it is not.</p>
-<p>Two caveats on this experiment. First, model swaps interact with the prompt: a prompt tuned for a stronger model often leaks capability when ported to a weaker one, so the right comparison is "weaker model with a prompt tuned for it" versus "stronger model with its own tuned prompt." Second, the Vertex AI Eval Service calls a judge model to grade the traces, and the judge is held constant across the comparison. Changing the judge is a different experiment and should be done separately.</p>
-<p>Agents CLI does not ship a scheduler, but the eval commands are designed to drop into standard infrastructure. The pattern we can use here is a cron job or Cloud Scheduler trigger that runs eval generate plus eval grade on a cadence and writes the results to a persistent location:</p>
-<p>A nightly run against a stable regression dataset catches drift from model updates, data changes in the agent's tools, and dependencies that shift under the agent's feet. For a production agent, the scheduled run also captures the model vendor's quiet upgrades, which can move the agent's behavior without any change on our side. The dataset for the scheduled run is typically larger than the one used in the inner loop (dozens to hundreds of cases rather than a few), since it only runs once a day.</p>
-<p>The scheduled run produces a result file every day, but a file nobody looks at is not an alert. The pattern here can be a wrapper script that compares each new run's mean against a baseline (the previous run, or a committed known-good) and exits non-zero when the drop exceeds a threshold. The non-zero exit is what triggers the alert from the surrounding scheduler.</p>
-<p>Running it against our regression demo (baseline 4.0, candidate 2.75 from the chef-prompt run):</p>
-<p>And against an identical pair (self-compare):</p>
-<p>The non-zero exit code is what a cron job, Cloud Scheduler, or GitHub Actions step picks up to send the alert.</p>
-<p>For ADK projects, eval optimize runs an automated hill-climbing pass on the agent's prompt using the GEPA framework (not currently supported for the LangChain extension). The command takes a dataset and a target metric, proposes prompt variants, grades each one, keeps the variants that improve the metric, and iterates. The output is a set of candidate prompts ranked by their eval score, which a human then reviews and promotes to the agent definition.</p>
-<p>Two things to understand about eval optimize. First, it is scoped to prompt optimization, not to arbitrary agent changes: the agent's tools, structure, and model stay fixed. Second, GEPA sometimes finds genuine improvements and sometimes finds prompt variants that score higher on the specific metric by overfitting to its wording. The reviewer is the control. For projects where the loop applies, the discipline is to run eval optimize on the regression dataset (where improvements are measurable) and to review the candidate prompts carefully before promotion.</p>
-<p>A few patterns and anti-patterns from running this loop ourselves and watching teams do the same.</p>
-<p>Lead with a small, representative dataset, not a comprehensive one. The temptation when starting an eval is to try to cover every edge case the agent will ever see. The result is a dataset that takes an hour to run and that nobody runs on a change. Four cases that run in under a minute, as above, exercise the main behaviors and get run on every change. A regression dataset of three hundred cases that runs for an hour becomes a release gate at best and shelfware at worst.</p>
-<p>Snapshot result files, not scores. The score is a summary; the result file is the evidence. When a regression surfaces three weeks after a prompt change, having the full result JSON from before and after the change (not just the mean score) is what lets eval compare show the specific case that moved. The per-case breakdown in Step 4 above would not have been possible from scores alone.</p>
-<p>Separate the dataset from its expectations. The dataset is the inputs. The eval config is the expectations. They evolve on different cadences: the dataset grows as new real-world cases surface in production, and the config evolves as the team's definition of "good" matures. Keeping them in separate files, both committed to version control, makes it clear which half changed when a score moves.</p>
-<p>Treat summary metrics with suspicion. The model-swap experiment in Step 5 is the clearest example. The mean dropped by half a point, but the per-case breakdown showed the drop was concentrated in one case while the others held or improved. A team that only looked at the mean would have made the wrong call.</p>
-<p>More evals do not automatically lead to more fixes. A recent controlled study we ran found that coding agents using agents-cli run four times as many evals as coding agents without it, but change the agent after an eval about as often as the baseline. The behavior gain comes from what the skills put into the build at the start, not from the inner iteration. Evals are necessary for quality, but the quality comes from acting on what the evals show.</p>
-<p>Scaffold an Agents CLI project and run the first eval loop in a handful of commands:</p>
-<p>The full eval namespace is documented at google.github.io/agents-cli/cli. The source code, including the first-party eval primitives, is at github.com/google/agents-cli.</p>
-<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
-<p>A2UI 1.0: Build delightful, fast, reliable, agentic experiences</p>
-<p>Catch Go bugs that fuzzing misses with Gemini and a constraint solver</p>
-<p>How Agent Anomaly Detection scores on benchmarks we didn't write</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>Sprint estimates usually fail because development teams heavily rely on memory and assumptions instead of evidence. They assume similar tasks will take the same amount of time. Based on these half-baked assumptions, most managers plan around ideal sprint working hours. The backlog then fills with commitments that look realistic on paper but often end up delayed.</p>
+<p>Actual development rarely follows that plan. There are always unexpected bugs and task dependencies that consume more time than teams account for in their estimates. Even the buffer time set aside for unexpected work may not be enough. This causes tasks to take longer than expected and pushes sprint commitments behind schedule.</p>
+<p>Developer time tracking helps teams make better estimates with historical data. It shows how long previous tasks actually took, which provides managers with an evidence-based reference when they are planning similar work.</p>
+<p>Reviewing this data before committing to a sprint scope turns estimation from guesswork into an evidence-based process.</p>
+<p>Historical time data offers deeper insights, depending on how you collect and analyze it. Most importantly, it explains why planned work took longer than expected.</p>
+<p>Before sprint planning, the following records should be reviewed.</p>
+<p>Completed task duration: Check the time spent on finished tasks. Managers should compare similar work to understand typical development effort.</p>
+<p>Actual versus estimated hours: Management should observe and identify differences between planned and recorded hours. If there are repeated delays, to some extent, it indicates inaccurate estimates.</p>
+<p>Carryover work: Review unfinished tasks from previous sprints. Determine whether poor estimates or external delays caused the spillover..</p>
+<p>Interruptions: Measure time spent on urgent requests and production issues. These activities reduce the development capacity that you had planned earlier.</p>
+<p>Meetings and ceremonies: Review the time being spent on planning sessions and sprint reviews.</p>
+<p>Bug-fix time: Examine hours spent resolving defects. You can also compare it to the time for developing new features.</p>
+<p>Blocked tasks: Managers should account for the tasks delayed by missing approvals or technical dependencies.</p>
+<p>Capacity differences: Compare team availability across sprints. Include leave and staffing changes in that time as well.</p>
+<p>These records provide the most value when reviewed together. For example, a task may finish three days late even if the development work stayed within its estimated hours. The actual issue could be an external dependency.</p>
+<p>Teams should understand these differences before using historical data to estimate future work.</p>
+<p>Historical records provide a useful starting point for estimating new tasks. However, teams must interpret the data rather than simply copy previous estimates.</p>
+<p>The following approaches can improve estimation accuracy.</p>
+<p>The first step is to consider completed tasks that resemble upcoming work. Managers should compare their requirements and technical complexity. Moreover, the development environment should be considered.</p>
+<p>For example, suppose a team needs to estimate a new API integration. Three previous integrations required 12, 15, and 18 hours of active work.</p>
+<p>The average is 15 hours. This gives developers a reference point for the new estimate.</p>
+<p>However, the average doesn't tell the entire story. The new integration may involve unfamiliar authentication methods or more complicated testing.</p>
+<p>Review the reasons behind differences in previous task durations. Check whether developers encountered unexpected bugs or unclear requirements.</p>
+<p>As a project manager, I'd consider these details before estimating for the next project. In my experience, they provide more context than an average alone.</p>
+<p>Inaccurate estimates can happen; it doesn’t mean that there is a definite planning problem. However, repeated overruns across similar tasks may reveal an underlying issue.</p>
+<p>Research suggests the pattern is widespread. A review of software estimation surveys reports that 60–80% of software projects encounter effort overruns, with the average overrun falling between 30% and 40%.</p>
+<p>Start by calculating the difference between estimated and actual effort. Here is the formula for it.</p>
+<p>Estimation variance (%) = [(Actual hours − Estimated hours) ÷ Estimated hours] × 100</p>
+<p>Suppose a task was estimated at 10 hours but needed 14 hours. The actual effort exceeded the estimate by 40%.</p>
+<p>You can compare the results across similar tasks.</p>
+<p>For example, database migrations may repeatedly require more time than expected. This means that the team might be overlooking data validation or additional testing. Once the cause is clear, adjust future estimates accordingly.</p>
+<p>Avoid increasing every estimate by the same percentage. Different types of work involve different risks. Teams can also break large tasks into smaller parts. This makes hidden development activities easier to identify.</p>
+<p>The aim is to correct recurring estimation errors without unnecessarily increasing the entire sprint backlog.</p>
+<p>Task duration doesn't always reflect the hours spent developing a feature.</p>
+<p>A study of developer workdays by Meyer and colleagues, which tracked 2,197 hours of activity across 20 developers, found that coding accounted for around 21% of the typical day. Collaborative work such as meetings and email took up roughly 24%.</p>
+<p>Consider a developer who starts a feature on Monday and finishes it on Wednesday. The task took three days to complete. This is pretty straightforward, and the estimation could be based on it; however, the developer may have spent several hours in meetings. Other than that, urgent support requests could also have consumed additional time.</p>
+<p>The actual development effort could be much lower than three full working days. This distinction matters during estimation.</p>
+<p>Teams should record focused development time separately from interruptions. They should also track waiting periods caused by blocked tasks. A more appropriate approach would be to use active development hours to estimate similar future work. They should also account for recurring interruptions when calculating sprint capacity.</p>
+<p>For example, a task may regularly wait for security approval. Adding more development hours to its estimate won't resolve that delay.</p>
+<p>Instead, the team should recognize the dependency and consider its effect on delivery.</p>
+<p>If managers are able to separate these activities, it will help create better estimates without confusing effort with elapsed time.</p>
+<p>A precise estimate can create false confidence when a task involves substantial uncertainty.</p>
+<p>Suppose similar tasks previously required between 12 and 20 hours. If you estimate the next task at exactly 14 hours, it will overlook important differences.</p>
+<p>A range of 12–20 hours provides a clearer picture of the possible effort. Developers can then discuss what might push the task toward either end of the range.</p>
+<p>For example, the lower estimate can be directly applied to integration, and the upper estimate might be considered for unfamiliar code or additional testing.</p>
+<p>In such scenarios, if the requirements stay unclear, consider a short technical investigation before finalizing the estimate. This can help identify dependencies and reduce uncertainty.</p>
+<p>However, estimate ranges should still support practical planning decisions. Teams need to determine how much capacity to reserve for the work.</p>
+<p>Choose a planning assumption that reflects the task's risk and available capacity.</p>
+<p>As developers learn more about the task, they can refine the estimate.</p>
+<p>Historical time data should affect how much work a team accepts during sprint planning. Better estimates offer little value if teams continue making unrealistic commitments.</p>
+<p>If several sprints end with unfinished tasks, it is best that you first review why the team missed its commitments in the first place. Once you have identified the causes, use those findings to reduce the next sprint's scope.</p>
+<p>Teams should prioritize work that supports the sprint goal. Moreover, avoid adding extra tasks just because they appear manageable during planning.</p>
+<p>Production incidents and urgent requests can disrupt planned development. To get more reliable estimations, review how much time these activities consumed in previous sprints. Then reserve an appropriate amount of capacity.</p>
+<p>Historical estimates become less reliable in case unfamiliar technology or additional dependencies are involved. It is best to break complex tasks into smaller components where possible. This helps developers assess the work more accurately.</p>
+<p>Nominal capacity represents scheduled working hours, whereas actual capacity reflects the time available after accounting for other commitments.</p>
+<p>The Scrum Guide identifies previous performance and upcoming capacity as important inputs to sprint forecasting.</p>
+<p>When you are selecting backlog items, consider both. Additionally, avoid committing every available hour or deducting the same interruption twice.</p>
+<p>Historical time data is useful for sprint planning. Most development teams already use project management tools that include basic time tracking features.</p>
+<p>However, these tools don't always break down how developers spend their working hours. For clearer time data, a feature-specific time tracker is more useful because it provides more details about tasks and workloads.</p>
+<p>TimeBee is one such developer time tracking tool I've used. It tracks working hours and time spent on projects and tasks. It also provides attendance records and workforce activity reports.</p>
+<p>With this data, teams can review how much time previous tasks required. For example, developers can record hours spent building a feature. They can also track debugging and revisions separately. Later, managers can compare these records with the original estimates. This helps them plan similar work more accurately.</p>
+<p>TimeBee also tracks website and application activity. These reports can help teams understand how working hours are distributed.</p>
+<p>However, not all activities reflect actual development effort. Sometimes a developer just spends time reviewing documentation or discussing technical problems. Such work may not always appear in TimeBee as active computer use.</p>
+<p>Apart from that, attendance, leave, and overtime records from TimeBee can help managers calculate sprint capacity. They can review developer availability before deciding how much work to include in the next sprint.</p>
+<p>One thing to remember is that developer time tracking should help teams understand workload patterns. It shouldn't be used to monitor every minute of a developer's day. Management should be careful that the aim is to improve estimates and make more realistic sprint commitments.</p>
+<p>Sprint retrospectives should include a review of how the planning is going. If you have made a plan, it doesn’t mean you cannot make changes to it. During sprints, keep comparing original estimates with actual task hours. Track your unfinished work for recurring delays.</p>
+<p>Ask developers what caused significant differences. Some tasks may have required additional testing. Others may have been delayed by dependencies. Select one specific improvement for the next sprint.</p>
+<p>Not every estimation difference indicates a planning failure. Unexpected technical challenges are part of software development.</p>
+<p>The objective is to improve forecasts over time rather than eliminate every variance.</p>
+<p>Historical time data provides a more stable foundation for sprint planning. Developer time tracking helps teams understand what is actually happening within the sprint rather than creating unnecessary pressure for them.</p>
+<p>Other than that, the data also reveals how interruptions affect available development hours.</p>
+<p>However, time data should guide planning rather than dictate it.</p>
+<p>1. What is the difference between sprint velocity and time-based capacity planning?</p>
+<p>Sprint velocity measures how much work a team has completed during a sprint. It is usually measured in story points. Contrary to this, time-based capacity planning calculates the hours available for planned work. It accounts for meetings and other responsibilities.</p>
+<p>Velocity helps predict future delivery based on past performance. Capacity planning shows whether the team has enough time to meet its commitments.</p>
+<p>2. Which time tracking metrics are most useful for improving Agile sprint forecasts?
+The most useful metrics include estimated versus actual hours, task completion time, and unplanned work.</p>
+<p>Bug-fix time, rework, and blocked tasks also provide valuable insights. Teams should also review available capacity across previous sprints.</p>
+<p>These metrics help sort out recurring delays and estimation errors. They allow teams to forecast workloads more accurately and make realistic sprint commitments.</p>
+<p>**3. How can development teams improve estimates when historical time tracking data is incomplete? **</p>
+<p>Teams can start with available task records and completed sprint backlogs. Developer feedback can help fill information gaps. Similar tasks from previous projects may also provide useful estimates.</p>
+<p>When data is limited, teams should use estimate ranges instead of fixed hours. Consistent time tracking in future sprints will gradually provide more reliable planning data.</p>
+<p>4. How can time tracking data help balance workloads across developers during sprint planning?</p>
+<p>Time tracking data shows how much time developers spend on assigned tasks and other responsibilities. Managers can review these records to identify uneven workloads. They can then distribute upcoming tasks based on available capacity.</p>
+<p>Technical expertise and task complexity should also influence assignments. This helps prevent over commitment and supports a more balanced workload across the development team.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/hill-climbing-agent-quality-with-agents-cli-evaluation/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-use-developer-time-tracking-data-to-improve-sprint-planning-and-estimates/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building an AI App to Strengthen Human Thinking: How We Used SurrealDB Agent Memory</title>
+    <title>Mister Blocks</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9699.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Building an AI App to Strengthen Human Thinking: How We Used SurrealDB Agent Memory</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-12</p>
+        <h1>Mister Blocks</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fa3t3vg0w5damau9kkmr3.png" alt="Building an AI App to Strengthen Human Thinking: How We Used SurrealDB Agent Memory" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fa3t3vg0w5damau9kkmr3.png" alt="Building an AI App to Strengthen Human Thinking: How We Used SurrealDB Agent Memory" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Students who build with AI tools often end up with code that works and ideas behind it they can't explain. A tool that forgets every session can't tell them whether that is changing. It can't say they needed less help today, or that their guess about what they could explain was closer than last time.</p>
-<p>Lumente fosters questioning and curiosity in programming students who build with AI, through learning the concepts behind their own code. A student picks a concept like JWT and works it out by asking questions, and a map of four parts (category, similar concepts and differences, defining features and classification) shows them where to look. Our Claude agents ask the questions at first, then the help fades and the student starts asking, because that's the skill we want them to build.</p>
-<p>Lumente's own database already kept each student's levels for the code that sets the scores. What its agents were missing was memory. The hint giver answers when a student taps Help, and the coach writes a note at the end of each session, but neither could mention an earlier session. This post is how we gave those two agents long-term memory with SurrealDB Agent Memory, without storing anything students wrote. Now they can tell a student how this session compares with the last one, and the app shows the exact fact behind each thing they say.</p>
-<p>You can find our repository, demo video and live app here.</p>
-<p>For the coach to say "your guess was closer than last time", it has to remember last time. SurrealDB Agent Memory gave us that, and it let us write each fact ourselves, so it stores our sentences exactly as we wrote them and doesn't run a model on them.</p>
-<p>It also links each new value to the old one, keeps the history, and can forget a whole scope in one call, so we didn't have to build any of that. It went live in our production app on Oct 23 and is still on.</p>
-<p>We started from one rule: nothing a student types goes into memory. Their answers and questions are kept in Lumente's own database, never in Agent Memory. Memory only gets short sentences our code writes from numbers the app has already worked out, like "Last time on JWT you guessed 4 and proved 2."</p>
-<p>Memory doesn't know who the student is, either. Each student's facts live in their own scope, learner/<pseudonym>, and the pseudonym is a salted hash of their sign-in ID, so memory never sees a name or email.</p>
-<p>And students stay in control of it. The Memory sheet in the app shows them what Lumente remembers about them and how it changed. Delete my data calls POST /scopes/forget, which removes their whole scope in one call, and when we checked the live service afterward, there was nothing left to read.</p>
-<p>Lumente's architecture, with Agent Memory beside the code that sets scores</p>
-<p>We write each fact as one sentence from a template. There are three kinds:</p>
-<p>Each fact is one triple: the entity is the student's concept (topic/<pseudonym>_<concept>), the key says what the fact is about, and the value is the sentence.</p>
-<p>We send it with infer: "triples". By default, POST /facts uses infer: "full", where a model reads the text you send and extracts entities, attributes and relations from it. With "triples", we hand Agent Memory the structured triple ourselves, and it stores it as given. Our code already knows each fact exactly, so extraction could only add time, cost and the chance of a wrong fact.</p>
-<p>The labels carry the numbers, plus the session, the turn and the agent whose work the fact records, and they came back exactly the way we sent them. Each fact goes out in its own request:</p>
-<p>api/src/memory.ts L243-245 and L504-513, with the error handling taken out.</p>
-<p>This is the request behind the gap fact the coach cites below, without the pseudonym and session ID:</p>
-<p>When a student's level on a part changes, we write the same key again, and this is where long-term memory earns its place. Agent Memory sets supersedes on the new row and closes the old one with validUntil by itself, and our code doesn't touch either. SurrealDB's docs call this "closed in time, not erased."</p>
-<p>So Lumente always reads the current level, and the history of how the student got there stays readable. The Memory sheet shows students that history. Next to each level, it shows how many agent calls received that fact, which we count from our own logs.</p>
-<p>The Memory sheet before and after a JWT session. On the left: the last result and the one before it. On the right: the new result superseded the last one, which stays in the history, and the read counts went from 1 to 3.</p>
-<p>Agent Memory has one route that returns an entity's full history. When we measured it on the live service, it took 290 to 370 ms, well inside our 1.5-second budget. Before the hint giver or the coach runs, the API calls that route, keeps the newest value of each key, and skips any rows from the current session.</p>
-<p>Each agent gets at most 8 facts: the current level of each part, then the latest gap, then the parts that took the most Help. The hint giver and the coach read the same scope, so a hint can use a level that the evaluator's verdicts set.</p>
-<p>api/src/memory.ts L332-342. The history read is GET /entities/topic/{name}/history (L247-265).</p>
-<p>A remark like "your guess was closer than last time" only helps if the student can trust it. Every row in Agent Memory has its own ID, so a citation can point at one exact fact. We put each fact in the prompt as one line with its ID, and the prompt tells the agent to use only those facts and to list the IDs it used in cites.</p>
-<p>This is the coach's exchange from one of our JWT sessions:</p>
-<p>Claude could still make up an ID we never sent, so the API checks every hint and coach reply with verifyCites. It keeps only the IDs we sent and logs the rest, which means a made-up source never shows up on screen. We have a test where the hint giver cites a fake ID, and only the real one reaches the student.</p>
-<p>The student sees each fact we kept under the message, after "From what Lumente remembers:". "Bigger group" is what we call the part that the app shows as "Category".</p>
-<p>Left: a hint citing row a9f8jkmhssc13sdy8eze. Right: the coach citing row kdjcdbq1pq1mbg9du2si, in a session with a guess of 5 and a score of 6.</p>
-<p>Memory can't change a score, because the code that sets the scores never sees it. advance() is plain code with no model in it, and it decides what happens next and sets every level and point. Our six Claude agents judge what the answers mean and write the words.</p>
-<p>The API hands advance() a wrapped callAgent. The wrapper adds the facts to the hint giver's and the coach's input and leaves every other call alone, and advance() only carries the verified IDs onto the message.</p>
-<p>api/src/memory.ts L554-567, used at api/src/app.ts L325-326.</p>
-<p>The evaluator, whose verdicts feed the score, never gets memory, so a wrong, old or deleted fact can't change a number. Sessions and scores stay in SurrealDB Cloud, separate from Agent Memory.</p>
-<p>If memory is slow, empty or turned off, the two agents get the same input they had before we added memory, without a <memory> block, and the session keeps going. Their instructions tell them to use only the facts in <memory> and never to make up an earlier session.</p>
-<p>Three details are worth planning for if you build on Agent Memory. We first saw them on Oct 23 and our code handles all three, and the service may have changed since.</p>
-<p>At Build North 2026, Lumente placed in the top 10 of more than 50 teams and was runner-up for Best Use of SurrealDB Agent Memory.</p>
-<p>We also asked a few people to try it, most of them developers. Several told us the same thing: when they broke down a concept they thought they knew, they hit a wall, and realized they had never asked themselves what the concept itself was. One student put it this way:</p>
-<p>"I thought I knew the concept well enough to explain it. [...] When I started breaking it down, I got to see the fundamentals that were usually overlooked. [...] It made me question: what do I actually know? And how well do I actually know it?"</p>
-<p>Next is Check the AI. Today Lumente practices questioning, interpretation, analysis, explanation and self-examination, on concepts: figuring an idea out, telling it apart from similar ones, explaining it in your own words, and checking your prediction against what you proved. Check the AI adds evaluation and inference, practiced on what an AI tells you: judging whether its answer holds up and what follows from it. Questioning stays underneath both. We'll start it once learners show they improve on the concepts.</p>
-<p>Memory matters even more there. Judging what an AI tells you is a skill that grows over many sessions, never in one. Without memory, each session starts from zero and that growth stays invisible, to the student and to us. With it, Lumente can show a student, fact by fact, how their judgment of AI is getting sharper.</p>
-<p>You can find the memory code in api/src/memory.ts and the contract in agents/CONTRACTS.md.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Take a picture of your LEGO and AI will make a build
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/mister-blocks?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1312257?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/cynthiasalazarb/building-an-ai-app-to-strengthen-human-thinking-how-we-used-surrealdb-agent-memory-4ijd" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/mister-blocks" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
