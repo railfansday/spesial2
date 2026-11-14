@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Merge, Don&#x27;t Ship: Approval Gates for Agents</title>
+    <title>The need for at least a third option</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9682.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Merge, Don&#x27;t Ship: Approval Gates for Agents</h1>
+        <h1>The need for at least a third option</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fagentconn.com%2Fblog%2Fmerge-dont-ship-approval-gate-discipline-hero.jpg" alt="Merge, Don&#x27;t Ship: Approval Gates for Agents" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fagentconn.com%2Fblog%2Fmerge-dont-ship-approval-gate-discipline-hero.jpg" alt="Merge, Don't Ship: Approval Gates for Agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 14
-•
-Originally published at agentconn.com</p>
-<p>The operator conversation about production agents has shifted. Six months ago, the question was should agents have human approval gates? Today, the question is where exactly does the gate go?</p>
-<p>📖 Read the full version with charts and embedded sources on AgentConn →</p>
-<p>The answer emerging from production teams is deceptively simple: let agents merge freely, but gate the ship. Not more gates. Fewer gates, at higher stakes, in the right places.</p>
-<p>Michael J. Black put the underlying principle cleanly: "The more you delegate, the more your fundamentals matter, because you cannot supervise what you do not understand." That is not a warning against delegation. It is a design constraint for the approval layer. If your gate requires understanding the change to be useful, and you have designed your system so reviewers cannot understand the change, your gate is theater.</p>
-<p>Anthropic's own data makes the theater problem concrete. When they studied Claude Code's permission model, they found that users accept 93% of permission prompts. That is not evidence that 93% of agent actions are safe. It is evidence that per-action approval does not work — the approval rate is so high that the gate has become a speed bump, not a checkpoint. Anthropic's response was auto mode: a classifier that evaluates each tool call and only surfaces the ones that actually warrant human attention.</p>
-<p>Boris Cherny, head of Claude Code at Anthropic, tweeted about the demand signal: "Skip all permissions" was the most-requested feature. That demand tells you everything about where the old model failed. When your users' top request is "stop asking me," your gate is not providing oversight — it is providing friction.</p>
-<p>The lesson is not "remove all gates." The lesson is that a gate on every action is functionally equivalent to no gate at all, because approval fatigue degrades the human reviewer into a rubber stamp.</p>
-<p>Before you can design a useful approval gate, you have to fix what sits behind it. And the most common thing sitting behind it is a god agent — a single agent with 20, 30, or 50 tools that tries to do everything.</p>
-<p>The God Agent anti-pattern is the most documented failure mode in production agent architecture. The failure mechanism is straightforward: as tool count increases, tool-selection accuracy drops. With 5 tools, the model picks correctly almost every time. At 20 tools, accuracy slides to the low 80s. At 50 tools, accuracy falls below levels where production systems can function reliably.</p>
-<p>Sohail Shaikh and Ankush Rastogi quantified this at AI Engineer World's Fair 2026 in their talk "The 100-Tool Agent Is a Trap." Their data showed tool-selection accuracy plummeting from 78% at 10 tools to 40% at 100 tools. Their proposed fix — semantic routing with just-in-time context — is clever infrastructure, but the first-order fix is simpler: stop building god agents.</p>
-<p>Pykero Agency's analysis found the same pattern from the operator side: the most dependable production agents use 2–5 tools scoped to a single job. Past that range, tool-selection accuracy drops and failures get harder to isolate. This is not a theoretical concern — it is the most common source of production agent incidents after prompt injection.</p>
-<p>The 5–8 tool plateau: Multiple independent analyses converge on the same number. Production agents reliably select the right tool when they have 5–8 options. Beyond that, routing or splitting into sub-agents is not an optimization — it is a reliability requirement. Five well-scoped tools beat 25 sprawling ones every time.</p>
-<p>The connection to approval gates is direct. A god agent with 50 tools generates a firehose of heterogeneous actions — some safe, some destructive — and a human reviewer has no way to develop a mental model of what "normal" looks like. A scoped agent with 4 tools generates a predictable stream of actions. A reviewer can spot the anomaly because they understand the baseline.</p>
-<p>The move toward scoped, skilled agents is accelerating. Anthropic recently donated Agent Skills — the pattern that lets agents load domain-specific capabilities on demand rather than carrying every tool at all times — to the Agentic AI Foundation.</p>
-<p>This is why the article on AgentConn about the harness guardrail stack matters for this conversation: the guardrail layer works only when the scope of what it guards is narrow enough to reason about.</p>
-<p>The most important architectural pattern in production agent deployment right now has nothing to do with AI. It is a DevOps pattern that predates LLMs by a decade: decouple the merge from the ship.</p>
-<p>Matty Stratton's "Your Agent Didn't Break Prod. Your Pipeline Did" is the clearest articulation of this principle. His argument: if your team cannot answer "who decided to release this?" for a given deploy, then an agent that opens PRs quickly is not your biggest problem. Your pipeline is. PRs merge to main, but main is not what is live. A separate release step promotes main to production, and that promotion only happens on explicit approval.</p>
-<p>This is the merge-gate / ship-gate split:</p>
-<p>ThreeMoonsLab's agents-shipgate is an open-source implementation of the merge gate half. It issues a deterministic verdict when a PR changes an agent's tools or permissions — reviewing schemas, scopes, approval policies, idempotency, and blast radius. Crucially, it runs with no agent execution, no LLM calls, no network connections. The gate is static analysis, not another AI judgment call.</p>
-<p>Practitioner pattern: the three-layer gate</p>
-<p>Most teams get into trouble by collapsing all three into a single "approve every action" prompt. That is what produces the 93% rubber-stamp rate.</p>
-<p>The AgentOps Accelerator documentation from Microsoft Azure describes a similar two-stage split: feature PRs run an eval against the candidate agent before merge, and a later release-to-main PR acts as a manual approval step with static checks only. Deployment happens after that merge.</p>
-<p>Read the full research post on Anthropic →</p>
-<p>Let us return to the 93% number, because it reveals something deeper than a UX problem. And Anthropic is not the only company that noticed.</p>
-<p>Sam Altman described the same design principle for Codex: "move quickly on routine work while stopping for review when the risk changes." Sandboxing, approvals, and network policies — not a blanket approval prompt on every action. The two largest agent-tooling companies independently arrived at the same conclusion: gate by risk, not by action count.</p>
-<p>Anthropic's auto-mode research describes the failure mode precisely: "Over time, repeated prompts lead to approval fatigue, where people stop paying close attention to what they're approving." Before auto mode, Claude Code users had two workarounds: a sandbox (limiting what the agent could do) or the --dangerously-skip-permissions flag (which disables all prompts entirely). The naming of that flag is itself an admission: the team knew that per-action approval was so burdensome that users would seek an unsafe binary escape.</p>
-<p>Sachin Malhotra from Anthropic expanded on this at AI Engineer World's Fair 2026 in "Give the Agent a Budget, Not a Token." His framework replaces per-action approval with asymmetric permissions, replenishing rate limits, aggregate monitoring, and trusted identity. The key insight: bound the agent's autonomy budget, not its individual actions. Let it spend that budget on routine operations. Gate only the operations that exceed the budget.</p>
-<p>The habituation curve research models this formally: permission prompt approval rates follow a predictable decay curve. In the first hour, reviewers examine prompts carefully. By day three, they are clicking approve reflexively. The research suggests that any gate shown more than roughly 15 times per session will converge toward automatic approval regardless of content.</p>
-<p>⚠️ Contrarian Corner: Most approval gates are security theater. The evidence is clear: 93% auto-approve rate, documented habituation curves, and the existence of --dangerously-skip-permissions as a widely-used escape hatch. If your approval gate fires on every file write and every shell command, you do not have oversight — you have a speed bump that trained your reviewers to stop reading. The discipline is not "more gates." It is fewer gates that actually get read. Gate the irreversible. Auto-approve the routine. And stop pretending that a prompt shown 50 times a day is providing meaningful human oversight.</p>
-<p>The Zof.ai analysis crystallizes the emerging operating model into a formal pattern: agents propose, humans authorize, and a separate executor runs the authorized action.</p>
-<p>The critical detail: the agent never holds deployment credentials. The pipeline issues credentials per run, scoped to the authorized action. This means prompt injection cannot escalate to production access even if it compromises the agent's context — the agent has nothing to escalate with.</p>
-<p>HackerNoon's coverage of the same pattern emphasizes the scope constraint: "Scope each agent to the smallest set of tools its role requires." This is the tool-minimalism principle applied to security, not just reliability. A scoped agent with 4 tools has 4 possible attack surfaces. A god agent with 40 tools has 40.</p>
-<p>We covered the permission-defaults side of this in our piece on leaked secrets from agent defaults — the same principle applies. Default-open permissions combined with a rubber-stamp approval gate is how agents get access they should never have had. And the incidents keep happening: an agent with a valid key deleted production not because it was malicious, but because nothing between the agent and the destructive action was actually checking.</p>
-<p>The conversation about production agent oversight has matured past "should we have gates?" into specific architectural decisions. Here is what the evidence supports.</p>
-<p>💡 The approval-gate discipline — a practitioner checklist:</p>
-<p>The Microsoft AgentOps guidance puts it in pipeline terms: the agent owns the feature branch. CI owns the merge gate. A human owns the release. Three actors, three gates, three different kinds of checks.</p>
-<p>Matty Stratton's parting observation deserves the last word: "Gated promotions, expand/contract migrations, decoupling deploy from release: this is stuff engineering orgs have known for well over a decade." Agents did not invent a new problem. They accelerated an old one. The teams that already had deployment discipline are adapting fine. The teams that relied on a human reviewer catching problems informally — those are the ones discovering that a 93% approval rate means their last line of defense was never a line of defense at all.</p>
-<p>The approval gate that works is not the one you click through 50 times a day. It is the one that fires once, at the moment of maximum consequence, and demands your full attention because it earned it.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Recently I started exploring and building things for Ubunbu Touch, and I intend to test a couple other mobile systems in the upcoming months.</p>
+<p>Just got my first mobile device migrated from Android to Ubuntu Touch.</p>
+<p>I was expecting this Sunday project to take a few hours, but it didn't take even one. 👏 👏</p>
+<p>Let's see what it has to offer and how it holds up in the coming weeks.</p>
+<p>#ubuntu #ubuntutouch #mobile #mobileos #alternatives</p>
+<p>The reason was that late last year, I came to the realization that we really need a viable alternative to Android and iOS. Before that, I still believed that using Degoogled ROMs such as LineageOS, GrapheneOS, or others would be enough. You would just install F-Droid or another alternative app store, enable the developer settings, and then you would be good to go.</p>
+<p>Recent events and the trends we can observe tell that things are moving in the opposite direction, the direction of people (users and developers) increasingly losing control over their devices and their apps.</p>
+<p>iOS was always closed, and Apple has more control over your device than you. Android was supposed to be the open alternative. Deep down in theory that is still true, in practice, Google is trying very hard to close that gap gradually. Users have been losing control for a while, and recently we found that to run software on your devices you will need to pay for Google’s permission. It gets worse; even paying you will need to follow a cumbersome process to install software that can take 24 hours.</p>
+<p>A movement was started to try to stop this, but I think it is a losing battle.</p>
+<p>The above is completely the oposite of the freedom we still have on our computers, where one can easily change the software their device uses with little control from the supplier. You bought it with Windows, but you can replace it with Linux, FreeBSD, OpenBSD, ReactOS, Haiku, etc. And then run your or another person’s apps as you wish (the device is yours).</p>
+<p>On mobile you are locked down, and they are trying to make it increasingly difficult to run anything else. Even app developers and companies are incentivized to lock their apps to only these 2 systems for “security” reasons; alternative ROMs are being blocked.</p>
+<p>Our lives are now dependent on these mobile devices (almost everything is an app or requires an app); that’s a fact of modern times.</p>
+<p>Ahead of the disenfranchisement of people without a smartphone or people with the old phone, we are close to witnessing a person being required to become a customer of two foreign companies to be a citizen in their own country.</p>
+<p>And I just don’t want to get started on all the digital sovereignty aspects of it. They affect people, organizations, and governments, and it is clear that they nowadays are more important than ever.</p>
+<p>The truth is that I’m not 100% sure, but I do know we need one. I guess it would be nice that it would be open-source (at least the core of it), with multiple stores or ways to provide/get software, and with a clear focus on interoperability.</p>
+<p>It shouldn’t also be a copy of the existing ecosystems. This means a Windows Phone (belonging to Microsoft) wouldn’t be a real alternative, since it would also be closed and belong to a foreign big tech company.</p>
+<p>Tiny and completely distinct systems, popping like mushrooms, wouldn’t also be a real alternative, since they would fail to get any sort of traction and attention. They might be interesting for hobbyists to experiment with, but nobody will invest in them if there aren’t sufficient people using and building for them.</p>
+<p>Starting from scratch is also very hard; we have a few examples of failed attempts.</p>
+<p>So, our best bet is to put the weight of all the people who are uncomfortable with this situation behind something that already exists, that already has some community, that can be developed independently.</p>
+<p>These will be the ones I will be exploring, testing, and perhaps contributing to. Regardless of my preference, I don’t mind which one wins; I just think one of them needs to take off.</p>
+<p>Posted a response on your own website? Share the link here:
+
+Your post must include a link to this post.</p>
+<p>This work by Gonçalo Valério is licensed under a Creative Commons Attribution 4.0 International License.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/max_quimby/merge-dont-ship-approval-gates-for-agents-20l5" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://blog.ovalerio.net/archives/3359" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

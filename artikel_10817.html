@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory-efficient Diffusion Transformers with Quanto and Diffusers</title>
+    <title>The Privacy Risks of Browser Extensions: What Developers Should Know</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10817.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,49 +15,39 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Memory-efficient Diffusion Transformers with Quanto and Diffusers</h1>
+        <h1>The Privacy Risks of Browser Extensions: What Developers Should Know</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/quanto-diffusers/thumbnail.png" alt="Memory-efficient Diffusion Transformers with Quanto and Diffusers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_image1_1395065208.png" alt="The Privacy Risks of Browser Extensions: What Developers Should Know" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/quanto-diffusers/thumbnail.png" alt="Memory-efficient Diffusion Transformers with Quanto and Diffusers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_image1_1395065208.png" alt="The Privacy Risks of Browser Extensions: What Developers Should Know" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Over the past few months, we have seen an emergence in the use of Transformer-based diffusion backbones for high-resolution text-to-image (T2I) generation. These models use the transformer architecture as the building block for the diffusion process, instead of the UNet architecture that was prevalent in many of the initial diffusion models. Thanks to the nature of Transformers, these backbones show good scalability, with models ranging from 0.6B to 8B parameters.</p>
-<p>As models become larger, memory requirements increase. The problem intensifies because a diffusion pipeline usually consists of several components: a text encoder, a diffusion backbone, and an image decoder. Furthermore, modern diffusion pipelines use multiple text encoders – for example, there are three in the case of Stable Diffusion 3. It takes 18.765 GB of GPU memory to run SD3 inference using FP16 precision.</p>
-<p>These high memory requirements can make it difficult to use these models with consumer GPUs, slowing adoption and making experimentation harder. In this post, we show how to improve the memory efficiency of Transformer-based diffusion pipelines by leveraging Quanto's quantization utilities from the Diffusers library.</p>
-<p>For a detailed introduction to Quanto, please refer to this post. In short, Quanto is a quantization toolkit built on PyTorch. It's part of Hugging Face Optimum, a set of tools for hardware optimization.</p>
-<p>Model quantization is a popular tool among LLM practitioners, but not so much with diffusion models. Quanto can help bridge this gap and provide memory savings with little or no quality degradation.</p>
-<p>For benchmarking purposes, we use an H100 GPU with the following environment:</p>
-<p>Unless otherwise specified, we default to performing computations in FP16. We chose not to quantize the VAE to prevent numerical instability issues. Our benchmarking code can be found here.</p>
-<p>At the time of this writing, we have the following Transformer-based diffusion pipelines for text-to-image generation in Diffusers:</p>
-<p>We also have Latte, a Transformer-based text-to-video generation pipeline.</p>
-<p>For brevity, we keep our study limited to the following three: PixArt-Sigma, Stable Diffusion 3, and Aura Flow. The table below shows the parameter counts of their diffusion backbones:</p>
-<p>Quantizing a model with Quanto is straightforward.</p>
-<p>We call quantize() on the module to be quantized, specifying what we want to quantize. In the above case, we are just quantizing the parameters, leaving the activations as is. We’re quantizing to the FP8 data-type. We finally call freeze() to replace the original parameters with the quantized parameters.</p>
-<p>We notice the following memory savings when using FP8, with slightly higher latency and almost no quality degradation:</p>
-<p>We can quantize the text encoder in the same way:</p>
-<p>The text encoder is also a transformer model, and we can quantize it too. Quantizing both the text encoder and the diffusion backbone leads to much larger memory improvements:</p>
-<p>Quantizing the text encoder produces results very similar to the previous case:</p>
-<p>Quantizing the text encoder together with the diffusion backbone generally works for the models we tried. Stable Diffusion 3 is a special case, as it uses three different text encoders. We found that quantizing the second text encoder does not work well, so we recommend the following alternatives:</p>
-<p>The table below gives an idea about the expected memory savings for various text encoder quantization combinations (the diffusion transformer is quantized in all cases):</p>
-<p>Using bfloat16 can be faster for supported GPU architectures, such as H100 or 4090. The table below presents some numbers for PixArt measured on our H100 reference hardware:</p>
-<p>We found quantizing with qint8 (instead of qfloat8)  is generally better in terms of inference latency. This effect gets more pronounced when we horizontally fuse the attention QKV projections (calling fuse_qkv_projections() in Diffusers), thereby thickening the dimensions of the int8 kernels to speed up computation. We present some evidence below for PixArt:</p>
-<p>We additionally experimented with qint4 when using bfloat16. This is only applicable to bfloat16 on H100 because other configurations are not supported yet. With qint4, we can expect to see more improvements in memory consumption at the cost of increased inference latency. Increased latency is expected, because there is no native hardware support for int4 computation – the weights are transferred using 4 bits, but computation is still done in bfloat16. The table below shows our results for PixArt-Sigma:</p>
-<p>Note, however, that due to the aggressive discretization of INT4, the end results can take a hit. This is why, for Transformer-based models in general, we usually leave the final projection layer out of quantization. In Quanto, we do this by:</p>
-<p>"proj_out" corresponds to the final layer in pipeline.transformer. The table below presents results for various settings:</p>
-<p>To recover the lost image quality, a common practice is to perform quantization-aware training, which is also supported in Quanto. This technique is out of the scope of this post, feel free to contact us if you're interested!</p>
-<p>All the results of our experiments for this post can be found here.</p>
-<p>Quantized Diffusers models can be saved and loaded:</p>
-<p>The resulting checkpoint is 587MB in size, instead of the original 2.44GB. We can then load it:</p>
-<p>In the future, we can expect to pass the transformer directly when initializing the pipeline so that this will work:</p>
-<p>QuantizedPixArtTransformer2DModel implementation is available here for reference. If you want more models from Diffusers supported in Quanto for saving and loading, please open an issue here and mention @sayakpaul.</p>
-<p>In this post, we showed how to quantize Transformer models from Diffusers and optimize their memory consumption. The effects of quantization become more visible when we additionally quantize the text encoders involved in the mix. We hope you will apply some of the workflows to your projects and benefit from them 🤗.</p>
-<p>Thanks to Pedro Cuenca for his extensive reviews on the post.</p>
-<p>Interesting read. Thank you for providing examples.</p>
-<p>If you can add example for text_encoder (NOT text_encoder_2) covering different like Qwen etc,, will be helpful.e.g. Like this covers transformerBonus - saving and loading Diffusers models in Quanto</p>
+                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
+<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>The extension a developer installed three years ago can probably read everything they do in the browser today.</p>
+<p>General online security advice from VPNpro and similar guides cover the network side of staying safe, but they cannot see what an extension does inside the browser. That layer is more the developer's responsibility. The risk is complicated, but the fix is simple: request fewer permissions, narrower host access, and less data, and review every update. Here is a walkthrough of each.</p>
+<p>Think about what a developer has open on a normal day: a cloud console, a staging dashboard, a private repo, maybe webmail. One over-permissioned extension sees all of it.</p>
+<p>The most common mistake is asking for broad access early and planning to trim it later. Later rarely arrives.</p>
+<p>A manifest like this should raise eyebrows:</p>
+<p>A developer who cannot justify a permission in a short sentence likely shouldn't include the permission in the build.</p>
+<p>Host permissions deserve their own attention because they define how far the extension can reach. A few habits make a real difference:</p>
+<p>This also helps adoption. People hesitate when an extension asks to read every site they visit. A narrow request looks, and is, more trustworthy.</p>
+<p>Analytics and error logging are where good intentions leak. A crash report that includes the full page URL may contain a session token in the query string. A “usage event” may capture page titles from internal tools.</p>
+<p>The most secure approach is to collect only the data a feature needs and to process the data locally if possible. When data has to be sent, it should be stripped down to the absolute minimum. Avoid sending query strings, and truncate URLs to the domain name where possible. Never send page content if it is not absolutely necessary.</p>
+<p>Remote code is another trap. Manifest V3 restricts remotely hosted code for a good reason. A script fetched at runtime can modify its behavior after the fact, and one can’t audit what it will do in the future. Bundle everything and the code that is reviewed will be identical to the code that is run.</p>
+<p>A good extension today can become a risky one next year. Two patterns keep repeating.</p>
+<p>Ownership changes. Popular extensions get sold, and the new owner ships an update with tracking or worse. The Great Suspender, a widely used tab tool, ended up flagged as malware after a change of hands.</p>
+<p>Compromised publisher accounts. If an attacker phishes the developer account, they can push a malicious update to every existing user. Cyberhaven’s extension was hit by a phished administrator account in late December 2024.</p>
+<p>The defenses are mostly boring, which is a good sign. Hardware-key two-factor authentication on the publisher account, a short list of people allowed to publish, and a review step before each release stops most of it. Lockfiles, pinned versions and regular dependency audits cover the code side.</p>
+<p>Teams that only install extensions can apply the same thinking. Keep an approved list, review updates that change permissions, and remove anything nobody uses. Following security news is worthwhile too, since incidents involving popular extensions tend to be reported publicly.</p>
+<p>It is only one layer, though. A VPN protects traffic in transit. It does nothing about an add-on that reads page content inside the browser, so it never replaces a proper permission review.</p>
+<p>Simpler habits do more here. A separate browser profile for development keeps test extensions away from personal accounts. Fake or low-privilege accounts for testing avoid exposing real credentials. And installers for any tool, VPN clients included, should come from the official site or store, never from a mirror.</p>
+<p>Safe extensions come down to restraint. Ask for less access, collect less data, send less off the device, and explain more to the user. Developers who treat every permission as a liability end up with extensions people can trust, and teams that review what they install avoid the worst surprises.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/quanto-diffusers" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/the-privacy-risks-of-browser-extensions-what-developers-should-know/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

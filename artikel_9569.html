@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filament by Galaxy</title>
+    <title>Ingeniería de datos con dbt y DuckDB: de CSV crudos a un producto de datos público</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9569.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,50 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Filament by Galaxy</h1>
+        <h1>Ingeniería de datos con dbt y DuckDB: de CSV crudos a un producto de datos público</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fe0lbvzyq2pf66viwrotl.png" alt="Ingeniería de datos con dbt y DuckDB: de CSV crudos a un producto de datos público" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fe0lbvzyq2pf66viwrotl.png" alt="Ingeniería de datos con dbt y DuckDB: de CSV crudos a un producto de datos público" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Move data using your terminal or agent. Fast & open source.
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/galaxy?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1282575?app_id=339">Link</a>
-          </p></p>
+                <p>Autora: Marymar Danytza Calloticona Chambilla</p>
+<p>En este proyecto construí Data Foundry, una solución de ingeniería de datos por lotes que convierte eventos de ventas en tablas confiables y resultados públicos. Utilicé dbt para organizar las transformaciones y las pruebas, DuckDB como almacén local y GitHub Actions para ejecutar el proceso y desplegar sus resultados en GitHub Pages. No configuré servicios ni una cuenta AWS.</p>
+<p>Mi objetivo fue demostrar algo más que una consulta sobre un CSV: ingestión reproducible, reglas de calidad explícitas, deduplicación, trazabilidad, pruebas y entrega automatizada de un producto de datos.</p>
+<p>El generador produce 1.006 eventos sintéticos, junto con dimensiones de clientes y productos. Hay 1.000 órdenes únicas válidas, una versión repetida de una orden y cinco eventos con problemas intencionales: una fecha imposible de interpretar, una cantidad negativa, un precio vacío, un cliente inexistente y un producto inexistente.</p>
+<p>Los datos no representan personas ni ventas reales. Introducir defectos conocidos permite demostrar qué hace el pipeline con ellos. No basta con borrar las filas problemáticas: quiero saber cuántas llegaron, cuántas se aceptaron y por qué se retuvo cada una.</p>
+<p>DuckDB se ejecuta durante la construcción del pipeline. El sitio publicado sirve un snapshot de los resultados: no ofrece una base compartida ni ejecuta dbt en el navegador.</p>
+<p>El script scripts/generate_data.py genera los mismos archivos en cada ejecución. dbt seed carga esos CSV como tablas. Las dimensiones pequeñas funcionan bien como seeds en un laboratorio; en producción utilizaría un proceso de ingesta y fuentes apropiadas para el origen real de los datos.</p>
+<p>La documentación de dbt seed explica este mecanismo de carga. En el proyecto fijo los campos originales de la orden como texto para que el staging pueda identificar los errores de conversión de manera controlada.</p>
+<p>El modelo stg_order_events elimina espacios y usa try_cast para interpretar fechas, cantidades y precios. Una conversión inválida devuelve un valor nulo, que la regla de calidad clasifica con un motivo.</p>
+<p>También verifica las claves contra las dimensiones. Los registros reciben estados como invalid_date, invalid_quantity, invalid_price, unknown_customer o unknown_product.</p>
+<p>Para las versiones de una orden, la política es que el mayor event_id gana:</p>
+<p>Si la última versión es inválida, se retiene en cuarentena y no se recupera silenciosamente una versión anterior. En este ejemplo los identificadores de evento son únicos; en un origen real también necesitaría definir cómo resolver empates y eventos fuera de orden.</p>
+<p>fct_orders contiene solo la última versión aceptada de cada orden. Calcula ingresos con decimales y agrega el mercado y la categoría desde las dimensiones.</p>
+<p>quarantine conserva los eventos inválidos y las versiones anteriores. Una versión reemplazada se identifica como superseded_event, que se distingue de un error de calidad. Así puedo reconciliar el volumen:</p>
+<p>Las tablas gold daily_sales y market_sales resumen órdenes, unidades e ingresos. USD es una unidad común para el ejemplo; no realizo conversiones monetarias.</p>
+<p>Las pruebas de dbt verifican claves únicas y no nulas, referencias a dimensiones, estados permitidos y medidas válidas. Dos pruebas SQL adicionales comprueban que ningún evento desaparezca y que los ingresos de las tablas gold concilien con la tabla silver.</p>
+<p>Una prueba singular de dbt devuelve las filas que violan la regla. Si devuelve una fila, falla:</p>
+<p>Además, Python vuelve a leer los CSV, aplica la política documentada y calcula el ingreso esperado de forma independiente en centavos. Lo compara con la suma decimal de DuckDB. Esto ayuda a evitar que dos tablas concilien entre sí aunque ambas compartan un mismo error de transformación.</p>
+<p>scripts/export_site.py solo exporta cuando todas las pruebas registradas en run_results.json pasan y la conciliación independiente coincide. La evidencia queda en evidence/pipeline-validation.json.</p>
+<p>En la ejecución local pasaron las 26 pruebas de datos y los 34 recursos procesados por dbt build. Las 1.000 órdenes aceptadas sumaron USD 154.075,00, iguales a los 15.407.500 centavos calculados de forma independiente. Los seis eventos retenidos quedaron disponibles para auditoría. Estos importes pertenecen al conjunto sintético del laboratorio.</p>
+<p>Cada ref() declara una dependencia entre modelos. dbt usa esas referencias para construir el grafo y ejecutar los recursos en el orden correcto. Después, dbt docs generate crea la documentación de las tablas, sus columnas y dependencias.</p>
+<p>Publico esa documentación junto con un pequeño dashboard y archivos CSV/JSON. El dashboard permite revisar volúmenes, ingresos por mercado, motivos de cuarentena y resultados por mes. Los datos mostrados provienen de una ejecución real del pipeline, no de indicadores escritos a mano en el HTML.</p>
+<p>El workflow se activa con un push a main o una ejecución manual. Sus pasos son:</p>
+<p>El job de despliegue depende de que termine correctamente el pipeline. Una prueba fallida impide publicar la nueva versión. GitHub Pages se configura con la fuente GitHub Actions; el workflow utiliza un token temporal y no necesita una clave de otro proveedor de nube.</p>
+<p>El repositorio incluye el código y la configuración para reproducir el proceso. La referencia de dbt build y la guía de workflows de Pages describen los mecanismos utilizados.</p>
+<p>Esta solución muestra ingeniería de datos por lotes a pequeña escala. No implementa streaming, CDC, cargas incrementales ni un almacén persistente en la nube. El archivo DuckDB se reconstruye en el runner y el sitio sirve sus resultados exportados.</p>
+<p>Para evolucionarla, incorporaría una fuente externa, reglas de calidad vinculadas con el negocio y una estrategia de persistencia. Mantendría las comprobaciones de conservación de eventos y conciliación de ingresos para detectar regresiones.</p>
+<p>Autora: Marymar Danytza Calloticona Chambilla.</p>
+<p>La ejecución en GitHub Actions terminó correctamente: el pipeline y el despliegue pasaron. La aplicación pública mostró las 26 pruebas correctas, 1.000 órdenes aceptadas y USD 154.075,00 de ingreso validado. El filtro de febrero mostró 28 fechas del snapshot publicado.</p>
+<p>Este artículo y el código se prepararon con asistencia de IA y comprobaciones de ejecución.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/galaxy" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/marymar_danytzacallotico/ingenieria-de-datos-con-dbt-y-duckdb-de-csv-crudos-a-un-producto-de-datos-publico-1j0g" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
