@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test your applications against AWS locally with AWS Emulator</title>
+    <title>LinkedIn Replaces Argo CD with a Custom GitOps Engine for Kubernetes Deployments</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9892.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,65 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Test your applications against AWS locally with AWS Emulator</h1>
+        <h1>LinkedIn Replaces Argo CD with a Custom GitOps Engine for Kubernetes Deployments</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/11/11/Header-A-dark-gradient-1-1260x630.png" alt="Test your applications against AWS locally with AWS Emulator" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/kubernetes-argocd-linkedin/en/headerimage/generatedHeaderImage-1794414453878.jpg" alt="LinkedIn Replaces Argo CD with a Custom GitOps Engine for Kubernetes Deployments" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/11/11/Header-A-dark-gradient-1-1260x630.png" alt="Test your applications against AWS locally with AWS Emulator" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/kubernetes-argocd-linkedin/en/headerimage/generatedHeaderImage-1794414453878.jpg" alt="LinkedIn Replaces Argo CD with a Custom GitOps Engine for Kubernetes Deployments" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
-<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
-<p>Get started with one of these featured services or browse all</p>
-<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
-<p>Today we’re announcing AWS Emulator, a local emulator for Amazon Web Services (AWS) that you run on your machine. The AWS Command Line Interface (AWS CLI), the AWS SDKs, and your coding agents speak to it over a local HTTPS endpoint using the same AWS APIs they would use in the cloud, from your laptop. AWS Emulator has no additional service fee. You pay only for AWS resources when you deploy on AWS. Its source is on GitHub. You install it from an RPM or Debian package on Linux, and on macOS and Windows you run it in Docker.</p>
-<p>How it works
-         You install the emulator, start it, and point your tools at the local endpoint. When AWS Emulator starts, it generates its own credentials, a config file, and a certificate, and writes them to ~/.aws/emulator/9297/. You set environment variables so the AWS SDK talks to your laptop instead of AWS, and your application code stays unchanged.</p>
-<p>From there, your existing tests, CLI scripts, and coding agents keep working the way they already do. A unit test that creates an Amazon DynamoDB table, writes an item, and reads it back is the same test, and it runs on your machine without a deployment. A coding agent can create resources, check the result, and iterate again without waiting on a deployment in a Region.</p>
-<p>The emulator is implemented in Rust so that it stays light on CPU and memory on a laptop. It supports the APIs of AWS services that have an API model in the AWS API models repository on GitHub, and because it’s built from those models, the same ones the AWS SDKs use, your requests and the errors you get back have the same shape as on AWS.</p>
-<p>If you are a developer, especially one working with coding agents such as Kiro or Claude Code, you can use that loop to test AWS interactions of real complexity locally.</p>
-<p>Let’s try it out
-         To get started, I installed the package on Amazon Linux 2023. The package adds the aws-emulator command to /usr/bin/, so it’s on the path.</p>
-<p>On macOS and Windows, you build a Docker image from the short Dockerfile in the documentation and run the emulator in a container. We don’t publish a ready-made image.</p>
-<p>I started the emulator with aws-emulator. It serves HTTPS on 127.0.0.1:9297, so only my own computer can reach it, and it writes its log as JSON lines that show the address, the config file, and the certificate file.</p>
-<p>In another terminal, I set the environment variables that point the AWS CLI at the emulator, and unset any variables that could supply real AWS credentials.</p>
-<p>The emulator generates new keys each time it starts. Its access key IDs start with EMULATOR, so you can’t mistake them for real AWS keys, and it rejects requests signed with any other keys. To confirm that my shell was talking to the emulator, I checked the health endpoint and the caller identity. The emulator uses a single account, 000000000000.</p>
-<p>Then I created a bucket, copied in a small object, and listed it.</p>
-<p>With the AWS CLI pointed at my laptop, I had the same commands I already use and a local endpoint that answered them.</p>
-<p>Next I wanted to see it the way I actually work now, so with the emulator still running I opened Kiro and asked it to create an Amazon DynamoDB table, write an item, and read it back, all against AWS Emulator rather than my AWS account.</p>
-<p>To use the same setup with an existing test suite, I would start the emulator, set the same environment variables in the script that runs the tests, and run them as usual.</p>
-<p>Using the emulator in process
-         Running the emulator as a local process gives you an HTTPS endpoint that works with the AWS CLI and the AWS SDKs through environment variables. Some SDKs need an extra setting to trust the emulator certificate, for example a trust store for the AWS SDK for Java. For tests, there is a second option. AWS Emulator ships an embedded mode that you instantiate directly inside your test process and wire into the SDK through its HTTP client, rather than talking to a separate server over the network. Each embedded instance keeps its own state, so tests do not share buckets, tables, or queues, and you can run many of them in parallel. Embedded mode is available for the AWS SDK for Rust. You add the aws-emulator-embedded crate from GitHub to the [dev-dependencies] section of your Cargo.toml file. The following example creates an Amazon DynamoDB table, writes an item, and reads it back, entirely in process.</p>
-<p>When it runs as a local process, the emulator requires every request to be signed with Signature Version 4 (SigV4), the same way AWS does, and it exposes a /__admin/health endpoint on the same port so a script or a container can wait until it is ready before running tests. By default it also sends anonymous usage and error data, and you can turn it off.</p>
-<p>How we measure fidelity
-         An emulator is only useful if a test that passes against it would also pass against AWS, so we measure that directly with fidelity tests. A fidelity test is a short program that uses an AWS SDK to run a workflow, such as storing an object and then reading and deleting it, and asserts how AWS behaves. We verify each fidelity test against real AWS. A fidelity test passes only if the emulator matches AWS on the response to every call, including the status code, the body, and the exact error code and message, and on the resources and data that the workflow creates.</p>
-<p>With each release, we publish how many fidelity tests pass for each service, as k of n. For example, 40 of 50 means that 40 of the service’s 50 fidelity tests pass. The set of fidelity tests is public in the aws-emulator-evaluation-suite repository on GitHub, including the ones that don’t pass yet, so you can see what we verified and run the fidelity tests yourself. Read a score as a snapshot of a product that’s improving. When we add fidelity tests, a score can go down even while the emulator gets better.</p>
-<p>If the emulator doesn’t implement an operation yet, it returns HTTP 501 (Not Implemented), so your tests fail right away. If the emulator acts differently from AWS, you can tell us by opening an issue in the AWS Emulator repository on GitHub.</p>
-<p>How the emulator is built
-         AWS Emulator is built and maintained by agents from the AWS API models using Amazon Bedrock AgentCore Runtime Instances, AWS CodePipeline, and AWS CodeCommit, so it stays current with AWS as those models change.</p>
-<p>One group of agents looks for gaps, both by comparing emulator responses against real AWS and by statically comparing the emulator’s code against the published Smithy models, and files an issue for each gap it finds. Another group picks up an issue, writes tests, implements the behavior, and reviews the change for correctness, performance, and security. When the change is ready, it is pushed to a source repository, and that push triggers an AWS CodePipeline run that runs the fidelity tests before the change is published to the public GitHub repository.</p>
-<p>How we keep it secure
-         Because the code is written by agents, an independent security agent reviews changes adversarially, both while the fix is being made and again in the release pipeline as a final check before anything ships.</p>
-<p>Security of your own use remains a shared responsibility. We build the emulator to run safely on your machine: it listens only on your own computer by default and rejects requests that aren’t signed with its own keys. You decide where it runs, what data you put in it, and how you test before production. Don’t use the emulator to test whether your application is secure. It doesn’t evaluate AWS Identity and Access Management (IAM) policies and resource-based policies the way AWS does, so a request that AWS denies might succeed in the emulator. Keep real credentials out of the environment of your test jobs, and test your security settings and your whole application on AWS before you go to production.</p>
-<p>Now available
-         AWS Emulator is generally available today. It has no additional service fee. You pay only for AWS resources when you deploy on AWS. You can install it from RPM or Debian packages on Linux, run it in Docker on macOS and Windows, or build from source, and it works with the AWS SDKs and the AWS CLI once you set environment variables. At launch, it has some limits. It doesn’t evaluate IAM policies the way AWS does, and each emulator acts as a single account, with no cross-account or cross-Region behavior. How closely it matches AWS varies by service and feature. To see how well the emulator covers the services that you use, check the fidelity scores in the AWS Emulator documentation.</p>
-<p>If you want to check regional availability, visit the AWS Capabilities by Region page in AWS Builder Center. If you want to call APIs, search documentation, find regional availability, and check troubleshooting about this new feature, try using the AWS MCP Server and plugins with your preferred AI tool.</p>
-<p>To get started, visit the AWS Emulator repository on GitHub and see the AWS Emulator documentation.</p>
-<p>Updated on November 12, 2026: Added links to the AWS Emulator repository on GitHub.</p>
-<p>Daniel Abib is a senior specialist solutions architect at AWS, focused on generative AI and Amazon Bedrock — and passionate about serverless. He helps startups and enterprises build AI-powered applications and modernize with cloud-native architectures. A three-time Ironman finisher and four-time re:Invent speaker, he brings the same endurance mindset to building cloud solutions.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Live Webinar and Q&A: Guardrails, Not Gatekeepers: How to Govern AI Tooling Spend Without Slowing Developers (Dec 10, 2026)
+
+                            Save Your Seat</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>Agentic AI architecture extends microservices and cloud-native architectures with AI agents that work with context, memory, and protocols such as MCP and A2A. The article covers bounded-context integration, task-dependent coordination strategies, new security risks, and observability needs. It expects gradual adoption alongside existing architectures, with platforms absorbing common components.</p>
+<p>Hannes Hapke shares how Dataiku’s open-source Kiji Inspector applies Sparse Autoencoders (SAEs) directly to decision tokens to expose why agents pick specific tools. Moving past superficial chain-of-thought narratives, he discusses causal ablation, layer activation extraction via patched vLLM engines, and production monitoring workflows for software architects and senior engineering leaders.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>Oli Lane and Julian Wreford share how Gearset replaced guesswork in distributed asynchronous queues with OpenTelemetry tracing. They explain why traditional metrics fall short, how to implement user-centric SLOs based on latency distributions, and share practical debugging tips to help senior developers, software architects, and engineering leaders improve system reliability and team culture.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+LinkedIn Replaces Argo CD with a Custom GitOps Engine for Kubernetes Deployments</p>
+<p>Nov 12, 2026
+								
+								
+								
+									
+									4
+									min read</p>
+<p>In a recent post, LinkedIn revealed it has replaced Argo CD with its own GitOps engine. This new system deploys applications across over 250 Kubernetes clusters. It supports more than 4,000 services and manages over 100,000 deployments each week. According to a post, deployment infrastructure failures fell from 925 to 63 despite a 3.7x increase in deployment volume. The median time to detect and conclude a failed deployment dropped from 16.1 to 2.45 minutes.</p>
+<p>LinkedIn started with one Argo CD instance per cluster, a topology it chose because Argo CD already managed its cluster add-ons that way. Clusters run up to 5,000 nodes each. A central deployment orchestrator spawned an ephemeral pod per deployment, with Argo CD hidden behind it. The team lists seven problems that emerged at scale. Argo CD doesn't have an observedGeneration, so you can't link sync and health status to a specific deployment. LinkedIn created a Lua health check that uses a tracking annotation to address this. A Synced and Healthy application could also resolve to an unintended revision when stale repo-server cache entries were used.</p>
+<p>Two of the issues were architectural. Argo CD maintains one watch per group-version-resource across Applications. LinkedIn’s clusters have low resource-type diversity. This means etcd churn from one app can slow syncs for all apps. In one test, sync took under 3 minutes on a cluster with 60,000 pods and over 10 minutes with more than 80,000. The second was server-side-apply PATCH. Kubernetes truncates managedFields once an object has had more than 10 distinct field managers, and the API server then forgets who owns a field. In LinkedIn's AI workloads, which run multiple containers per Pod, a container removed from a manifest could therefore survive on the live Pod. The team had pruning disabled because destructive operations in production require approval. The remaining problems were CRD schema changes that required controller restarts across the fleet. Some OutOfSync states did not reflect real drift. Error messages were buried in boilerplate.</p>
+<p>LinkedIn evaluated Flux but found it shared the same controller paradigm, so it built the engine as a library. Each deployment runs in its pod, with no shared controller state. Updates use PUT for full replacements, not PATCH. They retry on resourceVersion conflicts with exponential backoff. A 3-way diff across the live object, the previously deployed manifest, and the newly rendered manifest detects drift, and genuine drift fails the deployment. The same pod then watches the object's status until it converges or times out, and the API server unwraps errors for the user. Objects missing from the rendered manifest become deletion candidates, subject to delete protection, and convergence logic for LinkedIn's CRDs is built in.</p>
+<p>The comparison uses the same calendar month a year apart. The migration ran from July 2025 to April 2026, which makes May 2026 the first clean post-migration month. The infra failure count covers only failures caused by the deployment system and excludes drift errors, since the two systems define drift differently. LinkedIn states that the improvement isn't solely due to the new engine. The orchestrator's error classification and reliability also got better during this time. The median duration for successful deployments is similar for both systems. However, the mean and tail have improved. The team attributes this to a namespace-scoped informer cache.</p>
+<p>The engine is internal, and no open-source release is mentioned. Argo CD remains in use at LinkedIn for cluster add-ons and system services. The team had also found that maintaining 200+ Argo CD instances made each upgrade a multi-week project.</p>
+<p>Teams running Argo CD at scale can check two things without a rewrite. Count the field managers on long-lived objects, since managedFields truncation can leave orphaned containers that produce no error. Then check whether sync latency tracks total pod count on shared clusters, which points to watch contention. LinkedIn concludes that the build-or-extend decision relies on the operational model. They say that per-deployment isolation, not controller tuning, allows the system to scale with compute.</p>
+<p>LinkedIn is not the only large operator to build deployment logic around Kubernetes rather than adopt a general-purpose GitOps controller. Uber’s Up platform assigns each deployment to a dedicated controller. This is the Uber Deployment Controller. It translates the intent into Kubernetes primitives and sends status updates. This helps the workflow move forward. Uber keeps a long-running controller, while LinkedIn runs one ephemeral pod per deployment with no shared controller state.</p>
+<p>Airbnb went further back and built its own tooling years earlier. In a talk at QCon London 2019 on InfoQ, infrastructure engineer Melanie Cebula introduced kube-gen. This internal framework creates Kubernetes configuration from one versioned project file. It also includes a deploy tool that applies or replaces objects and restarts pods, so changes take effect right away. Airbnb's deploy tool also returns an atomic success or failure, and a container that restarts for 30 seconds at the start of a rollout counts as a failed deploy. Airbnb was then at roughly 125,000 production deploys a year.</p>
+<p>Presented by: Kiran Gangadharappa - Engineering Advisor at Harness, and Scott Davis - Senior Engineering Manager at Harness</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://aws.amazon.com/blogs/aws/test-your-applications-against-aws-locally-with-aws-emulator/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/kubernetes-argocd-linkedin/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

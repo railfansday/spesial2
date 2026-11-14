@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Routing Is Simple. Until It Isn’t.</title>
+    <title>A technical vision for the Haskell ecosystem</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9905.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,74 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Model Routing Is Simple. Until It Isn’t.</h1>
+        <h1>A technical vision for the Haskell ecosystem</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://us1.discourse-cdn.com/flex002/uploads/haskell/original/1X/89166504e40f4869ea825dd70048017861ec8578.png" alt="A technical vision for the Haskell ecosystem" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://us1.discourse-cdn.com/flex002/uploads/haskell/original/1X/89166504e40f4869ea825dd70048017861ec8578.png" alt="A technical vision for the Haskell ecosystem" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Building a router into your agent sounds like an easy win. Send simple requests to cheaper models, reserve expensive ones for harder tasks, or route by specialty — Claude for code, Gemini for multimodal, and so on. A classifier or heuristic makes the call, costs go down, performance stays up. Done.</p>
-<p>Except it’s not. Most routing systems assume that model selection is a classification problem. In our experience building routing into agentic systems, what looks like a model-selection problem quickly becomes a systems optimization problem. Three dimensions made this surprisingly hard for us.</p>
-<p>We expected GPT-4.1 to be cheaper than Claude Sonnet 4.6. It wasn’t.</p>
-<p>Across 417 tasks on the AppWorld Test Challenge using the same CodeAct agent, Sonnet cost $79 total ($0.19/task) while GPT-4.1 cost $155 ($0.37/task) — nearly double. On paper, this makes no sense. GPT-4.1’s token pricing is lower on both input and output, and Sonnet takes roughly three times as many reasoning steps to finish the same tasks. By sticker price alone, GPT-4.1 should win easily.</p>
-<p>The explanation? Caching — something most routing discussions ignore entirely.
-Agent workloads tend to reuse large chunks of context across steps. When cache hit rates are high, effective input costs drop dramatically. Sonnet’s lower cache-read pricing meant it benefited disproportionately from this pattern, enough to overcome both its higher base pricing and its longer trajectories.</p>
-<p>The takeaway: actual cost depends on the interaction between the model, the workload, and the serving infrastructure. A router that only looks at pricing sheets is optimizing against the wrong numbers.</p>
-<p>A common routing strategy is to estimate how hard a task is and send harder tasks to stronger models. Intuitive, but it breaks down in two ways.</p>
-<p>First, difficulty is often invisible at routing time. A request like "summarize this contract" looks simple, but might trigger retrieval, compliance checks, tool use, and multiple rounds of refinement before it’s done. Meanwhile, a highly technical prompt might be handled efficiently by a smaller specialized model. You often don’t know how hard a task actually is until execution is underway.</p>
-<p>Routers aren’t solving one problem. They’re constantly juggling cost, quality, latency, compliance, and reliability all at once.</p>
-<p>It’s tempting to think about latency purely in terms of model size — bigger models are slower, smaller ones are faster. But what the user actually experiences depends on much more than that.</p>
-<p>Routing itself adds overhead. Infrastructure factors — which hardware a model is running on, whether the cache is warm, how busy the endpoint is — often dominate end-to-end response times. A theoretically faster model can still produce a slower experience if the serving conditions aren’t right.</p>
-<p>Then there’s routing granularity. Routing once per task adds minimal overhead. But routing at every step — which gives you more flexibility to adapt mid-execution — means every additional decision point introduces latency and operational complexity.</p>
-<p>A router that ignores the serving system is optimizing against the wrong reality.</p>
-<p>These lessons shaped how we built our router. The key shift: we stopped treating routing as a classification problem and started treating it as an optimization problem. Rather than asking "which model is best for this task?", our algorithm optimizes across cost, quality, and latency simultaneously — while staying lightweight enough to avoid becoming a bottleneck itself.</p>
-<p>The figure below shows the result on the AppWorld Test Challenge with a CodeAct agent. Each blue square is a different configuration of our router, tracing out a cost-accuracy frontier. The important thing isn't any single point — it's that the router gives you a range of operating points to choose from depending on whether you want to prioritize cost, latency, or accuracy. Configuration 1 (latency-optimized) lands at 84% accuracy for $93 and 83s — a 21% cost reduction and 9% latency reduction compared to running Opus alone, with only a 4% accuracy drop. Configuration 2 pushes cost even lower.</p>
-<p>Notice that a standard difficulty-based router (the teal diamond) lands in a similar accuracy range but at higher cost — it doesn't explore the full tradeoff space the way an optimization-based approach can. And because the optimization itself is lightweight (roughly 6 ms and 2 kB of memory per task), the router doesn't become the bottleneck we warned about earlier.</p>
-<p>The lesson we took away from this work is that routing isn’t really about choosing models. It’s about optimizing systems. Models are one variable — an important one, but just one among caching behavior, infrastructure state, compliance constraints, and workload patterns.</p>
-<p>When routing works well, it’s rarely because it found the "best" model for a given task. It’s because it found the best operating point for the entire system. That’s a harder problem than classification, but it’s the one worth solving.</p>
-<p>We’ll be sharing more about the technical details behind our approach in a follow-up post. In the meantime, if you’re building routing into your own agentic systems, we’d love to hear what tradeoffs you’re running into.</p>
-<p>This post was influenced by numerous conversations with colleagues, whose thoughtful questions, feedback, and insights helped refine our thinking.</p>
-<p>So I've always felt that model routing is a false proposition; it should have been part of the harness all along.</p>
-<p>Agreed, routing should disappear into the harness and just be part of the system's execution logic. Our goal is exactly that—making model choice an intrinsic capability rather than a separate concern.</p>
+                <p>the technical leadership committee of the Haskell Foundation has been successfully bootstrapped!</p>
+<p>We have spent the last few weeks discussing our vision and strategy and are now fully operational.</p>
+<p>We’re going to actively develop initiatives and proposals that we believe need funding and execution. For that we need companies, contractors and volunteers to help. Everyone can participate, whether it’s by dropping ideas informally, writing a concrete proposal themselves or finding entities that could support or fund initiatives.</p>
+<p>We tried to keep the community proposal process as light as possible. However, we believe that fairness and participation are vital, especially when funding is involved, so anyone who writes a proposal should be aware that we will open the floor for the community to comment or even deliver counter-proposals. The process may evolve as we make experiences and get feedback.</p>
+<p>Below is our vision. Feel free to get in touch with us!</p>
+<p>We believe that Haskell is awesome and that it can provide unique value to everyone, because it sits at an interesting intersection between human craftsmanship and machine automation:</p>
+<p>There may be better languages for formal verification or for vibecoding, but there’s no better language for “human in the loop”. Haskell is where we maintain control of our work, build institutional knowledge and ship responsibly.</p>
+<p>We’re driven to improve Haskell for everyone:</p>
+<p>Imagine Haskell had the iteration speed of golang, the debugging capabilities of C# and the onboarding experience of rust. And all that while providing stronger guarantees and better performance!</p>
+<p>Modern workflows require fast iteration times: compilation, interactive repl, remote dependency caching, CI and test integration. All of this affects both human and machine workflows.</p>
+<p>While Haskell scales well in terms of code complexity… it doesn’t scale well in terms of build times. As an example, GHC’s own CI has turnaround times of 6 hours. We want to bring them down to 2.</p>
+<p>Instead of helplessly dumping logs and binaries into LLM chats, we envision deterministic tools that allow precise and ergonomic enquiries:</p>
+<p>And all of that in your editor/IDE as well as through powerful CLI and scripting interfaces, the latter enabling power users as well as LLM-driven debugging (natively, without requiring any custom adapters like MCP).</p>
+<p>Debugging must be fun again, without littering Debug.Trace.trace all over your codebase.</p>
+<p>Documentation and interactive exploration will assist newcomers in understanding all caveats of laziness and GHC and should clearly explain how to leverage these tools.</p>
+<p>In these times of low frustration tolerance, we are going to build the best onboarding experience in the programming language ecosystem, because it is the ultimate benchmark for developer experience as a whole.</p>
+<p>This can only be done if we commit to unix principles, which we summarize as:</p>
+<p>Documentation should be a joy to read, written by humans, for humans.</p>
+<p>Security and trust don’t get established by accident. Once trust is lost, it’s often irrecoverably lost.</p>
+<p>To protect our community assets and reputation, we need to:</p>
+<p>We should further support attempts to utilize or extend the strengths of the Haskell language to boost practical applications of secure design and architecture, such as Information Flow Control or Mandatory Access Control. We’re also monitoring the efforts of dependent types and liquidhaskell.</p>
+<p>What if we could compile Haskell software that’s 10 years old with the latest GHC, without any source code changes?</p>
+<p>While this might seem like an impossible goal to achieve… embarking on that journey is going to get us closer to a robust, stable and predictable ecosystem anyway.</p>
+<p>The questions we need to answer along the way are:</p>
+<p>Not only requires this investment in GHC and core tooling, but also potentially support community efforts to maintain stable package sets or coordinate ecosystem upgrades, make cabal more ergonomic for complex use cases, spearhead and support stability policies and gather data about what parts of the ecosystem cause churn.</p>
+<p>We want Haskell to not only be a choice for fast moving startups, but also for large or conservative companies that do not want their workflows or software stacks disrupted. Stability will benefit both of these types of users, reduce cost and friction and build a reputation for Haskell as a modern language with a predictable ecosystem.</p>
+<p>All of the above is an attempt to support the Haskell open source ecosystem that we love. We are committed to open source, its values and the social aspect of it. Collaboration is how we engage with and inspire each other.</p>
+<p>We want to enable all the maintainers and volunteers who keep this ecosystem alive, many of them unknown, doing their part on a Saturday evening at the other end of the world.</p>
+<p>We code because we love to ship products. But we also code, because we want to socialize, meet people and have a good time. We’re committed to both of these values.</p>
+<p>Thank you @hasufell and the TLC for writing this up; it’s very inspiring to see these goals. I think this ambitious agenda will provide us with a lot of fun and profit.</p>
+<p>That’s really great to see  I’ll be doing my part and see if I can submit a proposal for some unglamorous work I’ve been meaning to do.</p>
+<p>Woah, this is so inspiring and motivating! I have multiple features I want to add to HLS!</p>
+<p>Is Haskell Team finally focusing on “Adoption” ?</p>
+<p>Is there a place to sign up to be a volunteer, or is it just the general “help out where you can”?</p>
+<p>Hacker News discussion: https://news.ycombinator.com/item?id=50484235</p>
+<p>Don’t start reading without your hypertension pills! Lots of moronic and sloppy takes.</p>
+<p>We should further support attempts to utilize or extend the strengths of the Haskell language to boost practical applications of secure design and architecture</p>
+<p>Can I suggest we do this by promoting the use of effect systems to this end? Effect systems are basically capability systems if you generalise the definition of each of those two terms in a natural way, as I explain in my article Bluefin is a capability system. Capability systems have a long history of development for security purposes. Haskell is the natural setting for capability systems, as it is referentially transparent, which capability systems proponents would describe as “having no ambient authority”.</p>
+<p>In what way would Bluefin have any security advantages over plain IO?
+My understanding is that the security benefits of capability systems usually fall into two camps:</p>
+<p>1 doesn’t apply to Bluefin and 2 can be trivially circumvented by using unsafePerformIO</p>
+<p>To be clear, I’m not suggesting Bluefin specifically as the solution to secure design and architecture, I’m saying that that one benefit Haskell has that will help with secure design and architecture is effect systems in general. In the world of effect systems, Bluefin and effectful have a number of non-security-related benefits that I’ve elaborated in detail elsewhere, but they don’t have an inherent security advantage, per se.</p>
+<p>I’m not too familiar with pledge, but I don’t think it’s a capability system. I think it just acts to reduce ambient authority. A capability system allows you to run different components of your program with different levels of authority, in a fine grained way, based on what capabilities are in scope in each of those components.</p>
+<p>Regarding your point 2, yes, effect systems can do that, but of course the dependencies would have to be written with that use case in mind (as they do in Pony, unless I’m much mistaken).</p>
+<p>Sure, you can circumvent anything with unsafePerformIO, as it allows you to write unsafeCoerce and thereby walk over your entire heap making arbitrary changes. I’m not proposing that Haskell would be a verified system (although I’d be interested to see how close to one it could become with SafeHaskell).</p>
+<p>I’m not too familiar with pledge, but I don’t think it’s a capability system</p>
+<p>That’s fair. Fuchsia capabilities are probably a better example.</p>
+<p>Regarding your point 2, yes, effect systems can do that, but of course the dependencies would have to be written with that use case in mind (as they do in Pony, unless I’m much mistaken).</p>
+<p>Well, the difference is that (AIUI) pony doesn’t have any escape hatches and so if a function doesn’t receive a capability to, say, access the file system, it literally cannot do so.</p>
+<p>No matter how fancy your effect system is, a compromised Haskell dependency can always call unsafePerformIO (writeFile ... malware).</p>
+<p>I just don’t see any concrete security vulnerabilities that could be avoided by using an effect system.</p>
+<p>I don’t disagree that effect systems can have benefits for software engineering in general, but I really don’t see how they’re relevant to “secure design and architecture”.</p>
+<p>That’s fair. Fuchsia capabilities are probably a better example.</p>
+<p>OK, and what do you see as the fundamental distinction between Fuchsia and Haskell-with-an-effect-system (besides one being an operating system and the other having an additional level of “nesting” within a programming language)?</p>
+<p>I can only repeat that I’m not proposing that Haskell would be a verified system. Nonetheless, I think a software project written in a capability system, albeit not a formally verified one, would still be easier to implement correctly and audit that one written in the style of “ambient authority”. I would be interested to hear your arguments against that, if you disagree.</p>
+<p>Regarding Pony, perhaps it always enforces the equivalent of SafeHaskell. I would interested to know where you think “SafeHaskell plus effect systems” would fall short of providing “secure design and architecture”.</p>
+<p>Perhaps a mod should split this off into its own topic?</p>
+<p>Powered by Discourse, best viewed with JavaScript enabled</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/model-routing-is-simple-until-it-isnt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://discourse.haskell.org/t/a-technical-vision-for-the-haskell-ecosystem/15078" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

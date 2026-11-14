@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</title>
+    <title>Securing Distributed JAX Clusters</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9683.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</h1>
+        <h1>Securing Distributed JAX Clusters</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Foyib0mj4ac0hoijqt1j3.png" alt="Securing Distributed JAX Clusters" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Foyib0mj4ac0hoijqt1j3.png" alt="Securing Distributed JAX Clusters" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>Three small open models, 150 MMLU questions each, five pushback styles: “That’s wrong” did more damage, and naming a wrong option was close to fatal.</p>
-<p>The post <a href="https://towardsdatascience.com/are-you-sure-flipped-qwen25-15bs-right-answer-2-times-in-3/">“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
+                <p>When you run JAX on a single machine, it works like an accelerated NumPy library. You run Python code, XLA compiles the computation graph, and your local GPU or TPU runs the kernels.</p>
+<p>Everything shifts when you scale across several hosts. Process 0 spins up a coordinator to track worker nodes, while the cluster passes tensor slices over the network and caches compiled binaries on disk. If you do not configure these features deliberately, your cluster communicates in plaintext and can even execute arbitrary native machine code planted by neighbouring users.</p>
+<p>Here is how those trust boundaries work and how to lock them down.</p>
+<p>To run JAX across multiple nodes, you call jax.distributed.initialize(). Process 0 becomes the coordinator, spinning up a gRPC service that manages cluster topology, health heartbeats, and a shared key-value store JAX distributed docs.</p>
+<p>By default, connections to this coordination service are completely unauthenticated and unencrypted JAX security docs. Anyone who can reach that port can talk to process 0. An attacker on the same network can register rogue worker processes, inject poisoned metadata into the distributed key-value store, or force a cluster crash by spoofing failed heartbeats.</p>
+<p>JAX provides native Mutual TLS (mTLS) for this coordination layer. Both the coordinator and worker ranks present X.509 certificates validated against a shared Certificate Authority (CA).</p>
+<p>Here is how to initialise distributed JAX securely:</p>
+<p>Two settings in that snippet are critical.</p>
+<p>First, verify_secure_credentials defaults to False. If you provide invalid certificates, JAX raises an immediate error. But if you omit certificate arguments entirely, JAX falls back silently to an unencrypted plaintext channel JAX distributed mTLS docs. Setting verify_secure_credentials=True forces JAX to abort execution if secure credentials are not supplied.</p>
+<p>Second, mtls_peer_uri_prefix checks the Subject Alternative Name (SAN) URI in peer certificates, and this prefix must end with a trailing slash (/). If you configure spiffe://cluster.internal/workload/jax, an attacker holding a valid certificate for spiffe://cluster.internal/workload/jax-rogue would pass validation JAX URI verification issue.</p>
+<p>To understand how interceptors and credential validation operate under the bonnet, read the CodeReviewLab guide to gRPC security.</p>
+<p>JAX's coordinator client relies on gRPC, which uses HTTP/2 multiplexing over persistent TCP sockets. In high-performance computing (HPC) and corporate cloud environments, worker nodes often export proxy variables such as HTTP_PROXY, HTTPS_PROXY, and NO_PROXY to reach external package repositories.</p>
+<p>Standard cluster scripts often attempt to bypass internal traffic using wildcard asterisks, such as NO_PROXY=10.* or NO_PROXY=*.cluster.local. The C-core gRPC library supports standard CIDR notation such as 10.0.0.0/16, but it does not support wildcard asterisks or shell globbing gRPC issue tracker.</p>
+<p>When gRPC encounters those unsupported wildcard masks, it fails to match internal addresses and routes node-to-node coordination traffic directly to the outbound corporate HTTP proxy JAX proxy documentation. The proxy rejects HTTP/2 multiplexing or drops the traffic, leaving jax.distributed.initialize() hung waiting for a response.</p>
+<p>To prevent this hang when outbound proxies are required, format NO_PROXY using clean CIDR blocks or explicit IP lists instead of wildcard asterisks:</p>
+<p>Enabling mTLS on the coordinator does not encrypt every byte passing between nodes. JAX delegates heavy data transfers to lower-level accelerator runtimes, leaving several critical data paths unauthenticated and unencrypted at the framework level.</p>
+<p>For TPU workloads, libtpu (version 0.0.46 and above) supports environment-driven mTLS controls configured using TLS_CERT_FILE, TLS_KEY_FILE, TLS_CA_FILE, and TLS_VERIFIER.</p>
+<p>For GPU and CPU clusters, you cannot rely on JAX to secure collective data or profiler ports. You must isolate node-to-node traffic using cloud VPC encryption, security groups, or Kubernetes network policies. If you are structuring workload isolation across nodes, review the CodeReviewLab guide to container security.</p>
+<p>Recompiling large XLA graphs on every run wastes valuable compute time. JAX solves this with a persistent compilation cache, enabled through JAX_COMPILATION_CACHE_DIR.</p>
+<p>When JAX compiles a function, it calculates a hash from the unoptimised graph, compiler flags, and library versions. If a matching entry exists on disk, JAX skips compilation and loads the pre-compiled native artifact directly.</p>
+<p>This design introduces a severe trust assumption. The official documentation issues a direct warning: "The compilation cache is considered trusted. Do not share a compilation cache with users you do not trust. For example, if you put the compilation cache in a directory to which others may write, those users can trigger your JAX process to run arbitrary code." JAX cache docs</p>
+<p>If you point JAX_COMPILATION_CACHE_DIR to a shared folder such as /tmp/jax_cache, an unauthenticated NFS mount, or a world-writable cloud bucket, any user with write access can plant malicious machine binaries. When your job compiles a graph matching that hash, XLA loads the attacker's binary straight into memory, executing arbitrary code within your workload context.</p>
+<p>The same boundary applies to foreign function calls registered with jax.ffi or custom PJRT plugins JAX FFI documentation. Never deserialize untrusted computation graphs or load third-party kernels without verifying signatures.</p>
+<p>To keep the compilation cache safe, enforce strict directory permissions:</p>
+<p>If your fleet shares pre-compiled graphs, mount the shared storage volume as read-only for compute worker nodes. Allow write access only to an isolated CI build pipeline.</p>
+<p>When reviewing code or deployment manifests for JAX workloads, verify these four items:</p>
+<p>Spotting subtle cluster configuration bugs takes structured practice. You can build that habit on real-world code snippets with interactive challenges on Code Review Lab.</p>
+<p>Does your team run distributed training with coordinator mTLS enabled today, or are your worker nodes still trusting plaintext traffic on the cluster subnet?</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://towardsdatascience.com/are-you-sure-flipped-qwen25-15bs-right-answer-2-times-in-3/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/securitystefan/securing-distributed-jax-clusters-39l" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

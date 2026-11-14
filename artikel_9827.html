@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pointer Provenance in Rust vs C++</title>
+    <title>Someone&#x27;s impersonating this blog</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9827.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,131 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Pointer Provenance in Rust vs C++</h1>
+        <h1>Someone&#x27;s impersonating this blog</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://sofiabelen.github.io/projects/pointer-provenance-in-rust-vs-cpp/yves-alarie-MmZet_7mzMY-unsplash.jpg" alt="Pointer Provenance in Rust vs C++" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://sofiabelen.github.io/projects/pointer-provenance-in-rust-vs-cpp/yves-alarie-MmZet_7mzMY-unsplash.jpg" alt="Pointer Provenance in Rust vs C++" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I’ve been exploring Rust, and one topic that got me intrigued is pointer
-provenance, particularly because it’s not easy to visualize.</p>
-<p>To get a feel for
-vtables,
-what I wanted was to look at the actual memory, to see what it really looked
-like and prove that I could in fact call these functions through their
-respective function pointers. With provenance, I wanted to take it apart the
-same way, but it turns out it’s not so straightforward. This only got me more
-intrigued, so let’s see what we can find!</p>
-<p>My first time hearing about provenance, I wondered, why hadn’t I heard about it
-before? It seems so crucial, yet a bit of an obscure concept.</p>
-<p>Let’s start by taking a good look at this snippet. It’s short, but our intuition
-can trick us if it’s our first time coming across this concept. void opaque(int*) is forward declared here, so for us it’s a black box. Neither we
-nor the compiler can rule out that this function dereferences p and writes to
-memory.</p>
-<p>If we compile this with -O2, Clang optimizes this to return 1. Let’s try this
-on Godbolt:</p>
-<p>The question is, how does it know that int* p doesn’t point to the same memory
-address where x lives (meaning that opaque(p) could end up modifying x)?</p>
-<p>The compiler assumes p can’t equal &x because p wasn’t derived from x.</p>
-<p>When I first heard about this, I thought it was a bit of a strange concept. What
-does it mean that something is derived from something?</p>
-<p>I mean, if pointers were just numbers (memory addresses), p could
-theoretically happen to hold the same memory address as x’s allocation on the
-stack. Good thing they’re not just numbers!</p>
-<p>This brings us to the core of provenance. That “derived from” relation
-is provenance: for every pointer, the compiler keeps track of which
-allocation it belongs to and may, therefore, touch.</p>
-<p>I tried to find a way to print this mysterious provenance, but it turns out that
-it’s purely a compiler abstraction. It does not exist as an actual data field
-stored alongside the memory address. (There are exceptions though: feel free to
-look up the CHERI architecture to go down another rabbit hole).</p>
-<p>So what can we do to inspect it? If the compiler knows about it then it must
-exist somewhere. If so, there must be a way to see it.</p>
-<p>This is how I learned about LLVM IR (intermediate representation), which is
-essentially a low-level programming language that acts as a bridge between
-high-level languages (like Rust, C++, etc) and machine code.</p>
-<p>Let’s try it for this code instead, where we also pass &x to opaque to see
-what happens when the compiler doesn’t optimize that part away:</p>
-<p>We can use the -emit-llvm flag on Godbolt to see the LLVM
-IR:</p>
-<p>What the compiler does is to conceptually construct a DAG (directed acyclic
-graph), to answer the question of where a pointer comes from and whether two
-pointers can touch the same memory.</p>
-<p>If the root origins don’t match, LLVM can guarantee that writing through %0
-will never alter the value stored at %2.</p>
-<p>There is so much more to explore here that it’s hard not to get carried away
-because it’s truly fascinating. However, my original goal was to compare how C++
-and Rust handle this, so let’s continue.</p>
-<p>If we were to cast &x to an integer, then LLVM must assume that anyone could
-rebuild a pointer to x from that integer.</p>
-<p>The result is that the compiler gives up the optimization:</p>
-<p>That’s a pity if we only wanted to read the address and never intended to cast
-it back to a pointer. Wouldn’t it be nice if we could communicate this intent to
-the compiler?</p>
-<p>This is exactly what Rust provides with its powerful provenance APIs.</p>
-<p>p.addr() extracts the raw memory address integer while telling Rust’s abstract
-machine:</p>
-<p>I am reading this numeric address for inspection, but I guarantee I WILL NOT
-cast it back to a valid pointer.</p>
-<p>To mirror our previous experiments, we can try to see if the optimization was
-avoided or not:</p>
-<p>What we see is that mov eax, dword ptr [rsp + 12] reloads x after
-opaque(p), meaning that, at least for now, the optimization is given up. Same
-as in the C++ case.</p>
-<p>Still, we can benefit from using the more expressive API, and not relying on
-exposure semantics. It gives the compiler room to optimize in the future, and,
-by telling Miri explicitly what we mean, it can better help us catch bugs.</p>
-<p>In lock-free data structures, we sometimes need to store status flags in the
-lower unused bits of a pointer. It’s a very cool trick, which left me with my
-eyes wide open for a minute when I first read about it. I talk more about it in
-this
-post.
-Essentially, due to alignment, the lower bits of pointers are “wasted” (always
-0), so we can use them to store flags.</p>
-<p>What we can do is work with an intermediate pointer value, which will have the
-flag bit set BUT that also inherits provenance from the original pointer. This
-is exactly the functionality that with_addr provides us. After we’re done, we
-can recreate our valid initial pointer.</p>
-<p>The tagged value is stays a pointer rather than ‘usize’ because an integer is
-just a number and can’t carry provenance.</p>
-<p>Keep in mind that tagged isn’t dereferenceable, given that p.addr() | 1 is
-misaligned for u32. Dereferencing it would be UB.</p>
-<p>addr() reads the address without exposing provenance.</p>
-<p>with_addr() builds a new pointer with a new address but the same
-provenance as the original.</p>
-<p>In legacy code, we’d have to do something like this:</p>
-<p>This code will run, but if we run it with Miri, it emits a warning:</p>
-<p>Actually, the reason that it runs is also interesting. What happens is similar
-to the C++ example. p as usize exposes the provenance of p, and since the
-reconstructed pointer points to the same allocation, provenance is recovered.</p>
-<p>Provenance would be lost if we did some pointer arithmetic and landed in a
-different allocation.</p>
-<p>To see what happens when provenance is not exposed, we can use
-ptr::without_provenance, which creates a bare address with no allocation
-behind it. (It’s useful for dangling or sentinel pointers, but it can’t be
-dereferenced).</p>
-<p>As expected, Miri complains about a dangling pointer and tells us explicitly that it has no provenance.</p>
-<p>Provenance, in short, is a hidden piece of information tracking “which
-allocation” a pointer originates from, which LLVM uses for optimizations.</p>
-<p>In C++, uintptr_t casts force the optimizer to prepare for the worst case by
-disabling some optimizations.</p>
-<p>In Rust, addr(), with_addr() and without_provenance() let you state your
-intent explicitly: you only want the number, or you are deriving a new pointer
-from an existing one. In principle, that gives the compiler room to optimize
-more aggressively. In our experiment, however, the Rust version is unoptimized
-too: x was still reloaded from the stack. Using more expressive
-APIs is still valuable though, as Miri can enforce the rules and catch bugs that
-stem from unintended usage.</p>
-<p>I had planned to compare what Miri and ASan can catch, but I’ll save that for
-another post. It was enough new info as it is and it takes some time to fully
-wrap my head around it.</p>
-<p>I’m currently between jobs and looking for a Rust role, so writing these posts
-keeps me motivated and has helped me find a sense of community. Thank you for
-reading, and I hope you enjoyed it!</p>
+                <p>I was googling the name of my website, as one does occasionally, and was surprised to see a link to one of my blog posts on mataroa.site. At first I figured it was just an alternate domain name for mataroa.blog, but no, when you type mataroa.site into your browser, it shows you my blog. It's the only thing that's hosted there.</p>
+<p>My next thought was that someone bought me a URL, but that can't be the case either: using a custom domain on mataroa requires a premium account, which I don't have. For anything but a plain redirect, I would have needed to set up the A record my end.</p>
+<p>I then realized that the version of my blog on that site doesn't have the latest post. The most recent update on the homepage is my Aug 21 entry. When you scroll down and start clicking some of the older links, you get 404 pages. You also get a 404 if you try to post a comment, load the RSS feed or view standalone pages like the AI statement.</p>
+<p>Someone scraped my blog and created a website to impersonate me. They're also impersonating mataroa, since using the name implies some sort of official connection.</p>
+<p>They're re-hosting the stolen images on their own server, and they all have a watermark. Bizarrely, the watermark is mattbee.mataroa.blog, my real URL. I assume this is to somehow make it seem legitimate, like it's an officially-sanctioned mirror, but I don't know who they think is going to care. It's not like they're stealing from a site with name recognition.</p>
+<p>When you view the source of a blog post, it's identical to the rendered HTML except that there are two Cloudflare scripts at the bottom, one to obfuscate the mailto: link in the footer (which doesn't work1) and one for analytics.</p>
+<p>When you view the source of the index, there's a hidden link at the bottom to a Chinese github.io page for a website cloning tool.</p>
+<p>I have no idea why I was targeted for impersonation. It should be obvious this isn't a high-value website.2 It's a personal blog where I write what's relevant to me, and that rarely overlaps with anything other people care about. If the subject matter didn't tip them off, it should be clear from the 0 comments on most posts that this is not an enterprise ripe for monetization.</p>
+<p>If they just wanted a fake blog to scam adsense, surely a large language model would happily spew out more SEO-friendly slop than anything I have to offer. If their goal was to leech off the popularity of mataroa, why not impersonate one of the blogs with multiple front-page appearances on the orange website? Surely they have more SEO juice than me. Nothing about this makes any sense.</p>
+<p>Anyway, the URL is registered with Namecheap, so I sent them an abuse report. I have no idea if they'll act on it. They don't seem to have a good track record of giving a shit unless the content is actually hosted with them.</p>
+<p>It's hosted with Cloudflare, and the abuse reporting form they insist you use straight-up doesn't work. Click "Submit an abuse report" and it'll take you to a completely blank page. Very encouraging.</p>
+<p>I'd have to dox myself to do a DMCA takedown, and I don't have the legal resources to do anything when it gets ignored. So if neither evil corporation cares to do anything, I guess I can just get fucked. I figure the best thing I can do to protect myself is document everything here. If you see a link to mataroa.site, it's not affiliated with me or mataroa. It seems like it isn't set up to scam people or distribute malware at the moment, but it probably will in the future. Be careful.</p>
+<p>The index page also has a meta tag with a verification code for mitgo.com, a fake-looking website with some word salad identifying it as some kind of ad/SEO scamming platform or service. Will try to investigate this further.</p>
+<p>It does, I had just forgotten to enable javascript. ↩</p>
+<p>Email (optional and
+                    private):</p>
+<p>@Virgil: I don't know if you got a slop bot to write this comment for you, but if you had read the post you're responding to, you'd know that I clicked that button and it doesn't go anywhere.</p>
+<p>Own a small web agency and this regularly happens to us. Small client sites are scraped and mimicked for what look like temporary SEO rankings. We have not been able to figure out what the specific overarching goal is, but pretty sure it has to do with scamming/phishing, and relying on the temporary authority they get granted. Really sucks, and yes, hard to take down, because often they go down by themselves after a few days.</p>
+<p>why not impersonate one of the blogs with multiple front-page appearances on the orange website?</p>
+<p>You did get on the orange site by the way, that's how i found this blog today!</p>
+<p>@Muhammad lol, life has a funny sense of humor. Thanks for reading!</p>
+<p>The cloudflare abuse reporting form does work, you probably just forgot to enable javascript again.</p>
+<p>@6: nope, I enabled JS on my phone and tried to load it on my work computer, freshly updated copy of Chrome and everything. Nothing. I'll try again on Firefox when I get home 🤷‍♀️</p>
+<p>For what it's worth, NameCheap used to be pretty good about taking down malicious or fraudulent websites. I used to do cyber security as a hobby and all I would have to do to take down a malicious website hosted by namecheap was to tag them in a (pre Elon) Twitter post about the fraudulent activity and they would remove the site(s) within a few hours. It seemed that NaneCheap had turned over a new leaf and didn't like the negative attention they were getting about hosting malicious sites. Do a follow up on your blog if nanecheap does take down the imposter site.</p>
+<p>I can't say I fully understand the motive for cloning a website, I guess eventually they the content will "fork" then they will start using it to distort facts slightly for consumption by AI.</p>
+<p>In any case, .site and other cheap domain extensions have pretty low reputation with search engines which I am guessing also extends to AI scrapers. Whoever is doing this is probably wasting their time.</p>
+<p>You are not being targeted. I had this happen to two of my blogs which receive very little traffic. This seems to be a larger effort to clone the Web, probably for use in AI and data harvesting. They are able to somehow get around the bot protections which I had set up on one of my sites. I have considered moving to a password-protected blog to avoid future cloning :(</p>
+<p>I smell some MMO schemes. Those people make money outta anything. There can be more to come.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://sofiabelen.github.io/projects/pointer-provenance-in-rust-vs-cpp/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://mattbee.mataroa.blog/p/someones-impersonating-this-blog/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

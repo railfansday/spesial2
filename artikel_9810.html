@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</title>
+    <title>Glasswing overwhelms maintainers with underwhelming findings (VulnCheck)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9810.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,189 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</h1>
+        <h1>Glasswing overwhelms maintainers with underwhelming findings (VulnCheck)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>One of our biggest goals on the WebAI team at Hugging Face is to make browser inference as fast and as user-friendly as possible. Getting there is a multi-layer effort: models need browser-friendly representations, runtimes need to build efficient execution plans, and the individual GPU operations at the bottom of the stack need to make the most of many different devices and browser implementations.</p>
-<p>Today, we are releasing the first layer of that effort: @huggingface/kernels, a minimal library for loading and running optimized WebGPU kernels from the Hugging Face Hub, together with an initial collection of 207 kernels at huggingface.co/webgpu-kernels.</p>
-<p>The collection covers operations used across a wide variety of machine learning architectures and workloads. More importantly, each kernel is published as a complete, versioned package: its interface, shader templates, correctness cases, benchmark cases, and usage instructions all live together on the Hub.</p>
-<p>We are also launching Fleet, an in-browser GPU benchmarking and testing suite that runs and scores the kernels on your hardware. Beyond the results for your own machine, Fleet gives the community a way to contribute performance and correctness evidence from devices we could never cover in a conventional test lab. With your consent, every run adds private evidence that can help us find failures (incorrect results, pathologically slow cases, etc.), improve kernel variants, and make better optimization decisions across real-world hardware.</p>
-<p>A model running in the browser eventually becomes a sequence of GPU operations: matrix multiplications, normalizations, convolutions, attention primitives, quantization operations, data-layout transformations, and many more. WebGPU makes these operations available across modern browsers through a portable API, while WGSL provides a common language for the shaders that execute them.</p>
-<p>Portability, however, does not automatically mean performance. Two shaders can implement the same operation and produce the same output while behaving completely differently across different accelerators. Workgroup sizes, memory access patterns, vectorization, data types, and fusion strategies can all affect performance. The best choice can also change with the input shape, device, browser, and available WebGPU features.</p>
-<p>This is why kernels form a foundational layer of fast browser inference. Higher-level runtimes can only be as efficient as the operations they dispatch. By making those operations individually discoverable, testable, benchmarkable, and versioned, we can improve the foundation independently while keeping a stable contract for the layers above it.</p>
-<p>Each kernel in the collection has its own repository and kernel card. The card documents the operation's semantics, inputs, outputs, attributes, supported data types, source files, and a ready-to-run @huggingface/kernels example.</p>
-<p>For example, ai.onnx.Add implements elementwise addition with multidirectional broadcasting. It is one of the simplest operations in a neural network, used everywhere from residual connections to adding a bias. Its card documents the two inputs, the broadcasted output shape, supported data types, and the variants available for different shapes and devices.</p>
-<p>Behind the card, the repository contains the artifacts needed to understand and evaluate the implementation:</p>
-<p>This structure turns a shader into a reusable software artifact. The interface is inspectable without reading WGSL, correctness and performance cases travel with the implementation, and published versions can be loaded explicitly rather than depending on an unversioned file URL. Our kernels can also serve as reference implementations for developers building custom WebGPU kernels or integrating these operations into their own runtimes.</p>
-<p>Running these kernels requires a browser with WebGPU support. WebGPU availability depends on the browser, operating system, GPU, and driver. You can check for it in JavaScript with "gpu" in navigator.</p>
-<p>@huggingface/kernels provides the bridge between a kernel repository and your application. Call getKernel with a Hub repository ID and a contract version, then invoke the returned function with typed input data and tensor shapes. Here is a small bias-add example:</p>
-<p>The second input is broadcast across the first dimension, producing an output with shape [2, 3]. The loader derives that output shape and logical data type from the manifest contract and the inputs, then allocates c automatically.</p>
-<p>Addition on six floats is deliberately the smallest possible demo. At this size, the GPU round trip costs far more than the math. The point is the call pattern: it stays exactly the same for the heavyweight operations where optimized kernels actually pay off, such as matrix multiplication (ai.onnx.MatMul). Only the repository ID and the inputs change.</p>
-<p>Even this elementary operation illustrates why kernels need variants. Equal-shape addition can use a direct vectorized path, while broadcasted inputs need different indexing logic. The published Add kernel includes variants for equal shapes, vectorized broadcasting, scalar processing, and general broadcasting. The runtime can select an implementation that fits the current call and device without changing the application-facing API.</p>
-<p>The version: 1 option selects version 1 of the published kernel contract. It is separate from an ONNX opset, an operator's since_version, or a model revision. Keeping those concepts separate lets applications depend on a stable JavaScript-facing contract while kernel implementations evolve behind it.</p>
-<p>So, how much of a difference do optimized kernels actually make? We put our collection head-to-head with ORT WebGPU on an Apple M4 GPU, using ONNX Runtime Web 1.30.0-dev.20260826-b1f76d586a. We started with 1,756 test cases across all 207 operations and kept the 809 cases where both sides produced matching outputs and reliable timings.</p>
-<p>Across those comparisons, our kernels were 2.57x faster by geometric mean and 1.90x faster at the median, with 629 wins, 176 losses, and 4 ties. Here is a closer look at four familiar operations:</p>
-<p>Some individual wins were much bigger. A particularly difficult bilinear Einsum case (i,ij,j with size 4096) ran in 0.136 ms with our kernel versus 1,396 ms with ORT WebGPU: more than 10,000x faster. A row-wise CumSum over [256, 4096] was 301x faster, at 0.016 ms versus 4.784 ms. These are unusual cases rather than the speedups you should expect everywhere, but they show how much a specialized kernel can help when a general implementation hits a slow path.</p>
-<p>We timed the work done on the GPU itself, leaving out setup such as loading kernels, creating sessions, uploading inputs, compiling shaders, and reading outputs back. Very short workloads are naturally harder to measure, and small cases can benefit from the GPU cache, so these numbers are best read as a useful comparison rather than a promise for every application.</p>
-<p>They are also results for individual operations, not complete models. Exact performance will change across GPUs and browsers, which is why Fleet is so important for building a broader picture.</p>
-<p>We are also working with the ONNX Runtime team to upstream these improvements so they can benefit the broader ONNX Runtime Web ecosystem.</p>
-<p>WebGPU performance varies across GPUs, browsers, and drivers, so results from one machine only tell part of the story. Fleet lets anyone run correctness and performance checks in the browser and see how the kernels behave on their hardware.</p>
-<p>With consent, each run privately contributes evidence that helps us spot device-specific failures, compare variants, and improve selection rules. The goal is simple: use broad, real-world coverage to make the kernels faster and more reliable for everyone.</p>
-<p>The initial 207 kernels are a starting point, not the end state. Publishing kernels independently on the Hub gives us a common place to inspect contracts, compare implementations, reproduce correctness checks, and improve performance without embedding every shader directly into every runtime.</p>
-<p>The collection is also part of the Hub's broader kernel ecosystem: on the Kernels page, the WebGPU kernels sit alongside kernels for CUDA, ROCm, Metal, and other platforms, and can be filtered, sorted, and explored like any other artifact on the Hub.</p>
-<p>This is the low-level foundation for the next steps in our browser inference stack. We are excited to connect these kernels to higher-level model tooling, continue expanding operation coverage, and make fast local inference easier to use across the WebAI ecosystem.</p>
-<p>Explore the WebGPU kernel collection, try @huggingface/kernels, and join the Fleet to contribute evidence from your device and help us make the kernels better for everyone.</p>
-<p>The Fleet part may matter as much as the kernels. The 809 comparable cases on an M4 are useful, but browser, driver and device variance is where WebGPU tends to get painful. Will Fleet eventually expose per-device distributions, or is the plan to use the runs only for aggregate selection rules?</p>
-<p>In an automated build system, I could see per device kernels, made more interesting by fusion of ops.</p>
-<p>The area that obviously needs more attention are the 947 tests that did not result in reliable output. This could be the test, it could be that the ORT WebGPU is wrong, or the new kernel is wrong, or the test harness had issues, hard to know from the outside. Perhaps the Fleet thing is meant to improve this.</p>
-<p>Very excited to see such attention at making WebGPU first class in ML!</p>
-<p>@sroussey  Agreed—the excluded 947 need a taxonomy before the 2.57× summary can travel. I'd want counts by operation and device for unsupported, ORT mismatch, new-kernel mismatch, and harness/timeout, with raw failing cases downloadable. Then Fleet can optimize only within a proven-correct compatibility envelope; fusion and per-device tuning become much safer.</p>
-<p>Excellent! This will help our WebAI community continue developing highly optimized solutions. Many thanks @Xenova  and @nico-martin  for the great work you have been doing.</p>
+                <p>Patrick Garrity of VulnCheck has written a blog
+post that looks at vulnerabilities found by Anthropic's Project Glasswing since it
+launched on April 7, and finds it wanting:</p>
+<p>Of the 37,966 findings Anthropic reports, only 7,349 (19.4%) have been made
+public. Just 217 of those have been marked fixed. The more glaring number is
+that 4.4% (1,654) of the project's findings have already been marked as
+duplicates, 7.5x more duplicates than fixes. On top of that, 419 findings have
+been withdrawn. It seems odd that the ledger now claims a 94.2% true positive
+rate, up from 90.8% at launch, when more findings have been withdrawn or marked
+as duplicates than fixed, likely a feedback loop missing to the triage rates
+listed as "True Positives".</p>
+<p>[...] AI is a valuable tool for finding vulnerabilities, and I'm not
+discounting that. But seven months in, the evidence still doesn't match the
+launch narrative. The CVEs are a sliver of this year's total, almost none are
+being exploited, fixes have stalled while duplicates and withdrawals pile up,
+and the triage burden is shifting onto the open source maintainers Glasswing
+promised to help. The receipts keep coming in. They still don't reconcile.</p>
+<p>So I'm not super surprised if not many of 40,000 potential security bugs have actually made it to "really fixed" yet.</p>
+<p>Unusual/stale?
+
+ Posted Nov 12, 2026 22:17 UTC (Thu)
+                               by Vorpal (guest, #136011)
+                              [Link] (1 responses)
+      
+
+
+
+This very much matches my experience at my dayjob as well. For patch code review LLMs can be really good, with some false positives (but quite few). They find things (most) humans would never think about, especially about interactions with entirely different parts of the code base. That said, they also miss things humans wouldn't, for example about overall system design. And, as you said, the author generally have the code fresh in their mind making it easy to deal with the feedback.
+
+We have also tried finding security issues with LLMs and there it was much more of a mixed bag. A few were genuine bugs, but many of those weren't actually security issues or even worth fixing (e.g. "yes this is a theoretical bug in things we are sending, if you assume another part of the same application building on top of this staticly linked library is actively malicious, and since this is C++, almost everything assumes the API user isn't 'holding it wrong'."). And a fair share were straight up incorrect. And of course, typically no one knows exactly what the code does off the top of their heads (some parts of the code even date to the late 90s), so triaging takes way more time than dealing with feedback on a PR. 
+
+It is interesting to me that LLMs does so much poorly in one area than another.
+
+
+
+
+
+
+
+
+
+Unusual/stale?
+
+ Posted Nov 13, 2026 16:38 UTC (Fri)
+                               by rgmoore (✭ supporter ✭, #75)
+                              [Link] 
+      
+
+
+It is interesting to me that LLMs does so much poorly in one area than another.
+It doesn't seem that surprising to me.  Patches are smaller and should be easier to reason about.  They're also likely to be way buggier than established code, so there are just more real bugs to find.  I bet you'd have the same general trend if you ran the LLM bug finding on established projects.  They'll generally do better on small projects than big ones, and they'll definitely do better on projects that have reputations for being buggy than ones that have reputations for being clean.</p>
+<p>Posted Nov 12, 2026 22:17 UTC (Thu)
+                               by Vorpal (guest, #136011)
+                              [Link] (1 responses)</p>
+<p>We have also tried finding security issues with LLMs and there it was much more of a mixed bag. A few were genuine bugs, but many of those weren't actually security issues or even worth fixing (e.g. "yes this is a theoretical bug in things we are sending, if you assume another part of the same application building on top of this staticly linked library is actively malicious, and since this is C++, almost everything assumes the API user isn't 'holding it wrong'."). And a fair share were straight up incorrect. And of course, typically no one knows exactly what the code does off the top of their heads (some parts of the code even date to the late 90s), so triaging takes way more time than dealing with feedback on a PR. 
+
+It is interesting to me that LLMs does so much poorly in one area than another.</p>
+<p>It is interesting to me that LLMs does so much poorly in one area than another.</p>
+<p>Unusual/stale?
+
+ Posted Nov 13, 2026 16:38 UTC (Fri)
+                               by rgmoore (✭ supporter ✭, #75)
+                              [Link] 
+      
+
+
+It is interesting to me that LLMs does so much poorly in one area than another.
+It doesn't seem that surprising to me.  Patches are smaller and should be easier to reason about.  They're also likely to be way buggier than established code, so there are just more real bugs to find.  I bet you'd have the same general trend if you ran the LLM bug finding on established projects.  They'll generally do better on small projects than big ones, and they'll definitely do better on projects that have reputations for being buggy than ones that have reputations for being clean.</p>
+<p>Posted Nov 13, 2026 16:38 UTC (Fri)
+                               by rgmoore (✭ supporter ✭, #75)
+                              [Link]</p>
+<p>It doesn't seem that surprising to me.  Patches are smaller and should be easier to reason about.  They're also likely to be way buggier than established code, so there are just more real bugs to find.  I bet you'd have the same general trend if you ran the LLM bug finding on established projects.  They'll generally do better on small projects than big ones, and they'll definitely do better on projects that have reputations for being buggy than ones that have reputations for being clean.</p>
+<p>It looks like following the Glasswing process led to 3/4 of the true findings having been found as normal bugs separately and fixed before the Glasswing report was read and understood (that is, the Glasswing bug got created but closed as a duplicate because it wasn't the first copy that someone fixed).</p>
+<p>It matches my experience at $DAYJOB with GitHub Copilot. I’ve seen it hallucinate APIs that don’t exist, and it often misdiagnose the problem, but it seems like the bug detector is separate from the reporter, because when it says there’s a bug, there usually is.</p>
+<p>I find that my coworkers ignore the LLM code review comments because they don't make any sense, but pretty much all of my comments lately are things that the LLM comments were supposed to mean.</p>
+<p>For example, if there's a PR where the new code assumes X is true, the old code didn't assume X was true, and the ticket is about improving the behavior of the system for situation Y (in which case X is true), humans tend to miss it, the code may be stylistically perfect, the tests may only exercise this code when X is true (which didn't matter to this code previously, so 100% coverage), but LLMs do a good job of saying something involving X. Knowing that the change was flagged is enough to notice that X might not be true, but reviewers wouldn't stare at clean-looking code that is well-explained to do something useful for long enough to think of that otherwise, or they'll never finish reviewing anything.</p>
+<p>The receipts keep coming in. They still don't reconcile.</p>
+<p>This sentence reads as super LLM to me, though from a quick skim it's the only part that is obviously LLM-ified.</p>
+<p>Before AI, people were trusting random stuff online way too much. You can be unlucky and meet bad people in real life but the chances are reasonably low because most people are decent. So trusting by default statistically works in real life - and that's great (Assuming you still have a "real life". I digress.)
+
+Even when we know it, we keep forgetting that these statistics are skewed online and the ratio is totally different there because the "global village" connectivity enables all the scammers and propagandists in the world to easily find you and engage with you - unlike in real life. But before AI there were still a few practical limits, even online. So people were still falling for it. Now thanks to AI, those practical limits are gone. So now the majority of what's unsolicited and/or strange online is genuinely suspicious and I think the misguided "trust by default" is finally dying there. About time. Now everyone is starting to educate themselves, realize that "they are the product" if it's free, demand proper security, reputation systems, ... - all safety things they should all have done a long time ago. There is still a long way to go: the safety and security systems still suck, many people still trust too much, monopolies, enshittification, ... but online naivety seems to be (slowly) going down? Good riddance. 
+
+Some of the current AI backslash might also be caused to that. I mean not just caused by energy, water, inflation and layoffs but also by the increase of online garbage.
+
+This is a good instance of "It must get worse before it gets better". Or some sort of "tradegy of the commons" for bad guys?
+
+Who knows, this might even get people to spend less time online?</p>
+<p>Even when we know it, we keep forgetting that these statistics are skewed online and the ratio is totally different there because the "global village" connectivity enables all the scammers and propagandists in the world to easily find you and engage with you - unlike in real life. But before AI there were still a few practical limits, even online. So people were still falling for it. Now thanks to AI, those practical limits are gone. So now the majority of what's unsolicited and/or strange online is genuinely suspicious and I think the misguided "trust by default" is finally dying there. About time. Now everyone is starting to educate themselves, realize that "they are the product" if it's free, demand proper security, reputation systems, ... - all safety things they should all have done a long time ago. There is still a long way to go: the safety and security systems still suck, many people still trust too much, monopolies, enshittification, ... but online naivety seems to be (slowly) going down? Good riddance. 
+
+Some of the current AI backslash might also be caused to that. I mean not just caused by energy, water, inflation and layoffs but also by the increase of online garbage.
+
+This is a good instance of "It must get worse before it gets better". Or some sort of "tradegy of the commons" for bad guys?
+
+Who knows, this might even get people to spend less time online?</p>
+<p>Some of the current AI backslash might also be caused to that. I mean not just caused by energy, water, inflation and layoffs but also by the increase of online garbage.
+
+This is a good instance of "It must get worse before it gets better". Or some sort of "tradegy of the commons" for bad guys?
+
+Who knows, this might even get people to spend less time online?</p>
+<p>This is a good instance of "It must get worse before it gets better". Or some sort of "tradegy of the commons" for bad guys?
+
+Who knows, this might even get people to spend less time online?</p>
+<p>Who knows, this might even get people to spend less time online?</p>
+<p>But there is an other reason:
+
+Meeting people in person, having a short chat with them, already gives a lot of context (ha, that has a bit of a different meaning these days, doesn't it). Even just seeing the person helps to prevent being as direct to say something you might still do behind a keyboard.
+
+But it can also swing the other way: trust in traditional media has been lost, especially in the US. And trust in online media you didn't know from before AI you will also not trust, worse: how can you verify anything anymore ?
+
+So online entertainment will remain and people will actually be less informed.</p>
+<p>Meeting people in person, having a short chat with them, already gives a lot of context (ha, that has a bit of a different meaning these days, doesn't it). Even just seeing the person helps to prevent being as direct to say something you might still do behind a keyboard.
+
+But it can also swing the other way: trust in traditional media has been lost, especially in the US. And trust in online media you didn't know from before AI you will also not trust, worse: how can you verify anything anymore ?
+
+So online entertainment will remain and people will actually be less informed.</p>
+<p>But it can also swing the other way: trust in traditional media has been lost, especially in the US. And trust in online media you didn't know from before AI you will also not trust, worse: how can you verify anything anymore ?
+
+So online entertainment will remain and people will actually be less informed.</p>
+<p>So online entertainment will remain and people will actually be less informed.</p>
+<p>I wasn't including "online media", I was only referring to _unknown and unsolicited_ media. Whether you are consuming Fox News or the New York Times, it's really not hard to verify that you are really consuming those and not some impersonation. That particular problem is basically solved.
+
+Once you have verified that what you see actually came from Fox News or the New York Times and you know who's talking (first, critical _identification_ step), then should you _trust_ them? (second step) Trusting _identified_ sources is a very different question that I wasn't touching on. Because the answer is the same that it's always has been: 1. Find who pays them (often: not you!) 2. Count the number of mistakes, lies and contradictions over long periods of time. 3. Shortcut: ask people you trust who have been doing that work. That is how trust always gets built: with transitive reputation and over time. There is nothing new in those second step, trust processes, the global village and AI did not change anything and do not matter here.
+
+If people starting trusting _random_ stuff less and less thanks to AI garbage as I'm hoping in the previous comment, then the "traditional", pre-Internet trust systems will hopefully start working better again. Cause the former has been leveraging our confirmation bias and other bad instincts to actively harm the latter. 
+
+With long and deep enough observation you can gauge not just the reliability when reporting facts but also the bias when expressing opinions. Assuming there is a clear distinction between the two in the first place - if not then run.
+
+You must constantly monitor the reliability of your shortcuts/friends/gurus too. Confirmation bias is an even higher risk there. Good education teaches that too.
+
+> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>Once you have verified that what you see actually came from Fox News or the New York Times and you know who's talking (first, critical _identification_ step), then should you _trust_ them? (second step) Trusting _identified_ sources is a very different question that I wasn't touching on. Because the answer is the same that it's always has been: 1. Find who pays them (often: not you!) 2. Count the number of mistakes, lies and contradictions over long periods of time. 3. Shortcut: ask people you trust who have been doing that work. That is how trust always gets built: with transitive reputation and over time. There is nothing new in those second step, trust processes, the global village and AI did not change anything and do not matter here.
+
+If people starting trusting _random_ stuff less and less thanks to AI garbage as I'm hoping in the previous comment, then the "traditional", pre-Internet trust systems will hopefully start working better again. Cause the former has been leveraging our confirmation bias and other bad instincts to actively harm the latter. 
+
+With long and deep enough observation you can gauge not just the reliability when reporting facts but also the bias when expressing opinions. Assuming there is a clear distinction between the two in the first place - if not then run.
+
+You must constantly monitor the reliability of your shortcuts/friends/gurus too. Confirmation bias is an even higher risk there. Good education teaches that too.
+
+> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>If people starting trusting _random_ stuff less and less thanks to AI garbage as I'm hoping in the previous comment, then the "traditional", pre-Internet trust systems will hopefully start working better again. Cause the former has been leveraging our confirmation bias and other bad instincts to actively harm the latter. 
+
+With long and deep enough observation you can gauge not just the reliability when reporting facts but also the bias when expressing opinions. Assuming there is a clear distinction between the two in the first place - if not then run.
+
+You must constantly monitor the reliability of your shortcuts/friends/gurus too. Confirmation bias is an even higher risk there. Good education teaches that too.
+
+> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>With long and deep enough observation you can gauge not just the reliability when reporting facts but also the bias when expressing opinions. Assuming there is a clear distinction between the two in the first place - if not then run.
+
+You must constantly monitor the reliability of your shortcuts/friends/gurus too. Confirmation bias is an even higher risk there. Good education teaches that too.
+
+> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>You must constantly monitor the reliability of your shortcuts/friends/gurus too. Confirmation bias is an even higher risk there. Good education teaches that too.
+
+> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>> how can you verify anything anymore ?
+
+You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>You can't always verify everything yourself. That's why trust (and of course: free speech) exist. One thing I like to do is to read articles that teach me nothing on a topic I'm already very familiar with: great way to assert reliability. For instance: computer stuff in mainstream media.</p>
+<p>I watched the video of this talk online, and greatly appreciated Greg's perspective.  I wish more people could be as balanced as Greg about this stuff.</p>
+<p>Copyright © 2026, Eklektix, Inc.
+            
+            Comments and public postings are copyrighted by their creators.
+            Linux  is a registered trademark of Linus Torvalds</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/webgpu-kernels" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://lwn.net/Articles/1107173/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
