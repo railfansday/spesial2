@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Let’s Write a PostScript Interpreter</title>
+    <title>C++26 stumbles at finish line over Contracts dispute</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9974.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,63 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Let’s Write a PostScript Interpreter</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>C++26 stumbles at finish line over Contracts dispute</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://image.theregister.com/5309559.jpg?imageId=5309559&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="C++26 stumbles at finish line over Contracts dispute" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5309559.jpg?imageId=5309559&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="C++26 stumbles at finish line over Contracts dispute" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I think the most trustworthy programming languages are those which are human-scale: languages which a single user could reasonably write from scratch on some readily-available computational substrate. Knowing how to make your own tools provides a satisfying feeling of power.</p>
-<p>Today I’d like to take you on a brisk journey through the process of implementing an interesting subset of the PostScript programming language. We will ignore or simplify many features of the language, and we will elide most error-handling for simplicity, but every PostScript example we discuss will be a well-formed PostScript program which has the same behavior in our toy subset and a standard PostScript interpreter like Ghostscript.</p>
-<p>PostScript is primarily designed for describing printed documents: it has a rich vocabulary of features for creating and manipulating raster and vector graphics. For the purposes of this article I will narrowly focus on its mechanics as a general-purpose programming language.</p>
-<p>PostScript programs are composed of a series of whitespace-delimited tokens, plus a few special characters (% / ( ) < > [ ] { }) which immediately terminate the preceding token and begin a new one. The % character begins a line-comment. The / character can prefix a literal name, which we’ll discuss in more detail momentarily. The ( ) and < > characters enclose PostScript strings, which we will omit from our interpreter for simplicity. The [, ], { and } characters are used to enclose PostScript arrays and procedures, respectively, but are ordinary self-delimiting tokens. Given a PostScript program fragment:</p>
-<p>The PostScript execution model centers around several stacks: chiefly, an operand stack which is used to pass arguments between operators and a dictionary stack which is used to associate names with values.</p>
-<p>The above program fragment is executed as follows:</p>
-<p>It’s also worth taking a moment to touch on PostScript arrays. The [ operator pushes a special value called mark onto the operand stack, and the ] operator pops all of the values of the operand stack down to the topmost mark and builds an array from them:</p>
-<p>We’ll discuss programming in PostScript in more detail later, but this is enough to get building.</p>
-<p>Our PostScript interpreter will be written in a very concise style of JavaScript that is influenced by the philosophy of Forth, an influential ancestor of PostScript:</p>
-<p>Here are a few routines which illustrate this style:</p>
-<p>If you’re finding yourself struggling to “skim” code in this style, try to slow down and read each definition carefully, character-by-character. You may also find it useful to experiment with each definition in your browser’s JavaScript console as you go along.</p>
-<p>The first step in writing any interpreter is determining how we’ll represent data, in this case describing PostScript datatypes in terms of JavaScript datatypes:</p>
-<p>Using primitive JavaScript values to represent most of these types will be particularly helpful for writing the definitions of all the operators.</p>
-<p>Here are a set of definitions for constructing, accessing, and identifying various PostScript values:</p>
-<p>Next, we need to translate PostScript syntax into the above data representations. We can use a JavaScript RegExp to split an input program into a sequence of tokens- line-comments (which can be discarded), special delimiters ([]{}), names, and numbers (which can be coerced into JavaScript numbers). While it is possible to implement { and } as PostScript operators, it is simpler for our purposes to cluster the tokens of procedures together as we parse the program:</p>
-<p>The parse(x) routine will break it down into</p>
-<p>The PostScript operand stack and dictionary stack can be represented as simple JavaScript global arrays- o and d, respectively:</p>
-<p>Some simple routines for manipulating these stacks:</p>
-<p>Executing pre-tokenized PostScript programs is very simple: we execute each token in sequence. Names are looked up in the dictionary stack and the corresponding operator or procedure is called; anything else is pushed onto the operand stack. Since operators are JavaScript functions, when we execute them we’ll pop a number of values from the operand stack corresponding to their argument list count and apply() them to the function. If the function returns something other than undefined, we’ll push the result onto the stack:</p>
-<p>The large bulk of the machinery of our interpreter lives in the primitive operator definitions, but each is individually fairly simple, with the possible exception of the for operator, which needs a few helper routines for generating stepped ranges. Many of these operators are pure JavaScript functions which do not directly access or modify either stack and can be tested and understood in isolation.</p>
-<p>To access the primitives from within exec() and execproc() we need to install them into the dictionary stack. Here’s a procedure to initialize both stacks:</p>
-<p>We can now execute programs and observe their effects on the stacks:</p>
-<p>For interactive use, we can wire everything up into a Read-Eval-Print-Loop (REPL). We’ll need at least some rudimentary output capabilities, so for starters we can install an extra primitive == which pops a value from the stack and displays it:</p>
-<p>If we’re using Node.js we have to write our REPL in an event-driven style:</p>
-<p>If we’re using QuickJS we can write a more straightforward infinite loop instead:</p>
-<p>Either way, we now have a fancy PostScript-style desk calculator:</p>
-<p>The entire interpreter in one piece, for reference.</p>
-<p>Our interpreter offers a very small subset of the primitive operators supplied with standard PostScript. There are some fun finger-exercises to be had in fleshing out more of that set in terms of what we already have:</p>
-<p>Try your hand at abs- compute the absolute value of a number:</p>
-<p>How about min- find the minimum of two values on the stack?</p>
-<p>It can also be worthwhile to try some classic functional programming exercises, like recursively computing the Fibonacci sequence:</p>
-<p>There are, of course, more idiomatic iterative approaches:</p>
-<p>I quite enjoy the way that enclosing PostScript expressions in [] acts like a more composable alternative to list comprehensions.</p>
-<p>Here’s a utility routine for making a copy of an array with the elements in reversed order:</p>
-<p>How many approaches can you think of for concatenating a pair of arrays, given the primitive operators we have at hand?</p>
-<p>Much of my experience with concatenative programming languages like PostScript is with Forth, which uses slightly different names and factorings for most operators. Fortunately, PostScript is fairly malleable:</p>
-<p>PostScript’s roll and index operators make it easier to reach deep into the stack than the usual Forth stack-twiddlers, but this also demands the programmer retain a larger perspective of the contents of the stack in their limited working memory as they read. Even rot/-rot can be controversial “code smells” to some Forthwrights.</p>
-<p>In Forth, we can freely manipulate the “return stack” as well as the operand stack, usually with words like r> and >r for transferring values from the top of one stack to the other. Forth control structures will often store things like loop indices on the return stack between iterations in order to prevent them from interfering with the flow of arguments within the loop body. It can also be handy for temporarily stashing intermediate results to keep the operand stack shallow. PostScript has an “execution stack” for nested procedure bookkeeping, but it is not under direct control of the programmer; as a result we can’t use these sorts of idioms.</p>
-<p>The dictionary stack offers nestable scopes for named local variables:</p>
-<p>It’s even possible to build tidy abstractions around this pattern:</p>
-<p>But since this approach produces dynamic rather than lexical scopes, it is not transparent to procedures we exec. Without an auxiliary stack to “hide” intermediate state, it can be surprisingly challenging to write higher-order functions. Try defining the equivalent of a Lispy (cond) conditional in PostScript and you’ll see what I mean:</p>
-<p>PostScript has a tantalyzing bind operator (not implemented in our interpreter) which is meant to help sidestep the footguns of dynamic scope by eagerly replacing references to operators within a procedure with their values at bind-time. However, since bind concerns itself only with resolving operators, it isn’t useful for simulating general-purpose lexical scope; we’d need to build a more general mechanism for performing named substitutions within procedures.</p>
-<p>My preceding semantic quibbles aside, I think PostScript is quite elegant, and well worth learning. Now that we have an interpreter for the language which fits on a printed page or two, we have an inviting foundation for experimentation. I’m sure that over the course of our brief explorations you’ve already thought of many new primitive operators you could add- sin, cos, pi, perhaps more tools for manipulating data like type, cvx, and cvlit, or a richer set of input and output routines?</p>
-<p>You might find it worth the added bulk to add more robust error-handing. For example, you could make load tolerate undefined names and return a placeholder:</p>
-<p>You could also implement a more complete range of datatypes and syntax, like (strings), non-integer numbers, and the <</a 11 /b 22>> syntax for dictionary “literals”.</p>
-<p>Take your budding new human-scale programming environment in whatever direction you like. Enjoy the feeling of power.</p>
+                <p>ISO working group faces a fight over runtime checks, complexity, and the language's release timetable</p>
+<p>The next version of the C++ programming language may be delayed at the last minute due to a dispute over a security-enhancing Contracts feature.</p>
+<p>Contracts have deeply split C++ technical maintainers. One group backs the C++ creator Bjarne Stroustrup, who is against the technology in its present form in grounds it was hastily implemented. But others are eager to see Contracts implemented, even arguing the tech's detractors are poisoning the C++ development process itself.</p>
+<p>The disagreement boiled over just before a vote to ratify the new version of the language.</p>
+<p>In October, the Draft International Standard (DIS) of C++26 failed its ISO ballot — the next-to-last stage in the International Organization for Standardization’s approval process during which a standard's technical details are formally ratified by a set of national standards bodies.</p>
+<p>The ballot saw 13 votes cast in favor, 9 against, and 12 abstentions, failing to meet the ISO requirement of having no more than 25 percent negative votes. Contracts was the major sticking point for those voting nay.</p>
+<p>Contracts allow developers to add preconditions and postconditions to code, as well as assertions that check whether specified conditions hold. Such checks can help catch programming errors that might otherwise lead to undefined behavior.</p>
+<p>Design by Contract has long been a feature of languages like Ada and Eiffel.</p>
+<p>Developers have proposed adding Contracts  to C++ for at least a decade, after when they were abruptly yanked from C++20 owing to concerns over dangerous defaults.</p>
+<p>But Stroustrup roasted the revised proposal (P2900) that made it into C++26.</p>
+<p>“The P2900 contracts and extensions aim to change the nature of C++ and are an existential threat to C++, adding complexity and bloat,” Stroustrup and his colleagues wrote in a paper last August. They noted that the implementation is messy, outdated, not sufficiently tested, and could be more effectively implemented as a library.</p>
+<p>Not everyone agrees. Andreas Fertig, a member of the C++ standardization committee, feels that the criticisms have already been vetted and that vetoing the proposal this late in the C++ release process is damaging to C++ itself.</p>
+<p>“The topic has been worked on for years and has received a majority vote multiple times in its current form. By voting ‘no,’ an established system, one based primarily on trust and respectful collaboration, has been shaken,” Fertig wrote in a blog post.</p>
+<p>The elephant in the room is, of course, the ongoing criticism of how easy it is for developers to accidentally create security holes in C++, leading more than a few projects to adopt Rust. Adding controls might, as Stroustrup notes, hamper C++’s chief attribute of being a blazing-fast language.</p>
+<p>Fertig accused Stroustrup and Co. of being sore losers.</p>
+<p>“Every ISO standard is simply a set of compromises. Everyone loses sometimes, and everyone wins sometimes,” he wrote. But in this case, “the losing parties refused to accept their loss. The question that primarily determines how to move forward is whether the group can rebuild trust."</p>
+<p>Unlike Fertig, Harry Bott, CEO of the C++ Alliance – which maintains the open source EDG C++ compiler front end – does not see the Contracts discussion as disruptive to C++ itself.</p>
+<p>“The draft being sent back isn’t a failure of the process—it’s the process working as intended,” he wrote to The Register by email. “That doesn’t mean the process can’t improve. The goal should be to learn from this and strengthen the process so C++ can continue to evolve in a way developers can rely on.”</p>
+<p>With the ballot failing at this late point of the standardization process – a rarity in C++ history  – the language risks missing its expected shipping date of this year. That outcome may force everyone to refer to the new version as “C++27” rather than C++26. (That’s only the informal name; the official name of this eighth version of the language, should it be released next year, would be “ISO/IEC 14882:2027.”)</p>
+<p>ISO C++ working group WG21 is meeting next week in Búzios, Brazil, for the confronto final.</p>
+<p>According to a blog post from Thibault Ricord-Marchal, a software engineering consultant at the Paris-based Margo consultancy, the group faces a number of choices.</p>
+<p>They can carve Contracts out of the spec so the rest of C++26 can ship. That will be messy work, though. The undo button has to be smashed on a lot of library hardening already done using Contracts.</p>
+<p>Another option is moving Contracts into a separate technical specification, where work can continue to refine the technology.</p>
+<p>Or they could do a minor revision, vote again and hope the balmy Brazilian weather chills everyone out.®</p>
+<p>Safety reasons and unspecified communications issue cited</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>PARTNER CONTENT: Real-time endpoint data keeps AI-driven IT operations accurate, fast and under control</p>
+<p>‘We don’t have a security problem anymore. We have a data problem now’</p>
+<p>In the aftermath of Jensen Huang's resignation, not only may the AI bubble pop, but the world economy is in some peril</p>
+<p>What, you didn't actually want to fact-check it yourself, did you?</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>Anthropic sets behavior standards to protect Claude from rough treatment</p>
+<p>The competition is circling like vultures</p>
+<p>Chips boast up to 256 cores, clocks up to 5.3 GHz, and IPC gains of 20 to 31 percent, just not all on the same SKU</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://beyondloom.com/blog/postscript.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/devops/2026/11/13/c26-stumbles-at-finish-line-over-contracts-dispute/5309526" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

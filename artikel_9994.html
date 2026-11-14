@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paths in pieces</title>
+    <title>DOJ takes aim at $1.2B in Binance loot as FBI disrupts North Korean scam</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9994.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,60 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Paths in pieces</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>DOJ takes aim at $1.2B in Binance loot as FBI disrupts North Korean scam</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://image.theregister.com/5309552.jpg?imageId=5309552&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="DOJ takes aim at $1.2B in Binance loot as FBI disrupts North Korean scam" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5309552.jpg?imageId=5309552&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="DOJ takes aim at $1.2B in Binance loot as FBI disrupts North Korean scam" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Personal and work related blogof Harmen Stoppels.</p>
-<p>Open source software developerat Stoppels Consultingin Zürich, Switzerland.</p>
-<p>Find me on GitHubor send me an email atfirstname[at]lastname.ch</p>
-<p>Many[1][2][3][4][5][6][7][8][9] Linux distributions and package managers audit just-built binaries for non-relocatable absolute paths. If a binary contains a path /path/from/build/machine, it might not run on the end-user's machine.</p>
-<p>Now, a basic grep on the binary, or a slightly more sophisticated</p>
-<p>using GNU binutils's strings will detect these paths, right?</p>
-<p>The answer is no, at least when using GCC and targeting x86-64: you should not assume that string constants end up literally in the binary.</p>
-<p>In this C++ source we create a std::string from a string constant:</p>
-<p>Compile with GCC 12 or later and run, which prints the path:</p>
-<p>But the path occurs precisely 0 times in the binary itself:</p>
-<p>Surely these bytes must be part of the binary somewhere? Let's run strings on it and grep just for the /home prefix:</p>
-<p>The answer is that GCC optimizes our std::string{PREFIX}. The fact that we see something that looks like the prefix is merely a coincidence.</p>
-<p>GCC splits our string up into two (overlapping) pieces of 16 bytes, like so</p>
-<p>which fit exactly in xmm registers, so that it can copy our string to the std::string buffer using vectorized move instructions.</p>
-<p>Filtering the relevant bits from g++ -O2 -S -masm=intel, we get</p>
-<p>and our string is stored at .LC0 and .LC1 as constants, which just happen to be next to each other in the binary:</p>
-<p>In general, this happens when a string constant is copied into a buffer, as with std::string, strcpy or memcpy; strings that are only passed around as pointers, like in fopen(PREFIX "/x", "r"), stay intact.</p>
-<p>Some package managers like Conda and Spack install packages into a padded prefix during their builds, with the idea that they can be “relocated” to a shorter prefix of the user's choice: the binaries are patched in-place. Conda uses a repeated string _placehold in a directory name to make the prefix long enough.</p>
-<p>Now, even if we pick a 256-byte path (a convenient multiple of all x86-64 register widths) by padding the path Conda-style</p>
-<p>and keep our fingers crossed that GCC puts the pieces of the path contiguously in the binary, we do not see our prefix back in the binary. What we get instead is a much shorter string of only 176 bytes (that is 11 times 16):</p>
-<p>This is thanks to a further optimization: since the string _placehold repeats every 10 bytes, the 16-byte pieces repeat every lcm(10, 16) = 80 bytes, and GCC needs to store only 5 distinct 16-byte constants for the padding:</p>
-<p>For string literals, I don't think so. Clang does not split strings into constants, yet it generates essentially the same instructions. For example, take a longer path, and target AVX2 with -march=x86-64-v3:</p>
-<p>Clang simply puts the string in a section dedicated to strings, .rodata.str1.1:</p>
-<p>and copies its 53 bytes with two overlapping 32-byte ymm loads and stores, at offsets 21 and 0:</p>
-<p>That isn't particularly different from GCC's version, which loads the same two pieces from constants in .rodata.cst32 instead:</p>
-<p>So what does GCC gain? In terms of performance, probably nothing measurable: both do the same loads and stores. With repeated pieces, GCC might have a slight edge, because a repeated piece is loaded once and stored multiple times (11 loads for 16 stores in the earlier example). It also uses aligned reads, but that matters only for ancient CPUs.</p>
-<p>In terms of size, GCC's pieces can take more space than the string itself: overlapping bytes are stored twice, and the pieces are aligned to 16, 32 or 64 bytes. The 53-byte path above takes 64 bytes as two pieces, against 54 bytes as a string. It only pays off if it results in deduplication, for example when many strings share a prefix of at least 16 bytes for SSE2, 32 bytes for AVX2, and 64 bytes for AVX-512. Presumably deduplication does not save much in practice, especially now that some distributions use AVX2 as their baseline.</p>
-<p>Other than compiling with -Os, not really. From GCC 10 onwards (maybe older versions too?) the split-into-pieces optimization triggers for strings up to 256 bytes even without specifying -march. From GCC 12 it is relative to the target's vector width, so longer strings get split too: up to 512 bytes for AVX2 and 1024 bytes for AVX-512.</p>
-<p>I believe the only control you have over this is setting the maximum vector width to 128 bits (forcing xmm operations), by passing -mstore-max=128. But this merely restores old defaults, and means strings of up to 256 bytes are still stored in pieces.</p>
-<p>These post-build audits for absolute paths are popular, but you could argue that they are too brittle to start with, so why expect them to work at all?</p>
-<p>Indeed, Debian goes much further than a bad-path scan. Their audit asserts that a package can be rebuilt bit for bit in different circumstances: on a different machine, with a different user, time and date, hostname, locale, etc. That is a much more reliable way to keep machine-specific details out of binaries.[10]</p>
-<p>I would argue that, despite that, it is still useful to keep string constants literally in the binary, even on Debian, because it improves interpretability of binaries. Running strings ./binary is such a simple and convenient way to get insight into an opaque binary blob, that it outweighs the marginal savings that come with splitting and deduplication. It is reminiscent of Fedora and Ubuntu turning frame pointers back on by default, despite the small overhead, just to make profilers and tracing tools work more reliably.</p>
-<p>Other than that, there is the argument of binary patching, which — despite being considered somewhat brittle — is common practice in Conda and Spack: upon install to a user-specified location, the absolute paths are patched in-place accordingly, through what can be seen as a glorified sed invocation. This only works if the path is stored in one piece.</p>
-<p>If you'd like to discuss this, a good place is the gcc-patches thread that I started recently, with an initial attempt at a patch that adds a way to opt out.</p>
-<p>[1] RPM (Fedora, RHEL, openSUSE): check-buildroot greps every installed file for the build root.</p>
-<p>[2] Arch Linux: makepkg warns about references to $srcdir and $pkgdir.</p>
-<p>[3] Yocto / OpenEmbedded: the buildpaths QA check.</p>
-<p>[4] FreeBSD ports: the stage QA greps for the staging directory.</p>
-<p>[5] pkgsrc: CHECK_WRKREF, off unless a package developer turns it on.</p>
-<p>[6] Homebrew: brew bottle scans for the prefix to decide whether a bottle is relocatable.</p>
-<p>[7] conda-build: files containing the build prefix are listed in info/has_prefix, to be rewritten on install.</p>
-<p>[8] rattler-build: the same scheme as conda-build, with memmem.</p>
-<p>[9] Julia's BinaryBuilder: check_absolute_paths warns about the build prefix in any file.</p>
-<p>[10] Even Debian keeps one path fixed: since early 2024 both builds use the same build directory, because it is recorded in the .buildinfo file and reused when rebuilding. So a build path embedded in a binary goes unnoticed there too.</p>
+                <p>‘FaceStealer’ scam tied to $400M+ theft, 900+ webcam recordings</p>
+<p>The US government on Thursday said it had obtained court authorization to seize or restrain use of over $1.2 billion stolen during last month's $6.3 billion Binance heist, as part of a larger effort to disrupt North Korea's ongoing cryptocurrency theft.</p>
+<p>The court also allowed the takedown of cloud-based infrastructure used in a Democratic People’s Republic of Korea (DPRK) social engineering scheme called “FaceStealer” that has amassed more than $400 million in the last 18 months.</p>
+<p>It’s called FaceStealer because it involved secretly recorded webcam videos. Victims are typically people working in the cryptocurrency and web3 industries, along with open source software developers and maintainers who DPRK hackers target in the hope of accessing the software repositories they control as the first step towards creating supply chain attacks.</p>
+<p>The FBI said it had seized more than 900 webcam videos belonging to these tech workers.</p>
+<p>First, the North Koreans send targets an invitation to join a video meeting. Those invitations come from hijacked accounts that the next intended victim may find familiar or credible.</p>
+<p>“You're going to think it's real because it's going to be based on either conversations or interests you've expressed in the past with this actual person,” said special agent Jeremy Robertson, who oversees counterintelligence and cyber investigations at FBI Los Angeles.</p>
+<p>“They're going to then send you a link to catch up, and it's usually a calendar invite, and it's going to have some typo-squatted URLs in there,” he told reporters on Thursday.</p>
+<p>The URL directs the victim to a fake Zoom or Teams meeting, and the cybercriminals record the target’s webcam video while playing a phony, prerecorded video of the person who purportedly sent the meeting invite.</p>
+<p>Sometimes the hackers also use deepfake videos of well-known individuals in the cryptocurrency and web3 industries, we’re told.</p>
+<p>“When you log in, whoever invited you – your friend or business associate – is going to be on the screen, but you're not going to hear any audio,” Robertson said. “But you're going to see their face, you're going to see them looking around, you're going to see them mouthing some words, and then in the text box you're going to receive some instructions.”</p>
+<p>The text box tells the victim that the person on the other end of the video call can’t hear them, they need to upgrade their software for the audio to work properly, and it sends a link to the supposed fix.</p>
+<p>Clicking to access the “fix” installs cryptocurrency-stealing malware on the victim’s computer and sends their contact list to the digital thieves to perpetuate the scam.</p>
+<p>The FBI attributes FaceStealer to a North Korea-linked group tracked as Sapphire Sleet, which is widely regarded as a Lazarus Group offshoot. Sapphire Sleet is also known as UNC1069, Stardust Chollima, APT38, and BlueNoroff.</p>
+<p>“The actors behind this activity, commonly referred to as Sapphire Sleet and other associated names, are part of a broader North Korean effort to generate revenue for the regime, to steal virtual assets, and gain access to networks and trusted online ecosystems,” Brett Leatherman, assistant director of the FBI's Cyber Division, told reporters. “North Korean hackers are increasingly blending cyber intrusion, social engineering, and emerging technologies such as deep fakes to make their impersonation efforts more convincing and scalable.”</p>
+<p>The FBI also provided an update on its efforts to recover the stolen assets from the October 29 attack on Binance. The agency previously blamed the $6.3 billion heist on TraderTraitor, a North Korean hacking operation also linked to Lazarus Group.</p>
+<p>Last week, Binance revealed the attackers laid the groundwork for their “sophisticated, multi-stage campaign” back in June, and said it involved social engineering during fake job interviews, malware downloads, compromised internal AI tooling, endpoint takeover, and an “advanced transaction-authorization method.”</p>
+<p>Since the theft, federal investigators and private-sector partners have helped freeze more than $2.7 billion in stolen assets. The Justice Department's court authorization covers more than $1.2 billion of that haul.®</p>
+<p>Safety reasons and unspecified communications issue cited</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>PARTNER CONTENT: Real-time endpoint data keeps AI-driven IT operations accurate, fast and under control</p>
+<p>‘We don’t have a security problem anymore. We have a data problem now’</p>
+<p>In the aftermath of Jensen Huang's resignation, not only may the AI bubble pop, but the world economy is in some peril</p>
+<p>What, you didn't actually want to fact-check it yourself, did you?</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>Anthropic sets behavior standards to protect Claude from rough treatment</p>
+<p>The competition is circling like vultures</p>
+<p>Chips boast up to 256 cores, clocks up to 5.3 GHz, and IPC gains of 20 to 31 percent, just not all on the same SKU</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://stoppels.ch/2026/11/12/paths-in-pieces.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/cyber-crime/2026/11/12/doj-takes-aim-at-12b-in-binance-loot-as-fbi-disrupts-north-korean-scam/5309523" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

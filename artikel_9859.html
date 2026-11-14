@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers now runs llama.cpp quants</title>
+    <title>Someone&#x27;s impersonating this blog</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9859.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,42 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers now runs llama.cpp quants</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>Someone&#x27;s impersonating this blog</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We're adding support for running GGUF models efficiently in transformers, so you can use checkpoints sized for your laptop's memory through the familiar transformers APIs. Pick a GGUF from the Hub, load it with from_pretrained, and start generating on your own machine.</p>
-<p>Running AI models on your laptop has become much easier, and llama.cpp has been a big part of that. Its inference engine powers local AI tools such as Ollama, LM Studio, and Jan. Alongside projects like MLX, it has helped make local inference a practical option for everyday use.</p>
-<p>A recent example of what local AI can feel like:</p>
-<p>This is where we are right now. And i’m not gonna lie it feels pretty magical 🧙‍♀️Qwen3.6 27B running inside of Pi coding agent via Llama.cpp on the MacBook ProFor non-trivial tasks on the @huggingface codebases, this feels very, very close to hitting the latest Opus in Claude… pic.twitter.com/lsIxLoUneU</p>
-<p>GGUF, developed by the llama.cpp team, is a widely used format for local inference. The team also shares quantized checkpoints under ggml-org on the Hub. Publishers such as Unsloth, LM Studio Community, and bartowski also provide ready-to-use GGUF checkpoints in a range of quantizations, so users can pick the version that fits their machine. GGUF models have been downloaded millions of times.</p>
-<p>We want to make it easier to run these models locally with transformers, too. Compatibility is only useful if the model is pleasant to run. To bring performance close to llama.cpp, we're reusing its underlying ggml kernels through the kernels library, and reducing overhead in generate. Our initial focus is local inference on Apple Silicon, starting with the Qwen3.5 architecture.</p>
-<p>GGUF packages model weights and metadata, including tokenizer information and an optional chat template, in one file. It supports different quantization levels, letting you trade some precision for a smaller memory footprint. Variants such as Q4_K_M mix tensor precisions, using mostly 4-bit weights while keeping sensitive tensors at higher precision.</p>
-<p>Here's how quantization changes the file size of Unsloth's Qwen3.5-4B:</p>
-<p>We suggest starting with Q4_K_M, then trying Q5_K_M or Q6_K if you have more memory available. More aggressive quantization can help larger models fit, but the quality tradeoff depends on the model and the task. Evaluate it on the work you actually want the model to do. The Hub's GGUF documentation describes the available quantization types.</p>
-<p>To load a GGUF model, pass its Hub model_id and filename as gguf_file to from_pretrained.</p>
-<p>No extra configuration is needed: when the weights stay packed on Metal, transformers automatically loads the compatible ggml/Metal layer kernels and uses ggml-org/ggml-attn as the attention implementation. If that kernel cannot be fetched, the model falls back to "sdpa" with a warning, and you can always force "sdpa" by passing attn_implementation="sdpa" explicitly. See the GGUF documentation for more loading options.</p>
-<p>That is the only GGUF-specific step. Everything after it is the standard transformers API:</p>
-<p>Without a compatible quantization kernel, the loader falls back to dequantizing the model and uses more memory.</p>
-<p>You can also use the same checkpoint with transformers serve, which exposes an OpenAI-compatible API:</p>
-<p>The model argument uses <model_id>:<filename>.gguf: before the colon is the Hub repository (unsloth/Qwen3.5-4B-GGUF), and after it is the file to load (Qwen3.5-4B-Q4_K_M.gguf). This selects a specific quantization from a repository that may contain several.</p>
-<p>For models whose chat template supports thinking, add --reasoning off to skip it or --reasoning on to enable it. The default, --reasoning auto, follows the chat template’s default. See the reasoning options for details.</p>
-<p>You can connect a client such as Jan or Pi by adding a custom OpenAI-compatible provider with these settings:</p>
-<p>transformers runs the model on your Mac, while the client provides the conversation interface. The same endpoint can be used by other clients that support this API.</p>
-<p>Our reference for local inference performance is llama.cpp. The comparison below focuses on three GGUF checkpoints: a small dense model, a larger dense model, and a mixture-of-experts model.</p>
-<p>The llama.cpp column comes from the llama-bench tool (build 5f55650a7, release b10200, Metal backend from ggml 0.18.0), run as llama-bench -m <file> -p 0 -n 128 -r 3, which reports tg128: the token-generation rate over 128 decoded tokens, averaged across three repetitions, with prompt processing excluded. The transformers column is generate producing the same 128 tokens from a 12-token prompt, best of three warmed runs, and it includes prefill.</p>
-<p>Measured on a MacBook Pro M2 Max, 32 GB unified memory, macOS 26.6, PyTorch 2.12.1, kernels 0.17.0,
-plugged in.</p>
-<p>Transformers is close to llama.cpp across all three checkpoints. The chart uses the same measurements described above; it does not imply identical benchmark conditions, since the Transformers measurement includes prefill while llama-bench reports decode-only throughput.</p>
-<p>When GGML and llama.cpp joined Hugging Face, we described their complementary roles: llama.cpp provides a foundation for local inference, while transformers provides a foundation for model definition. GGUF support brings those two closer together.</p>
-<p>llama.cpp remains our recommended engine when your priority is efficient local inference. Its dedicated runtime, memory management, and broad hardware support are built around that goal. This integration gives developers a convenient way to work with the same GGUF checkpoints inside transformers:</p>
-<p>For that last case, use GgufConfig(dequantize=True):</p>
-<p>The bigger opportunity is bringing ggml's performance to models that llama.cpp does not support.</p>
-<p>transformers already provides the PyTorch implementations of these architectures. With ggml kernels and quantization schemes available in PyTorch, we can work toward accelerating their supported operations without first implementing the entire model in llama.cpp. This is especially useful for new architectures, research models, and custom variants that may never receive a dedicated llama.cpp implementation.</p>
-<p>That opportunity extends beyond the GGUF format itself. A kernel operates on tensors; it does not require the whole model to come from a GGUF file. The same building blocks can be integrated into other transformers models and loading workflows. This also opens a path to other modalities: computer vision models, audio models, and multimodal models could reuse compatible attention, normalization, and matrix multiplication kernels without first having a full implementation in llama.cpp. Each architecture still needs integration and validation; the initial GGUF examples here cover text generation.</p>
-<p>We also wanted to show how far we can get while keeping the model and generation loop in Python. With the right kernels and an efficient generation loop, Python and PyTorch can deliver strong local inference performance. The kernels handle the heavy computation, while the generation loop keeps the GPU busy by avoiding unnecessary synchronization.</p>
-<p>Our focus was to make eager execution fast without requiring torch.compile. For interactive use, we wanted a quick start and a steady stream of tokens, without compilation pauses or recompilation when input shapes change. The two main pieces of that work are the kernels and generate itself.</p>
-<p>A kernel is a small program that performs an operation on the GPU. PyTorch supplies general-purpose implementations; a specialized kernel can do less work, combine several operations, or read quantized weights directly in their stored format.</p>
-<p>The kernels library lets us distribute compatible builds of ggml's Metal kernels on the Hub and call them from transformers. That brings ggml's work into the PyTorch model without replacing the model with a separate inference runtime.</p>
-<p>The first four packages build on ggml's kernels; the top-k kernel addresses a separate bottleneck in MoE routing. Together they reduce the GPU work needed for each generated token.</p>
-<p>To show the contribution of the layer kernels, we compare the same packed GGUF checkpoints with and without them. The quantization kernel stays enabled in both configurations: disabling it would also change how weights are represented and would measure a different tradeoff.</p>
-<p>Faster kernels only help if the GPU has work to do. During generation, the CPU schedules GPU operations and controls the loop that produces the next token. Reading a result back from the GPU can force the CPU to wait until queued operations finish. Repeating even a small wait for every token can noticeably reduce throughput.</p>
-<p>Two changes address this in generate, which results in improvements for all transformers models (not just when running GGUF files):</p>
-<p>These changes improve the generation loop around the model, so their usefulness extends beyond GGUF. They complement the kernel work: kernels reduce the cost of an operation, while fewer synchronization points let CPU scheduling and GPU execution overlap.</p>
-<p>These measurements keep all layer kernels enabled; the bars isolate the changes to the generation loop.</p>
-<p>The initial target is a single interactive conversation on Apple Silicon. There are a few boundaries to keep in mind:</p>
-<p>If you have a GGUF model you would like to use in transformers, open an issue with the checkpoint and your use case. That will help us prioritize support for the models people are running locally.</p>
-<p>We would like to thank Arthur Zucker for initiating this work and reviewing all of my PRs, and Cyril Vallez for the generate PRs. We are grateful to Sayak Paul, the llama.cpp team, and Bertrand Chevalier for their help integrating the kernels. We also thank Aritra Roy Gosthipaty and Pedro Cuenca for reviewing this blog post, and Lysandre Debut for overseeing the project.</p>
+                <p>I was googling the name of my website, as one does occasionally, and was surprised to see a link to one of my blog posts on mataroa.site. At first I figured it was just an alternate domain name for mataroa.blog, but no, when you type mataroa.site into your browser, it shows you my blog. It's the only thing that's hosted there.</p>
+<p>My next thought was that someone bought me a URL, but that can't be the case either: using a custom domain on mataroa requires a premium account, which I don't have. For anything but a plain redirect, I would have needed to set up the A record my end.</p>
+<p>I then realized that the version of my blog on that site doesn't have the latest post. The most recent update on the homepage is my Aug 21 entry. When you scroll down and start clicking some of the older links, you get 404 pages. You also get a 404 if you try to post a comment, load the RSS feed or view standalone pages like the AI statement.</p>
+<p>Someone scraped my blog and created a website to impersonate me. They're also impersonating mataroa, since using the name implies some sort of official connection.</p>
+<p>They're re-hosting the stolen images on their own server, and they all have a watermark. Bizarrely, the watermark is mattbee.mataroa.blog, my real URL. I assume this is to somehow make it seem legitimate, like it's an officially-sanctioned mirror, but I don't know who they think is going to care. It's not like they're stealing from a site with name recognition.</p>
+<p>When you view the source of a blog post, it's identical to the rendered HTML except that there are two Cloudflare scripts at the bottom, one to obfuscate the mailto: link in the footer (which doesn't work1) and one for analytics.</p>
+<p>When you view the source of the index, there's a hidden link at the bottom to a Chinese github.io page for a website cloning tool.</p>
+<p>I have no idea why I was targeted for impersonation. It should be obvious this isn't a high-value website.2 It's a personal blog where I write what's relevant to me, and that rarely overlaps with anything other people care about. If the subject matter didn't tip them off, it should be clear from the 0 comments on most posts that this is not an enterprise ripe for monetization.</p>
+<p>If they just wanted a fake blog to scam adsense, surely a large language model would happily spew out more SEO-friendly slop than anything I have to offer. If their goal was to leech off the popularity of mataroa, why not impersonate one of the blogs with multiple front-page appearances on the orange website? Surely they have more SEO juice than me. Nothing about this makes any sense.</p>
+<p>Anyway, the URL is registered with Namecheap, so I sent them an abuse report. I have no idea if they'll act on it. They don't seem to have a good track record of giving a shit unless the content is actually hosted with them.</p>
+<p>It's hosted with Cloudflare, and the abuse reporting form they insist you use straight-up doesn't work. Click "Submit an abuse report" and it'll take you to a completely blank page. Very encouraging.</p>
+<p>I'd have to dox myself to do a DMCA takedown, and I don't have the legal resources to do anything when it gets ignored. So if neither evil corporation cares to do anything, I guess I can just get fucked. I figure the best thing I can do to protect myself is document everything here. If you see a link to mataroa.site, it's not affiliated with me or mataroa. It seems like it isn't set up to scam people or distribute malware at the moment, but it probably will in the future. Be careful.</p>
+<p>The index page also has a meta tag with a verification code for mitgo.com, a fake-looking website with some word salad identifying it as some kind of ad/SEO scamming platform or service. Will try to investigate this further.</p>
+<p>It does, I had just forgotten to enable javascript. ↩</p>
+<p>Email (optional and
+                    private):</p>
+<p>@Virgil: I don't know if you got a slop bot to write this comment for you, but if you had read the post you're responding to, you'd know that I clicked that button and it doesn't go anywhere.</p>
+<p>Own a small web agency and this regularly happens to us. Small client sites are scraped and mimicked for what look like temporary SEO rankings. We have not been able to figure out what the specific overarching goal is, but pretty sure it has to do with scamming/phishing, and relying on the temporary authority they get granted. Really sucks, and yes, hard to take down, because often they go down by themselves after a few days.</p>
+<p>why not impersonate one of the blogs with multiple front-page appearances on the orange website?</p>
+<p>You did get on the orange site by the way, that's how i found this blog today!</p>
+<p>@Muhammad lol, life has a funny sense of humor. Thanks for reading!</p>
+<p>The cloudflare abuse reporting form does work, you probably just forgot to enable javascript again.</p>
+<p>@6: nope, I enabled JS on my phone and tried to load it on my work computer, freshly updated copy of Chrome and everything. Nothing. I'll try again on Firefox when I get home 🤷‍♀️</p>
+<p>For what it's worth, NameCheap used to be pretty good about taking down malicious or fraudulent websites. I used to do cyber security as a hobby and all I would have to do to take down a malicious website hosted by namecheap was to tag them in a (pre Elon) Twitter post about the fraudulent activity and they would remove the site(s) within a few hours. It seemed that NaneCheap had turned over a new leaf and didn't like the negative attention they were getting about hosting malicious sites. Do a follow up on your blog if nanecheap does take down the imposter site.</p>
+<p>I can't say I fully understand the motive for cloning a website, I guess eventually they the content will "fork" then they will start using it to distort facts slightly for consumption by AI.</p>
+<p>In any case, .site and other cheap domain extensions have pretty low reputation with search engines which I am guessing also extends to AI scrapers. Whoever is doing this is probably wasting their time.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-llama-cpp-quants" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://mattbee.mataroa.blog/p/someones-impersonating-this-blog/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

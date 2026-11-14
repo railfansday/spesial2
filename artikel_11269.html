@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelerate BERT inference with Hugging Face Transformers and AWS Inferentia</title>
+    <title>Deep Learning over the Internet: Training Language Models Collaboratively</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11269.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,17 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Accelerate BERT inference with Hugging Face Transformers and AWS Inferentia</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>Deep Learning over the Internet: Training Language Models Collaboratively</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog//assets/55_bert_inferentia_sagemaker/thumbnail.png" alt="Accelerate BERT inference with Hugging Face Transformers and AWS Inferentia" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog//assets/55_bert_inferentia_sagemaker/thumbnail.png" alt="Accelerate BERT inference with Hugging Face Transformers and AWS Inferentia" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>notebook: sagemaker/18_inferentia_inference</p>
-<p>The adoption of BERT and Transformers continues to grow. Transformer-based models are now not only achieving state-of-the-art performance in Natural Language Processing but also for Computer Vision, Speech, and Time-Series. 💬 🖼 🎤 ⏳</p>
-<p>Companies are now slowly moving from the experimentation and research phase to the production phase in order to use transformer models for large-scale workloads. But by default BERT and its friends are relatively slow, big, and complex models compared to the traditional Machine Learning algorithms. Accelerating Transformers and BERT is and will become an interesting challenge to solve in the future.</p>
-<p>AWS's take to solve this challenge was to design a custom machine learning chip designed for optimized inference workload called AWS Inferentia. AWS says that AWS Inferentia “delivers up to 80% lower cost per inference and up to 2.3X higher throughput than comparable current generation GPU-based Amazon EC2 instances.”</p>
-<p>The real value of AWS Inferentia instances compared to GPU comes through the multiple Neuron Cores available on each device. A Neuron Core is the custom accelerator inside AWS Inferentia. Each Inferentia chip comes with 4x Neuron Cores. This enables you to either load 1 model on each core (for high throughput) or 1 model across all cores (for lower latency).</p>
-<p>In this end-to-end tutorial, you will learn how to speed up BERT inference for text classification with Hugging Face Transformers, Amazon SageMaker, and AWS Inferentia.</p>
-<p>You can find the notebook here: sagemaker/18_inferentia_inference</p>
-<p>If you are going to use Sagemaker in a local environment (not SageMaker Studio or Notebook Instances), you need access to an IAM Role with the required permissions for Sagemaker. You can find here more about it.</p>
-<p>We are going to use the AWS Neuron SDK for AWS Inferentia. The Neuron SDK includes a deep learning compiler, runtime, and tools for converting and compiling PyTorch and TensorFlow models to neuron compatible models, which can be run on EC2 Inf1 instances.</p>
-<p>As a first step, we need to install the Neuron SDK and the required packages.</p>
-<p>Tip: If you are using Amazon SageMaker Notebook Instances or Studio you can go with the conda_python3 conda kernel.</p>
-<p>After we have installed the Neuron SDK we can load and convert our model. Neuron models are converted using torch_neuron with its trace method similar to torchscript. You can find more information in our documentation.</p>
-<p>To be able to convert our model we first need to select the model we want to use for our text classification pipeline from hf.co/models. For this example, let's go with distilbert-base-uncased-finetuned-sst-2-english but this can be easily adjusted with other BERT-like models.</p>
-<p>At the time of writing, the AWS Neuron SDK does not support dynamic shapes, which means that the input size needs to be static for compiling and inference.</p>
-<p>In simpler terms, this means that when the model is compiled with e.g. an input of batch size 1 and sequence length of 16, the model can only run inference on inputs with that same shape.</p>
-<p>When using a t2.medium instance the compilation takes around 3 minutes</p>
-<p>The Hugging Face Inference Toolkit supports zero-code deployments on top of the pipeline feature from 🤗 Transformers. This allows users to deploy Hugging Face transformers without an inference script [Example].</p>
-<p>Currently, this feature is not supported with AWS Inferentia, which means we need to provide an inference.py script for running inference.</p>
-<p>If you would be interested in support for zero-code deployments for Inferentia let us know on the forum.</p>
-<p>To use the inference script, we need to create an inference.py script. In our example, we are going to overwrite the model_fn to load our neuron model and the predict_fn to create a text-classification pipeline.</p>
-<p>If you want to know more about the inference.py script check out this example. It explains amongst other things what  model_fn and predict_fn are.</p>
-<p>We are using the NEURON_RT_NUM_CORES=1 to make sure that each HTTP worker uses 1 Neuron core to maximize throughput.</p>
-<p>Before we can deploy our neuron model to Amazon SageMaker we need to create a model.tar.gz archive with all our model artifacts saved into tmp/, e.g. neuron_model.pt and upload this to Amazon S3.</p>
-<p>To do this we need to set up our permissions.</p>
-<p>Next, we create our model.tar.gz. The inference.py script will be placed into a code/ folder.</p>
-<p>Now we can upload our model.tar.gz to our session S3 bucket with sagemaker.</p>
-<p>After we have uploaded our model.tar.gz to Amazon S3 can we create a custom HuggingfaceModel. This class will be used to create and deploy our real-time inference endpoint on Amazon SageMaker.</p>
-<p>The .deploy() returns an HuggingFacePredictor object which can be used to request inference.</p>
-<p>We managed to deploy our neuron compiled BERT to AWS Inferentia on Amazon SageMaker. Now, let's test its performance. As a dummy load test, we will loop and send 10,000 synchronous requests to our endpoint.</p>
-<p>Let's inspect the performance in cloudwatch.</p>
-<p>The average latency for our BERT model is 5-6ms for a sequence length of 128.</p>
-<p>To clean up, we can delete the model and endpoint.</p>
-<p>We successfully managed to compile a vanilla Hugging Face Transformers model to an AWS Inferentia compatible Neuron Model. After that we deployed our Neuron model to Amazon SageMaker using the new Hugging Face Inference DLC. We managed to achieve 5-6ms latency per neuron core, which is faster than CPU in terms of latency, and achieves a higher throughput than GPUs since we ran 4 models in parallel.</p>
-<p>If you or you company are currently using a BERT-like Transformer for encoder tasks (text-classification, token-classification, question-answering etc.), and the latency meets your requirements you should switch to AWS Inferentia. This will not only save costs, but can also increase efficiency and performance for your models.</p>
-<p>We are planning to do a more detailed case study on cost-performance of transformers in the future, so stay tuned!</p>
-<p>Also if you want to learn more about accelerating transformers you should also check out Hugging Face optimum.</p>
-<p>Thanks for reading! If you have any questions, feel free to contact me, through Github, or on the forum. You can also connect with me on Twitter or LinkedIn.</p>
+                <p>Konten tidak tersedia.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/bert-inferentia-sagemaker" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/collaborative-training" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

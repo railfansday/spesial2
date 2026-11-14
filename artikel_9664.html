@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeaseWire</title>
+    <title>text-overflow: ellipsis Does Nothing in a Flex Row? Look at min-width</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9664.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,36 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>LeaseWire</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>text-overflow: ellipsis Does Nothing in a Flex Row? Look at min-width</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4m6jhwd2qezx3xfuyhau.png" alt="text-overflow: ellipsis Does Nothing in a Flex Row? Look at min-width" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4m6jhwd2qezx3xfuyhau.png" alt="text-overflow: ellipsis Does Nothing in a Flex Row? Look at min-width" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Lease abstraction, wired to your model.
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/leasewire?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1313277?app_id=339">Link</a>
-          </p></p>
+                <p>This layout bug shows up in a lot of UIs. A row has an icon, a long file name and a button. You want the name to end with "..." when space runs out. You add the usual three lines. Nothing happens. The name keeps its full length and shoves the button past the edge of the card.</p>
+<p>Those three lines on .name are right. MDN points out that text-overflow cannot cause an overflow on its own. You pair it with overflow and white-space, and MDN's own example is overflow: hidden plus white-space: nowrap. Both are here.</p>
+<p>This first version works, because .name is itself the flex item and overflow: hidden gives it a zero minimum.</p>
+<p>So why no dots? In many real layouts, the text is not the flex item. It sits one level deeper.</p>
+<p>Now .meta is the flex item in the row. It has no overflow of its own. That one detail is the whole bug.</p>
+<p>Every flex item starts with min-width: auto. For flex items, auto does not mean zero.</p>
+<p>Section 4.5 of the CSS Flexbox spec covers this. A flex item's automatic minimum width comes from its content, unless the item is a scroll container. MDN's min-width page says the same thing in shorter words: for flex items, auto resolves to a content-based size, and a scroll container gets a minimum of 0.</p>
+<p>What does "based on content" mean for one long line of text that cannot wrap? The smallest the item may get is the full width of that line. So:</p>
+<p>flex-shrink is still on, by the way. It just cannot shrink an item below its minimum size.</p>
+<p>Give the flex item that holds the text a zero minimum:</p>
+<p>Now .meta can shrink below its content width. .name inside it gets a real, narrow width, its text overflows, and the ellipsis shows up.</p>
+<p>Another way is overflow: hidden on .meta. That turns it into a scroll container, and per the spec and MDN, a scroll container's automatic minimum is 0. We prefer min-width: 0 for this case. It states the intent directly, and it does not hide parts of .meta's children that paint past its edges, such as a child's focus ring.</p>
+<p>One note from reading the docs: MDN says overflow: clip does not create a scroll container, while hidden does. So we would not expect overflow: clip on .meta to reset the minimum. Use min-width: 0 or overflow: hidden here.</p>
+<p>If the text sits inside several nested flex containers, each flex item between the row and the text can hold the line open. Put min-width: 0 on each flex item on that path, not only the one nearest the text.</p>
+<p>These properties are well supported. MDN lists min-width, overflow and text-overflow as Baseline widely available since July 2015, and flex-shrink since September 2015.</p>
+<p>Engineers who can explain why min-width: 0 works, not just paste it, are the people PIXEL RECRUITING LLC likes to introduce to product teams that need frontend and UI help. We are a direct staffing partner for Mastercard in O'Fallon, MO, and you can learn more at pixelrecruiting.com.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/leasewire" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/pixelrecruiting/text-overflow-ellipsis-does-nothing-in-a-flex-row-look-at-min-width-3mn0" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

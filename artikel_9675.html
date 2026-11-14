@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudways Velocity</title>
+    <title>URL Encoding vs Base64: When to Use Which</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9675.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,39 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Cloudways Velocity</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>URL Encoding vs Base64: When to Use Which</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdy3zuogn78djk1ug118f.png" alt="URL Encoding vs Base64: When to Use Which" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdy3zuogn78djk1ug118f.png" alt="URL Encoding vs Base64: When to Use Which" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Managed Node.js hosting. Always warm, never off.
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/cloudways?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1310169?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 14
+•
+Originally published at toolstead.net</p>
+<p>Both percent-encoding and Base64 turn input into a restricted set of ASCII characters, both are reversible, and both are routinely described as "making a string safe". They are also answers to completely different questions, which is why choosing between them by feel produces data that survives the round trip in testing and falls apart in a log file three weeks later.</p>
+<p>The distinction is one sentence long: percent-encoding protects characters that have syntactic meaning inside a URL, and Base64 re-encodes bytes that are not text at all. Get that backwards and nothing throws an exception — the value simply arrives different, or half of it arrives.</p>
+<p>The second clause is the one people skip, and it is the source of the classic bug covered below. The two transforms compose; they do not compete.</p>
+<p>Percent-encoding is defined per component of the URL grammar. It says: replace the bytes that are not allowed here with % followed by two hex digits. Its output is still text with the same meaning — a human can read an encoded path and see what it was. Its cost is unbounded in the worst case: an ASCII character costs one %XX triplet if it needs escaping (three characters), and a character outside ASCII costs one triplet per UTF-8 byte, so a single CJK character is nine characters.</p>
+<p>Base64 is defined over bytes, with no knowledge of URLs. Its output uses 64 characters — A–Z, a–z, 0–9, +, / — plus = padding, and it expands by exactly one third. All of those characters are legal in a URL as characters, which is exactly why Base64 breaks there: + means something else, / means something else, and = is used by other parts of the URL syntax. Legal, and load-bearing, are not the same property.</p>
+<p>Take an image encoded as standard Base64 and dropped into a query parameter:</p>
+<p>Every character there is legal in a URL, so the browser sends it and the server receives it. Then the server parses the query string with application/x-www-form-urlencoded rules — which is what most frameworks do by default — and in those rules + means a space. The Base64 that arrives is not the Base64 that was sent. If it decodes at all, it decodes to different bytes; more often it fails at a length that is not a multiple of four, at a totally different character position from the one that was altered.</p>
+<p>There are two correct fixes, and they are not interchangeable:</p>
+<p>The order of operations is worth writing down, because it is easy to get one step wrong and hard to see: bytes → Base64 → percent-encode → query string, and in reverse query string → percent-decode → Base64-decode → bytes. A percent-decode after a Base64-decode is a bug that only shows up on inputs containing %.</p>
+<p>JavaScript offers both, and the difference is exactly the "per component" rule.</p>
+<p>encodeURI is designed to take a whole URL you already assembled. It therefore leaves &, =, ?, / and : alone — they are the URL's structure, and encoding them would destroy it. Used on a value that is then pasted into a query parameter, it leaves the & alone, and the & splits your value into a second parameter. That is a straightforward injection: user text becomes URL syntax.</p>
+<p>encodeURIComponent is designed for one piece of a URL, so it encodes everything structural. It is the function to reach for by default, and one of the few places a rule of thumb is genuinely correct: if you are not certain, encode harder — an over-encoded unreserved character is harmless, an under-encoded & is a parameter injection.</p>
+<p>Note also what encodeURIComponent does not encode: ! ' ( ) * - . _ ~ and alphanumerics are left as-is, because RFC 3986 marks them as unreserved. That is correct, and it is why two different producers can emit different-looking but equivalent strings — a fact that matters later, when a signature or cache key is computed over one of them.</p>
+<p>+ meaning space is not a URL rule. It is a rule of application/x-www-form-urlencoded, the format used by HTML forms and, by convention, by query strings on many servers. Consequences worth knowing:</p>
+<p>Both transform encodings cost something, and neither is a solution to "the URL is too long". Percent-encoding can triple the length of ASCII input and worse for non-ASCII; Base64 adds a flat 33% and then gets percent-encoded, so a binary payload in a URL can end up nearly twice its size in characters before anything else is counted — see why Base64 costs 33% for the arithmetic.</p>
+<p>Practical limits are the reason this matters: older browsers capped URLs near 2,083 characters, many servers and proxies cap the request line at 8 KB, and every URL ends up in logs, analytics and referrer headers, where a megabyte of encoded data is not something anyone wants to retain. If the payload is more than a token or a short parameter, it belongs in the request body, not in the query string. If it is binary and it must be in a URL — a signed thumbnail, an inline data URI — that is a design decision with a cost, and Base64 plus percent-encoding is that cost. If you want to see where that cost lands, decode the data URI back into an image — the decoded byte count is printed next to the payload you pasted.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/cloudways" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/toolstead/url-encoding-vs-base64-when-to-use-which-1na4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

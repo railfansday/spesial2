@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Time Series Collections in Amazon OpenSearch Serverless: Observability That Scales With the Incident</title>
+    <title>The HackerNoon Newsletter: Jensen Huangs Nvidia Exit Is a Wake-Up Call for Startup Founders (11/13/2026)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9693.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Time Series Collections in Amazon OpenSearch Serverless: Observability That Scales With the Incident</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>The HackerNoon Newsletter: Jensen Huangs Nvidia Exit Is a Wake-Up Call for Startup Founders (11/13/2026)</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F57gxo33peyqpoyzf1ob6.png" alt="Time Series Collections in Amazon OpenSearch Serverless: Observability That Scales With the Incident" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_97_ns3zc973yu9qkwho3q1k9nmk.png" alt="The HackerNoon Newsletter: Jensen Huangs Nvidia Exit Is a Wake-Up Call for Startup Founders (11/13/2026)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F57gxo33peyqpoyzf1ob6.png" alt="Time Series Collections in Amazon OpenSearch Serverless: Observability That Scales With the Incident" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/hackernoon_newsletter_97_ns3zc973yu9qkwho3q1k9nmk.png" alt="The HackerNoon Newsletter: Jensen Huangs Nvidia Exit Is a Wake-Up Call for Startup Founders (11/13/2026)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 13
-•
-Edited on Nov 13
-•
-Originally published at Medium</p>
-<p>The worst hour of an incident is also the busiest hour for your telemetry. A collection that grows with that hour and drops back to zero afterward changes how you plan.</p>
-<p>Built for logs, metrics, traces, and events, the new time series collections in Amazon OpenSearch Serverless scale compute in seconds when telemetry surges and release it, all the way to zero, when the surge passes. Recent data stays hot, and older data moves to a cheaper warm tier that stays searchable. Alerting and anomaly detection run on the same collection that holds the data. With room for up to 100 TB of hot storage in a single collection, the ceiling is high enough for serious observability workloads. Where sizing for the peak is wasteful, flexible compute optimizes the cost: you pay for the capacity each hour uses, not the capacity the busiest hour needs. Agent traces arrive in bursts, which makes them a good test case, and the rest of this post uses them as the example.</p>
-<p>During an incident, telemetry volume climbs at exactly the moment engineers need answers fastest. A bad deployment floods the logs with errors, retries multiply the traces, and every dashboard is open at once. When I size a logging domain with a customer, the conversation always comes back to that hour. Ingest cannot fall behind while people are waiting on it, so the domain gets sized for the peak, and the extra capacity sits idle the rest of the day. Storage pulls in the same direction. Keeping months of history hot gets expensive, so older data moves to snapshots, and someone has to restore one before anyone can query it.</p>
-<p>With agents in the mix, both pressures grow. As Implement Agent Observability and From Log Lines to Agent Investigations describe, every model call and tool call an agent makes becomes a span in the same pipeline as your application traces. Evaluation jobs launch hundreds of runs at once. A single retry loop turns one request into dozens of spans. Development agents go quiet when their developers go home. Telemetry that used to spike only during incidents now spikes on schedules nobody sets for it.</p>
-<p>For compute, each time series collection draws on its collection group, a shared pool of OpenSearch Compute Units (OCUs) with a floor and a ceiling that you set. With the floor at zero, the group releases all of its compute when nothing is arriving. The ceiling caps what any surge can cost. Express Create in the console sets up the group, encryption, and network access in one step, and the launch post walks through the same setup from the AWS CLI.</p>
-<p>Because the collections in a group share its capacity, the group also works as a cost boundary. Giving development and production their own groups gives each its own ceiling, so an evaluation run in development cannot eat into the capacity production depends on. If scale-to-zero on Serverless is new to you, What If Your Search Infrastructure Only Existed When Someone Searched? covers how it works for search collections.</p>
-<p>When something goes wrong with an agent, the questions usually concern the last few hours, such as why a run failed this morning or what last night's batch cost. A time series collection keeps that window fast. At ingest, every document goes to both the hot tier and Amazon S3. Once it passes the age you choose, its hot copy is released and it lives on in the warm tier. A query that reaches older data pulls that range back into the hot tier. The first query over it is slower, and repeat queries run at hot-tier speed. Hot storage rates apply only to data that is still hot.</p>
-<p>Unlike a lifecycle policy, retention lives on the index itself, as the index.data.retention setting, and it is independent of tiering. You can set it when an index is created, inherit it from an index template, or change it later on an index that already holds data. Shortening it applies to data already indexed, so anything older than the new limit is deleted permanently. Spans can stay hot for a week and be kept for 90 days, which covers both debugging and a quarterly cost review. When an audit asks what an agent did two months ago, the answer is a query against the same collection rather than a snapshot restore. On a managed domain, the observability maturity model in From Log Lines to Agent Investigations reaches the same goal with UltraWarm. Here it takes two settings on an index template.</p>
-<p>Behind that tiering sits one requirement. Every document needs a designated timestamp field, and the service rejects any document without a valid one. The default field is @timestamp, while OpenTelemetry span documents record their time in startTime. Because the ingestion pipeline creates the span index on its own, the setting belongs in an index template that exists before the first span arrives. One template can carry it along with the tiering and retention settings:</p>
-<p>From then on, the span index uses startTime as its time field, keeps spans hot for seven days, and deletes them after 90. Rejections apply to single documents rather than whole requests, so one bad record never fails a batch.</p>
-<p>With this launch, alerting and anomaly detection come to Serverless, running inside the collection that stores your telemetry. They are managed from OpenSearch UI workspaces, alongside the Agent Traces page and the PPL queries from earlier posts.</p>
-<p>Alerting in OpenSearch is built from four pieces that work together. At its center is a monitor, a job that runs a query against your data on a schedule. Each monitor carries one or more triggers, which are conditions checked against the query's results. When a trigger's condition holds, it creates an alert that you can acknowledge or mute in OpenSearch UI. A trigger can also run actions, which send a notification through a channel you configure. On Serverless, three kinds of monitor are available. Per-query monitors evaluate one aggregated result, per-bucket monitors evaluate each group separately, and PPL monitors express both the query and its conditions in PPL.</p>
-<p>Turning the loop check from What Did That Agent Run Cost? into a PPL monitor takes its query and adds a schedule and a trigger. The monitor below runs every five minutes, counts tool calls per run, and fires when any run calls one tool more than five times:</p>
-<p>On Serverless, a monitor has to name a concrete index, as the Serverless alerting documentation notes, and a wildcard such as otel-v1-apm-span* is rejected. On a time series collection, that restriction costs nothing. The collection keeps one index per name instead of rolling over to new ones, and retention ages old spans out inside that same index. The name the pipeline writes to, otel-v1-apm-span, therefore always holds current data. Monitors belong to an OpenSearch UI workspace, so you create them there, or through the workspace's API, rather than on the collection. With the same pieces, a per-bucket monitor on input tokens, bucketed by agent name, catches the one agent that crosses its budget even when the rest of the fleet is quiet.</p>
-<p>Rather than relying on a fixed threshold, anomaly detection learns what normal looks like. Its detectors use the Random Cut Forest algorithm to model the usual rhythm of a metric and flag deviations in near real time. Pointed at token usage, a detector can learn the daily pattern of spend and flag a sudden jump, whatever caused it. A prompt change, a new tool, and a retry loop all look the same to the detector: spend that does not match the pattern. On Serverless, the detector writes its findings to a result index in the same collection. A per-query or per-bucket monitor on that index, with a trigger on anomaly grade and confidence, turns each finding into a notification.</p>
-<p>Observability data surges when things break, gets read mostly while it is fresh, and needs watching around the clock. Time series collections in Amazon OpenSearch Serverless fit each part of that pattern. Compute rises with the surge and falls back to zero when it passes. Two index settings handle tiering and retention without a lifecycle policy. Alerting and anomaly detection run where the data already lives, with up to 100 TB hot in one collection. Agent traces show the fit clearly, and the same collection holds the application logs and metrics they sit beside. The launch post has the full setup.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Get Hacker Noon's top homepage stories delivered to your inbox every day at noon</p>
+<p>Get Hacker Noon's top homepage stories delivered to your inbox every day at noon</p>
+<p>Get Hacker Noon's top homepage stories delivered to your inbox every day at noon</p>
+<p>🪐 What’s happening in tech today, November 13, 2026?</p>
+<p>The
+           HackerNoon Newsletter
+          brings the HackerNoon 
+          homepage
+          straight to your inbox.
+          On this day,
+          
+           we present you with these top quality stories. 
+          
+            From 
+        A 23M-Parameter Model Still Wins: 338 Embedding Models Ranked by Real Downloads
+       to 
+        138 Open Source OCR and PDF Parsers Ranked by GitHub Stars: PaddleOCR, MinerU, Tesseract and More,
+       let’s dive right in.</p>
+<p>By @anomalydetection [ 8 Min read ] An Anchorage witness filmed a tentacled object near JBER. We fact-check the claims, the solar geometry, and why AAROs last jellyfish was balloons. Read More.</p>
+<p>By @zbruceli [ 9 Min read ] Nvidias board just pushed out Jensen Huang, the founder who built a $4T company. What founders need to know about control Read More.</p>
+<p>By @textmining [ 11 Min read ] PaddleOCR, MinerU and Tesseract lead 138 open source OCR and PDF-parsing repos with 1,000+ GitHub stars, ranked from the Text Mining directory. Read More.</p>
+<p>By @textmodels [ 10 Min read ] all-MiniLM-L6-v2 got 177M Hugging Face downloads in 30 days. See all 338 embedding models ranked by real downloads, from BAAI and Qwen to OpenAI. Read More.</p>
+<p>🧑‍💻 What happened in your world this week?</p>
+<p>It's been said that
+          writing can help consolidate technical knowledge,
+          establish credibility,
+           and contribute to emerging community standards.
+          Feeling stuck? We got you covered ⬇️⬇️⬇️</p>
+<p>ANSWER THESE GREATEST INTERVIEW QUESTIONS OF ALL TIME</p>
+<p>We hope you enjoy this worth of free reading material. Feel free to forward this email to a nerdy friend who'll love you for it.See you on Planet Internet! With love, 
+ The HackerNoon Team ✌️</p>
+<p>The HackerNoon Newsletter: How Switch Mirroring Decisions Create Blind Spots in OT Network Monitoring (11/12/2026)</p>
+<p>Get Hacker Noon's top homepage stories delivered to your inbox every day at noon</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/jon_handler_9bb3e6b4a2fd0/time-series-collections-in-amazon-opensearch-serverless-observability-that-scales-with-the-incident-1i43" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/11-13-2026-newsletter?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

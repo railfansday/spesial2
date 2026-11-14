@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yogurt</title>
+    <title>TC39 `using` Declarations Land in V8 13: What Node.js 24 Developers Get for Free Without TypeScript</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9691.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,75 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Yogurt</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-13</p>
+        <h1>TC39 `using` Declarations Land in V8 13: What Node.js 24 Developers Get for Free Without TypeScript</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Femzvxuokuqzdkmyrzfut.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fblog%2Fposts%2Fusing-declarations-v8-13-nodejs-24%2Fthumbnail.png" alt="TC39 `using` Declarations Land in V8 13: What Node.js 24 Developers Get for Free Without TypeScript" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Femzvxuokuqzdkmyrzfut.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fblog%2Fposts%2Fusing-declarations-v8-13-nodejs-24%2Fthumbnail.png" alt="TC39 `using` Declarations Land in V8 13: What Node.js 24 Developers Get for Free Without TypeScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Free, private, open-source alternative to Granola
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/yogurt?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1311999?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 14
+•
+Originally published at jsmanifest.com</p>
+<p>This article was written with the assistance of AI, under human supervision and review.</p>
+<p>Every JavaScript developer has shipped a file handle that never closed. A database connection that stayed open. A timer that kept the event loop alive.</p>
+<p>The pattern is always the same: open a resource, forget to clean it up in one edge case, ship the leak to production. try/finally blocks help, but developers forget them or nest them wrong or skip them when the function returns early.</p>
+<p>TC39's Explicit Resource Management proposal gives JavaScript deterministic cleanup. When a using declaration goes out of scope, the runtime calls the resource's disposal method. No try/finally. No manual tracking. No leaks.</p>
+<p>V8 13 ships this feature unflagged. Node.js 24 gets it for free. TypeScript developers have been using the syntax since TypeScript 5.2, but the language-level guarantee is newer. Now the runtime enforces it.</p>
+<p>The TC39 Explicit Resource Management proposal adds two keywords to  using and await using. A resource declared with using must implement a Symbol.dispose method. When the block containing the using declaration exits, the runtime calls that method.</p>
+<p>The disposal happens at the end of the containing block, not the function. Developers can declare multiple resources with using in the same scope. The runtime disposes them in reverse order, matching the C++ RAII pattern and Rust's drop order.</p>
+<p>The disposal call happens even when exceptions occur. Developers do not need to wrap using declarations in try/finally. The runtime guarantees the cleanup.</p>
+<p>Resources that need asynchronous cleanup implement Symbol.asyncDispose instead. Developers declare them with await using. The runtime awaits the disposal before continuing.</p>
+<p>The proposal reached Stage 3 in TC39 in March 2023. V8 shipped the implementation in version 13.0, released October 2024. Node.js 24 (the current LTS as of March 2026) includes V8 13.4.</p>
+<p>Node.js file handles already implement Symbol.dispose and Symbol.asyncDispose. Developers using Node.js 24 can replace try/finally patterns immediately.</p>
+<p>File handle lifecycle diagram showing traditional vs using-based cleanup</p>
+<p>The using version removes the try/finally block and the null check. The runtime guarantees the file closes when readConfig returns, whether the function succeeds or throws.</p>
+<p>Multiple file operations in the same function become clearer. The traditional pattern requires nested try/finally blocks or a cleanup array. The using declaration handles both cases.</p>
+<p>The disposal order matches the declaration order reversed. Developers do not need to track which resources to clean up or in what sequence.</p>
+<p>The try/finally pattern requires explicit cleanup logic. Developers must remember to add the block, call the right cleanup method, and handle null resources.</p>
+<p>The using declaration moves the cleanup guarantee to the language. The runtime handles null checks, disposal calls, and error propagation.</p>
+<p>Early returns expose the difference. A function with multiple exit points needs cleanup in every path. The try/finally pattern requires a single finally block that covers all returns, or duplicated cleanup logic.</p>
+<p>The using version guarantees cleanup without extra code. Developers add new early returns without updating cleanup logic.</p>
+<p>Any object with a Symbol.dispose method works with using declarations. The method receives no arguments and returns nothing. The runtime calls it when the scope exits.</p>
+<p>The disposal method runs even when the main code throws. Transactions that fail to commit get rolled back. Locks get released. Temporary files get deleted.</p>
+<p>Resources that perform synchronous cleanup use Symbol.dispose instead of Symbol.asyncDispose. The runtime calls the method synchronously when the scope exits.</p>
+<p>A resource can implement both Symbol.dispose and Symbol.asyncDispose. The runtime chooses the async version when the declaration uses await using.</p>
+<p>The disposal method should not throw unless the failure represents an unrecoverable error. When disposal throws, the runtime propagates the error. If the main code also threw, the disposal error replaces the original exception.</p>
+<p>The pattern matches how Node.js file handles implement disposal. The Symbol.dispose method calls closeSync() internally. Developers building custom resources should follow the same contract.</p>
+<p>Resources that perform asynchronous cleanup need Symbol.asyncDispose. The method returns a Promise. The runtime awaits the Promise before continuing.</p>
+<p>Database connections, network sockets, and file handles all require async disposal. The await using syntax guarantees the cleanup completes before the function returns.</p>
+<p>Comparison of sync vs async resource disposal patterns</p>
+<p>The await using declaration ensures the connection returns to the pool. Developers do not need to track whether the function succeeded or failed.</p>
+<p>Multiple async resources dispose in reverse order. The runtime awaits each disposal before starting the next.</p>
+<p>The disposal order prevents race conditions. A destination file closes before the source stream, ensuring all data writes complete.</p>
+<p>Mixing sync and async disposal in the same scope works. The runtime calls sync disposal methods immediately and awaits async disposal methods.</p>
+<p>The runtime disposes resources in reverse declaration order regardless of disposal type. Async disposal awaits completion before moving to the next resource.</p>
+<p>For more patterns on resource management and cleanup strategies, see 10 JavaScript and Node.js Tips That Knock Away Multiple Concepts and 5 Node.js Tricks to Make JavaScript Development Fascinating.</p>
+<p>V8 13 shipped using declarations unflagged in October 2024. Chrome 131 (stable November 2024) includes the feature. Safari 18.2 (shipped December 2024) supports it. Firefox 135 (planned February 2025) will include it.</p>
+<p>Node.js 24 (LTS since March 2026) includes V8 13.4. Developers targeting Node.js 24 can use using declarations without transpilation. Deno 2.1 (shipped January 2025) supports the feature. Bun 1.2 (shipped December 2024) implements it.</p>
+<p>Browser support lags server runtimes. Developers shipping client-side code should check caniuse.com for current browser coverage. Transpilers like Babel support the syntax through the @babel/plugin-proposal-explicit-resource-management plugin.</p>
+<p>TypeScript 5.2 added support for using declarations in August 2023. Developers using TypeScript get type checking for Symbol.dispose and Symbol.asyncDispose methods. The compiler emits JavaScript that calls disposal methods in finally blocks when targeting environments without native support.</p>
+<p>The Node.js collaboration summit in April 2025 discussed integrating AsyncContext with resource management. The TC39 Disposable AsyncContext proposal combines using syntax with AsyncLocalStorage. That feature remains in Stage 1.</p>
+<p>Production readiness depends on the target environment. Node.js 24 projects can adopt using declarations immediately. Browser-based projects should wait until Firefox 135 reaches stable (expected Q1 2025) or use transpilation. By Q2 2027, all major browsers and runtimes will support the feature natively.</p>
+<p>No. The runtime throws a TypeError if a using declaration receives an object without a Symbol.dispose method (or Symbol.asyncDispose for await using). Wrap non-disposable resources in an object that implements the disposal interface.</p>
+<p>The disposal error propagates to the caller. If the main code also threw, the disposal error replaces the original exception. Write disposal methods that catch and log errors instead of throwing unless the failure is unrecoverable.</p>
+<p>Yes. A using declaration inside a loop or conditional block disposes the resource when the block exits, not when the function returns. Resources declared in a loop body dispose on each iteration.</p>
+<p>Yes. Call the Symbol.dispose method directly. The runtime skips the automatic disposal if the method already ran. Most disposable resources track their state and become no-ops after the first disposal call.</p>
+<p>JavaScript's using provides deterministic cleanup like Rust's Drop trait. The disposal happens at the end of the block, not the function. Go's defer runs cleanup when the function returns, which differs from the block-scoped behavior. The reverse-order disposal matches both languages.</p>
+<p>TypeScript 5.2 shipped using declarations 14 months before V8. TypeScript developers have been writing the syntax since August 2023. The language-level support changes the guarantee.</p>
+<p>TypeScript compiles using declarations to try/finally blocks when targeting runtimes without native support. The cleanup happens, but the TypeScript compiler generates the code. Developers targeting older runtimes still ship transpiled JavaScript.</p>
+<p>V8's native implementation moves the cleanup guarantee to the runtime. The disposal call happens regardless of transpilation. Developers targeting Node.js 24 skip the build step entirely. No TypeScript compiler. No Babel plugin. The runtime enforces cleanup.</p>
+<p>The feature eliminates a class of bugs that try/finally blocks fail to prevent. Developers forget to add cleanup code. They nest blocks wrong. They return early without cleanup. The using declaration removes those failure modes.</p>
+<p>Database connections stay open. File handles leak. Network sockets time out. These failures happen in production because cleanup logic lives in application code. The runtime guarantee moves cleanup from developer discipline to language semantics.</p>
+<p>Node.js 24 makes this guarantee available without TypeScript. Developers running plain JavaScript get deterministic cleanup. The runtime handles disposal. The feature works in scripts, REPL sessions, and production code. For more on leveraging modern Node.js features, see Convenient Tactics of Logging in Node.js and JavaScript in the Browser.</p>
+<p>Every resource leak that ships to production represents a try/finally block developers forgot to write. The using declaration removes that decision. Cleanup happens automatically. The runtime guarantees it.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/yogurt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/jsmanifest/tc39-using-declarations-land-in-v8-13-what-nodejs-24-developers-get-for-free-without-typescript-38h" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
