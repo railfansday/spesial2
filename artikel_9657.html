@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attestation is not supported for the docker driver</title>
+    <title>How We Reached 99% Line Coverage in a React Native App</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9657.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,34 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Attestation is not supported for the docker driver</h1>
+        <h1>How We Reached 99% Line Coverage in a React Native App</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fdocker-provenance-sbom-attestation-unsupported.png" alt="Attestation is not supported for the docker driver" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/su84CjGgOYTg9vg3xJdACEwaiyp1-rg9385z.png" alt="How We Reached 99% Line Coverage in a React Native App" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fdocker-provenance-sbom-attestation-unsupported.png" alt="Attestation is not supported for the docker driver" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/su84CjGgOYTg9vg3xJdACEwaiyp1-rg9385z.png" alt="How We Reached 99% Line Coverage in a React Native App" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 15
-•
-Originally published at latchkey.dev</p>
-<p>Attestation is not supported for the docker driver is buildx telling you the builder you are on cannot carry attestations at all, which is a different refusal from the exporter one people usually conflate with it. Four separate programs refuse attestation builds with four different sentences, and the default provenance buildx adds on its own is not any of them.</p>
-<p>Four refusals, four programs. Only the first is "Attestation is not supported for the docker driver."; the second is "docker exporter does not currently support exporting manifest lists".</p>
-<p>A build that worked stops as soon as --provenance or --sbom is set, or a --load that worked stops when someone turns attestations on. The wording depends on which program objected: buildx refuses before the build starts and prints three lines with a documentation link, while BuildKit refuses at export time with one line about manifest lists. The block below is two builds on this machine, one per driver.</p>
-<p>```Captured locally on Docker 29.6.2 and buildx v0.35.0-desktop.2, 2026-09-21
---- docker buildx build --provenance=true --load, on the default docker driver
-ERROR: failed to build: Attestation is not supported for the docker driver.
-Switch to a different driver, or turn on the containerd image store, and try again.
-Learn more at https://docs.docker.com/go/attestations/
---- the same flag on a docker-container builder, refused later and by a different program
-ERROR: failed to build: docker exporter does not currently support exporting manifest lists</p>
-<p>This is what the message itself suggests, and it is the only way to keep the plain driver and still carry attestations, because the classic image store cannot hold an index. On a hosted runner it means configuring the daemon before the build step, which is a real cost; on a self hosted runner image it is a one time change.</p>
-<p>The daemon has to be restarted for this to take effect, so it belongs in the runner image rather than in a workflow step.</p>
-<p>Since the default is inline only, you do not have to give up provenance to make --load work. Leave the defaults alone and set only the flags that create separate manifests. This keeps the build metadata that ends up in the image configuration while avoiding the exporter refusal.</p>
-<p>There is an environment variable that stops buildx adding its default provenance. Reach for it when a registry or a downstream tool genuinely cannot cope with the inline metadata, not as a reflex, because it is a supply chain signal you are giving up for every build in that job.</p>
-<p>Two of these come from buildx, before any build starts, and two from BuildKit, at the moment it tries to write the result. They fail at different times, they name different things, and the fix for one is not the fix for another. Identify yours from the wording before you change a flag.</p>
-<p>The buildx one is assembled at runtime from a feature name, the name of your driver and a documentation URL, so the sentence you pasted exists as a literal in no source file. Searching for it will not find the code; searching for "is not supported for the" and the word driver will.</p>
-<p>Read in docker/buildx (build/utils.go and build/opt.go) and moby/buildkit at commit 99bd9de (exporter/oci/export.go and exporter/containerimage/writer.go) on 2026-09-21.</p>
-<p>It is widely repeated that buildx attaches provenance by default and that this is why --load fails. The first half is true with conditions and the second half is not. When you do not pass --provenance and the builder supports attestations, buildx sets a provenance attestation with mode=min and inline-only=true. Inline only means it goes into the image configuration rather than into a manifest of its own, so nothing becomes an index and the docker exporter has one ref to write.</p>
-<p>On the plain docker driver buildx does not add it at all, because the default attestation is only added when the driver reports the multi platform feature. So a --load with no attestation flags has a single ref to write on either driver and the exporter takes it. What moves the boundary is the flags that write attestation manifests of their own: --provenance=mode=max, and any --sbom, since there is no inline form of one. Each of those makes the result an index, and an index is what the docker exporter refuses. The boundary is non inline attestations, not attestations in general.</p>
-<p>Two rows are captured locally on this machine on 2026-09-21, Docker 29.6.2 with buildx v0.35.0-desktop.2, and kept in our transcript: the docker driver refusal, and the exporter sentence, which we captured from a multi platform --load that reaches it by the same route. The other three rows are read from the buildx and BuildKit source cited above rather than measured, and either is repeatable on your own machine in under a minute.</p>
-<p>A job that never calls docker/setup-buildx-action is on the docker driver, which is BuildKit inside the daemon. That driver reports no multi platform support unless the containerd image store is on, so it cannot carry attestations and buildx stops you at the flag. A job that does call the setup action is on a docker-container builder, which can, so the same flags get you all the way to the exporter before anything objects.</p>
-<p>This is why the same workflow changes its error message when someone adds a setup step for an unrelated reason. Neither message is about your Dockerfile, and the fix in each case is on the output, not on the image.</p>
-<p>Every claim on this page is a decision made by a flag and a driver feature bit, and any of the five combinations can be run locally in under a minute. A Latchkey run would add the observation that a hosted runner also has a docker driver until you install a builder, which is true and is one sentence, not a recorded job.</p>
-<p>The part that would have needed a runner is a claim about what happens on GitHub hosted infrastructure specifically, and this page does not make one. What it makes instead is a claim about buildx and BuildKit, which are the same binaries wherever they run, and it shows the five outcomes in a table, marking which two we captured and which three we read from source, so you can repeat any of them on your own machine.</p>
-<p>It adds a provenance attestation with mode set to min and inline only set to true, but only when the driver reports multi platform support. On the plain docker driver it adds nothing. Inline only means the metadata goes into the image configuration rather than a separate manifest, which is why the default does not stop a load.</p>
-<p>Because there is no inline form of an SBOM. Any SBOM attestation is written as its own manifest, which makes the result an index, and the docker exporter refuses an index. The default provenance avoids that by living in the image configuration.</p>
-<p>The driver message comes from buildx before the build starts and means this builder cannot carry attestations at all. The exporter message comes from BuildKit at the end and means the build succeeded but its result cannot be written in the format you asked for. The first is fixed by changing builder, the second by changing output.</p>
-<p>Often yes, because attestation manifests require OCI media types and BuildKit will tell you directly that it cannot export attestations with Docker media types forced. Treat that as a concession to one destination rather than a default, and keep attestations on for registries that accept them.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>John Adib is a London engineering manager, former Sarshomar CEO and Jibres CTO. Two-time founder, UK Global Talent endorsed.</p>
+<p>John Adib is a London engineering manager, former Sarshomar CEO and Jibres CTO. Two-time founder, UK Global Talent endorsed.</p>
+<p>John Adib is a London engineering manager, former Sarshomar CEO and Jibres CTO. Two-time founder, UK Global Talent endorsed.</p>
+<p>In October, the mobile app's CI report showed 99.26% line coverage. The number was gratifying, but it was a poor place to start the story. When I joined the consumer engineering team in April, the app had 113 unit-test files and 14 Maestro YAML files. The device flows had existed for years, yet they were not running in CI. A feature could be finished while the work of trusting it still sat ahead of us.</p>
+<p>My remit as engineering manager covered mobile, backend and web work. Mobile verification was a particular bottleneck because a change could bring a nearby screen back into scope. People repeated checks near release, often without leaving an executable record for the next change. I wanted the checks to arrive with the implementation, where a developer and reviewer could see what had been exercised.</p>
+<p>There is no April coverage percentage in our records. I can't turn 113 test files into an imaginary baseline. The six-month comparison is about the test inventory and the way those tests entered development. The October coverage report is a later measurement of a defined scope.</p>
+<p>In May, we began making tests an expectation for changed production code. The agent working on a task had to understand the requirement, implement it, write relevant tests and run the repository checks before presenting the result. The tests were written close to the change, while the intended behaviour was still fresh.</p>
+<p>We gave that work some practical support. Jest ran with jest-expo and a shared render helper that supplied providers and routing. Business decisions that did not need a screen could live in pure helpers. Controlled GraphQL responses made it possible to exercise failure states without bringing up the whole application. These choices made a useful test cheaper to write and easier to keep.</p>
+<p>The count moved gradually at first: 164 unit-test files at the end of May, 250 in June and 395 in July. It rose to 1,040 in August and 1,669 in September. At the October checkpoint, the inventory contained 2,257 files. That is a substantial record of work. A file can contain one assertion or many, though, and splitting a file changes the count without protecting another behaviour.</p>
+<p>The Maestro inventory followed a different path. It stayed at 14 YAML files through April, reached 129 in May and 225 by the end of September. October's snapshot had 404. Those files include leaf flows, shared setup and suite entrypoints, so they do not represent 404 independent journeys.</p>
+<p>The more important step was connecting device flows to execution. The first EAS device workflow arrived in May; PR smoke runs and nightly Maestro Cloud runs followed in June. A flow sitting in a folder could now return a result during development. Even then, an inventory count was generous. The October route report found that all 99 non-exempt product routes were reachable through leaf flows in the repository, while only 28 were reached by leaves that CI ran. The gap was visible, which meant we could plan the next work instead of calling the whole app covered.</p>
+<p>The October line-coverage report merged results from four Jest shards. It counted 22,903 covered lines out of 23,072 eligible lines within the configured scope. The reported figure was 99.26%. The report also recorded 95.55% branch coverage, a useful reminder to look at decisions and failure paths as well as lines reached.</p>
+<p>We had made the coverage scope more explicit. Test helpers, Storybook, development-only code and other excluded files no longer belonged in the production-code denominator. That made the result more useful for the decision it was meant to support. It also means a coverage percentage without its scope is easy to overread. We pinned CI thresholds to the measured October baseline so a later change could not quietly lower that measure.</p>
+<p>Coverage still cannot tell a reviewer whether an assertion would catch the bug that prompted a fix. For a regression, I ask for a test that fails with the old defect and passes with the correction. In one review, two defects had slipped through earlier passes. We temporarily reverted their fixes, and both new specifications failed for the original reasons. That was stronger evidence than a green test count.</p>
+<p>Nor could the Jest report show what happened on an iOS or Android device. The team brought device runs, screenshots and recordings into review for changed interactions. Those results belonged to the code revision being assessed. They answered questions the coverage report was never designed to answer.</p>
+<p>Six months after we started changing the process, the test inventory was much larger and the October coverage measure gave us a demanding CI guardrail. I still wanted the same questions in a review: which behaviour did the tests check, which device paths actually ran, and what remained for a person to assess? The number helped most when it led to those questions.</p>
+<p>The figures and engineering decisions are documented in my Beyond the QA Bottleneck case study. I also presented the case study at React Native London on 22 October 2026, hosted at Funding Circle in London; the talk page includes the slides.</p>
+<p>John Adib is a London engineering manager, former Sarshomar CEO and Jibres CTO. Two-time founder, UK Global Talent endorsed.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/kalemi/attestation-is-not-supported-for-the-docker-driver-m1l" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/how-we-reached-99percent-line-coverage-in-a-react-native-app?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

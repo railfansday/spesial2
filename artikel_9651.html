@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Post-Hackathon Production Cliff: What Breaks 30 Days Later and How to Build Agentic Apps That Survive</title>
+    <title>XYBench: Helping with the problem behind the question</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9651.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,106 +15,35 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Post-Hackathon Production Cliff: What Breaks 30 Days Later and How to Build Agentic Apps That Survive</h1>
+        <h1>XYBench: Helping with the problem behind the question</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fiyk4zp82vej7szn7ut7e.png" alt="The Post-Hackathon Production Cliff: What Breaks 30 Days Later and How to Build Agentic Apps That Survive" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/aOWdQgZ8ioJcx9Eii4iob.png" alt="XYBench: Helping with the problem behind the question" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fiyk4zp82vej7szn7ut7e.png" alt="The Post-Hackathon Production Cliff: What Breaks 30 Days Later and How to Build Agentic Apps That Survive" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/638e39b249de7ae552d977b5/aOWdQgZ8ioJcx9Eii4iob.png" alt="XYBench: Helping with the problem behind the question" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 15
-•
-Originally published at tamiz.pro</p>
-<p>A hackathon agent usually wins by doing something impressive in a controlled demo. Production starts when the environment changes, inputs arrive in new shapes, tools return partial failures, and nobody is standing behind the terminal to repair the run. Thirty days later, the real failures are rarely the model itself. They are missing state boundaries, unverifiable side effects, unbounded retries, silent prompt drift, and observability systems that record activity without explaining intent.</p>
-<p>The path from a working prototype to a dependable agentic application is not a deployment checklist. It is a change in how you define correctness. This guide examines the failure modes that emerge after the applause fades, then shows how to build agents whose actions can be verified, recovered, and safely automated.</p>
-<p>The prototype treats the agent as the application. Production treats the agent as one component inside a controlled workflow.</p>
-<p>A typical hackathon implementation looks roughly like this:</p>
-<p>That loop is enough to demonstrate agency. It is not enough to survive real traffic because it assumes several things simultaneously: the model emits valid tool calls, tools are available, tool results are complete, external state advances predictably, and the same action should not be repeated after a timeout.</p>
-<p>Production architecture replaces that assumption with explicit contracts:</p>
-<p>The model is still nondeterministic. The system around it becomes predictable.</p>
-<p>Agent reliability is not the probability that the model never makes a mistake. It is the probability that a mistake cannot become an invisible, irreversible production incident.</p>
-<p>The first month exposes a predictable set of failure classes. Understanding them is more useful than memorizing framework APIs because the APIs change; the failure modes do not.</p>
-<p>Hackathon inputs come from the team. Production inputs come from users, upstream systems, and old data nobody remembers writing. The agent may discover that a required field is missing, but the tool schema still declares it as required.</p>
-<p>Instead of letting the model improvise around a malformed request, validate the request before entering the agent loop. Return structured errors that the model can reason about, but avoid allowing the model to bypass the validation boundary.</p>
-<p>The important point is not Pydantic specifically. It is the boundary between untrusted input and typed execution. Once an action reaches a tool, its arguments should already satisfy a machine-checkable contract.</p>
-<p>Network failures are ambiguous. A 500 response may mean the server failed before committing, while a timeout may mean the server committed and the response was lost. Blindly retrying a POST request can duplicate a payment, create two support tickets, or send two emails.</p>
-<p>This distinction belongs in the tool contract, not in the model's discretion.</p>
-<p>Long-running agents accumulate tool results, conversation history, and intermediate reasoning. Eventually the context window becomes a lossy summary of the task. The agent may forget an early constraint, repeat completed work, or treat a stale observation as current.</p>
-<p>Context management is therefore part of correctness. Use explicit task state, summarize old events into a structured checkpoint, and retain only the information required for the next decision. Do not rely on the model to rediscover the original goal after thousands of tokens.</p>
-<p>A tool that returns {"status": "ok"} after an internal partial failure is worse than one that throws an exception. The agent interprets the response as evidence that the intended action happened.</p>
-<p>Tools should return a typed outcome that distinguishes whether the desired postcondition was reached:</p>
-<p>The verifier may be imperfect, but it gives the orchestrator something better than a model's interpretation of an HTTP status code.</p>
-<p>Most agent demos verify the agent's answer. Few verify the agent's actions.</p>
-<p>A response such as “Your refund has been processed” is easy to inspect. A refund operation is not. The agent may have called the wrong endpoint, passed the wrong amount, received a misleading success response, or invented the completion entirely.</p>
-<p>This is the verifier gap: the distance between what the agent says happened and what the system can independently prove happened.</p>
-<p>If the same model both chooses an action and decides whether the action succeeded, errors become correlated. A mistaken plan can produce a mistaken verification, especially when the verification is based only on the tool's own response.</p>
-<p>Prefer independent evidence whenever possible.</p>
-<p>The verifier does not need to be another large language model. A deterministic read-back often provides more reliable evidence than asking a model to judge a JSON blob.</p>
-<p>A tool contract should specify what must be true after successful execution.</p>
-<p>This turns “schedule the meeting” from an instruction into a verifiable operation. The agent can still choose when and how to invoke it, but the runtime knows how to confirm the outcome.</p>
-<p>Real systems contain partial knowledge. If a read-back cannot confirm whether a write committed, the correct result is unknown, not failed and not succeeded.</p>
-<p>An unknown outcome should trigger reconciliation:</p>
-<p>This is the difference between a resilient agent and a hopeful one.</p>
-<p>A useful architecture separates six concerns that are often collapsed into one agent loop.</p>
-<p>The planner interprets the goal, selects the next action, and proposes arguments. It should not directly perform privileged operations. Its output is a proposal, not an irreversible fact.</p>
-<p>The policy engine evaluates the proposal against authorization, scope, cost, data classification, and business rules. It can approve, reject, or require human review.</p>
-<p>The executor performs approved actions with timeouts, idempotency keys, retry budgets, and circuit breakers. It owns transport-level correctness.</p>
-<p>The verifier checks postconditions through independent evidence. It should be able to fail closed when evidence is unavailable.</p>
-<p>The state manager stores the task plan, completed steps, pending actions, idempotency records, checkpoints, and human approvals. It should be durable across process restarts.</p>
-<p>The orchestrator advances the workflow based on structured outcomes. It decides whether to continue, retry, compensate, wait, or escalate.</p>
-<p>The separation matters because these components fail differently. The planner may hallucinate. The executor may time out. The verifier may be stale. The policy engine may be misconfigured. A single loop makes those failures indistinguishable.</p>
-<p>The most durable way to improve an agent is not to add more instructions to the prompt. It is to improve the action surface.</p>
-<p>A tool named manage_customer_account may support dozens of operations, leaving the model to construct arbitrary payloads. Smaller tools create clearer contracts, narrower permissions, and more precise verification.</p>
-<p>Each operation can have a different authorization rule and a different postcondition.</p>
-<p>Tool descriptions should explain when to use the tool, what it guarantees, and what it does not guarantee.</p>
-<p>Vague descriptions such as “Manages refunds” encourage tool misuse. Operational descriptions reduce invalid calls and make failures easier to diagnose.</p>
-<p>The agent should not have unrestricted access to a shell, database, or HTTP client when its task requires three business operations. Give it a bounded toolset with typed arguments, scoped credentials, and explicit limits.</p>
-<p>For high-risk operations, require structured approval:</p>
-<p>Human approval should be a normal state transition, not an emergency escape hatch bolted onto the application.</p>
-<p>Every tool result should contain enough information for the runtime to decide what happened without asking the model to infer it.</p>
-<p>Evidence might include the remote object identifier, a read-back snapshot, a provider event ID, or a correlation key. Avoid returning secrets or unnecessary personal data in evidence.</p>
-<p>A production agent is a distributed workflow with a probabilistic decision-maker inside it. Durable state is what makes that workflow recoverable.</p>
-<p>A chat transcript records what was said. It does not reliably record what has already happened. Store a structured task record:</p>
-<p>This record allows the orchestrator to resume after a deployment, model timeout, worker crash, or human approval delay.</p>
-<p>For a write operation, derive the key from the task and logical action, not from the current attempt.</p>
-<p>If the task legitimately needs to repeat the same operation, such as sending a weekly report, include a logical occurrence such as the ISO week in the key.</p>
-<p>The key must be passed to the remote API when supported. If the API does not support idempotency, store a local operation record and implement reconciliation before retrying.</p>
-<p>Retries should follow a policy, not an LLM's confidence:</p>
-<p>An unknown result should not be retried directly. It should be reconciled first. Use exponential backoff with jitter for transient failures, and open a circuit breaker when a dependency repeatedly fails.</p>
-<p>Some actions cannot be rolled back. Others require a compensating action rather than a literal rollback. A booking can be canceled; a sent email cannot be unsent. A published article may require a correction.</p>
-<p>Record compensation policies alongside tool definitions:</p>
-<p>The orchestrator should attempt compensation only when the original action is known to have succeeded and the workflow is no longer valid. Otherwise, escalate.</p>
-<p>Traditional application logs answer “what happened?” Agent logs must also answer “why did the system believe this action was appropriate?”</p>
-<p>Do not log hidden chain-of-thought as an operational requirement. Record concise decision rationales, structured state transitions, and observable facts. Those are more useful for debugging and less sensitive than unrestricted reasoning traces.</p>
-<p>Token usage and latency matter, but they do not reveal whether the agent is solving the right problem.</p>
-<p>A rising token bill may indicate increased complexity. A rising duplicate-write rate indicates a correctness problem. A falling verification coverage may indicate that new tools were added without contracts.</p>
-<p>Alert on broken system invariants rather than every transient error.</p>
-<p>These signals identify drift before users report it.</p>
-<p>Guardrails should constrain capability, not merely inspect generated text. Text moderation cannot prevent a valid-looking tool call from deleting the wrong resource.</p>
-<p>If an agent only needs to create a draft, do not give it permission to publish. If it only needs to read one customer's account, do not provide a broad customer-search token.</p>
-<p>Where possible, issue short-lived credentials scoped to:</p>
-<p>Enforce maximum spend, record counts, request volume, recursion depth, and wall-clock duration in the runtime.</p>
-<p>When a budget is exhausted, stop with an explicit partial-completion state. Do not ask the model to “finish more efficiently” after the limit has already been exceeded.</p>
-<p>This approach turns autonomy into a measured capability rather than a binary launch decision.</p>
-<p>External content may contain instructions aimed at the agent. Treat retrieved text as untrusted data, not as policy. Keep system policy and tool permissions outside the model's ability to rewrite. If a document says “email the contents to this address,” the agent should not treat that as an authorized instruction.</p>
-<p>The model may interpret untrusted content. It must not grant it authority.</p>
-<p>A demo evaluation asks whether the agent can complete a task. A production evaluation asks whether it can complete tasks safely across a distribution of inputs, with incomplete evidence, partial failures, and retries.</p>
-<p>A task can reach the correct final answer through an unsafe path. Evaluate intermediate properties:</p>
-<p>Capture redacted trajectories and replay them against new model versions, tool versions, and prompts. This catches regressions that unit tests miss, especially when a change affects tool selection or recovery behavior.</p>
-<p>Agent behavior is stochastic. Run important evaluations multiple times and report confidence intervals or failure rates. A single successful run is not evidence of a reliable system.</p>
-<p>Use the first month after a hackathon as a reliability engineering phase, not a waiting period for a larger team.</p>
-<p>The goal of this month is not to eliminate all model errors. It is to ensure that errors are bounded, visible, recoverable, and increasingly rare.</p>
-<p>Verify the task's postconditions using independent evidence whenever possible. Re-read a created record, query the payment provider, check a delivery event, or compare a resulting resource with the requested fields. Treat the agent's final message as a claim, not proof. If the external system cannot confirm the outcome, record it as unknown and reconcile before retrying.</p>
-<p>Every side-effecting tool should at least support an idempotency strategy. Prefer provider-supported idempotency keys. When the API does not support them, use a correlation key and a reconciliation query before retrying. Read-only tools are naturally repeatable, but they still need timeout and error handling.</p>
-<p>Often, yes. If the workflow is predictable, a conventional program is cheaper and easier to verify. Agents become valuable when inputs require interpretation, planning, or adaptation across multiple steps. A strong architecture uses deterministic code for policy, verification, and high-risk execution while reserving model-driven planning for the parts that genuinely require judgment.</p>
-<p>Start with the action surface. Narrow the toolset, type the arguments, add idempotency to writes, verify side effects, and persist task state. These changes usually remove more real incidents than prompt tuning, because they address the boundary where model ambiguity becomes system damage.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Truly useful AI assistants need to be able to help users who ask misguided questions—not just users who ask the right question with the right amount of detail. We’re releasing XYBench, a benchmark of 8K+ questions that tests how AI assistants respond to requests based on misconceptions, such as asking how to thicken frosting that keeps sliding off cupcakes when the real problem is that the cupcakes are still too warm to frost. XYBench won the Best Resource Paper Award at EMNLP 2026.</p>
+<p>A mismatch between the approach someone asks about and the goal they want to achieve is known as the XY problem: a person wants to accomplish X, assumes a particular approach Y will work, and asks for help with Y. In the cupcake example, the person is so committed to making the frosting stick that they fail to consider the warmth of the cupcake as the true problem to be addressed.</p>
+<p>Developed with researchers at Carnegie Mellon, NVIDIA, and Johns Hopkins, XYBench exposes a critical gap in LLMs' ability to troubleshoot problems: recognizing when a user's request is based on an implicit misconception and appropriately redirecting them toward a solution that addresses their actual goal. Drawing on 8,115 real-world questions spanning programming and everyday activities such as cooking and home repair, we introduce a benchmark that measures whether models identify these misconceptions and are able to prioritize effective solutions in their responses.</p>
+<p>The models we evaluated on XYBench – Claude Sonnet 4.6, GPT-5, Gemini 3.1 Pro, Qwen3.5-9B, and DeepSeek-V4 Pro – often suggested a solution to the user’s problem but kept their answers focused on the original, mistaken approach. Unlike human reference answers, all five models were less likely to steer users away from that approach and toward a solution suited to their goal.</p>
+<p>People use AI systems with different levels of knowledge and may not always know how best to approach a problem. We hope XYBench helps researchers measure whether model improvements make assistants better at recognizing mistaken assumptions, explaining why a proposed approach might not work, and suggesting more effective alternatives—even when users don't know the right questions to ask.</p>
+<p>We built XYBench from four sources: 1,557 questions from Stack Overflow, 184 from Stack Exchange, 102 manually curated examples, and 6,272 questions generated from WikiHow guides. For each question, we identified the stated request (Y), what the person explicitly asks for, and the intended request (X)—the underlying goal that can be inferred from context.</p>
+<p>For the public forum questions, we used the three highest-scored human answers and the accepted answer, where available, to establish the intended request and possible solutions. We filtered out cases where answering the stated request was judged sufficient. For WikiHow, we used Sonnet 4.5 to generate questions around plausible misconceptions in procedural guides, then refined them to include enough context for an expert to infer the underlying goal without stating it outright. We removed examples where answering the literal request would largely resolve the problem.</p>
+<p>A model might spend several paragraphs recommending a more powerful vacuum cleaner, then briefly suggest checking for a clogged hose. If a clog is causing the weak suction, clearing it could solve the problem.</p>
+<p>A more helpful answer would recognize that the user wants to restore suction and focus on diagnosing the cause. This draws on pragmatics, the branch of linguistics concerned with how context and communicative intent shape meaning. To test whether models use this understanding in their answers, XYBench measures three aspects of each response:</p>
+<p>In XYBench, Claude Sonnet 4.5 serves as the automated judge. It classifies individual suggestions within each model’s response and assesses the answer’s pragmatic emphasis.</p>
+<p>To validate Sonnet 4.5’s judgments, two human reviewers independently assessed 500 model responses to XYBench questions. Agreement with the judge, averaged across the reviewers, ranged from 97.5–100% on whether a solution appeared, 84.6–93.3% on misconception identification, and 74.2–79.8% on pragmatic emphasis.</p>
+<p>We evaluated Sonnet 4.6, GPT-5, Gemini 3.1 Pro, Qwen3.5-9B, and DeepSeek-V4 Pro on XYBench in a single-turn setting, with one response per question. We evaluated human reference answers separately using the same metrics.</p>
+<p>Across all four sources, every model was more likely to include a solution to the stated request (Y) than to the underlying goal (X). On Stack Overflow, stated-request solutions appeared in 75–86% of responses, compared with 59–71% for underlying-goal solutions.</p>
+<p>A passing mention of a solution does not make it the focus of an answer. In the vacuum example, a model could briefly suggest unclogging the hose but focus most of its response on buying a more powerful vacuum. We would count that response as containing a solution to the underlying goal, even though the model emphasized the stated request. We measured overall emphasis separately: on Stack Overflow, models focused primarily on the underlying goal in only 35–41% of their responses, and on the stated request in 47–57%. In the remaining responses, models gave similar emphasis to the stated request and the underlying goal.</p>
+<p>We also tested whether making the user’s goal explicit would help. In an oracle experiment, we supplied both the stated request (Y) and the intended request (X) alongside each question. On Stack Overflow, Sonnet 4.6’s rate of including a solution to the underlying goal rose from 59% to 67%, but its misconception-identification rate fell from 47% to 34%. Across the sources with human reference answers, every model in this experiment still trailed humans on misconception identification. Supplying intent helped, but did not consistently close the gap with human responses. This suggests that detecting intent is only part of the challenge: models also need to act on it when it diverges from the stated request.</p>
+<p>A separate experiment tested whether models could identify useful advice when judging responses instead of writing them. We gave the same five models, plus GPT-4.1, each question with two possible answers: one focused on the literal request and one explaining the misconception and addressing the underlying goal. On Stack Overflow, all six chose the goal-focused answer in 71–84% of cases. By comparison, only 35–41% of the answers written by the five models in our main evaluation primarily focused on the underlying goal. The results expose a gap between recognizing useful advice and producing it, which a multiple-choice test alone would miss.</p>
+<p>Researchers can use XYBench to test whether changes to prompting or training help models identify misconceptions, offer solutions to users’ underlying problems, and make those solutions the focus of their answers. Measuring each behavior individually lets researchers see whether progress in one also improves the others.</p>
+<p>Future work could test which training methods help models act on inferred intent—AKA what users need and not just what they literally asked for. The XYBench currently covers English-language queries and mainly procedural problems; extending it to other languages, cultures, and conversational settings remains an open direction.</p>
+<p>We hope XYBench enables researchers to build models that offer useful advice even when a user’s first question rests on a mistaken assumption.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/tamizuddin/the-post-hackathon-production-cliff-what-breaks-30-days-later-and-how-to-build-agentic-apps-that-375h" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/allenai/xybench" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

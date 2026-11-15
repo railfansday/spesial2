@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solving the fox game</title>
+    <title>Siri AI Developer Preview Lets iOS, iPadOS, and macOS Apps Integrate with Siri</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9813.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,194 +15,67 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Solving the fox game</h1>
+        <h1>Siri AI Developer Preview Lets iOS, iPadOS, and macOS Apps Integrate with Siri</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
+            <img src="https://res.infoq.com/news/2026/11/apple-siri-ai-integration/en/headerimage/ios-27-virtualization-1794583601204.jpeg" alt="Siri AI Developer Preview Lets iOS, iPadOS, and macOS Apps Integrate with Siri" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/apple-siri-ai-integration/en/headerimage/ios-27-virtualization-1794583601204.jpeg" alt="Siri AI Developer Preview Lets iOS, iPadOS, and macOS Apps Integrate with Siri" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Christoffer Stjernlöf posted about the Fox Game,
-an old Norse asymmetric board game (seemingly also called “halatafl”) where
-twenty sheep try to outsmart two foxes and get to the other side.
-His AI uncovered some interesting insights, but left the question open as of whether the 
-foxes or the sheep actually win with perfect play (the general sentiment
-in his family was that winning with the foxes was easy). This was too tempting
-for me to leave on the table, so I set out to make a strong solve.</p>
-<p>Since I don't know this game myself, I've stayed with the rules he describes
-even when they differ from e.g. Wikipedia
-(in particular, I do not use forced fox jumps, or multi-jumps); the only
-real change is that I don't have a 40-move draw rule, any position that is
-a forced win for one of the sides would be a win no matter how long it would
-take. (I consider this just an implementation detail in his AI, although
-morally, I consider a draw a loss for the sheep.) You might want to read
-his post to get the full rules, because I'm not going to repeat them here.</p>
-<p>The results first: The sheep win with perfect play, even with only 19 sheep
-(remove one on the flank), or 18 if they are allowed to go first. Even with
-only 9 sheep (the minimum possible that isn't an instant win for the foxes),
-the sheep can force a draw right from the start. With one fox, 11 sheep
-suffice for a forced win. (The draw margin is seemingly so large because
-one fox can just camp in the last spot in the pen, and it's hard to force
-it away without getting harassed by the other fox, unless you have lots of sheep.)</p>
-<p>The rest is about the implementation. I'll skip over a lot of wrong turns,
-and unsurprisingly, there were a lot of bugs to iron out, but hopefully,
-it got to a good place in the end. :-) I started out trying to make something
-very simple, and it worked for the first few cases, but then things got
-more complicated than I would have liked in the end. Still only at ~1000
-lines of code, though, with no dependencies.</p>
-<p>The board has 33 squares. I tried a few different ways of represent the state
-of the game, and ended up on a simple bitboard representation: There's a
-64-bit bitmap representing where there are sheep, and another bitmap
-representing where there are foxes. Since there's plenty of room in there,
-I use a spare bit to represent side-to-move. This is compact (which mattered
-a lot earlier on, but not as much later), easy to iterate over, and has
-little redundancy, so it's easy to keep valid. You need fast 64-bit population
-count and bit-scan instructions, but a) that's common now everywhere,
-and b) I decided fairly early that I wanted to require BMI2 anyway.</p>
-<p>The bit order mostly doesn't matter; I just started at top-left and went
-from there. All it really influences is square iteration order. There's
-a small tweak in that I store the right half of the board mirrored
-(reverse x order) for symmetry purposes; more on that below.</p>
-<p>I just typed in every possible move from every square into an array,
-then verified by generating some SVGs that I hadn't made any typos (I had).
-In retrospect, I should have done something more automated; it would have
-been less painful.</p>
-<p>The moves for sheep are just “you can go to X, Y or Z”. The moves
-for foxes are “you can go to X or Y, or you can go to Z if there's
-a sheep at W (which will be eaten)”. The move generator mostly just looks up
-the source square and tests every move. For the sheep, I make an easy
-test using bitboards; for the foxes, I could probably do something
-similar, but the jump moves proved a bit tricky (even with PEXT/PDEP)
-and I didn't end up using it.</p>
-<p>This is the part that really determines the geometry of the board
-(apart from debugging display). Everything else is pretty much geometry-agnostic.</p>
-<p>There's a little over 2^41 possible board states (this includes some
-illegal positions as well as some situations that could never arise
-during actual gameplay, such as a fox being stuck at C1 with a row
-of sheep ahead of it), and I want to remember all of them. With that
-many positions, I figured I needed a fairly compact representation.
-I needed to store that a position could be sheep win, fox win or
-a draw, and then there was a fourth “invalid” state that was useful
-for internal reasons, so that maps exactly to two bits per position.
-(A tablebase intended for distribution could be compressed to less using the usual
-tricks of entropy coding, skipping half of the positions, or similar.)</p>
-<p>This means we need to give a number to every possible position, ideally
-one with no collisions and no holes. I learned about
-combinatorial number systems
-which fit the bill exactly; given e.g. “we have 33 squares and 15 pieces”,
-it gives a dense mapping of positions from board to ID (ranking) and the
-opposite (unranking). (I made some fairly fast ranking and unranking
-algorithms, which may or may not have been novel, but it turned out
-I didn't actually need fast unranking after some other optimizations.)
-There are some extra complications in that there are two types of
-pieces, but you can solve them in a number of ways.</p>
-<p>On a macro level, I store everything with 9 sheep and 1 fox first,
-then 9 sheep and 2 foxes, 10 sheep and 1 fox, and so on. This gives
-beautiful locality (a single move can never remove more than one sheep,
-and only extremely rarely more than one fox), allowing me to just
-mmap everything and let the kernel deal with it, even though I only
-had 256GB of RAM and the total set was larger (329,870,110,455
-bytes after the symmetry optimizations below).</p>
-<p>mmap is almost never the right answer, but again, I was trying to
-go for simplicity. It certainly brought me pain, though, and perhaps
-some more explicit I/O would have been better.</p>
-<p>The board is left-right symmetric (with an odd number of columns,
-so that there is a middle column that is neither “left” nor “right”).
-I had hoped to just ignore this, but eventually the gains became
-too important to ignore, so I conceded.</p>
-<p>The basic idea is that I ranked the board twice, both as itself
-and mirrored (mirroring is just a couple of masks and shifts, given
-my representation), and picked the key that was the smaller as canonical.
-This reduced the number of positions I needed to look at to a bit
-over 50%, as expected, but it does nothing to the storage/RAM
-requirements; the new rank is not dense and the “illegal”
-(non-canonical) positions are spread out a bit all over the place
-(although of course near the low and high ends of values,
-it works much better).</p>
-<p>As a tweak, I chose to compute all 33+281 canonical fox positions
-and renumbered using those placements as an assumption. This slashes ~95% of 
-the waste, which is good enough; you can still rank a
-nonconical position if the foxes are symmetric about the center
-(or if there's only one fox and it's in the middle!), though.</p>
-<p>You can improve on this by making the macro-splitting finer;
-instead of having a chunk for e.g. “10 sheep, 2 foxes”, you
-could have one with “5 sheep in left, 0 foxes in left, 1 sheep
-center, 1 fox center, 4 sheep in right, 1 fox in right”
-and demand that there are more sheep in left than right.
-However, you still get problems when the number is balanced,
-you'd need finer splitting etc.. The gains are small enough
-that I didn't see the point in doing this, and it tends to be
-a place where it's easy to introduce bugs.</p>
-<p>I imagined calculating the exact number of positions up to symmetry
-would be an interesting exercise somehow, but I suppose it just
-immediately falls to Burnside's lemma
-as soon as you know how to count positions at all.</p>
-<p>Now that we have positions and moves and a way to store results,
-we want to know how to find the result for the starting position
-(and ideally also all other positions).</p>
-<p>My first attempt just did a depth-first search, caching as it went.
-This worked for the earlier stages but was generally a disaster; it ran out of stack
-easily (even with 8 GB—eight gigabytes of stack), and had problems
-with figuring out loops. (It didn't loop infinitely, but was prone
-to declaring loops where one side could break out of the loop by winning.
-I had a nasty hack to fix that, but it didn't really feel good.)</p>
-<p>What I did instead was propagating results one step at a time.
-For each possible position:</p>
-<p>If from a given position you know you can immediately win
-(e.g., the sheep reach the pen, or the fox eats the last
-relevant sheep), mark it as such.</p>
-<p>If you can, in one move, reach a known-won position, mark your
-position as won (for the side to move). Similarly, if you can only reach known-lost
-positions, mark your position as lost.</p>
-<p>Repeat #2 over and over again until you no longer have changes.</p>
-<p>This was simple but still inefficient; I typically needed 40–80
-passes for each chunk (where a chunk is something like “all
-positions with 15 sheep, 2 foxes”). However, it was super-easy to parallelize;
-I have 64 cores and could just hand out reasonable independent sub-chunks,
-you don't even need locking or atomic operations on the result set.</p>
-<p>The correct way of doing this is retrograde analysis (replace #2
-with doing backwards moves) and I assume this would have made the
-calculation roughly ten times as fast. But I only needed ~36 hours
-for the actual run (plus numerous pre-runs that failed for various
-reasons!), so I never got to this. After all, I wanted something
-simple to begin with.</p>
-<p>Since I only store win/draw/loss (WDL) for each position (also known as
-a “bitbase” in chess tablebases), it's not
-easy to know what the fastest way to win is; just that “this move
-does not mess it up, the other side still can't force a draw”.
-However, in practice, you could just do reasonable-looking moves that don't
-regress the position, and take forward moves whenever you can (i.e., do sheep
-pushes if that still wins).</p>
-<p>I made a simple alpha-beta searcher that tries to get win distances
-using the bitbase as a guide, which was a really fun challenge!
-It can find wins when they're perhaps ~20 ply (10 moves for each side)
-away, depending a bit on how narrow the win is (if there are only
-a few ways to win, it will obviously have to search a much smaller
-tree). Ultimately, though, alpha-beta for finding exact mate scores is just
-a losing game, since even perfect move ordering will only give you
-a sqrt() improvement over pure minimax.</p>
-<p>Perhaps making DTZ (distance-to-zeroing, referring to zeroing the
-draw move counter in e.g. chess) bases would be possible
-without breaking the bank on storage space; I would assume that
-usually, you can force some sort of progress pretty fast, at least
-as the sheep.</p>
-<p>I made a very rudimentary interface to the database; the UI isn't
-very nice, and it largely relies on hovering (which doesn't work all that
-well on mobile) but I didn't want a polished game-player, just to know the
-answer. :-) You can try it out at
-https://sheep.sesse.net/,
-although I don't envision keeping it up forever. Perhaps someone can
-gain new insight from it and become an expert player, although strong
-solves are rarely very insightful in themselves due to the brute-force
-nature. At least we've conclusively settled (again, under this ruleset!)
-that the sheep win with perfect play.</p>
-<p>Earlier, I would publish the source, but these days, the only ones
-who would be reading it would be the AI beast (fox?), and I'm not really
-so interested in that. :-) I'm definitely open to answering questions
-if anyone should have them; contact information at my home page as usual.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>QCon AI New York (December 15-16, 2026): Learn how senior engineers are building AI systems that hold up in production.
+
+                            Register Now</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>Lily Mara explains how to avoid high-risk software rewrites through incremental FFI refactoring. She shares how engineering teams can replace Python bottlenecks with Rust via PyO3, demonstrating how to achieve dramatic function-level speedups, seamless integration testing, and meaningful infrastructure cost savings without microservice overhead.</p>
+<p>Agentic AI architecture extends microservices and cloud-native architectures with AI agents that work with context, memory, and protocols such as MCP and A2A. The article covers bounded-context integration, task-dependent coordination strategies, new security risks, and observability needs. It expects gradual adoption alongside existing architectures, with platforms absorbing common components.</p>
+<p>Hannes Hapke shares how Dataiku’s open-source Kiji Inspector applies Sparse Autoencoders (SAEs) directly to decision tokens to expose why agents pick specific tools. Moving past superficial chain-of-thought narratives, he discusses causal ablation, layer activation extraction via patched vLLM engines, and production monitoring workflows for software architects and senior engineering leaders.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>Oli Lane and Julian Wreford share how Gearset replaced guesswork in distributed asynchronous queues with OpenTelemetry tracing. They explain why traditional metrics fall short, how to implement user-centric SLOs based on latency distributions, and share practical debugging tips to help senior developers, software architects, and engineering leaders improve system reliability and team culture.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Siri AI Developer Preview Lets iOS, iPadOS, and macOS Apps Integrate with Siri</p>
+<p>Nov 13, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>Apple released the Siri AI Developer Preview in the 27.3 beta releases of its operating systems, enabling developers and apps to integrate with the assistant and hand off actions to it. During the Preview, access to Siri AI is restricted to developer builds and internal TestFlight testers.</p>
+<p>Apple says that Siri AI is an entirely new version of its assistant which is "profoundly more capable, conversational, and personal".</p>
+<p>Today’s preview allows any app to bring its content and actions directly into Siri AI by using App Intents, making it easier for all apps to tap into Siri AI’s newest capabilities, including personal context understanding, onscreen awareness, natural language, and more.</p>
+<p>These new capabilities let users make natural language requests and have Siri AI carry out any custom action supported by the app. The framework also supports complex requests through Skills, a new feature that lets developers "teach Siri AI how to combine several actions into a single experience".</p>
+<p>If a request does not specify an app name, it will automatically be routed to the app currently in the foreground, the app associated with an active Live Activity, or the app previously mentioned in the ongoing conversation. This allows users to continue conversations across an app and its Live Activity, or a different app altogether. While an app is running in the background, however, it will receive only requests that explicitly mention its name.</p>
+<p>Requests can also include actions across apps, such as finding content in one app, sending it to another, and performing an action there.</p>
+<p>Commenting on Apple's announcement, Reddit user sixtypercenttogether noted:</p>
+<p>In my limited testing so far it does what it says. If you include a good description on your intent and parameters, Siri can figure it out. THIS is what Siri should have been all along, all the way back in 26.0.</p>
+<p>User Medical_Lengthiness6 compared Apple's approach to integrating Siri AI to Google's AppFunctions:</p>
+<p>Doing it via app intents was the right move. Google could have done this with the android intents but instead decided to make a completely different agent skills sdk that you have to implement.</p>
+<p>All Apple Intelligence features, including Siri AI, may be subject to usage limits, with extended, premium access planned for the future. Finally, developers based in the EU should be aware that Siri AI is currently unavailable in the EU on iOS, iPadOS, and watchOS.</p>
+<p>Explore how Azul helps Java teams reduce JVM vulnerability risk, strengthen application security, and prepare their Java environments for agentic AI. Discover practical strategies for securing Java workloads while maintaining performance and reliability. Learn more.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="http://blog.sesse.net/blog/tech/2026-11-13-19-51_solving_the_fox_game.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/apple-siri-ai-integration/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

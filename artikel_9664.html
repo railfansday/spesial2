@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Token Pooling-Aware Training for Multi-Vector Embedding Models</title>
+    <title>Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9664.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,74 +15,105 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Token Pooling-Aware Training for Multi-Vector Embedding Models</h1>
+        <h1>Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/train-sentence-transformers/st-hf-thumbnail.png" alt="Token Pooling-Aware Training for Multi-Vector Embedding Models" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxhkmasof54dam4ydyj0j.jpg" alt="Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/train-sentence-transformers/st-hf-thumbnail.png" alt="Token Pooling-Aware Training for Multi-Vector Embedding Models" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxhkmasof54dam4ydyj0j.jpg" alt="Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Multi-vector embedding models give each query token its own opportunity to find a match in a document. This makes them wonderfully expressive for search, but those document vectors add up quickly. A corpus with millions of documents can contain hundreds of millions of vectors!</p>
-<p>Token pooling makes these representations smaller by merging similar token vectors. The more aggressively I compress them, however, the easier it becomes to lose something useful. Pooling-aware training teaches the encoder to preserve the information that matters when its vectors are merged, helping you retrieve better from the same storage budget.</p>
-<p>In this post, I'll explain how pooling works, train a model for compressed retrieval with Sentence Transformers, and explore the resulting quality and storage tradeoff. With pool_factor=4, my normally trained model retains 94.6% of its unpooled NanoBEIR nDCG@10, with a 4x reduction in document vectors. Token pooling-aware training raises that retention to 97.8% at the same storage budget! Let's see how.</p>
-<p>This post builds on pooling-aware training studied in Stefan Josef's Learn to Pool and LightOn's pooling regularization study, which also explores targeted training and adaptive budgets. Here, I'll focus on understanding the method and putting it to work with a short, reproducible Sentence Transformers example.</p>
-<p>Pooling-aware training improves retrieval quality at the same vector budget. Details below.</p>
-<p>A single-vector embedding model compresses an entire document into one vector. Multi-vector models such as ColBERT instead keep a collection of contextual token vectors, allowing different parts of a query to match different parts of a document.</p>
-<p>For example, a query about a laptop with a long battery life can find evidence about the laptop in one part of a document and battery endurance in another. With MaxSim scoring, each query vector selects its best matching document vector, and those scores are added together:</p>
-<p>MaxSim⁡(Q,D)=∑q∈Qmax⁡d∈Dq⊤d
-\operatorname{MaxSim}(Q, D) = \sum_{q \in Q} \max_{d \in D} q^\top d
-MaxSim(Q,D)=q∈Q∑​d∈Dmax​q⊤d</p>
-<p>Even with the 2-bit or 4-bit residual quantization supported by Fast-PLAID, storing hundreds of vectors per document adds up. At 4 bits per residual coordinate, 200 vectors of 128 dimensions require 12.8 KB of quantized residuals per document, or 12.8 GB across a million documents. Pooling each document to 50 vectors reduces that to 3.2 GB, at the same dimensionality and precision.</p>
-<p>The useful observation is that many document vectors can be similar. Several tokens might describe closely related concepts, creating an opportunity to represent them together.</p>
-<p>HierarchicalTokenPooling groups similar token embeddings using Ward hierarchical clustering. Starting with one group per token vector, it repeatedly merges the two groups that cause the smallest increase in how spread out the vectors are within their groups. This spread is measured by the sum of squared distances from each vector to its group's mean, so Ward's method favors compact groups of similar vectors.</p>
-<p>These merges build a hierarchy of progressively larger groups, letting us choose a level of compression that fits our budget. We then represent each group by its mean and normalize the resulting vectors again, ready for MaxSim scoring.</p>
-<p>You can make compression proportional to document length:</p>
-<p>With pool_factor=4, documents retain approximately one quarter of their original vectors, so longer documents can keep proportionally more capacity. By default, the first token is protected from merging and pooling applies only to document embeddings, leaving query embeddings unchanged.</p>
-<p>HierarchicalTokenPooling offers three alternative controls:</p>
-<p>This distinction matters when document lengths vary. With pool_factor=4, a longer document can retain approximately one quarter of its vectors, allowing its representation to grow with its content. With distance_threshold, the vector count can grow when more distinct embeddings need to be preserved.</p>
-<p>Adaptive pooling uses a shared distance threshold to merge similar embeddings more aggressively while preserving more vectors for documents with distinct content. It can be used with any multi-vector model, including one trained without a pooling-aware objective.</p>
-<p>Rather than choosing a threshold manually, you can calibrate it for a target average vector count. Given a representative sample of your corpus in calibration_documents:</p>
-<p>Calibration only needs document embeddings and returns a threshold you can reuse when indexing. The target is an average, so individual documents can receive more or fewer than 16 vectors. The achieved average can also change on another corpus.</p>
-<p>Pooling can already be useful on an ordinary multi-vector model. The difficulty appears when a document contains a distinction that matters for retrieval, but merging its vectors makes that distinction harder to recover. The original training objective never required the model to work with these compressed representations. But, you can teach it to do exactly that.</p>
-<p>If you've used Matryoshka embeddings, the training principle will feel familiar. Matryoshka applies a retrieval objective at several embedding widths, teaching smaller prefixes to remain useful. Pooling-aware training applies the objective to representations with fewer token vectors.</p>
-<p>For my example, each training batch contributes two losses:</p>
-<p>L=12Lunpooled+12Lpooled
-\mathcal{L} = \tfrac{1}{2}\mathcal{L}_{\mathrm{unpooled}} + \tfrac{1}{2}\mathcal{L}_{\mathrm{pooled}}
-L=21​Lunpooled​+21​Lpooled​</p>
-<p>The first term teaches the model to retrieve with its full representations. The second teaches it to arrange its token embeddings so that useful matches survive pooling. Both objectives update the same encoder, giving it feedback about retrieval before and after compression.</p>
-<p>Ward clustering makes discrete decisions about which tokens belong together. During training, HierarchicalTokenPooling uses a straight-through estimator to pass gradients from pooled vectors back to their member tokens, without differentiating the cluster assignments. The encoder can then learn from retrieval errors made with its pooled representations.</p>
-<p>MultiVectorTokenPoolingLoss wraps an existing multi-vector retrieval loss and applies it using your chosen poolers:</p>
-<p>CachedMultiVectorMultipleNegativesRankingLoss supplies the retrieval objective. It teaches each query to score its relevant document above the negative documents in the batch. By default, it uses model.similarity, using the model's similarity setting (MaxSim in this example) and kernel settings. A model configured with similarity_fn_name="meanmaxsim" would also use MeanMaxSim during training.</p>
-<p>Gradient caching allows the encoder to process small mini-batches while retaining a larger set of in-batch negatives. My training script uses mini-batches of 64 with a training batch size of 256.</p>
-<p>MultiVectorTokenPoolingLoss adds the compression objective. Here, None means that one variant uses the original embeddings, while pooling supplies the factor-4 variant. The two weights average their losses. Pooling variants reuse the computed token embeddings, so each additional pooler adds clustering and scoring work without requiring a separate encoder pass for that variant.</p>
-<p>The poolers can also be custom BaseTokenPooling implementations that preserve gradients through their input embeddings. You can adapt the training objective to the representation you want to deploy.</p>
-<p>Replace the factor-4 pooler with your chosen deployment configuration, or include several poolers and choose weights for their losses.</p>
-<p>The complete training script includes the dataset, trainer, validation loss, and small retrieval evaluations during training. From a checkout of the repository, run both variants locally with uv:</p>
-<p>The script declares its training and kernel dependencies, so uv installs them for you. Compatible kernels are enabled automatically.</p>
-<p>You can also train on a cloud GPU with Hugging Face Jobs. Install the CLI and log in with a token that can run Jobs and upload models:</p>
-<p>This runs the pooling-aware variant on an A10G GPU with a four-hour time limit. Passing HF_TOKEN as a secret lets the script upload the trained model to your Hub account when training finishes. To run the ordinary-loss baseline as well, repeat the command with --baseline after the script URL.</p>
-<p>You can accelerate MaxSim scoring, Ward clustering, and supported backbone operations with kernels. Install the training and kernel dependencies:</p>
-<p>In the training example above, replace the model and pooler initialization before constructing the loss:</p>
-<p>Hierarchical poolers inherit the model's kernel settings by default, so you only need to enable kernels on the model.</p>
-<p>Sentence Transformers selects compatible kernels for your setup and uses the existing implementation wherever a replacement isn't available. For example, the default MaxSim kernel scores queries against documents without building the full token similarity matrix in memory, but it does require CUDA and Triton.</p>
-<p>The default Ward clustering kernel considerably speeds up hierarchical clustering by running on CUDA instead of the CPU. We're talking about 30-150x faster than SciPy depending on the setting.</p>
-<p>Let's load the pooling-aware model and retrieve with compressed document embeddings. Kernel settings aren't saved with the model, so add use_kernels=True when loading if you'd like to use them for inference too:</p>
-<p>The pooler compresses the document embeddings after the encoder's forward pipeline, reducing the total from 58 vectors to 16 while leaving query embeddings unchanged. Mars still receives the highest similarity score, followed by Jupiter and Venus, so the ranking is preserved despite storing far fewer document vectors.</p>
-<p>You can change pool_factor at inference to explore a different storage budget with the same trained model. For repeated use, you can also pass token_pooling=pooling when initializing MultiVectorEncoder to make it the runtime default. The pooler's tasks still control which inputs are compressed (e.g. only documents).</p>
-<p>To investigate, I trained two models from answerdotai/ModernBERT-base, each with a fresh 128-dimensional token projection:</p>
-<p>Both runs use one epoch over the same 120,000 MS MARCO triplets, seed 42, and matching initialization and optimization settings. The training token cap is 300, and short queries are expanded to at least 32 token positions to provide additional contextual query vectors. Only the loss differs between the two experiments, and I didn't run a hyperparameter search.</p>
-<p>I evaluated both models on NanoBEIR@13, reporting mean nDCG@10 (%). The figure compares ordinary and pooling-aware training with pool factors of 2, 3, 4, and 6, alongside unpooled retrieval. The table also includes fixed caps and adaptive thresholds, showing how the training benefits transfer to other pooling settings.</p>
-<p>For adaptive pooling, I calibrated a separate threshold for each encoder and NanoBEIR corpus, using its unpooled document embeddings to match the average vector counts under caps of 64, 32, and 16. Short documents bring those averages below their respective caps.</p>
-<p>At the trained pool_factor=4, nDCG@10 improves from 49.03 to 51.23, while storing 74.8% fewer document vectors than unpooled retrieval. This increases score retention from 94.6% to 97.8%, where retention is the pooled mean nDCG@10 divided by each model's own unpooled mean. Unpooled retrieval also improves, from 51.84 to 52.39.</p>
-<p>The gains extend to fixed caps and adaptive pooling, even though training used only the full representation and proportional pooling. At an average of 29.58 vectors per document, adaptive pooling retains 97.3% of the pooling-aware model's unpooled score while storing 84.7% fewer document vectors. The normally trained model retains 93.3% at the same budget.</p>
-<p>If index size is your main concern, I would reach for these options in this order:</p>
-<p>If the model's default dimensionality is larger than 128, I would consider Matryoshka truncation and fine-tuning earlier as well. These approaches can be combined, so evaluate the resulting index size and retrieval quality with your search engine and corpus.</p>
-<p>MultiVectorMatryoshkaLoss trains token embeddings to remain useful after truncation. You can wrap it with MultiVectorTokenPoolingLoss to train for both smaller dimensions and fewer document vectors, reusing the encoder's embeddings across the compression settings.</p>
-<p>Try the complete training example, choose a budget that matters for your application, and compare it with a matched ordinary-loss run. The accompanying evaluation script measures unpooled retrieval, caps of 64, 32, 16, 8, and 4 vectors, and pool factors of 2 through 6, so you can plot the quality and storage tradeoff for your own model.</p>
-<p>With a few extra lines in the training objective, a smaller document representation becomes something the model actively learns to use. That opens up an exciting amount of room to make multi-vector retrieval more practical!</p>
+                <p>Every market has two stories: the one printed on the price chart, and the one people tell each other. Prices record what already happened. Sentiment, mindshare, and prediction markets hint at what the crowd expects next. The Nebula API from Hidden Systems serves both stories as structured data, and nebula-go is the Go client that makes it pleasant to consume.</p>
+<p>If you have ever wired a market-data endpoint into a Go service, you know the drill. You write an HTTP client, invent a struct for half the response, keep the other half as map[string]any, add retries, forget to respect Retry-After, and then repeat the whole ritual for the next endpoint. nebula-go is an MIT-licensed attempt to delete that ritual. It covers all 41 operations of the Nebula Public API with typed requests and responses, a real error taxonomy, retries that listen to the server, server-sent-event streaming for the Nebula Agent, and an optional adapter for x402 pay-per-request billing.</p>
+<p>In this overview you will see what the SDK covers, how its API feels in practice, which design decisions make it pleasant to live with, and where the sharp edges are.</p>
+<p>Quick start: from zero to sentiment in one file</p>
+<p>Design decisions that matter in production</p>
+<p>Generated from a contract, not from memory</p>
+<p>Nebula is a market-intelligence API that watches the public conversation around financial assets — equities, commodities, indices, crypto, and AI-related names — and turns it into queryable signals. Instead of scraping social platforms and stitching together your own sentiment pipeline, you ask the API a question and get typed observations back.</p>
+<p>The surface is broader than a single "sentiment endpoint":</p>
+<p>The same data is also exposed through a Nebula MCP server and a CLI, which makes the API a natural fit for coding agents and terminal workflows. But if you are writing a Go service, the REST API is the integration point — and that is exactly where nebula-go lives.</p>
+<p>The project is young. The first version landed in late October 2026, and the changelog already lists five versions, from the initial 0.1.0 to 0.3.2 in mid-November. What it lacks in age it makes up for in discipline: the repository reads like someone sat down and decided to get the boring parts right.</p>
+<p>The feature list is longer than the version number suggests:</p>
+<p>Typed DTOs generated from OpenAPI. Requests are ordinary structs, responses have concrete field types all the way down to nested time-series points.</p>
+<p>context.Context** on every call.** Timeouts and cancellation behave the way Go developers expect, including during retries and streamed responses.</p>
+<p>Retries with server hints. Eligible GETs retry on 429, 500, 502, 503, and 504, honoring Retry-After and RateLimit-Reset before falling back to exponential backoff with jitter.</p>
+<p>An inspectable error hierarchy. Sentinel errors for errors.Is, rich *APIError values for errors.As, and client-side validation before a request ever hits the network.</p>
+<p>SSE streaming for the Agent. ChatStream exposes a channel of chunks and a terminal Err() so you can tell a completed answer from a truncated one.</p>
+<p>Response metadata everywhere. Request ID, rate-limit figures, credits charged, credits remaining, and payment receipts are available on every response.</p>
+<p>Localization. A global locale and per-request overrides, with constants for Spanish, Italian, Turkish, Russian, Korean, Japanese, and Chinese.</p>
+<p>Opt-in x402 payments. A separate adapter for paying per request in USDC on Base, with explicit spend controls and a no-wallet preview mode.</p>
+<p>An offline generator. go generate ./... rebuilds the typed surface from the pinned OpenAPI contract; a -check mode detects drift without writing files.</p>
+<p>That last point deserves emphasis. Many SDKs are handwritten once and slowly drift from the API they wrap. This one treats the OpenAPI document as the source of truth and keeps the generated surface, the handwritten business rules, and the tests in separate layers. We will come back to that.</p>
+<p>Install the module from your project directory:</p>
+<p>Put your API key in an environment variable — never in source control or browser code:</p>
+<p>Now ask a small question: "What does the recent conversation around NVIDIA look like?" Save this as main.go and run go run .. It makes two account-mode API calls, so normal API credits apply.</p>
+<p>A few things are worth noticing in that small program.</p>
+<p>The first call resolves a human-readable name to an API identifier. The second call carries both the AssetID and the AssetClass forward in an AssetRef. That pairing matters: a display symbol alone may not identify the asset you mean, especially in crypto, where several tokens can share a ticker. The SDK's type system nudges you to keep the identifier and its class together instead of passing loose strings around.</p>
+<p>The sentiment signal is a decay-weighted bullish-minus-bearish measure. Positive values lean bullish, negative values lean bearish, and the magnitude also depends on activity. Read it alongside the timestamps and post counts rather than as a standalone trading signal.</p>
+<p>Finally, HTTPMetadata() is available on the response even though the JSON body has its own metadata field. It reports the request ID, rate-limit state, and credit accounting for the call you just made. That is the kind of detail that usually gets bolted on after the first production incident.</p>
+<p>The API surface is only half of an SDK. The other half is how it behaves when the network misbehaves, the server pushes back, or the data is missing. This is where nebula-go shows its personality.</p>
+<p>Optional request fields are pointers, so the SDK can distinguish "use the server default" from "send this exact value":</p>
+<p>Helpers like StringPtr, IntPtr, Int64Ptr, Float64Ptr, BoolPtr, TimePtr, and typed-constant pointers keep the call sites readable. Explicit values still have to satisfy endpoint rules — Limit: IntPtr(0) is rejected for asset listings — but the SDK checks required fields, selector conflicts, enums, and numeric ranges before the HTTP call and returns a ValidationError that names the operation and the field.</p>
+<p>The same philosophy applies to responses. Nullable scalars are pointers, so an unavailable price is nil, not a fake zero. That sounds pedantic until you build a chart and a missing data point silently becomes a crash to zero.</p>
+<p>Errors are classified with sentinels and enriched with details. Application code can branch with errors.Is, while diagnostics use errors.As:</p>
+<p>The sentinel list covers the cases you actually branch on: validation, transport, bad request, unauthorized, out of credits, forbidden, not found, rate limited, server errors, and payment states. APIError keeps the status code, API message, headers, parsed metadata, and up to 8 KiB of the response body, which is usually enough to understand a failed call without reproducing it. A credit-related 402 preserves the plan renewal time and purchased-credit balance when the API supplies them.</p>
+<p>There is also a deliberate distinction between failure modes: TransportError wraps network problems, DecodeError reports a successful HTTP response with invalid JSON, and wrapped errors preserve context cancellation. That means a canceled request does not get misclassified as a server failure in your metrics.</p>
+<p>Retrying blindly is how you turn a rate limit into an outage. The SDK retries eligible GETs on transient network errors and HTTP 429, 500, 502, 503, or 504, and it picks the delay in a sensible order: Retry-After first, then RateLimit-Reset, then exponential backoff with jitter. Computed backoff is capped, and the overall call deadline still wins.</p>
+<p>Just as important is what it does not retry: POST chat requests, x402 payments, other 4xx errors, decoding failures, and failed body reads. Those are exactly the cases where an automatic retry can duplicate work or spend money twice. If you add your own retry loop on top, you are multiplying attempts — the README says so plainly, which is refreshing.</p>
+<p>Configuration stays out of the way until you need it:</p>
+<p>The defaults are reasonable: 30 seconds per call, three total GET attempts, 250 ms initial backoff with a 5-second cap. WithHTTPClient lets you inject your own proxy, TLS settings, or instrumentation. The client is immutable after construction and safe for concurrent use across goroutines, which is the behavior a shared client in an HTTP server needs.</p>
+<p>One security detail worth calling out: the SDK blocks cross-origin redirects so an API key or a signed payment header cannot leak to another host. It is a small thing that many clients forget.</p>
+<p>The Nebula Agent is stateless: your application owns the conversation and sends the full message history with each request. For a chat UI, StreamChatCompletion returns a ChatStream that behaves like a Go channel rather than a callback maze:</p>
+<p>Two details make this usable in real applications. First, a closed events channel does not mean the answer completed — you must check Err() afterward, because malformed events, API error frames, cancellation, and an unexpected end before [DONE] all surface there. Second, the configured timeout covers the entire stream, so a long answer needs a longer WithTimeout; the default 30 seconds is not enough for a thoughtful essay. Keep the defer stream.Close() even when you expect to drain the stream, since it also releases resources on an early return.</p>
+<p>The Agent request itself is OpenAI-compatible, with roles for system, developer, user, and assistant, and an optional thinking mode for deeper answers. Billing is usage-based, with a 10-credit minimum in the pinned contract, so Usage is worth inspecting when it is present.</p>
+<p>Two features deserve their own examples because they are where market intelligence stops being a dashboard and starts being a tool.</p>
+<p>Forecasts are requested per asset, and a successful HTTP response can still say the asset is not forecastable. The SDK makes that state explicit instead of forcing you to guess from an empty array:</p>
+<p>Both mindshare and sentiment forecasts expose Status, Reason, and IsForecastable(). Refresh: BoolPtr(true) asks for recomputation and can cost more credits; the pinned contract describes roughly five seconds for a refresh with a cached fallback after twenty, so the SDK's timeout defaults are worth revisiting if you enable it.</p>
+<p>Prediction markets follow a similar "carry the identifier forward" pattern. Search with Predictions.ListMarkets, open the canonical market with Predictions.Market, then use the listing ID and outcome ID from that response to fetch history. The IDs refer to different objects, so each one has to come from its own field. The SDK keeps those types distinct, which prevents the classic bug of passing a market ID where an outcome ID belongs.</p>
+<p>Not every project wants an account and a credit balance. Nebula supports x402, an HTTP-native payment protocol, for eligible read operations: you pay per request in USDC on Base mainnet and skip the API key entirely. Thirty-seven of the 41 operations are eligible GETs; account details, the two forecast-generation endpoints, and Agent chat are not.</p>
+<p>The x402 package is opt-in and deliberately paranoid. You can inspect an offer without a wallet or private key:</p>
+<p>Preview mode does not establish trust — it shows what the server is asking for. To actually pay, you supply your own signer and an explicit SpendPolicy with a per-payment cap and a nonempty recipient allowlist. The adapter checks the x402 version, the exact scheme, the Base network, the USDC asset, the recipient, the amount, and the resource URL before anything is signed. Production resources must use HTTPS, and signed GETs disable both SDK retries and the standard transport's implicit replay.</p>
+<p>The README is refreshingly blunt about the risk: x402 can irreversibly spend real USDC, the cap applies per payment rather than in total, and a lost response after signing returns ErrPaymentUncertain, which you must reconcile before authorizing another payment. This is the right posture for a payment feature. It is also a good reason to start with API-key mode and add x402 only when pay-per-request genuinely fits your product.</p>
+<p>The most interesting engineering choice in this repository is not an API method. It is the pipeline behind the API methods.</p>
+<p>The SDK is generated from a vendored OpenAPI 3.0.3 document pinned at info.version 1.0.2. go generate ./... rebuilds request structs, typed responses, enums, service methods, query validation rules, and x402 eligibility from that contract. The generator is offline: it does not download the spec or call Nebula, so regeneration works in CI and on a plane. A -check mode reports missing, edited, or obsolete generated files without writing anything, which makes drift a build failure instead of a slow surprise.</p>
+<p>Naming choices that cannot be inferred from OpenAPI live in compat.json, and business rules that span several parameters live in handwritten request_validation.go. Generated code stays generated; human decisions stay human. That separation is why the project can claim a complete API surface without pretending every rule fits in a schema.</p>
+<p>The test strategy follows the same principle. The suite runs without a Nebula key or a wallet, using local HTTP servers, an in-memory transport, and fixtures. A coverage guard ties all 41 operations to service calls, documentation, fixtures, and x402 eligibility. Contract tests exercise all 173 query parameters and all 750 response properties, including nullable fields, empty collections, large int64 values above 2^53, fractional timestamps, and unknown upstream fields retained in Raw. CI runs the race detector, go vet, staticcheck, govulncheck, CodeQL, formatting checks, and a generated-output check on both Go 1.24 and the current stable release.</p>
+<p>That is a lot of ceremony for a young SDK, and it is the main reason to take the project seriously. Contract tests do not prove live API compatibility — the README says that too — but they do make silent regressions much less likely.</p>
+<p>Hand-rolling an API client is not wrong. Sometimes it is the right call: you need one endpoint, you want zero dependencies, or your organization has a standard HTTP stack. Here is an honest comparison.</p>
+<p>The trade-off is familiar: less code to own, more behavior to learn. For a service that talks to Nebula regularly, the SDK is the shorter path. For a one-off script, curl and encoding/json may still win.</p>
+<p>The SDK fits a few concrete shapes of work:</p>
+<p>Research dashboards. Show sentiment, mindshare, and prediction-market odds next to price history without building an ingestion pipeline.</p>
+<p>Monitoring and alerting jobs. Watch for momentum shifts or sentiment regime changes and notify a team when thresholds are crossed.</p>
+<p>AI assistants and tool-using agents. Give an LLM typed access to market intelligence, with streamed answers when a human is reading.</p>
+<p>Internal analyst tools. Let analysts search assets, compare communities, and pull forecasts without writing HTTP code.</p>
+<p>Quant-adjacent research. Treat sentiment and attention as features alongside prices, with the usual caveat that correlation is not causation.</p>
+<p>It is less suitable if you need a synchronous trading connection, ultra-low-latency market data, or an API surface that Nebula does not expose. This is an intelligence API, not an exchange feed.</p>
+<p>Is nebula-go free to use?
+The SDK is MIT-licensed, so you can use, modify, and ship it freely. The Nebula API itself is a commercial service: account mode consumes credits, and x402 mode pays per request in USDC.</p>
+<p>Which Go version do I need?
+Go 1.24 or newer. That minimum comes from the module's dependency graph, including the optional x402 adapter.</p>
+<p>Does it support streaming responses?
+Yes. Agent.StreamChatCompletion returns a ChatStream backed by server-sent events. Read chunks from Events(), then check Err() to distinguish a completed answer from a truncated one.</p>
+<p>Can I use it without an API key?
+For the 37 x402-eligible GET operations, yes — with a wallet and a configured spend policy. Account details, forecast generation, and Agent chat require an API key.</p>
+<p>How is it tested without hitting the live API?
+The suite uses httptest servers, an in-memory transport, and saved fixtures. Contract tests compare the SDK against the pinned OpenAPI document, so go test ./... works offline and without a wallet.</p>
+<p>Is it production-ready?
+It is a v0.x project, so pin a version and review the changelog before upgrading. The test discipline, CI coverage, and release cadence are stronger than the version number suggests.</p>
+<p>nebula-go is a focused piece of engineering: one API, 41 operations, and a lot of attention to the parts of client code that usually get skipped. Typed responses make the data legible. The error taxonomy makes failures actionable. The retry policy respects the server. The generator keeps the SDK honest against its contract. And the x402 adapter treats payments with the caution they deserve.</p>
+<p>If you are building anything in Go that touches market sentiment, prediction markets, or AI-generated market analysis, it is worth a look — and worth a star if you want the project to keep moving.</p>
+<p>Repository: github.com/tigusigalpa/nebula-go</p>
+<p>Package docs: pkg.go.dev/github.com/tigusigalpa/nebula-go</p>
+<p>Nebula API documentation: docs.hiddensystems.ai/nebula</p>
+<p>API coverage matrix: docs/API-COVERAGE.md</p>
+<p>Install it with go get github.com/tigusigalpa/nebula-go, set NEBULA_API_KEY, and ask your first question. The README's troubleshooting table covers the usual suspects — an empty key, a validation error, a plan window that is too short — and the issue tracker is the place for reproducible bugs.</p>
+<p>Market data, sentiment, forecasts, and Agent output are not investment advice.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/token-pooling" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/tigusigalpa/nebula-go-sdk-a-type-safe-go-client-for-market-intelligence-apis-5gbn" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

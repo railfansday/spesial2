@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ML Modules for Mere Mortals</title>
+    <title>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9862.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,172 +15,51 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>ML Modules for Mere Mortals</h1>
+        <h1>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I think everyone can agree code needs to be modular.
-Modularity lets us reason locally about our code no matter how big it grows.
-However, no one seems to agree on how code should be modular.
-There are a bunch of different approaches and each new language seems to bring their own spin on it.</p>
-<p>Today we’re going to talk about a pretty old spin: ML Modules.
-ML here stands for Meta Language, as seen in SML and OCaml (and not machine learning).
-Despite SML first appearing in 1983, ML Modules have not caught on.
-OCaml is the sole production language you’ll find with an ML module system, and at the height of its popularity it’s niche.</p>
-<p>This is a shame because ML modules have a lot to offer.
-We’re going to talk about what ML modules are and then touch a little on why ML modules are.
-Who better after all to explain modules, than the guy who doesn’t know what’s in a module
-
-?…On second thought, don’t answer that.…I already wrote the blog post.</p>
-<p>Modules exist to make our code modular, duh, but what does that mean in practice?
-I think most programmers have some intuitive sense of modularity:</p>
-<p>Most languages have a way to do this, and if they don’t, one gets created for them (looking at you JavaScript).</p>
-<p>ML modules achieves this with, you guessed it, the Module.
-ML modules, however, are a little different from the modules we know and love.
-To explain their differences, we’ll lean on a made-up Rust-inspired syntax.
-It will start off looking a little weird and gradually, as we introduce concepts, end up looking really weird (but hopefully more familiar than SML syntax).
-We’ll start by defining a module with just functions:</p>
-<p>AModule bundles together related arithmetic functions as one thing we can reason about.
-Each function can see every other function in the module.
-This is useful, but any language with namespaces offers this.</p>
-<p>A little more unique is that ML modules will let us put not only function definitions in modules, but also type definitions:</p>
-<p>Here we have a Set module with a Set type, which is a sorted Vec<i32>.
-Our module’s functions can refer to the type definitions much the same way they can refer to their module’s function definitions.
-Okay but that’s not that crazy, still well within the realm of Rust modules.</p>
-<p>Not only can modules contain type definitions.
-Modules themselves have types.
-A module type is called a signature (so we don’t get it confused with “normal” types).
-The signature of our Set module is:</p>
-<p>A module signature declares every definition of a module alongside its type.
-This might look similar to the way we define a trait in Rust.
-That’s because much like traits act as interfaces in Rust, signatures act as interfaces in ML Modules.
-Modules having signatures is the single most important thing to understand about ML Modules.
-All the complexity and expressiveness of modules results from them having signatures and the wonderful wacky things that enables.</p>
-<p>Signatures resemble the way a C/C++ implementation file conforms to its header.
-Modules, unlike .cc files, aren’t in a 1:1 relationship with signatures.
-Our Set module can conform to any signature that it matches.
-A module matches a signature when it defines every declaration in the signature and they agree on type.</p>
-<p>Matching a signature provides Encapsulation
-
-, hiding internal details of our module from our public API.
-Take a look at FullSetSig.
-Do callers of Set really need to know about index_of?
-Encapsulation advocates shout a resounding no: index_of is an implementation detail of Set.Set being a Vec<i32> and not integral to our Set API.</p>
-<p>We can encapsulate index_of by matching our Set module to a new signature:</p>
-<p>SetSig removes index_of, hiding the implementation detail.
-We can then ascribe our signature to our Set module:</p>
-<p>Now the rest of our code sees Set as SetSig without index_of.
-Importantly, our Set module hasn’t changed.
-index_of is still available inside the module.
-Ascribing the signature only changes the public view of the module, similar to a private function in Rust.</p>
-<p>A module’s definition isn’t the only place we can ascribe a signature.
-We can also make a “new” module by matching an old module to a new signature.
-Let’s say we want an InsertOnlySet (never you mind why I need that):</p>
-<p>We can create that from our Set module purely by matching the signature:</p>
-<p>Now InsertOnlySet is effectively a whole new module, despite the underlying implementation being shared with Set.
-This is what’s cool about modules.
-We can repurpose modules “for free” simply by giving them a different signature.
-If we want to do this in an OO language, we’d have to add a new interface in our class definitiion.
-But we can slap one of these bad boys anywhere in our codebase.</p>
-<p>Ascribing a signature to a module lets us hide implementation details, but there’s a bit of a glaring hole here.
-Sure we’ve hidden away index_of, but our module broadcasts to the world that type Set is a Vec<i32>!
-Set relies on our vector being kept in sorted order, but anybody is free to write a function:</p>
-<p>Nothing but a small flesh wound in our encapsulation.
-Fortunately, ML modules foresaw this problem and provided a solution using signatures.</p>
-<p>Much the same way a signature lets us hide functions, it also lets us hide types.
-ML Modules call this an abstract type.
-If we update SetSig to be:</p>
-<p>Our signature no longer broadcasts that type Set is Vec<i32>.
-Within the Set module we’re free to use type Set as Vec<i32>, but everywhere outside the module type Set is now some unknown type.
-Because callers know nothing about our newly abstract Set type, all they can do is pass it to and from the methods provided by the Set module.
-As long as we keep our underlying Vec<i32> sorted within Set, we know no one else is able to mess with it.
-They simply don’t know enough about the type!</p>
-<p>Our Set module is nearing perfection, but it still leaves a little to be desired: it only works for i32.
-Now we could of course write a new module SetU64, SetString, on and on everytime we need one, but c’mon there’s gotta be a better way.
-This isn’t Go.</p>
-<p>Generics is the go-to solution for this problem.
-Heck we’ve even used it ourselves with Vec<i32>.
-ML Modules, however, have a more modular solution.
-You can parameterize a module by another a module.</p>
-<p>Think of a parameterized module as a function that takes a module and returns another module.
-To make our Set accept any type and not just i32, we parameterize it by a module that provides the type of our Set’s elements:</p>
-<p>Our newly parameterized Set accepts any module that conforms to Elem.
-Any module can match Elem as long as it has at least a T definition.</p>
-<p>With that our Set module supports any type.
-Except for one teensy detail.
-I’ve deceived you with some tactical // ...s.
-If we actually try to implement index_of, we quickly encounter a problem:</p>
-<p>We don’t know how to compare T’s.
-Rust’s Ord would solve this, of course, but ML modules have modules not traits.
-Set doesn’t take in just a type, however, it takes in a full module.
-If we need to know how to compare T’s, we can just ask our Elem module:</p>
-<p>Now it’s clear how to implement index_of:</p>
-<p>With our parameterized module implemented, we can create new Set modules by applying them to new argument modules:</p>
-<p>SetU32.Set is a Vec<u32> and provides an interface that takes and returns u32 instead of i32.
-We can do it again as easy as:</p>
-<p>Just like that, a whole new module.
-This time a set of Strings.
-I could do this all day.</p>
-<p>Because we accept a module, we can request anything a module can hold (even a whole other submodule or parameterized module!).
-The downside is that we have to specify the whole module every time.
-We have to specify cmp every time we apply our Set module.
-Rust traits let us write Ord for a type once and use it everywhere implicitly.</p>
-<p>In practice, we don’t actually repeat how to order our type every time we want a Set.
-Recall that a signature will match any module that provides what it needs.
-If we make a big module called U64:</p>
-<p>Then we can use that as our argument to Set:</p>
-<p>But hang on, we got into this whole Module business to break up our code.
-Now we’ve got to dump everything into one module just in case we need it later?
-That’s not very cash modular of us.</p>
-<p>ML modules have a final feature to get us the best of both worlds: include.
-include expands a module inline within another module.
-We’re free to split up our U64 module into various submodules: U64Order, U64Arithmetic, etc.
-Our final U64 module only has to include these submodules:</p>
-<p>Modules can be organized into logical components and then combined later to provide convenience (wow!).
-We’re free to cut up and reassemble modules at the whims’ of the wind.
-We can even apply a module and include it inline:</p>
-<p>Why do you need one module that’s a bunch of overlapping Sets?
-I don’t know!
-I’m not your supervisor.
-Either way, modules will happily let you do it.</p>
-<p>We’ve covered the basics of modules.
-Let’s take a look at a more involved examples to get a sense of what modules can offer.
-We’re gonna use modules to assemble a little build executor.
-Out build step will be a parameterized module:</p>
-<p>Where CacheSig represents a cache of build steps and RunnerSig represents running some command:</p>
-<p>For brevity we’ll keep these pretty simple, but hopefully you can imagine how these might expand.
-We can then implement BuildSet in terms of our input modules:</p>
-<p>Our build functions takes a list of source files, compiles them, and then links the object files into a final binary.
-How does run tell when it’s compiling and when it’s linking?
-Don’t worry about it!
-Now that we’ve set that up we can toggle the functionality of our build by controlling what modules we pass to BuildStep.
-For a real build, we’ll want something like an in-memory cache:</p>
-<p>Next we’ll want something that runs our commands:</p>
-<p>We can then assemble our build system via:</p>
-<p>But maybe we don’t always want caching.
-Maybe we want a build that always reruns actions for local testing.
-We simply swap out our cache module:</p>
-<p>Our build system works first try.
-We wouldn’t write the code bad, of course, but just in case we might want to test it.
-A FakeRunner will let us do just that:</p>
-<p>Because FakeRunner is a parameterize module, we can create a new module (and a new empty COMMANDS) every time we apply it:</p>
-<p>If we want to check that caching works we can extend our tests with a new fake runner and compare their commands:</p>
-<p>This isn’t earth shattering stuff.
-If we wanted to replicate this setup in an OO language, however, we would need runtime objects or, heaven forbid, a DI framework.
-Here we can do it all by wiring up modules statically.</p>
-<p>Hopefully this has helped you see what’s cool about modules.
-Module’s power lies in their signatures.
-What would require a newtype wrapper or a visibility change in other languages can be accomplished by simply changing the signature a module is viewed at.</p>
-<p>With abstract types, this allows for constructing webs of encapsulation where each piece knows precisely what it needs to about its neighbor and no more.
-Signatures act as this encapsulation boundary, freeing us to reason about our code modularly.
-As long as our module conforms to the expected signature we can contort and refactor it to our wildest whims and trust that it will continue to integrate into our system as expected.
-ML Modules are neat and I think they deserve more love and exploration in programming languages.</p>
+                <p>One of our biggest goals on the WebAI team at Hugging Face is to make browser inference as fast and as user-friendly as possible. Getting there is a multi-layer effort: models need browser-friendly representations, runtimes need to build efficient execution plans, and the individual GPU operations at the bottom of the stack need to make the most of many different devices and browser implementations.</p>
+<p>Today, we are releasing the first layer of that effort: @huggingface/kernels, a minimal library for loading and running optimized WebGPU kernels from the Hugging Face Hub, together with an initial collection of 207 kernels at huggingface.co/webgpu-kernels.</p>
+<p>The collection covers operations used across a wide variety of machine learning architectures and workloads. More importantly, each kernel is published as a complete, versioned package: its interface, shader templates, correctness cases, benchmark cases, and usage instructions all live together on the Hub.</p>
+<p>We are also launching Fleet, an in-browser GPU benchmarking and testing suite that runs and scores the kernels on your hardware. Beyond the results for your own machine, Fleet gives the community a way to contribute performance and correctness evidence from devices we could never cover in a conventional test lab. With your consent, every run adds private evidence that can help us find failures (incorrect results, pathologically slow cases, etc.), improve kernel variants, and make better optimization decisions across real-world hardware.</p>
+<p>A model running in the browser eventually becomes a sequence of GPU operations: matrix multiplications, normalizations, convolutions, attention primitives, quantization operations, data-layout transformations, and many more. WebGPU makes these operations available across modern browsers through a portable API, while WGSL provides a common language for the shaders that execute them.</p>
+<p>Portability, however, does not automatically mean performance. Two shaders can implement the same operation and produce the same output while behaving completely differently across different accelerators. Workgroup sizes, memory access patterns, vectorization, data types, and fusion strategies can all affect performance. The best choice can also change with the input shape, device, browser, and available WebGPU features.</p>
+<p>This is why kernels form a foundational layer of fast browser inference. Higher-level runtimes can only be as efficient as the operations they dispatch. By making those operations individually discoverable, testable, benchmarkable, and versioned, we can improve the foundation independently while keeping a stable contract for the layers above it.</p>
+<p>Each kernel in the collection has its own repository and kernel card. The card documents the operation's semantics, inputs, outputs, attributes, supported data types, source files, and a ready-to-run @huggingface/kernels example.</p>
+<p>For example, ai.onnx.Add implements elementwise addition with multidirectional broadcasting. It is one of the simplest operations in a neural network, used everywhere from residual connections to adding a bias. Its card documents the two inputs, the broadcasted output shape, supported data types, and the variants available for different shapes and devices.</p>
+<p>Behind the card, the repository contains the artifacts needed to understand and evaluate the implementation:</p>
+<p>This structure turns a shader into a reusable software artifact. The interface is inspectable without reading WGSL, correctness and performance cases travel with the implementation, and published versions can be loaded explicitly rather than depending on an unversioned file URL. Our kernels can also serve as reference implementations for developers building custom WebGPU kernels or integrating these operations into their own runtimes.</p>
+<p>Running these kernels requires a browser with WebGPU support. WebGPU availability depends on the browser, operating system, GPU, and driver. You can check for it in JavaScript with "gpu" in navigator.</p>
+<p>@huggingface/kernels provides the bridge between a kernel repository and your application. Call getKernel with a Hub repository ID and a contract version, then invoke the returned function with typed input data and tensor shapes. Here is a small bias-add example:</p>
+<p>The second input is broadcast across the first dimension, producing an output with shape [2, 3]. The loader derives that output shape and logical data type from the manifest contract and the inputs, then allocates c automatically.</p>
+<p>Addition on six floats is deliberately the smallest possible demo. At this size, the GPU round trip costs far more than the math. The point is the call pattern: it stays exactly the same for the heavyweight operations where optimized kernels actually pay off, such as matrix multiplication (ai.onnx.MatMul). Only the repository ID and the inputs change.</p>
+<p>Even this elementary operation illustrates why kernels need variants. Equal-shape addition can use a direct vectorized path, while broadcasted inputs need different indexing logic. The published Add kernel includes variants for equal shapes, vectorized broadcasting, scalar processing, and general broadcasting. The runtime can select an implementation that fits the current call and device without changing the application-facing API.</p>
+<p>The version: 1 option selects version 1 of the published kernel contract. It is separate from an ONNX opset, an operator's since_version, or a model revision. Keeping those concepts separate lets applications depend on a stable JavaScript-facing contract while kernel implementations evolve behind it.</p>
+<p>So, how much of a difference do optimized kernels actually make? We put our collection head-to-head with ORT WebGPU on an Apple M4 GPU, using ONNX Runtime Web 1.30.0-dev.20260826-b1f76d586a. We started with 1,756 test cases across all 207 operations and kept the 809 cases where both sides produced matching outputs and reliable timings.</p>
+<p>Across those comparisons, our kernels were 2.57x faster by geometric mean and 1.90x faster at the median, with 629 wins, 176 losses, and 4 ties. Here is a closer look at four familiar operations:</p>
+<p>Some individual wins were much bigger. A particularly difficult bilinear Einsum case (i,ij,j with size 4096) ran in 0.136 ms with our kernel versus 1,396 ms with ORT WebGPU: more than 10,000x faster. A row-wise CumSum over [256, 4096] was 301x faster, at 0.016 ms versus 4.784 ms. These are unusual cases rather than the speedups you should expect everywhere, but they show how much a specialized kernel can help when a general implementation hits a slow path.</p>
+<p>We timed the work done on the GPU itself, leaving out setup such as loading kernels, creating sessions, uploading inputs, compiling shaders, and reading outputs back. Very short workloads are naturally harder to measure, and small cases can benefit from the GPU cache, so these numbers are best read as a useful comparison rather than a promise for every application.</p>
+<p>They are also results for individual operations, not complete models. Exact performance will change across GPUs and browsers, which is why Fleet is so important for building a broader picture.</p>
+<p>We are also working with the ONNX Runtime team to upstream these improvements so they can benefit the broader ONNX Runtime Web ecosystem.</p>
+<p>WebGPU performance varies across GPUs, browsers, and drivers, so results from one machine only tell part of the story. Fleet lets anyone run correctness and performance checks in the browser and see how the kernels behave on their hardware.</p>
+<p>With consent, each run privately contributes evidence that helps us spot device-specific failures, compare variants, and improve selection rules. The goal is simple: use broad, real-world coverage to make the kernels faster and more reliable for everyone.</p>
+<p>The initial 207 kernels are a starting point, not the end state. Publishing kernels independently on the Hub gives us a common place to inspect contracts, compare implementations, reproduce correctness checks, and improve performance without embedding every shader directly into every runtime.</p>
+<p>The collection is also part of the Hub's broader kernel ecosystem: on the Kernels page, the WebGPU kernels sit alongside kernels for CUDA, ROCm, Metal, and other platforms, and can be filtered, sorted, and explored like any other artifact on the Hub.</p>
+<p>This is the low-level foundation for the next steps in our browser inference stack. We are excited to connect these kernels to higher-level model tooling, continue expanding operation coverage, and make fast local inference easier to use across the WebAI ecosystem.</p>
+<p>Explore the WebGPU kernel collection, try @huggingface/kernels, and join the Fleet to contribute evidence from your device and help us make the kernels better for everyone.</p>
+<p>The Fleet part may matter as much as the kernels. The 809 comparable cases on an M4 are useful, but browser, driver and device variance is where WebGPU tends to get painful. Will Fleet eventually expose per-device distributions, or is the plan to use the runs only for aggregate selection rules?</p>
+<p>In an automated build system, I could see per device kernels, made more interesting by fusion of ops.</p>
+<p>The area that obviously needs more attention are the 947 tests that did not result in reliable output. This could be the test, it could be that the ORT WebGPU is wrong, or the new kernel is wrong, or the test harness had issues, hard to know from the outside. Perhaps the Fleet thing is meant to improve this.</p>
+<p>Very excited to see such attention at making WebGPU first class in ML!</p>
+<p>@sroussey  Agreed—the excluded 947 need a taxonomy before the 2.57× summary can travel. I'd want counts by operation and device for unsupported, ORT mismatch, new-kernel mismatch, and harness/timeout, with raw failing cases downloadable. Then Fleet can optimize only within a proven-correct compatibility envelope; fusion and per-device tuning become much safer.</p>
+<p>Excellent! This will help our WebAI community continue developing highly optimized solutions. Many thanks @Xenova  and @nico-martin  for the great work you have been doing.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://thunderseethe.dev/posts/ml-modules-for-mere-mortals/intro/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/webgpu-kernels" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

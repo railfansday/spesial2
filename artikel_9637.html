@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>codecov/codecov-action: the token it sends, OIDC, and uploads that fail green</title>
+    <title>Expo Simulators</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9637.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>codecov/codecov-action: the token it sends, OIDC, and uploads that fail green</h1>
+        <h1>Expo Simulators</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fcodecov-codecov-action.png" alt="codecov/codecov-action: the token it sends, OIDC, and uploads that fail green" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fcodecov-codecov-action.png" alt="codecov/codecov-action: the token it sends, OIDC, and uploads that fail green" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 15
-•
-Originally published at latchkey.dev</p>
-<p>codecov/codecov-action uploads coverage reports from a GitHub Actions job to Codecov by downloading the Codecov CLI, verifying its signature and running upload-coverage. On v7, authenticate with a repository token, with use_oidc: true and id-token: write, or tokenless where Codecov allows it, and set fail_ci_if_error: true, because by default a failed upload leaves the job green.</p>
-<p>The credential order in action.yml at v7.1.1, and what Codecov does with an upload that has none. Every failure after it is soft unless fail_ci_if_error is true.</p>
-<p>The Codecov step is usually the last line of a test job and the one nobody looks at. That is the problem: it is designed to stay green when the upload fails, so a missing token, an expired key or an empty report shows up weeks later as a coverage badge that stopped moving.</p>
-<p>Under the action is a Codecov CLI that it downloads and verifies with GPG, so a failure can come from the token, the signing key or the upload itself. Two errors have their own pages: failed to properly upload report and Codecov rate limit reached.</p>
-<p>Run your tests with coverage output first, then hand the report to the action. Naming the file in files and setting disable_search: true stops the CLI from also picking up stray reports elsewhere in the workspace. The action needs actions/checkout to have run, and bash, curl, git and gpg on the runner; GitHub-hosted runners have all four, and a container job without them fails at the first step with Error: The following required dependencies are missing: followed by the list.</p>
-<p>SHA for v7.1.1 from git ls-remote https://github.com/codecov/codecov-action refs/tags/v7.1.1^{}, read 2026-11-12.</p>
-<p>v7 is a composite action. It checks for its dependencies, marks the workspace as a git safe directory, detects whether the run is a pull request from a fork, fetches an OIDC token if asked, picks a credential, and then runs dist/codecov.sh. That script downloads the CLI from cli.codecov.io, imports Codecov's PGP key from keybase.io/codecovsecops, checks the signature and the SHA-256 sum, prints Token length: followed by a number, and runs the CLI.</p>
-<p>Every failure in that script goes through one function, exit_if_error, which prints the message and exits 1 only when fail_ci_if_error is true. The default is false. So Could not verify signature. Please contact Codecov if problem continues and Failed to run upload-coverage both print in red and leave the step green. The Token length: line is the fastest check you have: 0 means no credential reached the CLI.</p>
-<p>The order in action.yml is fixed. If use_oidc is true and the run is not from a fork, the OIDC token wins and any token you passed is ignored. Otherwise a CODECOV_TOKEN environment variable on the step is used, then the token input. With none of those, the upload goes out tokenless, and for a fork pull request the action sets the branch to the fork's head label, such as contributor:fix-typo, which is how Codecov recognizes a fork upload.</p>
-<p>Whether Codecov accepts a tokenless upload is decided on its side. Its documentation, read 2026-11-12, says private repositories always need a token. A public repository needs one only for a commit on a protected branch, and not at all if the organization has switched token authentication off in the Global Upload Token settings; new organizations start with tokens Not required, existing ones with Required. Tokenless uploads share a Codecov-wide rate limit, which is what the rate limit page is about.</p>
-<p>With use_oidc: true the action asks GitHub for an ID token whose audience is the url input, or https://codecov.io by default, and sends that instead of a long-lived secret. The job needs id-token: write, and because setting permissions replaces the defaults, list contents: read too. If the token request fails, the id-token write permission page covers where the line has to go.</p>
-<p>On a fork pull request the action skips the OIDC request entirely, because action.yml checks for a fork before asking, and the upload falls through to tokenless.</p>
-<p>v7.1.1 declares 50 inputs, most of them overrides for unusual CI setups. These are the ones that change outcomes in a normal workflow. Flags tag an upload so Codecov can report coverage per group, which in a matrix usually means one flag per OS or language version, for example flags: ${{ matrix.os }}.</p>
-<p>From action.yml at tag v7.1.1, read 2026-11-12. The README badge and examples still say v5.</p>
-<p>failed to properly upload report and its siblings name the CLI stage that broke; the line to read is above it, and the upload report page walks through it. A throttled tokenless upload is on the rate limit page. Token required because branch is protected appears in the titles of issues #1580, #1653 and #1738: Codecov wants a token for that commit and none arrived, so check the Token length: line before the secret itself.</p>
-<p>GPG failures have a specific recent cause. Codecov lost control of its keybase.io/codecovsecurity account, deleted it, and moved the key to keybase.io/codecovsecops (issue #1956). The fix is a release that reads the new account: v7.0.0 and later, or the copies published as v6.0.2 and v5.5.5. A workflow pinned to an older SHA keeps fetching from the account that no longer exists, and with fail_ci_if_error unset it says so only in the log.</p>
-<p>v4 removed several inputs and v5 renamed file to files and plugin to plugins, so those two need workflow edits. v6 and v7 changed the runtime and the signing key, not the inputs.</p>
-<p>From the README and the GitHub release notes for v6.0.0, v7.0.0, v6.0.2 and v5.5.5, read 2026-11-12.</p>
-<p>Yes, and since v4 it works without secrets: on a fork pull request the action sends no token, sets the branch to the fork's head label, and Codecov accepts it as a tokenless fork upload. Secrets and OIDC are not available to fork runs, so do not try to pass them.</p>
-<p>Look at the Token length: line in the step log. If it is 0, the secret did not reach the step: Dependabot runs read Dependabot secrets, fork runs get none, and a typo in the secret name yields an empty string. If it is not 0, check the token belongs to this repository or is the organization's global token.</p>
-<p>Rename file to files and plugin to plugins, then pin the new SHA. From v5 to v7 no input was removed, so the rest of the step carries over; v6 needs a runner that supports Node 24, and v7 is the line that reads Codecov's new PGP key location.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Cloud simulators built for agents
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/expo?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1314456?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/kalemi/codecovcodecov-action-the-token-it-sends-oidc-and-uploads-that-fail-green-228p" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/expo" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Much Memory Does Your Agent Actually Need?</title>
+    <title>Meatbags suck at spotting lying LLMs, so let AI narc on itself</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9880.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Much Memory Does Your Agent Actually Need?</h1>
+        <h1>Meatbags suck at spotting lying LLMs, so let AI narc on itself</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/227602.jpg?imageId=227602&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Meatbags suck at spotting lying LLMs, so let AI narc on itself" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/227602.jpg?imageId=227602&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Meatbags suck at spotting lying LLMs, so let AI narc on itself" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post, we compared ALTK-Evolve with ACE and showed that how you deliver an agent's self-distilled guidelines — a few retrieved per task vs. the whole set injected — drives both accuracy and cost. This post steps back to the question that comes before it: how much should you give it?</p>
-<p>Equipping an agent with agentic memory sounds simple: distill lessons from its past work, put them back in context, and more experience should mean better performance. It doesn't always work that way. When we scaled the evaluation to eight models — from a 30B dense model to frontier proprietary systems — one finding stood out:</p>
-<p>Agentic memory is not a feature you switch on. It's a dose you calibrate to the model.</p>
-<p>ALTK-Evolve lets an agent learn from its own past trajectories: distilling reusable guidelines and injecting them back at inference time, with no weight updates and no human annotation.</p>
-<p>The right dose differs by model tier: strong models with headroom want the full guideline set, weaker models do best with a compact core plus per-task retrieval, and saturated models show no measurable gain.</p>
-<p>Curated retrieval can be both the most accurate and the cheapest option: gpt-oss-120b gained +16.1pp task completion at only +5% tokens — and prompt caching keeps even the full guideline set affordable in production.</p>
-<p>Not every model benefits from the same amount of memory. Across eight models spanning the capability spectrum, we saw three recurring patterns:</p>
-<p>Strong models with headroom want the full guideline set — every guideline, including rare edge-case lessons. They have the capacity to absorb and apply all of it. DeepSeek-V3.2 (671B MoE) climbed +9.5 percentage points in task completion when given its full self-mined guideline set.</p>
-<p>Smaller or weaker models get drowned by a large guideline set. For these, a tight, high-confidence core plus a handful of task-relevant guidelines retrieved per task works best. gpt-oss-120b (117B MoE) gained +16.1pp with this selective approach — while the full guideline set gained less and cost ~50% more tokens.</p>
-<p>Already-saturated models show no measurable gain. We call this the saturated pattern — the label describes what we observed, not a proven cause. The model may already have been near its ceiling on these tasks, the guidelines may not have addressed its remaining failures, or it may not have applied the guidance effectively. GLM-5 (745B MoE) sat here in our runs.</p>
-<p>What puts a model into one pattern rather than another isn't simply parameter count. Benchmark headroom, context-window size, architecture, guideline quality, and task distribution all appear to shape where a model lands, and separating those factors is ongoing work. The practical takeaway holds either way: the right dose of memory depends on the model, and we can calibrate it.</p>
-<p>"Memory" here doesn't mean replaying a past transcript. It means a guideline set — strategies that worked, mistakes to avoid, and edge cases — distilled from the agent's own prior trajectories. The loop is straightforward:</p>
-<p>The agent attempts tasks and produces trajectories.</p>
-<p>ALTK-Evolve extracts behavioral guidelines from both its successful and unsuccessful runs.</p>
-<p>It consolidates those guidelines into a reusable set.</p>
-<p>At inference time, the agent receives either the full guideline set or a task-relevant selection of it.</p>
-<p>No model weights are updated. The learning loop changes the guidance available to the agent, not the underlying model — which is exactly why it's cheap to adopt and portable across the eight models we tested.</p>
-<p>We evaluated on AppWorld — 585 multi-step tasks (168 test_normal + 417 test_challenge) across 9 simulated apps (calendars, messaging, payments, and so on). Tasks are scored two ways: whether the agent fully completes each task (TGC — Task Goal Completion) and whether every variant of a scenario passes (SGC — Scenario Goal Completion, a stricter, all-or-nothing bar). Full definitions are in the appendix.</p>
-<p>Because the confusing part of any memory study is what's actually in the context window, we define the configurations up front.</p>
-<p>Both memory configurations draw from the same guideline set, mined once (via the loop above) from AppWorld's training split only. What changes between them is only how that one set is delivered — the full guideline set injects all of it every step, while curated retrieval delivers a selected subset — never how the guidelines were produced, and no test-split data ever goes into building it.</p>
-<p>The number of guidelines a model mines depends on its own capability, so we report configurations by strategy — "full guideline set" vs. "curated retrieval" — rather than by raw counts, which aren't comparable across models.</p>
-<p>Representative models from the eight-model sweep, measured by task completion (TGC) on test_normal:</p>
-<p>Figure 1. Representative models in the three observed patterns. Bars show TGC on AppWorld test_normal for baseline vs. the best-memory configuration; the x-axis begins at 40% to make differences visible. TGC alone understates the larger SGC gains — see the SGC columns in the table below.</p>
-<p>The figure plots TGC to keep it readable; the table adds the stricter SGC metric, where the gains are often larger:</p>
-<p>Reading the SGC column, the stricter metric usually moves more than TGC — DeepSeek's SGC jumps +16.1pp against a +9.5pp TGC gain — because good guidelines especially help an agent clear every variant of a scenario, not just the average case. And the effect doesn't disappear at the top of the range: GPT-5.5 and Opus, both near the ceiling on TGC, still gain +7.2 and +7.1pp SGC respectively. Memory keeps paying off as long as a model has a remaining failure mode to target.</p>
-<p>A practical concern: injecting a full guideline set inflates every ReAct step's input, because the guidelines are re-sent each turn. Here's what we observed:</p>
-<p>Table 1. Average token use per task, accumulated across agent steps, measured against the no-memory baseline.</p>
-<p>Curated retrieval keeps cost near baseline. For weaker models, where selection wins on accuracy, it also wins on cost — the best of both worlds (+16.1pp TGC at only +5% tokens for gpt-oss-120b). Better performance here does not require more inference cost.</p>
-<p>Memory doesn't blow up the reasoning loop. DeepSeek runs about the same number of ReAct steps with memory as without (≈18–19 on average), so the added cost is input-token inflation, not longer trajectories.</p>
-<p>The real efficiency lever in production is prompt caching: the static portion of the guideline set is identical across steps and can be cached, cutting effective cost substantially. Cache-aware prompt design — keeping the shared guideline-set prefix stable so it stays cacheable — is worth engineering for. We also hypothesize that context-window size plays a role: models with larger windows may absorb the full guideline set more effectively, while smaller-context models benefit more from retrieval that keeps injected content compact. We have not yet run controlled experiments isolating this factor.</p>
-<p>The lesson isn't to give an agent everything it has learned. It's to give it the amount of experience it can actually use.</p>
-<p>For weak models, that means a compact core plus a few task-specific lessons — which, conveniently, is also the cheapest option.</p>
-<p>For strong models with headroom, it means preserving the full guideline set, kept affordable in production via prompt caching.</p>
-<p>For saturated models, it means spending no extra context until their remaining failure modes are better understood.</p>
-<p>The gains are real across the board — automatic, leakage-free, and requiring no human annotation — but only when the dose fits the model.</p>
-<p>This is a starting point, not the finish line:</p>
-<p>A learned selector. Our current retrieval ranks guidelines by cosine similarity, which we've shown doesn't perfectly predict which guidelines help a given task. A selector trained on outcome signal is the natural next step.</p>
-<p>Memory for very weak models. Below a minimum capability baseline, self-distillation lacks signal. Teacher-distilled memory for very weak models is a separate problem we're exploring.</p>
-<p>Beyond AppWorld. These results are validated on AppWorld — a rigorous multi-step benchmark, but a single one. Broader agent benchmarks and real-world deployments are in progress.</p>
-<p>Isolating context window. As above, we want controlled experiments that separate context-window size from raw capability.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld tasks are graded by two metrics, both reported as percentages (higher is better):</p>
-<p>TGC — Task Goal Completion. The share of individual tasks the agent completes fully and correctly. This is the headline "did it get the job done" number.</p>
-<p>SGC — Scenario Goal Completion. A stricter, all-or-nothing metric. Each scenario bundles several variants of the same task (the same request with different data, phrasing, or edge conditions). SGC counts a scenario as passing only if the agent succeeds on every variant. It measures reliability — an agent that solves a task most of the time but fails on one variant scores on TGC but not on SGC.</p>
-<p>Really interesting take on agentic memory. The idea that memory needs to be calibrated to the model rather than simply accumulated is especially useful for production systems. Selective retrieval also seems like a practical way to improve reliability without unnecessarily increasing context and inference costs. It makes a strong case for thoughtful custom AI agent development and enterprise AI agent solutions, where memory, performance, and cost all need to be designed together. https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+                <p>What, you didn't actually want to fact-check it yourself, did you?</p>
+<p>The internet is full of schlock, from biased news and dubious hot takes to false factoids. LogicLens aims to separate fact from fiction using the very same technology behind some of that slop: AI.</p>
+<p>It’s a simple premise, really: LogicLens, which lives in Chrome as a browser extension, or on iOS in the form of a mobile app called Receipts, combs through articles, social media posts, and other content to check it not only for factual inaccuracies, but also for bad reasoning. LogicLens and Receipts claim to identify logical fallacies, flag reports that misrepresent information, detect content that attempts to polarize an issue, and the like.</p>
+<p>It also cites sources, so if, for example, you need to call someone out on their BS, you’ll have ammunition. Or, if you’re trying to fact-check something before sharing it, you can get a more accurate view of the situation, and maybe post something else instead.</p>
+<p>Using the Chrome extension is as simple as clicking on its icon in the list of extensions in the browser. On iOS, the Receipts app is found as a share option. Once it starts, LogicLens scans an article, post, video, etc. to find potential issues of factual or logical inconsistency and flags them for review.</p>
+<p>If the facts of the matter turn out to contradict your worldview, LogicLens’ creators say they’re not trying to be partisan - you may just not be as informed as you need to be, which hopefully their tool will assist with.</p>
+<p>“We're not trying to be the referee of truth,” the company’s about page states. “Instead, LogicLens helps uncover the context, so you can decide for yourself without the spin."</p>
+<p>Of course, AI is increasingly used for online analysis and content review, and LogicLens is no exception. LogicLens doesn't identify the AI models powering its service in its publicly available documentation, but AI is definitely the backbone of the system.</p>
+<p>According to LogicLens, it's using an AI system that's “Research-backed and custom designed to outperform general models like ChatGPT & even trained experts.” We’ll leave that up to anyone willing to give the tool a spin to decide, but one thing’s for certain: The world needs something.</p>
+<p>Large language models and image generation tools are increasingly being used to generate internet content slop, and not all of it is as harmless as poorly made commercials for drop-shipped garbage: Some of it is being used to craft very convincing misinformation.</p>
+<p>A 2024 study found that AI-generated misinformation was even more convincing than stuff crafted by humans - and that was two years ago. Just think how much worse it’s likely become since then.</p>
+<p>To make matters worse, concerns have been raised about critical thinking skills being on the decline, potentially making it harder for people to identify falsehoods on the internet. AI users are reportedly less likely to admit they don’t know something, even though use of AI has been found in studies to lessen brain activity, leading to poorer retention of facts and worse performance on tests.</p>
+<p>Is using more AI the solution to the problem? In an ideal world, we’d all just put the computers down and go touch grass, but we’re not in an ideal world: We’re living in the age of AI.</p>
+<p>LogicLens is free but requires sign-up and restricts nonpaying users to 15 analyses a day and 100 over the course of a month. A $4.99 monthly subscription removes those analysis caps.  ®</p>
+<p>Cambridge museum celebrates the world's first business computer with films, family activities, and a little Python</p>
+<p>Collabora and Nextcloud pitch alternatives as education customers weigh the cost of losing free services</p>
+<p>PARTNER CONTENT: Real-time endpoint data keeps AI-driven IT operations accurate, fast and under control</p>
+<p>Accessing banned content is as easy as whipping out a thesaurus, Parliament's Communications and Digital Committee hears</p>
+<p>In the aftermath of Jensen Huang's resignation, not only may the AI bubble pop, but the world economy is in some peril</p>
+<p>Safety reasons and unspecified communications issue cited</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>Anthropic sets behavior standards to protect Claude from rough treatment</p>
+<p>The competition is circling like vultures</p>
+<p>Chips boast up to 256 cores, clocks up to 5.3 GHz, and IPC gains of 20 to 31 percent, just not all on the same SKU</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-hmm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/offbeat/2026/11/13/meatbags-suck-at-spotting-lying-llms-so-let-ai-narc-on-itself/5309876" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

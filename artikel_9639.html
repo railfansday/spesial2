@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Actions cache not restored: the four silent misses</title>
+    <title>Hoverine</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9639.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>GitHub Actions cache not restored: the four silent misses</h1>
+        <h1>Hoverine</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fgithub-actions-cache-not-restored.png" alt="GitHub Actions cache not restored: the four silent misses" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fgithub-actions-cache-not-restored.png" alt="GitHub Actions cache not restored: the four silent misses" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 15
-•
-Originally published at latchkey.dev</p>
-<p>A GitHub Actions cache not restored is almost never a broken cache service. It is one of four things: a key that is different on every run, a restore-key prefix that matched an entry you did not want, nothing saved anywhere this branch can read, or a save the service refused. All four exit zero.</p>
-<p>The four misses and the line each one prints. Strings quoted from the actions/cache and actions/toolkit sources, read on 2026-09-20.</p>
-<p>The install step that a cache was supposed to shorten runs at full length, and nothing in the job is marked failed. The evidence is one line, either in the restore step or in the post-job step, and the exit code is zero whichever line you got. Which line it is happens to be the entire diagnosis, so it is worth reading before you change a single key.</p>
-<p>```Restore step on a miss (actions/cache src/restoreImpl.ts, example keys)
-Cache not found for input keys: npm-Linux-a91f4c2e7b, npm-Linux-</p>
-<p>runner.os resolves to Linux on both ubuntu-22.04 and ubuntu-24.04, so it cannot separate them, and the cache version hashes the path and the compression tool rather than the image. An entry written on one image restores cleanly on the other whenever the key matches, which gives you a tree built against different system libraries instead of an honest miss. The documented restriction is cross-platform, which is what enableCrossOsArchive exists for. Put the image in the key: matrix.os where you have a matrix, or the ImageOS variable the runner sets.</p>
-<p>Write the entry on the default branch so pull requests have something in scope to restore. A small scheduled job that restores and saves is enough, and it also keeps the entry inside the 7-day window on a repository that goes quiet.</p>
-<p>Two legs racing to save the same key produce Unable to reserve cache with key, which is a warning and not a failure, and one leg's content is lost. Put the matrix dimensions in the key. When you genuinely need to discard an entry, bump a version prefix rather than trying to overwrite it: entries are immutable, so a re-save under an existing key does nothing.</p>
-<p>The restore step and the post-job step print a different line for each failure, and reading which one you have takes ten seconds. Cache not found for input keys: means nothing matched, exact or prefix. Cache restored from key: naming something other than your exact key means a restore-key matched and the content may be old. Cache hit occurred on the primary key ..., not saving cache. means the entry already existed and your new content was not stored. Unable to reserve cache with key means the write was refused.</p>
-<p>Print the step output as well. The action documents cache-hit as a string, not a boolean: true when the exact key matched, false when a restore-key matched instead, and an empty string when nothing matched at all. A workflow that tests it as a boolean collapses the last two into one, which is exactly the distinction you need here.</p>
-<p>The four lines below are verbatim from the action's own source, read on 20 September 2026, with example keys filled in. No single run prints all four, so the block is a reference rather than a transcript, and we would rather say that than imply otherwise.</p>
-<p>The Actions cache service is reachable only from inside a GitHub-hosted job, so no script on any other runner can produce these lines. This page therefore carries no reproduction of its own.</p>
-<p>```The four lines, with example keys, and the file each is quoted from
-Cache not found for input keys: npm-Linux-a91f4c2e7b, npm-Linux-</p>
-<p>Cache restored from key: npm-Linux-3d0be71c4a</p>
-<p>Cache hit occurred on the primary key npm-Linux-a91f4c2e7b, not saving cache.</p>
-<p>Unable to reserve cache with key npm-Linux-a91f4c2e7b, another job may be creating this cache.</p>
-<p>Because the key it looks for is not the key anything saved. The usual reason is a key built from github.sha or a timestamp, which is unique per run. The second most common is a hashFiles glob that matches nothing, which resolves to an empty string. Echo the key in the job and compare it with the one in the restore step line.</p>
-<p>It means a restore-key prefix matched rather than your exact key, so the content is from an earlier state of the project. It is not an error, and it is a problem when you skip the install on the strength of it. Keep the install step unconditional, and narrow the prefix if the entry it falls back to is too old to be worth restoring.</p>
-<p>Most often because the exact key already exists: entries are immutable, so the action logs that a hit occurred on the primary key and skips the save. The other reason is that the job failed, because the post-job save only runs after a successful job. If the content changed but the key did not, put the thing that changed into the key.</p>
-<p>Between Ubuntu majors, no, and that is the hazard rather than the relief. The cache version hashes the path and the compression tool, not the image, so an entry saved on ubuntu-22.04 restores on ubuntu-24.04 whenever the key matches and hands you a tree built against different system libraries. runner.os is Linux on both and cannot separate them. Put the image in the key with matrix.os or ImageOS if that matters to what you cache.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Rive animation templates you can drop into your app
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/hoverine?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1314493?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/kalemi/github-actions-cache-not-restored-the-four-silent-misses-5aln" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/hoverine" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

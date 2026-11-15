@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kildall&#x27;s algorithm</title>
+    <title>Email addresses used in European school bomb hoaxes spotted in old infostealer logs</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9887.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,81 +15,66 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Kildall&#x27;s algorithm</h1>
+        <h1>Email addresses used in European school bomb hoaxes spotted in old infostealer logs</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
+            <img src="https://image.theregister.com/5269514.jpg?imageId=5269514&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Email addresses used in European school bomb hoaxes spotted in old infostealer logs" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5269514.jpg?imageId=5269514&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Email addresses used in European school bomb hoaxes spotted in old infostealer logs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I got a part time job writing a Lisp compiler, so I’m going to talk about that.</p>
-<p>This post might be hard to understand if you do not program. Or if you do. There’s a fair amount of background required.</p>
-<p>You might be familiar with Lisp in the form of a Scheme interpreter you used for a few semesters in college. You might think things about it like “it’s so elegant, but it’s kind of impractical for day-to-day use”. You might think of it as “an interpreted language” and so don’t understand what I mean by Lisp compiler. If you don’t think these things you can probably skip to the next section.</p>
-<p>In Lisp, in contrast with some languages, the semantics are essentially built around interpretation. When you give a Lisp interpreter some code it goes through it step by step and executes it. This invites careful execution. It’s natural, for example, to expect that a program like</p>
-<p>that defines an addition function and then calls it on a string, will do something nice like pop you into a debugger, rather than return garbage data.</p>
-<p>But it’s also generally slow. The interpreter has to do something on all possible input. It can’t, for instance, very well optimize FOO to accept only one numerical argument in a register, because later FOO might be called with a string.</p>
-<p>So you add a compiler. The compiler is an optimization. It takes code and returns an optimized version that tries to preserve these semantics as much as possible while being much faster. The optimized version is faster partly because it’s probably composed of machine code or JVM bytecode or something else interpretable very quickly, and partly because of higher level optimizations. For example</p>
-<p>here the compiler might note that FOO can only accept numbers, and when it sees a straightforward call to FOO like in the second line that gives it only numbers, it generates code that skips the “is this a number? No? Debugger time” check. An “interpreter stub” retains the whole safest behavior, and can be used in the third line if eval returns FOO.</p>
-<p>This strikes a good balance, for me, between speed and freedom. The optimized code isn’t any less safe, so I can still write things with abandon and watch them fail in the debugger.</p>
-<p>The downside is that the compiler has to be pretty smart to be very effective. Luckily several Lisp implementations with pretty good compilers already exist, like SBCL and CCL. Both can generate fast1 code without too much trouble.</p>
-<p>I work on a new Lisp compiler called Cleavir. Cleavir is the compiler part of Dr. Robert Strandh’s project, SICL. SICL is intended to provide modular, reusable, clean, and more positive adjectives code to other implementations, as well as being an implementation in itself.</p>
-<p>SICL isn’t yet an implementation on its own, but Cleavir is used in another new Lisp implementation, clasp, which is Dr. Christian Schafmeister’s project.</p>
-<p>As far as I know the initial thoughts for Clasp went something like this:</p>
-<p><drmeister> My lab has this new system for designing artificial protein-oids. They’re made of bis-amino acids, which we also invented.</p>
-<p><DoD, etc. shadowy masters> Frikkin’ sweet.</p>
-<p><drmeister> We call them spiroligozymes2. They could have incredible implications for-</p>
-<p><DoD, etc.> Sure great. Here’s an award for being a literal nanotechnologist, named after that physicist everyone likes.</p>
-<p><drmeister> OK so the thing is that this stuff we’re doing involves a lot of computer work.</p>
-<p><drmeister> Right, and we mostly do that in C++. But I like Lisp.</p>
-<p><DoD, etc.> Great. Use it. It’s got an ANSI standard. God bless America.</p>
-<p><drmeister> But we don’t want to lose the C++ code. Lisp can use C functions but C++ doesn’t really have any interoperability.</p>
-<p><drmeister> So I was thinking I’d spend several years making a new Lisp implementation that’s tight with C++ from the ground up.</p>
-<p><DoD, etc.> That sounds hard, and you’re a chemist.</p>
-<p><DoD, etc.> Here is a zillion dollars. Snap to it.</p>
-<p>It must be nice being a respectable scientist, is what I’m saying.</p>
-<p>Clasp ended up being based on Embeddable Common Lisp (ECL), so called because it’s written in C and designed to be called from C programs. ECL provides a lot of the runtime. For compilation, however, Cleavir compiles Lisp programs into its “Mid-level Intermediate Representation”, or MIR; Clasp then compiles this into LLVM-IR, which LLVM than compiles to machine code.</p>
-<p>This is pretty convoluted and presents some problems (LLVM doesn’t really seem to make itself a good target for something with an online compiler and mostly heap allocation, for one). Luckily they are not usually mine, because I mostly limit myself to Cleavir, but it’s nice to know the nature of the gnashing maw you hang over.</p>
-<p>Cleavir’s MIR, and also HIR (“High-level”), are mostly what I work with. Consider this (silly) function:</p>
-<p>flet establishes local closures, and setf assigns. (example anything) will print 19 and then return 350.</p>
-<p>In HIR, after a few transformations, the code looks like this. Here are the basics: white rectangles are “instructions”, and represent basic operations. Ovals and the orange rectangles are “data”. The solid black arrows indicate control flow. Red dashed arrows indicate inputs to instructions, and blue dashed arrows outputs. Functions begin with the instructions called “enter”.</p>
-<p>It’s not really much different from any assembly-type language in form, other than having closures and explicitly separating input and output, but it’s more convenient to represent control flow graphically than with labels.</p>
-<p>A graph of operation nodes is pretty common as an intermediate representation, because it maps closely with the conception of computers as state machines. As such, some optimization techniques are well-trodden.</p>
-<p>In 1973, G. A. Kildall published his paper “A Unified Approach to Global Program Optimization”3. The title is a bit grandiose but actually pretty accurate. Kildall laid out a very general algorithm for associating optimization information of any kind with nodes in an instruction graph of this form. A few weeks ago I implemented it for Cleavir.</p>
-<p>It works like this. First, you establish some domain of optimization information. This domain can be anything you want, as long as it forms a bounded meet-semilattice4. Elements of the domain are called “pools”. Next, you define an “optimization function” which, given an instruction node and its pool, returns another pool.</p>
-<p>The algorithm has a “work set” consisting of instructions paired with pools. The initial contents of the work set are dependent on what you’re doing, but contain at least one instruction. The algorithm returns what I’ve been calling a “dictionary”, which is an association of instructions to pools that is distinct from the work set. Initially the dictionary is empty, i.e. there are no associations.</p>
-<p>The algorithm proceeds by choosing and removing some (instruction, pool) pair from the work set. If the instruction removed has not yet been associated with a pool in the dictionary, or if the associated pool is less than or equal to (an operation established by the definition of meet) the pool from the work set, the instruction becomes associated with a new pool that is the meet of the old association and the pool from the work set. Additionally, the optimization function is called with the instruction and this new pool; the result pool is paired with all instructions immediate succeeding (or preceding, depending on what you’re doing) the instruction in the work set.</p>
-<p>But the paper describes that better. Intuitively, what happens is that if the pool in the work set for an instruction is “better” than the one for that instruction already in the dictionary, in some domain-specific sense, the instruction is reassociated with a “better” pool, and the nearby instructions are put in the work set with new information based on this instruction.</p>
-<p>Nothing makes sense when it’s put that abstractly, right? It’s not just me? I don’t know how mathematicians survive.</p>
-<p>I implemented this algorithm in a general way. The function, kildall, takes an argument called a “specialization” that includes all the domain-specific information for the algorithm. I have a few of these specializations.</p>
-<p>The one I just put into a usable state was escape analysis. Check out the program with getx and setx again. An interpreter, upon seeing the flet, would allocate closures for both functions on the heap, i.e. dynamically, with cleanup being handled by the garbage collector. But if we look at the program, we can see that the closures cannot possibly be returned from this function or otherwise appear outside a strictly delimited context - they do not “escape”. In other words, these closures could be allocated with stack discipline. This is cheaper. An interpreter isn’t smart enough to see this but a compiler ought to be able to.</p>
-<p>To analyze this with Kildall, we can have it track uses of values. A use causes an escape or does not; e.g. returning a value is an escape, but adding it is not. We define a pool as a map from variables to escape indicators. An indicator is true if the variable escapes, and false if it does not. Meet is a union of maps; if a variable appears in both maps, the new map’s indicator for that variable is the logical OR of the two indicators.5 The bound is a map where all variables are known to escape.</p>
-<p>The optimization function does different things depending on the type of instruction. We can do a completely correct, if overly conservative, analysis with the following rules:</p>
-<p>The algorithm can then proceed in the reverse direction of control flow. Here’s the HIR again. We start at the bottom return instruction, with an initial pool of the empty map. The return is not yet associated with any pool, so it takes that one, and passes on a pool up where its input, the “V”, escapes.</p>
-<p>It proceeds upwards in that way and then reaches the funcall to which GETX is input. It’s the first input, i.e. the function called, and we have not seen GETX before, so we put (GETX, false) in the next pool up. The same occurs for the other funcall with GETX, and so once we reach the top instruction, we have that GETX does not escape, and can be stack allocated.</p>
-<p>The beautiful thing here is that all we actually need to have in the code are the definition of the semilattice and the optimization function rules, and the algorithm handles all the control flow. The analysis automatically works just as well around branches and loops. The whole thing is maybe fifty lines.</p>
-<p>Stack allocating closures is nice, but what about those “cell” things? A cell is just a wrapper around a value, with a set and a get, like an ML “reference”. Closures in a language with assignment, like Lisp, have to have something like this; if setx just closed over the value, the assignment to x would not take in the outer function. These cells are implicit in the source code but still have to be allocated.</p>
-<p>Determining that a cell can be stack allocated is more complicated. Naïvely, you might expect that a cell doesn’t escape if every closure it’s put in doesn’t escape. This is basically true, but there’s a nesting problem. Consider:</p>
-<p>This is a function of one argument, which calls a function of zero arguments, which returns a function of no arguments that returns the first function’s argument. So for example if you call this function with x=4, you get back a function that returns 4.</p>
-<p>The HIR looks like so. The outer function allocates a cell for x and a closure for the middle function using it, then calls that function. The middle function fetches the same, identical cell, puts it in a new closure for the innermost function, and then returns it.</p>
-<p>If we use the Kildall specialization described above in the outer function, it will determine, correctly, that the middle closure can be stack-allocated; if used on the middle function it will determine, also correctly, that the inner closure cannot.</p>
-<p>Were we to say that a cell doesn’t escape if everything it’s closed into, the outer function analysis would find, incorrectly, that the cell can be stack allocated - because it doesn’t know anything about the inner functions.</p>
-<p>To determine whether cells can be stack allocated, we need to extend the algorithm to be aware of nested functions, which Kildall did not consider.</p>
-<p>The obvious thing to do is, when the algorithm hits an enclose instruction, it calls for a recursive analysis on the inner function. This analysis can determine that the fetched cell is enclosed in a closure which escapes. Another step converts this analysis into a simplified “info” structure with only the information we need, i.e. whether the cells can escape the inner function. The optimization function for the outer enclose then uses this information to determine that the cell escapes.</p>
-<p>On the getx example, it can determine in this way that the cell for x does not escape, as the functions don’t return their cells or any closures. So the x cell can be stack allocated there.</p>
-<p>That’s as far as I’ve actually implemented.</p>
-<p>Earlier, I mentioned that arguments to a funcall instruction other than the function called are assumed to escape. This is because the analysis does not know anything about the function called, and so cannot assume anything. However, as long as we’re analyzing inner functions, we have a representation for the information we need, the “info” structure. Particularly, we can track whether arguments are returned from functions (which does not inhibit them being stack-allocated in the calling function), or escape more generally. Then in the funcall we can use this information to provide a better analysis.</p>
-<p>The problem is that this information effectively has to be propagated forward from the enclose to the funcall, i.e. in the opposite direction as this analysis. This propagation is not trivial. We could have code like</p>
-<p>baz can be stack-allocated, but knowing this requires knowing that both possibly called functions do not let their argument escape.</p>
-<p>It would be possible to tie in another Kildall specialization, type inference, to do this. Type inference propagates forward, and finds for each variable a set of values that it always contains. In the above, the implicit called-function variable always contains a function that does not let its argument escape.</p>
-<p>This implies that type inference would have to be aware of the escape analysis, and escape analysis of type inference. A principled way to compose different specializations of Kildall’s algorithm together would do it.</p>
-<p>Which “languages” are “faster” is an argument I don’t want to get into. But if I spend comparable amounts of effort writing a program with clang, SBCL, and CPython, the SBCL program will probably be two to ten times as slow as clang’s, and a hundred to a thousand times as fast as CPython’s. ↩</p>
-<p>Check out this incredible title: “Spiroligozymes for Transesterifications: Design and Relationship of Structure to Activity” ↩</p>
-<p>You have a set. You have a binary operation on that set, “meet”, which takes two objects in the set as arguments and returns a third object in the set. The order of arguments to meet is not important (commutativity), and you can also rearrange groupings freely (associativity). If the two objects are the same, their meet is that same object (idempotency). There are examples later. ↩</p>
-<p>The algorithm generally proceeds from an incorrectly optimistic initial state down to harder-to-optimize reality. ↩</p>
-<p>This is not actually true in general: We can define a function like (labels ((foo () #'foo)) ...) that returns itself, or worse. But in HIR, recursive functions are currently implemented by putting the function in a cell (keep reading this post for more on those) which is over by the function. Since the analysis considers being written into a cell an escape, any function that returns itself will be marked as escaping for other reasons. ↩</p>
+                <p>Researchers say organizations should have detected and secured them sooner</p>
+<p>Two email addresses used to send bomb threats that disrupted thousands of Italian schools this week were found exposed in infostealer logs for over a year, experts say.</p>
+<p>Researchers at Hudson Rock looked into the two university email addresses used to send the bomb threats. One, from Egypt’s Kafrelsheikh University, was scooped up by Vidar – a cybercrime tool that steals saved account credentials and passwords from an infected computer and leaks them to attackers – as far back as October 2021. The other, from Taiwan's Dayeh University, was found among the 284 million addresses included in the massive AlienTXTBASE infostealer dump, dated February 2025.</p>
+<p>The experts said that the two addresses in infostealer logs do not strictly mean that those behind the bomb threats gained access to the accounts using the previous infostealer compromise.</p>
+<p>However, it suggests that there was ample time for the universities and Microsoft, which both universities used for authentication, to take action against the accounts that they should have been aware were appearing in infostealer logs.</p>
+<p>Modern threat intelligence has made infostealer logs highly visible.</p>
+<p>"Both findings place credential exposure well before the disruption, creating a substantial window in which exposed access could have been investigated and secured," Hudson Rock said.</p>
+<p>The researchers said that they would need access to details such as the email headers, and data from email providers, including sign-in events and audit records, that could show them more about who sent the email and from what session.</p>
+<p>Understanding whether the sender authenticated into the account could rule out spoofing, but would not in itself provide proof that the sender used a corresponding password taken from an infostealer log, Hudson Rock noted. There are many ways to get around password-based authentication.</p>
+<p>The researchers said that in any case where a credential is detected among infostealer logs, the organizations responsible for those accounts must contain them, revoke their access, rotate secrets, and go looking for suspicious activity.</p>
+<p>"The disruption illustrates why credential exposure deserves attention beyond fraud and data theft," the researchers said.</p>
+<p>"An account associated with an ordinary university user can become a means of reaching schools, frightening families, and consuming emergency resources."</p>
+<p>Around 6,300 of Italy's 7,476 state schools received fake bomb threat emails between November 11-12, although only around 390 of them evacuated their respective buildings.</p>
+<p>The emails contained messaging such as "we will annihilate you," and "we will carry out genocide against Italians," and mention of a  "powerful explosive device… with a remote trigger."</p>
+<p>Early reports suggested that the emails came from a Taiwanese email address and were signed by a "Mikhail Andropov, leader of the Vilayat of Misoginistan" – a fictitious state or region roughly mapping to "the land of Misogyny," with "vilayat" meaning an administrative region of the Ottoman Empire.</p>
+<p>Various theories have been reported about the identity of the sender, ranging from a teacher based in the Philippines whose email was compromised to a Russia-backed disruption operation. Neither are confirmed. Russia denied any involvement.</p>
+<p>Italy's Prime Minister Giorgia Meloni said on Thursday evening that there was no credence to the emails, and that whoever was behind the coordinated hoax sought to invoke chaos across the country.</p>
+<p>"To date, there is no evidence of a concrete danger," she said, ANSA reported. "These messages aren't intended to shock, they're intended to scare.</p>
+<p>"Those who write them are primarily seeking our fear, wasted days, suspicion, and chaos. Investigators and the judiciary, along with their European colleagues, are working to determine who is behind them."</p>
+<p>Schools in France, Ireland, Northern Ireland, and Scotland also received similar emails this week. None of the respective police forces believed the threats were legitimate.</p>
+<p>Hundreds of schools across the Republic of Ireland received the emails, as did news organizations such as RTÉ, which evacuated its Donnybrook campus, disrupting scheduled programming.</p>
+<p>Around 300 schools in Northern Ireland received bomb threats, although the PSNI said these were being treated as a hoax, and that the risk to the public was deemed low.</p>
+<p>Likewise, Police Scotland confirmed around 1,000 schools were affected by the email campaign and that the threats weren’t believed to be credible.</p>
+<p>In France, three school districts confirmed they received similar threats. Separately, domestic and international rail travel, including Eurostar services to London, were interrupted on Thursday following bomb threats made to Calais-Fréthun station.</p>
+<p>The latest wave of threats follows similar happenings at other types of organizations in recent weeks, including airline operators, air traffic controllers, and blood banks.</p>
+<p>At least 34 flights across various operators in Europe were affected earlier this month. Some were forced into unplanned landings, such as an Aer Lingus flight which pulled up to a French air base instead of its intended target of Rome.</p>
+<p>Military fighter jets were also scrambled to escort others in Italian and Austrian airspace. ®</p>
+<p>Cambridge museum celebrates the world's first business computer with films, family activities, and a little Python</p>
+<p>Collabora and Nextcloud pitch alternatives as education customers weigh the cost of losing free services</p>
+<p>PARTNER CONTENT: Real-time endpoint data keeps AI-driven IT operations accurate, fast and under control</p>
+<p>Accessing banned content is as easy as whipping out a thesaurus, Parliament's Communications and Digital Committee hears</p>
+<p>In the aftermath of Jensen Huang's resignation, not only may the AI bubble pop, but the world economy is in some peril</p>
+<p>Safety reasons and unspecified communications issue cited</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>Anthropic sets behavior standards to protect Claude from rough treatment</p>
+<p>The competition is circling like vultures</p>
+<p>Chips boast up to 256 cores, clocks up to 5.3 GHz, and IPC gains of 20 to 31 percent, just not all on the same SKU</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>One installer now offers conventional and read-only systems as separate Micro distro bows out</p>
+<p>Very nearly 30something environment gets spruced up… and there's a new Trinity, too</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://bike.github.io/posts/kildall.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/cyber-crime/2026/11/13/email-addresses-used-in-european-school-bomb-hoaxes-spotted-in-old-infostealer-logs/5309765" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
