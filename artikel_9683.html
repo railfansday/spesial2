@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Securing Distributed JAX Clusters</title>
+    <title>Cyber Experts Weigh In: How to Fight Artex &amp;amp; AntiFox</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9683.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Securing Distributed JAX Clusters</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
+        <h1>Cyber Experts Weigh In: How to Fight Artex &amp;amp; AntiFox</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Foyib0mj4ac0hoijqt1j3.png" alt="Securing Distributed JAX Clusters" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt131056a0513594b5/6af623f4a8a90fde9d0b34ee/Artex-ShaunWilkinson-Getty.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Cyber Experts Weigh In: How to Fight Artex &amp;amp; AntiFox" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Foyib0mj4ac0hoijqt1j3.png" alt="Securing Distributed JAX Clusters" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt131056a0513594b5/6af623f4a8a90fde9d0b34ee/Artex-ShaunWilkinson-Getty.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Cyber Experts Weigh In: How to Fight Artex &amp; AntiFox" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>When you run JAX on a single machine, it works like an accelerated NumPy library. You run Python code, XLA compiles the computation graph, and your local GPU or TPU runs the kernels.</p>
-<p>Everything shifts when you scale across several hosts. Process 0 spins up a coordinator to track worker nodes, while the cluster passes tensor slices over the network and caches compiled binaries on disk. If you do not configure these features deliberately, your cluster communicates in plaintext and can even execute arbitrary native machine code planted by neighbouring users.</p>
-<p>Here is how those trust boundaries work and how to lock them down.</p>
-<p>To run JAX across multiple nodes, you call jax.distributed.initialize(). Process 0 becomes the coordinator, spinning up a gRPC service that manages cluster topology, health heartbeats, and a shared key-value store JAX distributed docs.</p>
-<p>By default, connections to this coordination service are completely unauthenticated and unencrypted JAX security docs. Anyone who can reach that port can talk to process 0. An attacker on the same network can register rogue worker processes, inject poisoned metadata into the distributed key-value store, or force a cluster crash by spoofing failed heartbeats.</p>
-<p>JAX provides native Mutual TLS (mTLS) for this coordination layer. Both the coordinator and worker ranks present X.509 certificates validated against a shared Certificate Authority (CA).</p>
-<p>Here is how to initialise distributed JAX securely:</p>
-<p>Two settings in that snippet are critical.</p>
-<p>First, verify_secure_credentials defaults to False. If you provide invalid certificates, JAX raises an immediate error. But if you omit certificate arguments entirely, JAX falls back silently to an unencrypted plaintext channel JAX distributed mTLS docs. Setting verify_secure_credentials=True forces JAX to abort execution if secure credentials are not supplied.</p>
-<p>Second, mtls_peer_uri_prefix checks the Subject Alternative Name (SAN) URI in peer certificates, and this prefix must end with a trailing slash (/). If you configure spiffe://cluster.internal/workload/jax, an attacker holding a valid certificate for spiffe://cluster.internal/workload/jax-rogue would pass validation JAX URI verification issue.</p>
-<p>To understand how interceptors and credential validation operate under the bonnet, read the CodeReviewLab guide to gRPC security.</p>
-<p>JAX's coordinator client relies on gRPC, which uses HTTP/2 multiplexing over persistent TCP sockets. In high-performance computing (HPC) and corporate cloud environments, worker nodes often export proxy variables such as HTTP_PROXY, HTTPS_PROXY, and NO_PROXY to reach external package repositories.</p>
-<p>Standard cluster scripts often attempt to bypass internal traffic using wildcard asterisks, such as NO_PROXY=10.* or NO_PROXY=*.cluster.local. The C-core gRPC library supports standard CIDR notation such as 10.0.0.0/16, but it does not support wildcard asterisks or shell globbing gRPC issue tracker.</p>
-<p>When gRPC encounters those unsupported wildcard masks, it fails to match internal addresses and routes node-to-node coordination traffic directly to the outbound corporate HTTP proxy JAX proxy documentation. The proxy rejects HTTP/2 multiplexing or drops the traffic, leaving jax.distributed.initialize() hung waiting for a response.</p>
-<p>To prevent this hang when outbound proxies are required, format NO_PROXY using clean CIDR blocks or explicit IP lists instead of wildcard asterisks:</p>
-<p>Enabling mTLS on the coordinator does not encrypt every byte passing between nodes. JAX delegates heavy data transfers to lower-level accelerator runtimes, leaving several critical data paths unauthenticated and unencrypted at the framework level.</p>
-<p>For TPU workloads, libtpu (version 0.0.46 and above) supports environment-driven mTLS controls configured using TLS_CERT_FILE, TLS_KEY_FILE, TLS_CA_FILE, and TLS_VERIFIER.</p>
-<p>For GPU and CPU clusters, you cannot rely on JAX to secure collective data or profiler ports. You must isolate node-to-node traffic using cloud VPC encryption, security groups, or Kubernetes network policies. If you are structuring workload isolation across nodes, review the CodeReviewLab guide to container security.</p>
-<p>Recompiling large XLA graphs on every run wastes valuable compute time. JAX solves this with a persistent compilation cache, enabled through JAX_COMPILATION_CACHE_DIR.</p>
-<p>When JAX compiles a function, it calculates a hash from the unoptimised graph, compiler flags, and library versions. If a matching entry exists on disk, JAX skips compilation and loads the pre-compiled native artifact directly.</p>
-<p>This design introduces a severe trust assumption. The official documentation issues a direct warning: "The compilation cache is considered trusted. Do not share a compilation cache with users you do not trust. For example, if you put the compilation cache in a directory to which others may write, those users can trigger your JAX process to run arbitrary code." JAX cache docs</p>
-<p>If you point JAX_COMPILATION_CACHE_DIR to a shared folder such as /tmp/jax_cache, an unauthenticated NFS mount, or a world-writable cloud bucket, any user with write access can plant malicious machine binaries. When your job compiles a graph matching that hash, XLA loads the attacker's binary straight into memory, executing arbitrary code within your workload context.</p>
-<p>The same boundary applies to foreign function calls registered with jax.ffi or custom PJRT plugins JAX FFI documentation. Never deserialize untrusted computation graphs or load third-party kernels without verifying signatures.</p>
-<p>To keep the compilation cache safe, enforce strict directory permissions:</p>
-<p>If your fleet shares pre-compiled graphs, mount the shared storage volume as read-only for compute worker nodes. Allow write access only to an isolated CI build pipeline.</p>
-<p>When reviewing code or deployment manifests for JAX workloads, verify these four items:</p>
-<p>Spotting subtle cluster configuration bugs takes structured practice. You can build that habit on real-world code snippets with interactive challenges on Code Review Lab.</p>
-<p>Does your team run distributed training with coordinator mTLS enabled today, or are your worker nodes still trusting plaintext traffic on the cluster subnet?</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Cybercriminals using agentic pen-testing tools is a proverbial genie out of the bottle at this point, so enterprises need to get a defense plan in place right away.</p>
+<p>A month since it went closed-source, the Artex agentic penetration testing framework is spreading faster and causing more havoc than ever. Still, cyber defenders tell Dark Reading that defending against it is largely a matter of willingness, not capability.</p>
+<p>To recap: In August, a Chinese open source (OSS) developer released a cybercrime-grade agentic red-teaming tool called "Artex." In the months that followed, attackers and cybersecurity researchers have gradually realized just how effective Artex is at probing for vulnerabilities and turning initial access into meaningful compromise at so-called machine speed.</p>
+<p>"Artex is what the perpetual conflict era looks like," says Yuval Itzchakov, co-founder and chief technology officer (CTO) of A Security. "When our research team ran it against our open source benchmark, it found eight vulnerabilities in about 45 minutes, including a critical privilege escalation to admin, and chained them into a full attack path through a WAF, CAPTCHA, and MFA. All it took was a download, an install script, and a model key."</p>
+<p>Related:Attackers in Binance Breach Targeted Known Weakness, Missing Controls</p>
+<p>Nothing about it is so complicated, he says, "And that's the point. Take the guardrails off an AI hacking tool, and anyone can run agentic attacks at scale. In Artex, scope is just a suggestion to the model."</p>
+<p>Though its author de-listed the original Artex on Oct. 8, new variants continue to cause trouble. The variant du jour, "AntiFox," was recently weaponized by attackers to exploit Internet-facing Web services and their associated Amazon Web Services (AWS) environments. According to researchers at Arctic Wolf Labs, threat actors used their new agentic toy to breach, deploy Web shells, and execute operating system (OS) commands on compromised Microsoft Internet Information Services (IIS) servers, as well as enumerate services, expose production secrets, and manipulate Simple Storage Service (S3) buckets across AWS environments.</p>
+<p>Notably, Arctic Wolf Labs offered relatively banal advice for organizations defending against this quite new threat: hunt for indicators of compromise (IoCs), rotate and revoke relevant credentials and sessions. In fact, researchers say, there's little more to defending against Artex or AntiFox than basic cybersecurity hygiene. However, it's also important to avoid making assumptions; as GitGuardian pointed out in a blog post on AntiFox, "Blocking scanner tools won't stop these agents, and a leaked key stays dangerous until someone revokes it."</p>
+<p>The prospect of every Tom, Dick, and Harry having an agentic attack framework in their pocket might be intimidating, but cybersecurity defenders still possess some distinct advantages.</p>
+<p>Related:Getting Past the Post-Quantum Cryptography Discovery Phase</p>
+<p>First off, Itzchakov points out that "Artex stops at the front door. It has no lateral movement, no Active Directory testing, and no view inside. Defenders can see their whole environment and test it continuously with the same speed and autonomy, under guardrails no one can switch off. The organizations that come out ahead will treat this as permanent and build their security around it."</p>
+<p>In a profile of a recent incident response (IR) effort against an Artex attack, Eye Research noted another serious weakness of agentic tools in general: They're loud. "The agents left their name in pod names and probes, hammered endpoints no human would touch, and tripped detections on systems with EDR installed," it explained. "Where we had visibility, we saw them immediately."</p>
+<p>"If you want to be positive, there are a lot of small steps you can put together in order to protect networks and organizations," says Guillaume Valadon, lead cybersecurity researcher at GitGuardian. To catch Artex or AntiFox's loudness, for example, "blue teams must have in place a security information and event management (SIEM) platform and a really good detection system, to make sure that they will detect these tools in the noise."</p>
+<p>Related:Japan Pushes Emergency Funding for Cybersecurity as AI-Assisted Breaches Rise</p>
+<p>Besides active detection, organizations would be well advised to focus on secrets management. Artex and AntiFox have proven adept at finding secrets, in part because they use ordinary commands like "git" and "grep" to find what they're looking for, instead of shipping a more easily identifiable and blockable secret scanner.</p>
+<p>"Defenders need to be looking for exposed and dormant keys, checking Git repos for exposed secrets, and heavily implementing a defense-in-depth posture," adds Justin Moore, Arctic Wolf's director of adversary operations. "What makes these frameworks so effective is not that they’re conducting novel attacks; they’re just doing what we already know, just faster than we have seen before. Good cyber hygiene is exactly what prevents these types of attacks from being so successful, whether they’re agentic or not.”</p>
+<p>Despite all of the positive steps organizations can take, Valadon says, "If I'm being negative, I would say that it's too late."</p>
+<p>"For years we have been telling people that they should not output secrets — that we're finding really important hardcoded secrets everywhere, publicly. On Docker, GitHub, and so on. Now, because we have these tools that can go fast from nothing to discovery to weaponization, that makes it more difficult for blue teams," he says.</p>
+<p>"The agentic capacity for the attacker is already here, and they're going faster and faster and faster," he notes. "So if you didn't do the right stuff before, it will be difficult for you to catch up."</p>
+<p>The cybersecurity industry has been waiting for AI-driven cyberattacks for years now. Product marketing campaigns have hinged on agentic attacks being right around the corner. Stories of lightly AI-influenced tactics, techniques, procedures (TTPs), and malware have kept food on cyber reporters' plates. Most of the discourse has been, at best, theoretical, at worst, misleading.</p>
+<p>A meaningful, if incomplete, turning point seems to have occurred around midyear, if not among the most sophisticated attackers, then at least in the world of middling cybercriminals.</p>
+<p>"When we all started using ChatGPT, at that time, we were just asking it simple questions. It was fun, but it was not possible to code," Valadon explains. "And then we had agents that were more capable at coding and syncing. This year you can do it all, from end to end. You just give [an agent] a rough idea, and it will do some planning, syncing, it will build the code for you, and deploy it for you. It's getting better and better at doing the whole cycle."</p>
+<p>He also points to Anthropic and OpenAI's warnings about OSS AI earlier this fall: "Some people are saying that we are seeing these [attack] frameworks because of Chinese open-weight models. Because if you have a big GPU, you are able to run your own offensive models with Artex."</p>
+<p>"It's getting more and more dangerous," he says. "It's all fitting into the HuggingFace, OpenAI, Anthropic narrative [warning against attackers] having access to real offensive tools."</p>
+<p>Nate Nelson is a journalist and award-winning scriptwriter. In addition to Dark Reading he writes for Darknet Diaries, the most popular show in cybersecurity across all media.</p>
+<p>He began his career as a freelancer, ghostwriting Forbes and CNBC op-eds for executives in tech and finance. Then he transitioned to journalism at Threatpost, where he covered cybersecurity news and trends. Throughout those years he co-created a cybersecurity podcast, Malicious Life, which in its day climbed into the Top 20 technology podcasts charts on Apple Podcasts and Spotify.</p>
+<p>He holds degrees from New York University and Bard College. As a born and bred New Yorker, he enjoys a superiority complex, but is polite enough to keep it to himself.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>Securing Active Directory: Defending Against Modern Attack</p>
+<p>When the Plumbing Breaks: Lessons from PHP2Shell and LiteLLM</p>
+<p>From Shadow AI to Rogue Agents: Securing the AI You Can't See</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/securitystefan/securing-distributed-jax-clusters-39l" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cybersecurity-operations/cyber-experts-fight-artex-antifox" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

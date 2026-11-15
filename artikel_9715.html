@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers Model Integration Contracts</title>
+    <title>CI Failure Triage Needs Evidence Before It Needs a Classifier</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9715.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,142 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers Model Integration Contracts</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
+        <h1>CI Failure Triage Needs Evidence Before It Needs a Classifier</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/g1WeGoqPdQfjArop5JSl3omfg7J3-4083g11.jpeg" alt="CI Failure Triage Needs Evidence Before It Needs a Classifier" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/g1WeGoqPdQfjArop5JSl3omfg7J3-4083g11.jpeg" alt="CI Failure Triage Needs Evidence Before It Needs a Classifier" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
-(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
-During training, it could peek at the answer it was supposed to predict.
-Nothing crashed, and the bug stayed in main for almost two months.</p>
-<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
-it on every one of them. This post is about that model and the tests built
-around it.</p>
-<p>Transformers supports over 750
-model types, and its test suite is big: 88,000+ CPU tests on main, plus
-200,000+ GPU tests in a daily run. Model tests are only part of it: we also
-test pipelines, training, distributed execution, quantization and attention
-kernels.</p>
-<p>The integration tests load real checkpoints and exercise the model's API on
-real hardware. Running all of that on every PR would mean keeping a lot of GPUs
-busy all day long, which isn't practical. By the time a scheduled run finds a
-regression, it may already be in main.</p>
-<p>Our approach is to shrink the model instead. We build a fixture: a small
-model made from the real checkpoint's configuration, with fewer and narrower
-layers but every kind of layer it has, and its tokenizer and processor files
-unchanged. It is published once, then reused. We run "fast integration tests"
-against it on a cheap CPU runner. In our
-CPU study,
-the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
-is 1,227 MB.</p>
-<p>This also covers very large models: some don't fit on our standard GPU
-runners, but their fixtures run on CPU.</p>
-<p>Model integrators already build tiny test models (Transformers' tiny-random-*
-checkpoints). We wanted a common recipe, and
-checks that go beyond loading the model and running a forward pass. The UMT5
-bug would have passed a forward pass just fine.</p>
-<p>Fixtures won't replace full integration tests, but on PRs they give us a
-chance to catch bugs before they reach main.</p>
-<p>transformers-mic is a proposed
-standard for packaging these tests. A Model Integration Contract (MIC) has
-three parts:</p>
-<p>The contract holds if running the usage path on the fixture still produces the
-baselines.</p>
-<p>A contract covers an architecture and a usage path, not a single checkpoint:
-compatible checkpoints can share a fixture, while each keeps its own expected
-results. We publish them in huggingface-mic.</p>
-<p>For example, the SmolLM contract generates from prompts such as "The capital
-of France is" and compares its token IDs with a recorded answer. After loading
-the model and tokenizer, the generation code is, simplified to one prompt:</p>
-<p>It also compares training loss, checks that gradients are finite and verifies
-that an optimizer step changes the weights. See the full
-usage.md.</p>
-<p>A fleet dataset
-on the Hub pins each MIC to a frozen revision, along with the package versions
-used to record its baselines. Each CI run records the fleet revision it
-used, so we can reproduce it later.</p>
-<p>On a PR, we pick MICs based on the files the patch changes.</p>
-<p>We replayed frozen MICs over five months of Transformers commits. The small
-UMT5 fixture flagged the regression from its introduction on July 30, 2026
-until its fix on September 28.
-Label log-probabilities differed from the reviewed baseline by 1.22 and training
-loss by about 0.20.</p>
-<p>One detail mattered: the contract used SDPA, the default attention path.
-Running only the eager attention variant missed the bug. A fixture only
-helps if it goes through the same code as the real checkpoint.</p>
-<p>We then reverted the fix on a proof branch in Transformers' CI. The check
-failed with the same differences, and the selected T5 contract's runner step
-took 13.4 seconds on CPU, excluding setup.</p>
-<p>The replay results
-and the CI demo
-have the measurements and reproduction details.</p>
-<p>The first recipe was simple: make the dimensions smaller and keep fewer
-layers. That wasn't enough for mixed architectures. Keeping two layers is no
-use if both use sliding attention and the full-attention layers disappear.</p>
-<p>We also keep the original weights file format. Otherwise we would skip the
-conversion code that runs when a user loads the real checkpoint.
-The full recipe
-has more detail.</p>
-<p>The Llama 4 Scout shrink report
-shows what this looks like on a big model. 108.6 billion parameters become 44.7
-million. The vision stack goes from 34 layers to 2 and the language stack from
-48 to 4, keeping the checked layer kinds and MoE routing style.</p>
-<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
-model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
-the candidate baselines. The LLM drafts; it doesn't approve. Changed
-expectations require human review.</p>
-<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
-<p>It drafts the contract, builds the fixture and records its baselines on your
-machine, asking you to review each step, and stops before uploading anything.
-For a new model, the draft comes from an LLM through Inference Providers, billed
-to your own account (--bill-to ''). The
-CLI docs
-cover the individual steps.</p>
-<p>We used agents to build MICs across model families. When they hit an edge
-case, we fixed the recipe itself rather than the one fixture, with help from
-model experts. The published models and remaining gaps are in the
-coverage space.</p>
-<p>With random weights, our Whisper fixture barely responded to changes in
-the audio. It ran, but that made it a poor test of the audio path.</p>
-<p>So we trained it on a few tones paired with words such as "red" and "green".
-We weren't teaching it speech recognition, just making audio changes visible
-in its outputs. In our weight-initialization study,
-the random Whisper fixtures caught 18 of 24 injected faults. The overfit
-fixtures caught all 24.</p>
-<p>That gives us two ways to build the weights:</p>
-<p>The Whisper result doesn't settle which is better. Those were synthetic
-faults, and we haven't found a real regression caught only by the overfit
-version. Both versions missed an assisted-decoding bug that the real Whisper
-checkpoint exposed.</p>
-<p>So we keep random weights when they pass the checks, and overfit when we need
-better sensitivity or readable answers. Training takes seconds, but it is one
-more step that can fail to converge, and one more thing to maintain. The comparison
-has the results for both.</p>
-<p>As of November 1, 2026, the MIC job in Transformers CI
-reports failures without blocking PRs. Whether it should block depends on
-things we haven't measured yet:</p>
-<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
-show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
-<p>Coverage is still partial, across model families and the APIs people use.
-When a regression slips through, we can add the missing usage path and replay
-it on the broken and fixed versions. We'll keep existing tests until their
-coverage is accounted for.</p>
-<p>Finally, we'd like to link original Hub model pages to their MICs, so a
-developer or an agent using a checkpoint could start from an example tested on
-that checkpoint, its environment and its expected outputs.</p>
-<p>Want to help? Pick an uncovered model from the
-coverage space, try
-the tmic workflow,
-and contribute a usage path or review a generated contract.</p>
-<p>MIC contract coverage of Transformers model types</p>
-<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
-<p>MIC contract coverage of Transformers model types</p>
+                <p>If you have ever owned a CI pipeline and cleared a wall of red builds before standup, you might recognize this routine. A nightly run finishes with thirty-seven failed tests, and by the time anyone looks, thirty have passed on a rerun and picked up a flaky tag while the other seven get tickets.</p>
+<p>Nobody records why the thirty failed in the first place, so the same failures come back the next night under the same label. And it is easy to see why teams settle into this, because a rerun clears the build in minutes while finding the real cause of thirty failures could take the whole team a day.</p>
+<p>That gap is where a new class of AI models starts to look tempting. Shawn Gordon’s recent HackerNoon explainer introduces Jev, a decision model from TypeSafe AI that writes nothing and only picks an answer. It chooses from up to 255 options or returns a yes or no probability in about half a second. TypeSafe also says those probabilities are calibrated, so an answer given at 80 percent confidence should be right about 80 percent of the time.</p>
+<p>Sorting a failed test into a product defect, environment noise, or an agent error is a three-option choice question, which makes it look like a natural fit. But when Mastra, the company behind an open-source framework for building AI agents in TypeScript, tested Jev on a related triage job, the results were poor.</p>
+<p>Jev labeled 78 of Mastra’s own GitHub issues as urgent, high, or low, using only each issue’s title and body, and only about 10 of its answers matched an engineer’s judgment. Mastra concluded that the model could not see the evidence that priority depends on, and Gordon put the risk plainly in his explainer. “A consistently wrong classifier that runs cheaply is just a faster way to tag things badly.”</p>
+<p>CI triage has the same trap, because a model can sort failures well only when the pipeline has kept the evidence that separates one category from another. So the evidence has to come first and the classifier second.</p>
+<p>Most pipelines record a failed test as one status, and that single status hides three kinds of failure that need different fixes from different teams.</p>
+<p>Sai Krishna, Director of Engineering at TestMu AI (formerly LambdaTest), draws that line before any fix starts. “We should ideally treat these failures into three different categories,” he explains. “Whether it is a product defect, like an actual defect in the product. Or if it is environmental noise, maybe a network issue, a latency problem, a backend API that went down. Or very importantly now, since agentic pipelines are involved, whether it is an agent error.”</p>
+<p>He also gives a working definition for the third category, which is the one teams find hardest to name. “If the agent’s reasoning or actions are inconsistent, that is the point where we can clearly say it is an agent error,” Krishna says. “We have to put them in different buckets.”</p>
+<p>Each bucket leaves a different trail, and that trail is what a classifier will eventually read. A product defect reproduces on the same commit under the same conditions and usually traces back to a recent change in the application. Environment noise shows up as timeouts or 5xx responses from a dependency, and it tends to hit unrelated tests in the same time window.</p>
+<p>An agent error happens in a healthy environment and with an unchanged commit, while the agent’s steps differ from the last passing run. So the first practical move is to write those signals down as rules for each bucket and to name an owner for each one. The feature team takes defects, the platform team takes noise, and whoever owns the prompt and the model takes agent errors.</p>
+<p>Three buckets cover most failures, but some failures look like environment noise only because of how the suite runs.</p>
+<p>Srinivasan Sekar, also Director of Engineering at TestMu AI, sees this most often when teams move from local runs to large parallel grids. “The most common and unanticipated failure is shared state across parallel workers,” he highlights. “Locally, one or two tests run in parallel, and everything works, but in the cloud with 200 parallel workers you suddenly see tests depending on specific execution order.” The usual causes are global fixtures or singletons that several tests change at once, race conditions in test data setup, and ordering dependencies that nobody noticed while the suite ran one test at a time.</p>
+<p>These failures are test defects. And a classifier that only knows three labels will file them as environment noise, because they come and go without any change to the code. The fix is to add a fourth label and give the classifier the one signal that separates it, which is whether the test still fails with a single worker.</p>
+<p>Rerunning each failure once with one worker inside the triage job costs a few seconds and turns an ambiguous failure into a clear one. And the repair itself belongs in the test, through per-worker test data and idempotent setup and teardown, and not in the infrastructure.</p>
+<p>Agent errors are the hardest bucket to fill correctly, because the evidence is in decisions the agent made and not in any log the pipeline already keeps.</p>
+<p>Tom Howe, Director of Insight Engineering, built his team’s approach around those decisions. His team captures a trace of every action an agent takes, with full context, in a cryptographically secure audit system. It then uses separate agent evaluators to review those traces for logic errors that have happened or might happen next.</p>
+<p>“The steps that the non-deterministic system takes to get to an output are as important to test as the outputs themselves,” he explains. “By examining a detailed trace of the steps an agent takes and the tools it leverages to generate an output, you can get deep insight into where decisions are brittle and anticipate errors before they happen.”</p>
+<p>That trace is also the missing input for automated triage. After its test, Mastra advised letting an agent gather the evidence first and letting the classifier judge what it gathered, and CI works the same way. A triage job can attach an evidence bundle to every failure before any model sees it.</p>
+<p>The bundle carries the commit, the model and prompt versions, dependency health at the start of the run, the retry outcome, and a diff of the agent’s steps against the last passing run.</p>
+<p>Every field in that bundle points at a bucket. A degraded payments API points at noise, a failure with eight workers followed by a pass with one points at a test defect, and a changed step sequence on a healthy environment points at an agent error. When the signals conflict, as they do in this example, the bundle shows the conflict instead of hiding it. A person reading this bundle can usually name the bucket quickly, and so can a decision model.</p>
+<p>Once the evidence exists, the classifier’s job is narrow, and keeping it narrow is what makes it safe to automate.</p>
+<p>Shahram Anver, Co-Founder and CEO of Cleric, which builds AI SRE agents for incident investigation, shows how far that labeling can go once a team has the evidence to support it. His team tracks 51 failure mode labels across its agent investigations. Those labels separate tool access problems from reasoning errors, omitted steps, and unfinished runs, because a status that only says the agent responded tells the team nothing about whether it did useful work.</p>
+<p>Most CI teams do not need 51 labels on day one, but Anver’s taxonomy shows that the label set should grow as the evidence gets richer. A decision model makes that growth cheap, because a choice question over four labels or forty costs about the same to run. The harder design question is the rule for acting on each answer. The code below sends a failure straight to its owner only when the model is confident, and puts everything else in a human triage queue.</p>
+<p>The threshold should come from the team’s own data and not from a vendor’s claim. Public write-ups on Jev note that most claims about the model come from TypeSafe itself and that no calibration results have been published yet. So run the classifier in shadow mode for two weeks, keep human labels for the same failures, and check whether answers given at 90 percent confidence are actually right about 90 percent of the time.</p>
+<p>If the 0.9 bucket comes back at 0.70 accuracy, the model is overconfident on this team’s failures. In that case, raise the threshold or improve the bundle before letting it route anything on its own.</p>
+<p>Krishna treats the classifier as the last step of triage, not the first. “A model can sort failures faster than anyone on the team, but only if the pipeline kept what that model needs to see,” he says. “Start by labeling a month of failures by hand. Once your own engineers agree on the buckets, a classifier has something real to learn from and something real to be checked against.”</p>
+<p>The first week of this work needs no model at all. Pull the last month of failed and flaky tests, label each one by hand as a product defect, environment noise, an agent error, or a test defect, and note which piece of evidence decided the label. Then make the triage job attach those pieces of evidence to every new failure, run a decision model in shadow mode against the hand labels, and switch on automatic routing only for the labels where its confidence matches its accuracy.</p>
+<p>SWE-bench Scores Say Nothing About the Code Your Reviewers Inherit</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/ci-failure-triage-needs-evidence-before-it-needs-a-classifier?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

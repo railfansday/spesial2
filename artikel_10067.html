@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Run a vLLM Server on HF Jobs in One Command</title>
+    <title>CSS Optimization: Is Using Declarations Just Once (UDJO) Still Effective Today?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10067.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,51 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Run a vLLM Server on HF Jobs in One Command</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
+        <h1>CSS Optimization: Is Using Declarations Just Once (UDJO) Still Effective Today?</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/vllm-jobs/thumbnail.png" alt="Run a vLLM Server on HF Jobs in One Command" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2018/04/ellipses-brackets.jpg" alt="CSS Optimization: Is Using Declarations Just Once (UDJO) Still Effective Today?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/vllm-jobs/thumbnail.png" alt="Run a vLLM Server on HF Jobs in One Command" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2018/04/ellipses-brackets.jpg" alt="CSS Optimization: Is Using Declarations Just Once (UDJO) Still Effective Today?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>You can spin up a private, OpenAI-compatible LLM endpoint on Hugging Face infrastructure with a single command — no servers to provision, no Kubernetes, pay-per-second. Once it's up, you can query it from your laptop, a notebook, or anywhere else.</p>
-<p>It's the quickest way to stand up a model for tests, evals, or batch generation. (If you're after a managed, production-ready service instead, that's what Inference Endpoints are for — more on when to pick which at the end.)</p>
-<p>hf jobs run is docker run for HF infrastructure. We use the official vllm/vllm-openai image, ask for a GPU with --flavor, and expose vLLM's port with --expose:</p>
-<p>--expose 8000 routes the container's port through HF's public jobs proxy (see the Serve Models guide for the full reference). The command prints the URL your server is reachable at:</p>
-<p>6a381ca1953ed90bfb947332 is your job ID. Keep track of it, we'll need it. We'll use <job_id> as a placeholder for it in the rest of the post.</p>
-<p>Give it a couple of minutes to download weights and boot. When the logs show Application startup complete, you're live.</p>
-<p>vLLM speaks the OpenAI API, and every request just needs your HF token as a bearer token. The quickest way to hit it is curl:</p>
-<p>which returns the usual OpenAI-style JSON, with choices[0].message.content holding "Hello! How can I assist you today? 😊".</p>
-<p>Or, from Python, point the OpenAI client at the exposed URL and pass the token as the API key:</p>
-<p>Quick health check before you start: curl https://<job_id>--8000.hf.jobs/v1/models -H "Authorization: Bearer $(hf auth token)" should list the model.</p>
-<p>🔐 The endpoint is gated, not public. Every request must carry an HF token with read access to the job's namespace. A plain browser visit will be rejected. In effect, the jobs proxy is your API gate: access is scoped to you (and your org). That's fine for private use, but treat the URL accordingly: don't share it expecting it to be open, and don't paste your token into untrusted places. If you need finer-grained or public access, put a proper gateway in front instead. Or see HF Jobs or Inference Endpoints? below.</p>
-<p>Jobs are billed per second, so stop the server when you're done:</p>
-<p>The --timeout you set is a safety net (it'll auto-stop), but cancelling explicitly is cheaper. An a10g-large runs at $1.50/hour — check hf jobs hardware for the full price list and pick the smallest flavor that fits your model.</p>
-<p>The same command scales to much larger models — pick a beefier --flavor and tell vLLM to shard the model across the GPUs with --tensor-parallel-size. For example, the 122B Qwen3.5 mixture-of-experts model on 2× H200:</p>
-<p>--tensor-parallel-size should match the number of GPUs in the flavor (h200x2 → 2, h200x8 → 8). Run hf jobs hardware to see what's available and give bigger models a longer --timeout, since they take longer to download and load. For large models, H200 flavors are usually the best value.</p>
-<p>The --max-model-len 32768 --max-num-seqs 256 flags are specific to this model: Qwen3.5-122B is a hybrid Mamba/attention architecture with a 256K-token default context, which doesn't leave enough memory for vLLM's default batch settings. Capping the context length and concurrent-sequence count keeps it within the GPUs' memory. If a model fails to start with an out-of-memory or cache-block error, dialing these two down is the first thing to try. Everything else (the exposed URL, the OpenAI client, the token auth) stays exactly the same.</p>
-<p>Prefer a chat window over curl? A few lines of Gradio point at the same endpoint. Add --reasoning-parser deepseek_r1 to the vllm serve command so Qwen3's thinking comes back as a separate field (not necessary, but helpful), then run this code locally (you'll just need the job ID):</p>
-<p>Run it, open http://127.0.0.1:7860, and chat — reasoning streams into the collapsible panel, the answer below.</p>
-<p>Need to debug a startup failure, watch GPU memory, or tail logs interactively? You can open a shell straight into the running job. Launch it with --ssh and make sure your public key is registered at huggingface.co/settings/keys:</p>
-<p>You're now inside the container, where you can run nvidia-smi, inspect the process, or poke at the model directly — which makes debugging and monitoring much easier than reading logs from the outside. SSH support requires huggingface_hub >= 1.20.0.</p>
-<p>The same endpoint can back a terminal coding agent. Pi is a provider-agnostic agent harness. Point it at the job and you get a Read/Write/Edit/Bash agent running on your own self-hosted model.</p>
-<p>One thing to set up first: agents drive the model through tool calls, and vLLM only accepts those if the server is launched with tool calling enabled. So relaunch with --enable-auto-tool-choice and a --tool-call-parser matching the model family (hermes for Qwen3). Agents also benefit from a stronger model, so this is a good place to bring in the bigger one:</p>
-<p>Then add the job as a custom provider in ~/.pi/agent/models.json:</p>
-<p>The model you spun up a couple of commands ago, now driving an interactive coding agent in your terminal.</p>
-<p>HF Jobs isn't the only way to serve a model on Hugging Face. Inference Endpoints are our managed product for the same job, and which one fits depends on what you're after.</p>
-<p>Reach for HF Jobs when you want maximum flexibility and control: it's just docker run on HF infrastructure, so you pick the image, the exact vllm serve flags, and the hardware, and you pay per second for as long as the job runs. That makes it a great fit for experiments, one-off evals, batch generation, or kicking the tires on a model before committing to anything.</p>
-<p>Reach for Inference Endpoints when you want something more production-ready. They add the operational niceties a long-lived service needs: finer-grained access control (an endpoint can be public, protected, or private), and scale-to-zero, so you're not billed during periods of inactivity. If you're standing up a durable endpoint rather than running a job, that's the tool to grab.</p>
-<p>This post sticks to vLLM, but the same expose-a-port pattern works with any OpenAI-compatible server. To serve GGUFs with llama.cpp or run SGLang instead, see the Serve Models on Jobs guide, which walks through those backends.</p>
+                <p>CSS optimization is a deceptive topic. On the one hand, it feels like something simple that we should already have all the tooling for — especially when it comes to minification. On the other hand, the idea that we already exploited “everything” there is around CSS optimization may be considered naive. Such a claim looks hard to defend for a language that evolves almost daily.</p>
+<p>In this article, I’d like to pick a technique that’s at least 18 years old — UDJO, or “using declarations just once.”</p>
+<p>Aware of an older source? Please comment!</p>
+<p>The technique is inspired by the principle of DRY, “don’t repeat yourself”, in that it works by identifying and reducing (if not eliminating) declaration repetition.</p>
+<p>So, if there’s something like display: flex and it appears two or more times, it gets reconciled in one rule:</p>
+<p>The outcome of the technique depends on how intelligently the deduplication is done and how long the selectors are. Intelligence determines if UDJO leads to an actual maintainability advantage — can the change of a declaration really be done to all the selectors attached? And the selector length influences how big file size savings are.</p>
+<p>If you’re interested, my article on “DRY CSS” describes the mechanics in more detail. The question here is: Is UDJO still effective and still relevant today?</p>
+<p>When we try to answer this question, however, we end up with a problem: When sites are complex and their style sheet declarations have not been de-duplicated before, UDJO can require a lot of work.</p>
+<p>To save some time, I built tooling for this work. While it didn’t seem like it would immediately be as comprehensive as manually going through and testing style sheets, it seemed realistic enough that a tool could catch some repetition.</p>
+<p>Skipping ahead, I created CSS Dedup not only to identify repetition, but also to deduplicate what could safely be optimized (CSS Dedup has some documentation on this but in essence, deduplication affects selector locations, which is part of how the cascade works). This, then, gives us some data:</p>
+<p>For the first batch, I arbitrarily picked 20 websites to analyze. I then used CSS Dedup to check what the file size changes would be if we deduplicated what seemed provably safe, and also what seemed probably safe, but only if it led to file size savings.</p>
+<p>I picked those two options to provide the “natural” result of deduplication, but also the one site owners may be most interested in to reduce repetition but also decrease transfer size. After all, UDJO as a CSS optimization technique can improve both maintainability and performance.</p>
+<p>Important note: These values cannot be used to tell CSS quality—they depend on selector length and also on verifying if deduplication, in the respective case, actually leads to better maintainability. Also note that this leaves out changes after compression—this was not part of the experiment but would be fair to test, too.</p>
+<p>For the question whether UDJO still works today, this should be a yes. It works as well as to even come with file size savings.</p>
+<p>Maybe you’re curious, too, about what the situation looks like in our field, among web developers. Let’s take some samples on this, too.</p>
+<p>It would be valuable to expand this analysis to take more samples and investigate the differences across samples, but there may be something to web professionals using shorter selectors so as to be able to benefit more from UDJO.</p>
+<p>As mentioned at the beginning, UDJO’s effectiveness generally depends on the kind of repetition as well as on the length of selectors.</p>
+<p>This can be managed, however: While tools like CSS Dedup make no difference between declaration use cases (and are therefore blunt), it is possible to configure them so as to reap the performance benefits.</p>
+<p>As the data taken for this article suggest, file size savings may be achieved in most cases. Considering that this is based on safe changes, this means a low-cost performance optimization vector — especially when applied to minified output. It’s still a good idea to couch that against the use of further compression (e.g. gzip/Brotli), but at face value, deduplication shows how it can reduce the size of CSS.</p>
+<p>For anyone generally interested in CSS optimization, maintainability, and performance, UDJO should probably be part of the overall approach to CSS. But since the technique has been niche and since tooling is new, I invite you to review, test, and explore this vector. It seems hard to argue that we have reached the ceiling of how far we can take CSS optimization.</p>
+<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>and also to add that in the last weeks I’ve been testing some approaches to using CSS Dedup. It has proven quite effective, especially in the following setup: On static sites, reaping only savings via css-dedup CSS_FOLDER -p "(?<!\.min)\.css$" -f -s -z -q (options are explained in the docs). This makes already minified style sheets even smaller, at almost no cost.</p>
+<p>I’ll write more about this shortly (on my website)—and am curious about your thoughts and observations!</p>
+<p>I’d be curious to see the minuscule performance implications, if any at all.</p>
+<p>If up to 11% savings in a small sample are true – even pre-compression – then that’s not minuscule. Especially not with the average size of a stylesheet.</p>
+<p>I’d like to see more sites being tested both pre and post compression.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/vllm-jobs" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/css-using-declarations-just-once/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

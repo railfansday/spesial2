@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Granite 4.2 LLMs: How They&#x27;re Built</title>
+    <title>Hundreds of Fake Accounts Defended Jensen Huang On Social Media</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9915.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,84 +15,99 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Granite 4.2 LLMs: How They&#x27;re Built</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
+        <h1>Hundreds of Fake Accounts Defended Jensen Huang On Social Media</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They&#x27;re Built" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/social_64.png" alt="Hundreds of Fake Accounts Defended Jensen Huang On Social Media" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/65cc2c288ebd392213e58899/XHWV2L_wZsFe3ekksCgvQ.webp" alt="Granite 4.2 LLMs: How They're Built" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/social_64.png" alt="Hundreds of Fake Accounts Defended Jensen Huang On Social Media" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A technical walkthrough of how we built the Granite 4.2 reasoning model family.</p>
-<p>TL;DR: Granite 4.2 is our first family of dense, decoder-only reasoning LLMs, released in three sizes: 3B, 8B, and 30B. These  models are post-trained from Granite-4.1 base models. Granite-4.1 base models were pre-trained from scratch on roughly 15T tokens with a five-phase strategy that extends the context window to 512K tokens, supervised fine-tuned on chain-of-thought, reasoning, and agentic-trajectory data, then post-trained with a multi-stage reinforcement learning pipeline. That pipeline includes agentic RL, where the 8B and 30B models learn to act with tools inside real sandboxed environments. Every model has a thinking / non-thinking switch, a low-effort thinking mode that spends a short reasoning budget on easy questions, and native tool calling. All Granite 4.2 models are released under the Apache 2.0 license.</p>
-<p>Granite 4.2 is the reasoning-focused release of the Granite language-model family. Earlier Granite releases were strong instruction-following assistants; Granite 4.2 adds explicit reasoning. Every model can produce a chain of thought before its answer and can run in thinking or non-thinking mode depending on how much deliberation a task needs. A low-effort mode falls between the two, spending a short reasoning budget on easy questions.</p>
-<p>The three sizes (3B, 8B, and 30B) share the same architectural design and follow the same training pipeline (base model, SFT, then multi-stage RL), each at its own scale. All three are strong reasoners and instruction followers. The clearest capability split shows up in post-training. The 8B and 30B models additionally go through an agentic RL block that teaches them to operate as agents: calling tools, editing and running code, driving a terminal, and searching the web inside real environments. Every model supports native tool calling. Served through an OpenAI-compatible endpoint (for example, with vLLM), it emits tool calls in the OpenAI function-calling format and plugs into agentic harnesses without extra glue. Granite 4.2 is also supported in SGLang, see the SGLang cookbook for a ready-to-serve recipe.</p>
-<p>The rest of this post walks through the build: architecture, pre-training, supervised fine-tuning, the multi-stage RL pipeline, and results.</p>
-<p>Granite 4.2 models are built on a decoder-only dense transformer architecture with the following core components:</p>
-<p>Granite 4.2 models are post-trained from Granite-4.1 base models. Granite-4.1 base models were trained from scratch on approximately 15 trillion tokens using a five-phase training strategy. Phases 1–2 focus on foundational pre-training, phases 3–4 perform mid-training with progressively higher-quality data annealing, and phase 5 introduces long-context training, extending the context window to 512K tokens. Each phase uses a distinct data mixture and learning-rate schedule, gradually shifting from broad web-scale data toward more curated, high-quality sources.</p>
-<p>The pre-training recipe closely follows the previous generation; for a detailed treatment of the data blend, phase schedule, and long-context extension, see the Granite 4.1 blog.</p>
-<p>Supervised fine-tuning (SFT) turns the base model into a reliable instruction-following, reasoning, and tool-using assistant. The SFT data mixture combines agentic (31.6%) and non-agentic (68.4%) data, totaling approximately 7.2 million samples, or roughly 100B tokens, of which about 65B are trainable.</p>
-<p>The agentic corpus covers a broad range of domains, including software engineering (SWE, 69%), tool calling (12.1%), terminal use (8.0%), math (3.5%), search (0.8%), and action (0.2%). These samples and trajectories are generated using a diverse set of agent scaffolds and harnesses, including OpenHands, OpenCode, Terminus-2, SWE-agent, OpenResearcher, MiniSWE, OpenSeeker, EnvScaler, Gemini CLI, Hermes, Codex, and Goose. The agentic data combines samples from both open-source datasets and our own synthetically generated RL environments, spanning a variety of agent–harness combinations.</p>
-<p>The non-agentic corpus consists of several major categories: instruction following (18.8%), coding (18.8%), math (14.6%), multilingual (7.0%), science (5.4%), reasoning (3.0%), and safety (0.8%).</p>
-<p>We apply multiple stages of quality control before a sample enters the final SFT mixture. First, data from different sources is normalized and reformatted into a consistent OpenAI Chat format, making the conversation structure and tool interactions uniform across datasets and scaffolds.</p>
-<p>We then use GPT-OSS-120B and Gemma 4 as LLM-based judges to assess sample quality. Low-scoring samples are removed, as are samples containing hallucinated or fabricated information, invalid tool interactions, or tool calls to functions that are not defined in the corresponding tool list. Several targeted, dataset-specific heuristic rules are also applied where appropriate to further improve quality and remove known sources of noise.</p>
-<p>Finally, we perform both local and global deduplication. Deduplication is based on SHA-256 hashes computed over the combination of the tools and messages fields, removing duplicate samples both within individual data sources and across the overall SFT mixture.</p>
-<p>The complete corpus is first globally shuffled to reduce ordering effects and ensure that samples from different domains are well mixed during training. The shuffled corpus is then partitioned into equally sized .parquet shards, which are tokenized using the model's tokenizer and chat template and prepared for large-scale distributed training.</p>
-<p>Before launching the final large-scale runs, we tune hyperparameters on representative configurations, sweeping learning-rate schedules, initial learning rates, and warm-up ratios to find settings that train stably across model sizes. The final training configuration is summarized below:</p>
-<p>For the 30B model, we additionally perform a second phase of SFT focused specifically on agentic coding. In this phase, agentic, SWE, and coding data are upsampled to increase their effective contribution to the training distribution, while approximately 16% of the mixture is retained as replay data from the original SFT corpus.</p>
-<p>The 30B model is then fine-tuned for roughly one additional epoch at a lower learning rate of 3.0e-6. This targeted second phase increases the model's exposure to agentic coding trajectories without discarding the capabilities acquired during the initial SFT phase.</p>
-<p>After SFT, we apply a multi-stage, multi-environment reinforcement learning pipeline. Rather than a single RL pass, we run a chain of focused stages spanning many environments: math, code, science, instruction following, tool use, and structured output, then software engineering, terminal use, and web search. Each stage is an independent RL run that targets one capability and warm-starts from the previous stage's checkpoint.</p>
-<p>Figure 1. The staged RL curriculum. Foundational RL (verifiable rewards + skill boosters) runs for all sizes; the agentic RL block (SWE → Terminal → Search) runs for 8B and 30B only. Every model finishes with RLHF. Each stage is a separate GRPO run that warm-starts from the previous checkpoint.</p>
-<p>Every stage trains with asynchronous GRPO (Group Relative Policy Optimization), so the generator and trainer halves of the loop never block on each other. A pool of generation workers keeps sampling responses and dropping the finished trajectories into a shared buffer; once the buffer holds a full step's worth, the trainer pulls that batch, takes an optimizer step, and streams the updated parameters back to the generator workers without pausing them. A refresh can land partway through a rollout, leaving a single trajectory stitched together from two adjacent policy versions. We allow this instead of paying to prevent it: the workers reuse their existing KV cache rather than rebuilding it after each refresh, and the one guardrail is a limit that keeps them from drifting more than a single update behind the trainer, which bounds how off-policy any sample can get. Whatever mismatch survives that limit is handled in the objective by truncated importance sampling, which clamps the train-versus-generation log-probability ratio to a fixed ceiling so a handful of stale tokens cannot dominate an update.</p>
-<p>Advantages are group-relative with a leave-one-out baseline: each response is judged against the mean reward of the other samples drawn for the same prompt, which removes the need for a separate value network. To make this concrete, take RLVR, the first and longest-running stage: each step pairs 256 prompts with 16 sampled responses apiece for a 4,096-example batch, which the trainer consumes in a single optimizer step before the next rollout begins. Later stages keep this machinery unchanged and adjust only the per-stage shape, shown next.</p>
-<p>The pipeline keeps a common backbone of hyperparameters across every stage, which makes the curriculum easier to run and compare. A handful of knobs are fixed everywhere:</p>
-<p>What changes from stage to stage is the shape of each run: how many prompts and generations per step, how long the context is, whether the agent loop runs, and how hard we pull back toward the reference policy. The table below gives the exact settings for the 30B chain, stage by stage:</p>
-<p>Parameters shown for the 30B model. Global batch size = prompts/step × generations/prompt (e.g. 256 × 16 = 4096 for RLVR). The 3B and 8B models use the same recipe and hyperparameters with fewer stages (see How the Three Sizes Differ); the stage list is what changes, not the knobs.</p>
-<p>The KL schedule follows the reward type: explore freely where the reward is objective and verifiable (RLVR and SWE 2 run at KL 0), and stay close to the reference where the objective is preference, safety, or a narrow skill graft (RLHF and the code booster use KL 0.05). The rollout-turns column counts the environment interactions GRPO itself sees per rollout. In every case the model is trained on complete, real-environment trajectories.</p>
-<p>Each stage is a separate RL run with a single objective and its own reward signal. When it finishes, its policy is exported to Hugging Face format and becomes the base model for the next stage, so the pipeline is a sequence of warm-starts:</p>
-<p>The 8B and 30B models follow the full ladder. The 3B model takes a shortened path: foundational RL and alignment, without the agentic block.</p>
-<p>A stage is defined mostly by how it is rewarded. Across the pipeline there are three reward types, and a single stage can use more than one:</p>
-<p>Verifiable rewards are objective and hard to game, so the pipeline front-loads them. Judge- and preference-based rewards handle open-ended qualities that no checker can express. Agentic-outcome rewards are the sparsest: often a single bit at the end of a long tool-use trajectory.</p>
-<p>RLVR is the foundational stage and the broadest data mix in the pipeline: a single blended dataset spanning many verifiable domains.</p>
-<p>Each task type carries its own verifier, so the reward is grounded per example. RLVR runs for two rounds on 3B and 8B, and three on 30B. Each round is a fresh warm-started run on a re-weighted mix of public and internally curated RL data.</p>
-<p>After RLVR, a few short booster stages sharpen specific capabilities that benefit from concentrated training focusing on the following domains:</p>
-<p>Boosters are small, focused runs. A light KL penalty keeps the model close to its current behavior while nudging one skill.</p>
-<p>In the agentic stages the model learns to act: call tools, observe results, and iterate inside a real environment, rewarded on whether the task was actually solved. These stages share the same shape: multi-turn tool use, real (not simulated) environments, sparse outcome rewards, and GRPO, warm-started from the coding-boosted checkpoint. They run in order: SWE → Terminal → Search.</p>
-<p>Figure 2. The three agentic-RL environments. Each pairs a real harness with a real environment and a sparse, outcome-based reward. The 3B model runs none of these.</p>
-<p>The final stage of every model is RLHF for human preference and safety. It optimizes against a generative reward model (GenRM) for preference, plus a safety reward covering jailbreak resistance and appropriate refusals. This stage uses the highest KL penalty in the pipeline, aligning tone and safety without eroding the capabilities the earlier stages built. In addition to human preference and safety alignment, this stage also applies a reasoning-length penalty to discourage overly verbose reasoning behavior acquired during earlier stages.</p>
-<p>Same method and infrastructure; the difference is how far up the ladder each model goes.</p>
-<p>3B is a strong foundational-RL model; 8B and 30B add the agentic-RL block on top, learning to act with tools in real environments.</p>
-<p>Reinforcement learning at this scale needs infrastructure that can drive a training loop and a fleet of live environments at the same time. This matters most in the agentic stages, where every training example is a multi-turn rollout that edits code, runs commands, or browses the web. Granite 4.2's RL runs on two open components: NeMo-RL on the training side and NeMo-Gym on the rollout side.</p>
-<p>Figure 3. The RL system. NeMo-RL drives the GRPO loop (Megatron-Core training backend, vLLM generation, and Megatron-Bridge for HF⇄Megatron weight conversion). NeMo-Gym orchestrates rollouts and hosts the tools, sandboxes, and reward/verifier calls as pluggable Resources.</p>
-<p>That uniformity is what makes the staged curriculum above practical: a booster's rule-based checker and a full SWE sandbox present the same interface to GRPO.</p>
-<p>This split is also what makes the asynchronous training loop described above physically possible: generation and policy updates live on separate GPU pools, so the expensive generation fleet — including the live agentic environments — stays busy instead of idling through optimizer steps.</p>
-<p>Granite 4.2 was evaluated across agentic coding, general agentic and tool use, reasoning, chat and instruction following, and long context. The full benchmark table is below, followed by charts that break out the headline results by model size.</p>
-<p>Supported languages: English, German, Spanish, French, Japanese, Portuguese, Arabic, Czech, Italian, Korean, Dutch, and Chinese.</p>
-<p>The charts below break these results out by capability area.</p>
-<p>Figure 4. Reasoning (pass@1). Scores rise consistently with model size across math (AIME25, HMMT), science (GPQA), and code reasoning (LiveCodeBench, SciCode).</p>
-<p>Figure 5. Agentic coding resolve rates. The agentic-RL block is trained only for 8B and 30B; the 30B model leads across SWE-Bench variants and Terminal-Bench.</p>
-<p>Figure 6. General agentic and tool-use benchmarks, reported for all three sizes.</p>
-<p>We also released four quantized variants of the Granite 4.2 models for inference with vLLM. The models are converted to FP8, NVFP4, and MXFP4 using LLM Compressor, and to the GGUF format using the llama.cpp framework for reduced-memory deployment.</p>
-<p>The FP8 version is quantized with dynamic per-channel weights and per-token activations.  No calibration is used.</p>
-<p>The NVFP4 and MXFP4 versions are quantized using GPTQ calibrated on 2K samples drawn from the SFT dataset.  Max context length is 2K during calibration.</p>
-<p>Conversion of the Granite 4.2 models to GGUF is done with the canonical llama.cpp tool as described in https://github.com/IBM/gguf#gguf-conversion--quantization.</p>
-<p>We trained the Granite 4.2 language models on an NVIDIA GB200 NVL72 cluster hosted by CoreWeave, featuring:</p>
-<p>This infrastructure delivers the high-bandwidth, low-latency communication required for efficient large-scale distributed training.</p>
-<p>The training software stack is packaged into .sqsh container images, each giving a run a reproducible, portable environment with its SBSA-compatible CUDA targets, Linux aarch64 Python wheels, and GPU-specific binaries pinned. The large-scale SFT runs build on an NGC PyTorch base image (Ubuntu 22.04, CUDA 12.8, Python 3.12); the RL stack runs in its own NeMo-RL container.</p>
-<p>Granite models support tool calling with integrated reasoning: the model reasons about which tool to call and why before calling it. Tools are defined with the OpenAI function definition schema.</p>
-<p>Granite models can serve as the backbone for agentic coding tools. Because they support reasoning and tool calling through the OpenAI-compatible API, they integrate with popular agentic harnesses without extra adapters. Start the vLLM server, then follow the harness-specific instructions below.</p>
-<p>OpenCode is an AI coding agent that runs in your terminal.</p>
-<p>Configure ~/.config/opencode/opencode.json:</p>
-<p>For full documentation, see opencode.ai/docs.</p>
-<p>Pi is a minimal agent harness for AI-powered coding that runs in your terminal. It supports custom providers via a models.json configuration file.</p>
-<p>Then select the granite-4.2-30b model with /model or Ctrl+L in the interactive session.</p>
-<p>OpenHands is an AI software engineer that can plan, write code, and execute commands.</p>
-<p>Install and launch OpenHands following the official installation guide.</p>
-<p>Configure the LLM in the OpenHands settings with:</p>
-<p>Note: The openai/ prefix is required when connecting to OpenAI-compatible endpoints like vLLM. Refer to the OpenHands local LLM documentation for detailed setup instructions, troubleshooting, and alternative installation methods.</p>
-<p>Last updated: September 11, 2026 to clarify base models.</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>For those not in the know, Midas Project is a pretty well known political hit piece factory.</p>
+<p>In this specific case, they're working with "but we created 400 sock puppet accounts, which we then discover publicly" tactic.</p>
+<p>Meanwhile in reality, the letter to reinstate Jensen is at well over 100k signatories, including almost 6000 current nvidia employees and over a 1000 former ones.</p>
+<p>I'm reminded of the guy who landed a spacecraft on the comet, and then got retards like you cancel him because his shirt was considered immoral.</p>
+<p>What Great Men of History do in their own time is their business. In their case, what matters is what they created. Not how many women spread their legs for them.</p>
+<p>What Great Men of History do in their own time is their business. In their case, what matters is what they created. Not how many women spread their legs for them.True, but the women they harass and the enemies they supply do justifiably offset that. 
+
+Wernher von Braun did incredibly things at NASA, but his former employer should always be remembered.</p>
+<p>What Great Men of History do in their own time is their business. In their case, what matters is what they created. Not how many women spread their legs for them.</p>
+<p>True, but the women they harass and the enemies they supply do justifiably offset that. 
+
+Wernher von Braun did incredibly things at NASA, but his former employer should always be remembered.</p>
+<p>And what they do is our business when it affects national security.  And Jensen resigned, he was not fired.</p>
+<p>What did Jensen create?  His public appearances demonstrate that he is ignorant of AI.</p>
+<p>Nobody actually cares about who you sleep with. Our leadership sleeps with underage girls and eats babies and we haven't taken down a single one. But who you sleep with is the primary means with which you destroy someone in our society, if the powers that be decide that someone needs to be gotten rid of, because it turns out we are hypocritical little pieces of shit.</p>
+<p>Huangs ouster is about him smuggling chips to China, in particular, about the power struggle in DC around it. State and Treasury wanted it stop</p>
+<p>From what I've read, the issue isn't so much his personal life so much as the fact that Alice Huang may have used him to try to get around sanctions against exporting a ton of AI chips.  This potentially puts Nvidia at legal jeopardy.</p>
+<p>Correct.Who the funk cares which man sleeps with which woman?Except some American idiots?</p>
+<p>Having sex with someone has absolutely nothing to do with moral, unless one of them is under age.</p>
+<p>I can fuck who ever I want, that is NONE OF YOUR BUSINESS.</p>
+<p>Gee. 100k signatures. ALL stockholders. Gee no morales - all about greed. Who cares if he slept with many women, lies to his wife etc.Actually no one cares. The reason he was fired was for not disclosing internal relationships (and lying about external ones) which is a major policy violation and a massive legal risk. Literally no one gives a fuck how well his marriage is going or if he is a cheater.</p>
+<p>Gee. 100k signatures. ALL stockholders. Gee no morales - all about greed. Who cares if he slept with many women, lies to his wife etc.</p>
+<p>Actually no one cares. The reason he was fired was for not disclosing internal relationships (and lying about external ones) which is a major policy violation and a massive legal risk. Literally no one gives a fuck how well his marriage is going or if he is a cheater.</p>
+<p>https://standwithjensen.com/ [standwithjensen.com]</p>
+<p>You accuse them of fabricating the sock puppets based on what evidence? Because you do not like their politics?</p>
+<p>I'm not sure what you're saying there. There's a letter with 100k signatures, 7000 of which you've confirmed to have massive bias? Are you saying you haven't figured out what bias and who is pulling the strings for the other 93k signatures?</p>
+<p>Here's a hint for you: If a letter concerning the removal of a CEO has 100k signatures on them, you can be guaranteed that most of those signatures are fake as wellNormal people don't give a shit, and there aren't 100k deeply financially invested people, or at least not 1</p>
+<p>so china bot farms are trying to protect Jensen?I'm sure a well-appointed building on the mainland suitable for an AI startup is also being hinted at.</p>
+<p>so china bot farms are trying to protect Jensen?</p>
+<p>I'm sure a well-appointed building on the mainland suitable for an AI startup is also being hinted at.</p>
+<p>Good thing we don't have to deal with these "sock puppet" accounts here on Slashdot...</p>
+<p>I'm too lazy to mod this up with my alts today.</p>
+<p>Joining the chorus online were voices of seemingly everyday people: a chef, a stock trader, a Hebrew teacher and several environmental activists. But at least 400 of them were fake, ...
+Yup, 'cause scores of "everyday people" care about Nvidia or, more specifically, billionaire CEO Jensen Huang, (or, more generally, billionaires) so let's try to fake that.  So stupid.Like other documented influence campaigns, the posts appeared to have limited reach; the most-viewed tweet garnered about 8,000 views and 32 likes.
+Whew, good.  Guess people aren't that gullible.Still, some of the posts targeted lawmakers, ...
+Uh oh.</p>
+<p>Joining the chorus online were voices of seemingly everyday people: a chef, a stock trader, a Hebrew teacher and several environmental activists. But at least 400 of them were fake, ...</p>
+<p>Yup, 'cause scores of "everyday people" care about Nvidia or, more specifically, billionaire CEO Jensen Huang, (or, more generally, billionaires) so let's try to fake that.  So stupid.</p>
+<p>Like other documented influence campaigns, the posts appeared to have limited reach; the most-viewed tweet garnered about 8,000 views and 32 likes.
+Whew, good.  Guess people aren't that gullible.Still, some of the posts targeted lawmakers, ...
+Uh oh.</p>
+<p>Like other documented influence campaigns, the posts appeared to have limited reach; the most-viewed tweet garnered about 8,000 views and 32 likes.</p>
+<p>Whew, good.  Guess people aren't that gullible.</p>
+<p>Still, some of the posts targeted lawmakers, ...
+Uh oh.</p>
+<p>Still, some of the posts targeted lawmakers, ...</p>
+<p>Mind you, the U.S. will probably get the National Security blowback wrong. But with el Bunko in the WH, it cannot go too wrong for them....until the WH chan</p>
+<p>Sure, but they're probably not "everyday people" like those mentioned in the sock puppet campaign - a chef, a stock trader, a Hebrew teacher and several environmental activists.</p>
+<p>Fun part: the "story" about her being a PRC spy already fell apart after it was scrutinized.</p>
+<p>She worked against both PRC and US interests, and in favor of her own company.</p>
+<p>The second time in the same story you make a comment making a wild claim with no evidence. Your Twitter feed is not a good source of information.</p>
+<p>It's the opposite. The original story is the one that was leaked with no evidence (that she's a spy).</p>
+<p>In reality, she's a Singaporean business magnate. And one of her businesses is the typical Singaporean thing of semi-legal smuggling of goods in and out of PRC that CCP doesn't want smuggled in and out.</p>
+<p>Most people forget that CCP has banned importation of almost all top end nvidia systems, as they move to transition to domestic chips. She was subverting the Chinese import controls.</p>
+<p>Spot the fake account! It happens on Slashdot too. Ignore the bot, folks.</p>
+<p>and at least 260 of them have been deactivated or suspended by XI know that a social media site trying to carry the mantle of respectability might deactivate accounts indicated to be nefarious, but if I understand rightly, the accounts in questions were expressing views supportive of a person considered sufficiently aligned with X's overall themes of far right idiocy (by dint of being wealthy and by snuggling with Trump), so I ask out of earnest curiosity:  why would X take down such accounts?</p>
+<p>and at least 260 of them have been deactivated or suspended by X</p>
+<p>I know that a social media site trying to carry the mantle of respectability might deactivate accounts indicated to be nefarious, but if I understand rightly, the accounts in questions were expressing views supportive of a person considered sufficiently aligned with X's overall themes of far right idiocy (by dint of being wealthy and by snuggling with Trump), so I ask out of earnest curiosity:  why would X take down such accounts?</p>
+<p>Of course they take down bots. Manipulating readership is their job.</p>
+<p>I still think Nvidia made a mistake letting Jensen go. He bet on GPU computing when it was a hard sell and got developers to build around CUDA. I can make that argument without a fake chef backing me up.</p>
+<p>The replies aimed at lawmakers  [washingtonpost.com] are the part I'd pay attention to. Thirty-two likes is lousy if you're trying to go viral. If you're trying to make one congressional staffer think a bunch of unrelated people are suddenly fired up about chip export rules, it might be plenty. I'd like to see who paid for the ch</p>
+<p>He bet on GPU computing when it was a hard sell and got developers to build around CUDA.Making a big bet-good decision nearly 2 decades ago is not a reason to keep a CEO around. NVIDIA's current wealth is sitting on pushing one idea, and not the result of a continuous churn of innovation driven by leadership. They are a trillionaire company because someone outside of NVIDIA figured out what to use their products for and have coasted on their success. It's very much a right place right time situation. Jensen is no Steve Jobs and NVIDIA will be perfectly fine without him.Incidentally Apple is al</p>
+<p>He bet on GPU computing when it was a hard sell and got developers to build around CUDA.</p>
+<p>Making a big bet-good decision nearly 2 decades ago is not a reason to keep a CEO around. NVIDIA's current wealth is sitting on pushing one idea, and not the result of a continuous churn of innovation driven by leadership. They are a trillionaire company because someone outside of NVIDIA figured out what to use their products for and have coasted on their success. It's very much a right place right time situation. Jensen is no Steve Jobs and NVIDIA will be perfectly fine without him.</p>
+<p>Both employees and investors have initiatives to retain Jensen Huang.</p>
+<p>Employee effort: https://www.wired.com/story/nv... [wired.com]</p>
+<p>Investor effort: https://www.cnbc.com/2026/11/1... [cnbc.com]</p>
+<p>I wonder who might be responsible for astroturfing?</p>
+<p>If there was knowing export control violation, then retention will be more difficult.</p>
+<p>Says a lot about you.  Most people care, it's hypocrites and sociopaths that don't.</p>
+<p>Good to know you think the president being a rapist and child molester gives you permission to do the same.</p>
+<p>Have you seen the cost of RAM? Jensen has fucked all of us.</p>
+<p>fake accounts on the social media?  you don't say....</p>
+<p>How do we know the midas project is real?    How does this research further their mission?   How do export restrictions ensure AI benefits everyone?  Why does midas project have a horse in this race at all?</p>
+<p>How do we know I'm real?  (hint: I'm not)</p>
+<p>A sex scandal PR firm as soon as he started hooking up with the spy, they are probably trying to justify their existence</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>EFF Criticizes US Government's Use of AI For Evaluating Senior Health Insurance Requests</p>
+<p>Amazon Expands Drone Deliveries, and Gets Noise Complaints. 'Like a Swarm of Bees'</p>
+<p>All theoretical chemistry is really physics; and all theoretical chemists 
+know it.
+		-- Richard P. Feynman</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-granite/granite-4-2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://tech.slashdot.org/story/26/11/14/0529218/hundreds-of-fake-accounts-defended-jensen-huang-on-social-media?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

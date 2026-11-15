@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Replicate</title>
+    <title>How to set a CI budget for coding agents</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9631.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Replicate</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-14</p>
+        <h1>How to set a CI budget for coding agents</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fcap-agent-ci-spend.png" alt="How to set a CI budget for coding agents" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Flatchkey.dev%2Flearn%2Fog%2Fcap-agent-ci-spend.png" alt="How to set a CI budget for coding agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Turn Webflow/Framer app into a Claude/Codex project for free
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/replicate-10?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="http://www.producthunt.com/r/p/1314761?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 15
+•
+Originally published at latchkey.dev</p>
+<p>A CI budget for coding agents needs three layers: a time limit on every job, a rule that cancels runs the agent already superseded, and a hard dollar stop that refuses new work once it is reached. GitHub gives you the first two in YAML and the third as an account or repository budget; Latchkey adds a budget on each piece of work, a batch, under a workspace spend limit.</p>
+<p>Each layer catches what the one above lets through. The GitHub dollar stop covers an account or repository; Latchkey adds one per piece of work.</p>
+<p>The expensive failure is rarely one big job. It is a cheap job repeated: a test the agent cannot fix, a hang it does not notice, a push per attempt that starts the full pipeline each time. Nobody is watching at 3 a.m., and an agent does not get bored.</p>
+<p>A worked example from published numbers shows the scale. A job with no timeout-minutes runs for up to 360 minutes; on a GitHub-hosted Linux 2-core runner at $0.006 per minute, one hung attempt costs $2.16. With timeout-minutes: 15 the same hang costs $0.09. Multiply either by the number of attempts in a night and the first layer has paid for itself.</p>
+<p>jobs.<job_id>.timeout-minutes defaults to 360, and a step's own timeout-minutes has the same 360 maximum. Set both lower on anything an agent can trigger. The job limit is the backstop; the step limit on the test step is the one that names the hang in the log.</p>
+<p>Pick the number from the slowest green run you have seen, with headroom, not from a guess at what is safe. A timeout that is too tight teaches the agent that the suite is flaky.</p>
+<p>Defaults and maximums from the workflow syntax reference; the $0.006 Linux 2-core rate from the Actions runner pricing reference on docs.github.com. Both read 2026-11-12.</p>
+<p>An agent that pushes every attempt starts a run per push. Only the newest one matters, so let GitHub cancel the rest: a concurrency group per workflow and ref, with cancel-in-progress: true, cancels the running and pending runs of the same branch when a newer one arrives.</p>
+<p>Build the group from github.workflow as well as the ref. GitHub's own reference warns that group names must be unique across workflows, or a run of one workflow cancels another's.</p>
+<p>GitHub's hard stop lives in billing, under Budgets and alerts. For metered products such as GitHub Actions a budget can prevent usage once it is reached, but only if you select Stop usage when budget limit is reached. Without it you get an email at the threshold and usage carries on. Alerts can fire at 75%, 90% and 100%.</p>
+<p>Three details matter for agents. The narrowest scope for an organization budget is a single repository, so the stop is shared with every person working there: in GitHub's own example, once the organization's Actions budget is spent, members are blocked from using all GitHub-hosted runners until the next billing cycle or until the budget is raised. A budget counts metered usage only from the date it was created, so the first cycle can overshoot. And overlapping budgets each apply, so a product budget and a repository budget can block sooner than you expect.</p>
+<p>Budgets and alerts, and Setting up budgets, docs.github.com, read 2026-11-12.</p>
+<p>The loop itself. All three GitHub layers work per job, per branch or per account; none of them knows that forty runs over a night were one agent working one task. The retry cap belongs in the agent's instructions, and the dollar cap belongs on the task, which is the gap the next two sections fill.</p>
+<p>A batch is a name you pass on every job of one task, with --batch or LATCHKEY_BATCH. Its spend is every job in it at list rates, in whole minutes, with no monthly reset. Once that spend reaches the budget, latchkey run in the batch is refused before anything is created, with exit code 193, and the batch's queued jobs are held. Jobs already running finish within their own timeout and budget, so a batch can end a little past its number.</p>
+<p>The permission model is the useful part. An API key can set a batch's first budget, up to the workspace spend limit, or lower it, and never raise it; a raise is refused and the budget stays. Only a workspace owner or admin can raise one, on the Billing page. So the agent can be told to budget its own work without being able to talk itself into more.</p>
+<p>For a single command, --budget stops that job once it has cost the amount at its size's rate. A job stopped there ends with exit code 3, billed at most that budget.</p>
+<p>Exit codes and budget rules from latchkey help run and latchkey help budget in @latchkeydev/cli 0.16.0, run 2026-11-12.</p>
+<p>An owner or admin sets the spend limit in US dollars on the Billing page. It counts the calendar month, and at the limit Latchkey refuses new jobs, holds queued ones and stops running ones, GitHub Actions jobs on Latchkey runners included. A job or batch budget can never be set above it. There is none by default, so set one before you hand a key to an agent.</p>
+<p>Budgets attach to work and to the workspace, not to keys: there is no per-key monthly budget. To see what one agent spent, name its batches after it, which is what Latchkey's own MCP setup page recommends, and read latchkey budget show <batch> or the batch budgets list on the Billing page.</p>
+<p>Tell it in plain words, because the natural move for an agent that hits a wall is to try again. A refusal at the workspace spend limit carries the code JOB_CREATION_BLOCKED_SPEND_CAP_REACHED and is a limit to report to a human, never one to retry. A batch at its budget, JOB_BATCH_BUDGET_REACHED, takes a report or a new batch name for genuinely new work, and the CLI's reference rules out the obvious dodge: a new name is not a way around a budget your human set. The credential side of the same problem, one key per agent, is on one scoped API key per coding agent.</p>
+<p>The $2.16 and $0.09 in the introduction are arithmetic on published numbers, not a bill anyone received. No recorded run backs this page, and it has no entry in content/repro-evidence.mjs or content/heal-evidence.mjs. GitHub's side comes from the workflow syntax, pricing and budgets pages on docs.github.com; Latchkey's from latchkey help run and latchkey help budget in CLI 0.16.0 and its billing documentation, all read 2026-11-12.</p>
+<p>Create a budget for the Actions product under Billing, Budgets and alerts, scoped to your account, organization or a single repository, and select "Stop usage when budget limit is reached". Without that option the budget only sends alerts.</p>
+<p>With Stop usage selected, further metered usage is blocked: GitHub's example shows members blocked from all GitHub-hosted runners until the next billing cycle or until the budget is increased. Without it you are emailed and usage continues.</p>
+<p>360 minutes. jobs.<job_id>.timeout-minutes defaults to 360, and if you set a value above the runner's execution time limit the job is canceled at that limit instead.</p>
+<p>Yes. Organization budgets can be scoped to the whole organization or to a single repository, and enterprise budgets can also target a cost center. A repository is the narrowest scope for Actions spend.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/replicate-10" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/kalemi/how-to-set-a-ci-budget-for-coding-agents-1eoc" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
