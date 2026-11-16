@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs</title>
+    <title>The Future of AI Jobs May Be Outside the Tech Industry</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9664.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,105 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>The Future of AI Jobs May Be Outside the Tech Industry</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxhkmasof54dam4ydyj0j.jpg" alt="Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/UrpV801CsGP7A6fZ05LbjW72uwp1-poc3tfz.png" alt="The Future of AI Jobs May Be Outside the Tech Industry" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxhkmasof54dam4ydyj0j.jpg" alt="Nebula Go SDK: A Type-Safe Go Client for Market Intelligence APIs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/UrpV801CsGP7A6fZ05LbjW72uwp1-poc3tfz.png" alt="The Future of AI Jobs May Be Outside the Tech Industry" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Every market has two stories: the one printed on the price chart, and the one people tell each other. Prices record what already happened. Sentiment, mindshare, and prediction markets hint at what the crowd expects next. The Nebula API from Hidden Systems serves both stories as structured data, and nebula-go is the Go client that makes it pleasant to consume.</p>
-<p>If you have ever wired a market-data endpoint into a Go service, you know the drill. You write an HTTP client, invent a struct for half the response, keep the other half as map[string]any, add retries, forget to respect Retry-After, and then repeat the whole ritual for the next endpoint. nebula-go is an MIT-licensed attempt to delete that ritual. It covers all 41 operations of the Nebula Public API with typed requests and responses, a real error taxonomy, retries that listen to the server, server-sent-event streaming for the Nebula Agent, and an optional adapter for x402 pay-per-request billing.</p>
-<p>In this overview you will see what the SDK covers, how its API feels in practice, which design decisions make it pleasant to live with, and where the sharp edges are.</p>
-<p>Quick start: from zero to sentiment in one file</p>
-<p>Design decisions that matter in production</p>
-<p>Generated from a contract, not from memory</p>
-<p>Nebula is a market-intelligence API that watches the public conversation around financial assets — equities, commodities, indices, crypto, and AI-related names — and turns it into queryable signals. Instead of scraping social platforms and stitching together your own sentiment pipeline, you ask the API a question and get typed observations back.</p>
-<p>The surface is broader than a single "sentiment endpoint":</p>
-<p>The same data is also exposed through a Nebula MCP server and a CLI, which makes the API a natural fit for coding agents and terminal workflows. But if you are writing a Go service, the REST API is the integration point — and that is exactly where nebula-go lives.</p>
-<p>The project is young. The first version landed in late October 2026, and the changelog already lists five versions, from the initial 0.1.0 to 0.3.2 in mid-November. What it lacks in age it makes up for in discipline: the repository reads like someone sat down and decided to get the boring parts right.</p>
-<p>The feature list is longer than the version number suggests:</p>
-<p>Typed DTOs generated from OpenAPI. Requests are ordinary structs, responses have concrete field types all the way down to nested time-series points.</p>
-<p>context.Context** on every call.** Timeouts and cancellation behave the way Go developers expect, including during retries and streamed responses.</p>
-<p>Retries with server hints. Eligible GETs retry on 429, 500, 502, 503, and 504, honoring Retry-After and RateLimit-Reset before falling back to exponential backoff with jitter.</p>
-<p>An inspectable error hierarchy. Sentinel errors for errors.Is, rich *APIError values for errors.As, and client-side validation before a request ever hits the network.</p>
-<p>SSE streaming for the Agent. ChatStream exposes a channel of chunks and a terminal Err() so you can tell a completed answer from a truncated one.</p>
-<p>Response metadata everywhere. Request ID, rate-limit figures, credits charged, credits remaining, and payment receipts are available on every response.</p>
-<p>Localization. A global locale and per-request overrides, with constants for Spanish, Italian, Turkish, Russian, Korean, Japanese, and Chinese.</p>
-<p>Opt-in x402 payments. A separate adapter for paying per request in USDC on Base, with explicit spend controls and a no-wallet preview mode.</p>
-<p>An offline generator. go generate ./... rebuilds the typed surface from the pinned OpenAPI contract; a -check mode detects drift without writing files.</p>
-<p>That last point deserves emphasis. Many SDKs are handwritten once and slowly drift from the API they wrap. This one treats the OpenAPI document as the source of truth and keeps the generated surface, the handwritten business rules, and the tests in separate layers. We will come back to that.</p>
-<p>Install the module from your project directory:</p>
-<p>Put your API key in an environment variable — never in source control or browser code:</p>
-<p>Now ask a small question: "What does the recent conversation around NVIDIA look like?" Save this as main.go and run go run .. It makes two account-mode API calls, so normal API credits apply.</p>
-<p>A few things are worth noticing in that small program.</p>
-<p>The first call resolves a human-readable name to an API identifier. The second call carries both the AssetID and the AssetClass forward in an AssetRef. That pairing matters: a display symbol alone may not identify the asset you mean, especially in crypto, where several tokens can share a ticker. The SDK's type system nudges you to keep the identifier and its class together instead of passing loose strings around.</p>
-<p>The sentiment signal is a decay-weighted bullish-minus-bearish measure. Positive values lean bullish, negative values lean bearish, and the magnitude also depends on activity. Read it alongside the timestamps and post counts rather than as a standalone trading signal.</p>
-<p>Finally, HTTPMetadata() is available on the response even though the JSON body has its own metadata field. It reports the request ID, rate-limit state, and credit accounting for the call you just made. That is the kind of detail that usually gets bolted on after the first production incident.</p>
-<p>The API surface is only half of an SDK. The other half is how it behaves when the network misbehaves, the server pushes back, or the data is missing. This is where nebula-go shows its personality.</p>
-<p>Optional request fields are pointers, so the SDK can distinguish "use the server default" from "send this exact value":</p>
-<p>Helpers like StringPtr, IntPtr, Int64Ptr, Float64Ptr, BoolPtr, TimePtr, and typed-constant pointers keep the call sites readable. Explicit values still have to satisfy endpoint rules — Limit: IntPtr(0) is rejected for asset listings — but the SDK checks required fields, selector conflicts, enums, and numeric ranges before the HTTP call and returns a ValidationError that names the operation and the field.</p>
-<p>The same philosophy applies to responses. Nullable scalars are pointers, so an unavailable price is nil, not a fake zero. That sounds pedantic until you build a chart and a missing data point silently becomes a crash to zero.</p>
-<p>Errors are classified with sentinels and enriched with details. Application code can branch with errors.Is, while diagnostics use errors.As:</p>
-<p>The sentinel list covers the cases you actually branch on: validation, transport, bad request, unauthorized, out of credits, forbidden, not found, rate limited, server errors, and payment states. APIError keeps the status code, API message, headers, parsed metadata, and up to 8 KiB of the response body, which is usually enough to understand a failed call without reproducing it. A credit-related 402 preserves the plan renewal time and purchased-credit balance when the API supplies them.</p>
-<p>There is also a deliberate distinction between failure modes: TransportError wraps network problems, DecodeError reports a successful HTTP response with invalid JSON, and wrapped errors preserve context cancellation. That means a canceled request does not get misclassified as a server failure in your metrics.</p>
-<p>Retrying blindly is how you turn a rate limit into an outage. The SDK retries eligible GETs on transient network errors and HTTP 429, 500, 502, 503, or 504, and it picks the delay in a sensible order: Retry-After first, then RateLimit-Reset, then exponential backoff with jitter. Computed backoff is capped, and the overall call deadline still wins.</p>
-<p>Just as important is what it does not retry: POST chat requests, x402 payments, other 4xx errors, decoding failures, and failed body reads. Those are exactly the cases where an automatic retry can duplicate work or spend money twice. If you add your own retry loop on top, you are multiplying attempts — the README says so plainly, which is refreshing.</p>
-<p>Configuration stays out of the way until you need it:</p>
-<p>The defaults are reasonable: 30 seconds per call, three total GET attempts, 250 ms initial backoff with a 5-second cap. WithHTTPClient lets you inject your own proxy, TLS settings, or instrumentation. The client is immutable after construction and safe for concurrent use across goroutines, which is the behavior a shared client in an HTTP server needs.</p>
-<p>One security detail worth calling out: the SDK blocks cross-origin redirects so an API key or a signed payment header cannot leak to another host. It is a small thing that many clients forget.</p>
-<p>The Nebula Agent is stateless: your application owns the conversation and sends the full message history with each request. For a chat UI, StreamChatCompletion returns a ChatStream that behaves like a Go channel rather than a callback maze:</p>
-<p>Two details make this usable in real applications. First, a closed events channel does not mean the answer completed — you must check Err() afterward, because malformed events, API error frames, cancellation, and an unexpected end before [DONE] all surface there. Second, the configured timeout covers the entire stream, so a long answer needs a longer WithTimeout; the default 30 seconds is not enough for a thoughtful essay. Keep the defer stream.Close() even when you expect to drain the stream, since it also releases resources on an early return.</p>
-<p>The Agent request itself is OpenAI-compatible, with roles for system, developer, user, and assistant, and an optional thinking mode for deeper answers. Billing is usage-based, with a 10-credit minimum in the pinned contract, so Usage is worth inspecting when it is present.</p>
-<p>Two features deserve their own examples because they are where market intelligence stops being a dashboard and starts being a tool.</p>
-<p>Forecasts are requested per asset, and a successful HTTP response can still say the asset is not forecastable. The SDK makes that state explicit instead of forcing you to guess from an empty array:</p>
-<p>Both mindshare and sentiment forecasts expose Status, Reason, and IsForecastable(). Refresh: BoolPtr(true) asks for recomputation and can cost more credits; the pinned contract describes roughly five seconds for a refresh with a cached fallback after twenty, so the SDK's timeout defaults are worth revisiting if you enable it.</p>
-<p>Prediction markets follow a similar "carry the identifier forward" pattern. Search with Predictions.ListMarkets, open the canonical market with Predictions.Market, then use the listing ID and outcome ID from that response to fetch history. The IDs refer to different objects, so each one has to come from its own field. The SDK keeps those types distinct, which prevents the classic bug of passing a market ID where an outcome ID belongs.</p>
-<p>Not every project wants an account and a credit balance. Nebula supports x402, an HTTP-native payment protocol, for eligible read operations: you pay per request in USDC on Base mainnet and skip the API key entirely. Thirty-seven of the 41 operations are eligible GETs; account details, the two forecast-generation endpoints, and Agent chat are not.</p>
-<p>The x402 package is opt-in and deliberately paranoid. You can inspect an offer without a wallet or private key:</p>
-<p>Preview mode does not establish trust — it shows what the server is asking for. To actually pay, you supply your own signer and an explicit SpendPolicy with a per-payment cap and a nonempty recipient allowlist. The adapter checks the x402 version, the exact scheme, the Base network, the USDC asset, the recipient, the amount, and the resource URL before anything is signed. Production resources must use HTTPS, and signed GETs disable both SDK retries and the standard transport's implicit replay.</p>
-<p>The README is refreshingly blunt about the risk: x402 can irreversibly spend real USDC, the cap applies per payment rather than in total, and a lost response after signing returns ErrPaymentUncertain, which you must reconcile before authorizing another payment. This is the right posture for a payment feature. It is also a good reason to start with API-key mode and add x402 only when pay-per-request genuinely fits your product.</p>
-<p>The most interesting engineering choice in this repository is not an API method. It is the pipeline behind the API methods.</p>
-<p>The SDK is generated from a vendored OpenAPI 3.0.3 document pinned at info.version 1.0.2. go generate ./... rebuilds request structs, typed responses, enums, service methods, query validation rules, and x402 eligibility from that contract. The generator is offline: it does not download the spec or call Nebula, so regeneration works in CI and on a plane. A -check mode reports missing, edited, or obsolete generated files without writing anything, which makes drift a build failure instead of a slow surprise.</p>
-<p>Naming choices that cannot be inferred from OpenAPI live in compat.json, and business rules that span several parameters live in handwritten request_validation.go. Generated code stays generated; human decisions stay human. That separation is why the project can claim a complete API surface without pretending every rule fits in a schema.</p>
-<p>The test strategy follows the same principle. The suite runs without a Nebula key or a wallet, using local HTTP servers, an in-memory transport, and fixtures. A coverage guard ties all 41 operations to service calls, documentation, fixtures, and x402 eligibility. Contract tests exercise all 173 query parameters and all 750 response properties, including nullable fields, empty collections, large int64 values above 2^53, fractional timestamps, and unknown upstream fields retained in Raw. CI runs the race detector, go vet, staticcheck, govulncheck, CodeQL, formatting checks, and a generated-output check on both Go 1.24 and the current stable release.</p>
-<p>That is a lot of ceremony for a young SDK, and it is the main reason to take the project seriously. Contract tests do not prove live API compatibility — the README says that too — but they do make silent regressions much less likely.</p>
-<p>Hand-rolling an API client is not wrong. Sometimes it is the right call: you need one endpoint, you want zero dependencies, or your organization has a standard HTTP stack. Here is an honest comparison.</p>
-<p>The trade-off is familiar: less code to own, more behavior to learn. For a service that talks to Nebula regularly, the SDK is the shorter path. For a one-off script, curl and encoding/json may still win.</p>
-<p>The SDK fits a few concrete shapes of work:</p>
-<p>Research dashboards. Show sentiment, mindshare, and prediction-market odds next to price history without building an ingestion pipeline.</p>
-<p>Monitoring and alerting jobs. Watch for momentum shifts or sentiment regime changes and notify a team when thresholds are crossed.</p>
-<p>AI assistants and tool-using agents. Give an LLM typed access to market intelligence, with streamed answers when a human is reading.</p>
-<p>Internal analyst tools. Let analysts search assets, compare communities, and pull forecasts without writing HTTP code.</p>
-<p>Quant-adjacent research. Treat sentiment and attention as features alongside prices, with the usual caveat that correlation is not causation.</p>
-<p>It is less suitable if you need a synchronous trading connection, ultra-low-latency market data, or an API surface that Nebula does not expose. This is an intelligence API, not an exchange feed.</p>
-<p>Is nebula-go free to use?
-The SDK is MIT-licensed, so you can use, modify, and ship it freely. The Nebula API itself is a commercial service: account mode consumes credits, and x402 mode pays per request in USDC.</p>
-<p>Which Go version do I need?
-Go 1.24 or newer. That minimum comes from the module's dependency graph, including the optional x402 adapter.</p>
-<p>Does it support streaming responses?
-Yes. Agent.StreamChatCompletion returns a ChatStream backed by server-sent events. Read chunks from Events(), then check Err() to distinguish a completed answer from a truncated one.</p>
-<p>Can I use it without an API key?
-For the 37 x402-eligible GET operations, yes — with a wallet and a configured spend policy. Account details, forecast generation, and Agent chat require an API key.</p>
-<p>How is it tested without hitting the live API?
-The suite uses httptest servers, an in-memory transport, and saved fixtures. Contract tests compare the SDK against the pinned OpenAPI document, so go test ./... works offline and without a wallet.</p>
-<p>Is it production-ready?
-It is a v0.x project, so pin a version and review the changelog before upgrading. The test discipline, CI coverage, and release cadence are stronger than the version number suggests.</p>
-<p>nebula-go is a focused piece of engineering: one API, 41 operations, and a lot of attention to the parts of client code that usually get skipped. Typed responses make the data legible. The error taxonomy makes failures actionable. The retry policy respects the server. The generator keeps the SDK honest against its contract. And the x402 adapter treats payments with the caution they deserve.</p>
-<p>If you are building anything in Go that touches market sentiment, prediction markets, or AI-generated market analysis, it is worth a look — and worth a star if you want the project to keep moving.</p>
-<p>Repository: github.com/tigusigalpa/nebula-go</p>
-<p>Package docs: pkg.go.dev/github.com/tigusigalpa/nebula-go</p>
-<p>Nebula API documentation: docs.hiddensystems.ai/nebula</p>
-<p>API coverage matrix: docs/API-COVERAGE.md</p>
-<p>Install it with go get github.com/tigusigalpa/nebula-go, set NEBULA_API_KEY, and ask your first question. The README's troubleshooting table covers the usual suspects — an empty key, a validation error, a plan window that is too short — and the issue tracker is the place for reproducible bugs.</p>
-<p>Market data, sentiment, forecasts, and Agent output are not investment advice.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>ML Engineer at BigTech, building my own AI product Zorox. Writing about LLMs, post-training and deep learning.</p>
+<p>ML Engineer at BigTech, building my own AI product Zorox. Writing about LLMs, post-training and deep learning.</p>
+<p>ML Engineer at BigTech, building my own AI product Zorox. Writing about LLMs, post-training and deep learning.</p>
+<p>Recently I had a mentoring call with a student in 11th grade at a regional school. He was trying to build a plan: learn DevOps or go deep into ML? He didn't understand what was happening with the job market, and he was worried about his future. I liked how ambitious he was. He wasn't asking me for a list of courses but whether learning anything still makes sense.</p>
+<p>This article is my answer to him, but it's also for anyone who worries about their job, and for managers of companies that aren't digital yet. I'm making five predictions for the next five years. Each one has a date and a way to check it. In 2031, I'll reread this and see where I was wrong.</p>
+<p>Programming is one of the most intellectually demanding engineering jobs. And it's the job AI learned first. Why software and not, say, civil engineering?</p>
+<p>The hiring data shows how hard software got hit. US software job postings on Indeed fell 74% from the 2022 peak to the 2025 low, the sharpest drop of any category. Civil and electrical engineering postings are still 50-60% above their 2020 level.</p>
+<p>AI didn't cause the whole drop. Indeed's own analysis says nearly half of it came before ChatGPT, driven by interest rates and post-COVID over-hiring. AI is the likely reason software never bounced back the way other engineering did. Since early 2025 software postings have started to recover, but 71% of that growth went to senior roles. I see three reasons why code became AI's first target.</p>
+<p>Code is the best-documented craft on the internet. GitHub has 225 million developers and 395 million public repositories. Code made up about 17% of the 15.6 trillion tokens Meta used to pretrain Llama 3. No other profession has published its daily work in public for decades.</p>
+<p>Code is easy to verify. A program compiles or it doesn't. The tests pass or they fail. That gives a model a free, honest reward signal, and you can train on it with reinforcement learning at scale. DeepSeek-R1 did exactly this: for coding problems it used a compiler and test cases instead of a learned reward model, because a learned reward is easy to game. Compare that with a medical diagnosis or a bridge design, where you might wait years to learn whether the answer was right.</p>
+<p>Code is text, and text is what transformers handle best. The transformer, the architecture behind every major language model, was built to predict the next token in a sequence. Code is exactly that kind of sequence, with stricter rules than human language.</p>
+<p>On SWE-bench Verified, a set of real GitHub issues, the best AI systems solved 4% in late 2023 and 79% by the end of 2025. The Stanford AI Index 2026 reports scores near 100% a year later, and OpenAI has reportedly stopped using the benchmark, calling it contaminated.</p>
+<p>At the companies that build these models, most code is already written by AI. Anthropic says more than 80% of the code it merged in May 2026 was written by Claude. Google says about 75% of its new code is AI-generated and approved by engineers. Across all of GitHub, over 40% of pull requests now start as an agent's draft. Developers there work like managers: they hand tasks to agents and review what comes back.</p>
+<p>Most teams aren't there yet. In the 2025 Stack Overflow survey, 46% of developers said they distrust the accuracy of AI tools, and only 33% trust it. A randomized trial by METR found that experienced open-source developers were 19% slower with AI in early 2025. A later round points to a speedup, but the error bars still include zero.</p>
+<p>My prediction: by 2031, agents write most of the code at most software companies, not only at AI labs. A developer's main job becomes deciding what to build and checking what the agent built.</p>
+<p>"Programmers will disappear by 2030" is the forecast I hear most often, and I think it's wrong.</p>
+<p>The US Bureau of Labor Statistics still projects software developer jobs to grow 10% between 2025 and 2035, about three times the average for all jobs. But two years ago that forecast was 17.9%, so it's shrinking. And the narrow job of computer programmer, someone who turns a spec into code, is projected to shrink 7%. Developers stay. Typing code as a full-time job goes away.</p>
+<p>The data also shows which roles shrink and which grow:</p>
+<p>For QA, backend and DevOps, I couldn't find clean data, so that part is my own bet. I expect QA and a big part of routine backend work to shrink, and the people who run AI infrastructure to grow.</p>
+<p>In early 2026, only 4.5% of US software postings were entry-level. Companies hire seniors to supervise agents and hire fewer juniors to learn. That's the market my mentee is walking into.</p>
+<p>My prediction: by 2031 there are more software developers in the US than in 2025, but the job looks like a product engineer or a Forward Deployed Engineer today. You own a problem from the customer to production, and agents do the typing.</p>
+<p>For me, AGI means AI that can do everything a person can do. By that definition, a big part of the digital half is done.</p>
+<p>There is a way to put a number on it. A group of researchers led by Dan Hendrycks proposed a definition of AGI based on ten areas of human cognition. GPT-4 scored 27%. GPT-5 scored 57%. METR measures how long a task models can finish on their own, and that length doubles every 4 to 7 months. The gaps are clear too: long-term memory scored 0%, and the physical world is mostly untouched.</p>
+<p>So the money is going there. Robotics startups raised $15 billion in 2025, a record, and $18.8 billion in 2026 by June. Funding for humanoid robots alone went from $4.8 billion in 2025 to $11 billion in 2026, and the year isn't over yet. In January Jensen Huang called it "the ChatGPT moment for physical AI". Yann LeCun left Meta and raised $1 billion for AMI Labs to build world models. Money hasn't left LLMs, but robots are where it grows fastest.</p>
+<p>The hard part is data. A language model learns from the whole internet. A robot has to touch the world to learn from it. DROID, one of the largest open robot datasets, has only 350 hours of demonstrations. Labs work around it in three ways:</p>
+<p>And robots are getting cheap. Unitree's average robot price fell from about $85,000 in 2023 to about $24,000 in 2025, and its smallest humanoid starts at about $5,900. In August, Hugging Face opened preorders for Microduck, a $399 open-source walking duck that you train with reinforcement learning in simulation. In October, Jensen Huang brought four of them on stage at GTC Berlin. A robot you can program yourself now costs less than a new iPhone.</p>
+<p>My prediction: by 2031, robots do paid physical work at scale in warehouses and factories, and robotaxis run in most big US and Chinese cities. Home robots will still be a toy for enthusiasts.</p>
+<p>At Newmont's Boddington gold mine in Western Australia, the haul trucks have no drivers. By 2022 they had moved over 100 million tonnes of material on their own.</p>
+<p>Most companies are nowhere near that. About one in five uses AI at all, in both the US and the EU. In information and finance it's 35-60%. In construction, transport, hospitality and mining it's 7-15%. And "use AI" often means someone writes emails with ChatGPT. AI inside production itself is rarer still: 3.5% of EU manufacturers and 1.4% of construction firms.</p>
+<p>I see four reasons why these industries lag:</p>
+<p>AI is already working in some of these industries, and the examples show where it goes next:</p>
+<p>I think the barrier falls when attention moves. Today the best researchers and most of the money work on chatbots and code. As those markets fill up, researchers and investors will look at robots and the physical economy. The tools also get cheaper and simpler, so a mine or a shipping company won't need its own research lab to use them.</p>
+<p>My prediction: by 2031, the share of EU manufacturers using AI in production triples from 3.5% to above 10%, and autonomous haul trucks pass 10,000 worldwide. Medicine, energy and manufacturing move first. Construction and agriculture move last.</p>
+<p>If the biggest barrier is "nobody here knows how to build it", then the people who can build it will be in demand.</p>
+<p>Half of all job postings that ask for AI skills are already outside IT, and AI skills come with a 28% salary premium. Today most of these engineers work for AI vendors that deploy into other companies. I think that changes. A mine or a hospital that wants to stay competitive will need its own engineers who understand both the models and the business.</p>
+<p>An engineer who knows transformers is common. An engineer who knows transformers and also understands an oil rig's sensor data or a hospital's patient records is rare.</p>
+<p>My prediction: by 2031, more than 65% of AI-skill job postings are outside IT, up from 51% in 2024.</p>
+<p>Keep going. Don't drop your goals because of the headlines.</p>
+<p>The people who lose are the ones who only type code from a spec. The people who win understand a real problem, can build a system with AI, and can check whether it works. If you're starting now, learn the fundamentals properly: Python, math, classic ML. Then learn how to work with agents instead of competing with them. And look at industries that nobody in tech finds exciting.</p>
+<p>How to Build a Retriever From Scratch for a Support System</p>
+<p>ML Engineer at BigTech, building my own AI product Zorox. Writing about LLMs, post-training and deep learning.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/tigusigalpa/nebula-go-sdk-a-type-safe-go-client-for-market-intelligence-apis-5gbn" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/the-future-of-ai-jobs-may-be-outside-the-tech-industry?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

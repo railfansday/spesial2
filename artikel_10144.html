@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What is Model Routing in AI?</title>
+    <title>Taming Typography: Building a Modern CSS Reset</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10144.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,68 +15,94 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What is Model Routing in AI?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>Taming Typography: Building a Modern CSS Reset</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_what_is_model_routing_d65e267a6a.png" alt="What is Model Routing in AI?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2019/02/text-wrap.png" alt="Taming Typography: Building a Modern CSS Reset" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_what_is_model_routing_d65e267a6a.png" alt="What is Model Routing in AI?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2019/02/text-wrap.png" alt="Taming Typography: Building a Modern CSS Reset" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>"Do you know the closest ATM?" and "I was charged twice, the refund never arrived, and now my card is blocked" are both customer messages. Most AI apps send both to the same large model and pay large-model prices for each one.</p>
-<p>Model routing fixes that. A router looks at each request and sends it to the cheapest model that can handle it, and keeps the expensive model for the requests that need it.</p>
-<p>In this guide we'll cover what model routing is, how routers decide, and what it saves. Then we'll build a small router in about 60 lines of JavaScript and run it over 200 customer messages. At one setting it matched a large model's accuracy for about a third of the cost. At another it came within a point and a half for 89% less.</p>
-<p>Model routing in AI is the practice of sending each request to the model best suited to it, instead of sending every request to one model. A router sits between your app and a pool of models, reads each request, and picks a model based on what you care about: cost, speed, or quality.</p>
-<p>You'll also see it called AI model routing, LLM routing, or LLM model routing. They all mean the same thing. The pool might be a small and a large model from one provider, or models from several providers behind one API.</p>
-<p>The idea rests on one observation: most requests are easy. A small model answers them as well as a large one, in a fraction of the time and for a fraction of the price. The router's whole job is finding the hard ones.</p>
-<p>The diagram below shows a typical AI model routing architecture.</p>
-<p>Model routing works in three steps: the router reads the request, decides which model should answer it, and forwards the request to that model. The middle step is where routers differ. Routing tools decide which model to use in one of four ways.</p>
-<p>Rule-based routing uses rules you write by hand. Requests from free-plan users go to a small model. Anything tagged as code goes to a coding model. Prompts over a certain length go to a model with a bigger context window. It's simple, predictable, and free to run, but the rules only know what you thought of in advance.</p>
-<p>Intelligent model routing uses a model to make the decision. A small, fast classifier reads each request and predicts which model in the pool will answer it well. You'll also see it called smart or dynamic model routing.</p>
-<p>Two more terms come up here. Task-aware routing picks a model by the kind of job, like summarising, coding, or answering a support question. Context-aware routing also looks at what surrounds the request, like the conversation so far, the user, or the tools available.</p>
-<p>The big platforms work this way. Microsoft describes its Foundry model router as "a trained language model" that picks a model for each prompt in real time. Google says Gemini Notebook uses its new Decisions API as a real-time router, serving everyday queries with up to 40% lower latency. I've tested the Google Decisions API against Jev on the same messages we'll use below.</p>
-<p>Cascade routing tries the cheapest model first and only moves up when the answer isn't good enough. The usual test is confidence: if the cheap model is sure, keep its answer. If it isn't, send the request to a stronger model. It's also called confidence-based routing, and it's what we'll build below.</p>
-<p>A cascade needs no separate classifier, because the first model's own confidence does the routing. The trade-off is that escalated requests pay for two models and wait for both.</p>
-<p>Fallback routing is about staying up, not saving money. If a model times out, hits a rate limit, or its provider has an outage, the router sends the request to the next model on a list. Most production routers combine fallbacks with one of the three methods above.</p>
-<p>The main benefits of model routing in AI systems are lower cost, faster responses, and fewer outages, without giving up quality on the hard requests.</p>
-<p>We'll build a cascade router for a job every support tool has: sorting customer messages. Each message gets one of ten labels, like atm support or request refund.</p>
-<p>The test set is 200 messages from Banking77, a public set of banking support messages: ten labels, 20 messages each. They're the same 200 messages from my zero shot classification test, which is where the single-model numbers below come from.</p>
-<p>Put both keys in a .env file and run the examples with node --env-file=.env. It's the same setup as in my guide to getting a YouTube API key.</p>
-<p>Create router.mjs. The first function sends the message to Jev with one multiple-choice question, and returns the label Jev picked along with its confidence:</p>
-<p>Confidence runs from 0 to 1. When nearly all the probability sits on one label, it's close to 1. When Jev is torn between two labels, it drops.</p>
-<p>The second function asks Claude Opus 5.5 the same question. The output_config block limits the answer to one of our labels, so there's no free text to parse. SitePoint's guide to LLM structured output with JSON Schema explains how that works.</p>
-<p>The router itself is about a dozen lines:</p>
-<p>If Jev is at least 80% confident, its answer goes straight back. If not, Claude answers instead. And if Claude fails, the router falls back to Jev's answer, because a shaky answer beats an error page.</p>
-<p>Try it on an easy message and a harder one:</p>
-<p>Jev was sure about the lost card. On the ATM question it leaned towards card acceptance with a confidence of 0.64, so the router asked Claude, which got it right.</p>
-<p>Because cheap, strong, and threshold are options, the same function routes between any two models.</p>
-<p>Model routing reduces AI costs by keeping easy requests on a cheap model and paying for the expensive one only when it's needed. Here's what that looked like on our 200 messages, starting with each model on its own:</p>
-<p>Opus gets six more messages right out of 200, and costs more than 120 times as much.</p>
-<p>Now the router, at four confidence thresholds:</p>
-<p>Speed improved too. At the 0.8 threshold, the messages Jev kept came back in a median of 227 ms. The ones that escalated took about 2.1 seconds, because they waited for both models.</p>
-<p>A note on method: I ran every message through both models once and saved the answers, then replayed the router over them at each threshold. That's how you compare thresholds without paying for the same test four times.</p>
-<p>Then I ran the router live to check. At 0.95 it scored the same 95.0% and sent 61 messages to Opus. At 0.8 it scored 93.5% and sent 20, a point under the replay. Two answers moved: one of Jev's confidence scores landed at 0.82 instead of 0.78, just over the line, and Opus changed its answer on one message. Scores near the threshold shift a little between runs, so leave yourself a margin.</p>
-<p>The choice of cheap model matters less than you'd think. With Google's Gemini Decision 1 in first place instead of Jev, a 0.7 threshold reached the same 95% for US$0.28 per 1,000 messages.</p>
-<p>Model routing can cost a little quality, and the threshold decides how much. In our test the gap to Opus ranged from nothing at 0.95 to two points at 0.7.</p>
-<p>The loss comes from one place: answers the cheap model got wrong while feeling sure. At the 0.8 threshold, Jev kept five wrong answers because its confidence was above the line. Opus got four of those five wrong as well, so only one was a real loss: "Do all ATMs take this card?", which Jev filed under card acceptance with a confidence of 0.91.</p>
-<p>Escalating isn't risk-free either. On one message, Jev had the right label with a confidence of 0.44, and Opus overruled it with the wrong one.</p>
-<p>To optimize costs using AI model routing, measure first, route second, and keep measuring. These six steps cover LLM model routing cost optimization for any pair of models:</p>
-<p>The return is easy to estimate once you know the split. If nine in ten requests stay on a model that costs 1% as much, the bill drops by about 89%, which is what we measured.</p>
-<p>Several inference providers have multi-model routing built in, and most AI gateway platforms support model routing too, so you don't have to write your own. As of November 2026, these are the top model routing solutions for AI apps. Each name links to the tool's model routing docs:</p>
-<p>Hosted model routing platforms for large language models decide for you, which is the fastest way to start. A hand-built router like ours takes more work, but you choose the signal and you can see why every request went where it did.</p>
-<p>An LLM router is the component that does model routing for large language models. It can be a function in your own code, like the one in this guide, a hosted model such as Microsoft Foundry's model router, or a feature of an AI gateway.</p>
-<p>Smart model routing is another name for intelligent model routing: a model, not a hand-written rule, decides where each request goes. Dynamic model routing means the same thing.</p>
-<p>The ROI of AI model routing depends on how much of your traffic a cheaper model can handle. In our test, a 0.8 threshold kept 89.5% of messages on the cheap model and cut the cost per 1,000 messages from US$1.96 to US$0.22, for about a point of accuracy. The build was about 60 lines of code.</p>
-<p>OpenRouter's auto model routing works through its Auto Router. You set the model to openrouter/auto, and a decision model picks a model and a reasoning effort for each request. You pay the standard rate of whichever model it selects, with no extra fee.</p>
-<p>OpenClaw model routing is a primary model plus an ordered list of fallbacks. In the OpenClaw model routing configuration you set agents.defaults.model.primary and agents.defaults.model.fallbacks, and an agent can override the fallback list. When a model fails, OpenClaw first rotates auth profiles on the same provider, then moves to the next model on the list, as its model failover docs describe. That makes it fallback routing, not cost-based routing.</p>
-<p>An AI gateway simplifies model routing by putting every model behind one API, one set of keys, and one place for logs. Your app calls the gateway, and the routing rules live in config instead of code, so changing a model doesn't need a deploy.</p>
-<p>Mid-stream failover is when a router switches models after a streamed response has already started, because the first model failed partway through. It's the hardest kind of failover, because the user has already seen part of an answer. Many routers only fail over before the first token arrives and return an error after that, so check what your gateway does.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>CSS can now make choices about type that used to sit outside a reset. text-wrap: pretty can prevent a stranded word, container query units can scale a heading to the column it occupies, and text-box can trim the half-leading built into a line box. Some of these features are experimental and browser support is uneven, so they need guardrails rather than blind inclusion.</p>
+<p>I’ve put together tidy-typography.css, which gathers the useful parts into a default stylesheet: rendering and fallback rules, fluid sizing, vertical rhythm, wrapping, hyphenation, and OpenType detail.</p>
+<p>Use it whole, or take the declaration that solves the particular irritation in front of you. I’ll walk you through all the details in this article and give you the full code at the end.</p>
+<p>font-synthesis: none stops a browser from inventing bold or italic when the family lacks that face. The smoothing and text-rendering declarations are rendering hints, mainly for WebKit; results still vary by platform.</p>
+<p>text-size-adjust disables mobile font inflation that can make a deliberately sized layout jump on rotation. font-size-adjust: from-font uses font metrics to reduce the apparent size change while a fallback swaps for a webfont.</p>
+<p>(As with other snippets in this article, this ⁠:root block is a partial excerpt the final stylesheet combines it with additional custom properties defined later on.)</p>
+<p>Viewport-based fluid type does not know how wide its element is. A heading in a narrow sidebar can therefore scale as though it fills the viewport.</p>
+<p>container-type: inline-size makes the wrapper a container query, so its children can use cqi: a unit based on the container rather than the viewport. Replacing vw in clamp() lets the same heading scale appropriately in an article column or a 300px sidebar without component-specific media queries.</p>
+<p>line-height includes space above the cap-height and below the baseline: half-leading. It becomes obvious when text must align tightly with another element. text-box-trim removes it, while text-box-edge measures from capital-letter caps to the alphabetic baseline. This is a metrics-aware alternative to font-specific negative-margin nudges.</p>
+<p>Selectors Level 5 proposes :heading, matching h1 to h6 and [role="heading"]. It has not landed in browsers, so keep it behind an @supports selector() check.</p>
+<p>Default heading wrapping can leave one short final line. text-wrap: balance distributes text across its lines and works best for blocks of up to about six lines. For paragraphs, text-wrap: pretty avoids a stranded final word without balancing the whole block. Both replace JavaScript orphan fixers. Editable text needs text-wrap: stable, which prevents each new word from reshuffling the paragraph.</p>
+<p>hyphens: auto relies on the browser’s language dictionaries, so the document needs a correct lang attribute (for example <html lang="en-GB">). Without one the browser has no dictionary to use and won’t be able to hyphenate text. Even with the correct lang, the defaults can leave tiny word fragments or several hyphenated lines in a row.</p>
+<p>hyphenate-limit-chars controls the smallest breakable word and fragments; hyphenate-limit-lines prevents a ladder effect. hyphenate-limit-zone makes breaks less frequent, while hyphenate-limit-last protects the final word. Safari needs the prefixed equivalents, so declare both sets together.</p>
+<p>Set code, variables, and headings to hyphens: manual: a broken code word can change meaning, and a hyphenated heading usually reads as an error.</p>
+<p>Punctuation marks don’t carry the same visual weight as letters, so a quotation mark sitting at the start of a line can look slightly indented against the text below it. hanging-punctuation lets specified punctuation sit fractionally outside the text block’s edge.</p>
+<p>The first value handles opening punctuation, and last handles closing punctuation at the end of a block, while allow-end lets punctuation hang past the right edge rather than force-wrapping. The result is a text block whose edges read as genuinely flush.</p>
+<p>Underlines have a related problem. Browsers apply flat, one-size-fits-all thickness and position regardless of the font’s actual weight.</p>
+<p>text-decoration-thickness: from-font reads the thickness the font’s designer intended. text-underline-offset gives descenders room to breathe, and text-decoration-skip-ink: auto interrupts the underline wherever a descender crosses it rather than drawing straight through the letter.</p>
+<p>Variable fonts often include an optical size axis, or opsz. It lets a typeface use thinner strokes at large display sizes and thicker, more legible strokes when set small.</p>
+<p>font-optical-sizing: auto lets the font make that adjustment based on its actual rendered size. The @supports block covers the older font-variation-settings syntax some browsers still need, while font-variant-ligatures and font-kerning enable the font’s own ligatures and kerning pairs.</p>
+<p>Light text on a dark background genuinely reads heavier than the same weight on a light background. Where a font ships a GRAD, or grade, axis, the dark mode block dials that perceived weight down without changing glyph shape or width the way an actual weight change would. Fonts without a GRAD axis safely ignore the setting.</p>
+<p>Mixing a monospace font into running prose often exposes a mismatched x-height at the same declared font-size. The size-adjust keyword, set once at the @font-face level, scales that font’s rendered output specifically, leaving the actual font-size value untouched.</p>
+<p>Numbers in a table need identical widths so they stack into a clean column on the screen. Conversely, numbers in flowing text don’t need the same treatment and should sit naturally alongside the surrounding words.</p>
+<p>The tabular-nums and lining-nums keywords give table digits a fixed width and full cap height. oldstyle-nums and proportional-nums let digits sit alongside lowercase letters without sticking up and disrupting the sentence’s texture.</p>
+<p>font-variant-emoji makes the choice between full-colour and monochrome emoji explicit. Without it, the browser or platform gets to choose a fallback, and the result can vary more than you expect. Apply .emoji-color or .emoji-mono to containers where you want to enforce that choice, rather than setting it globally on the body.</p>
+<p>Quote style and character order differ by language and region. English nests single quotes inside double quotes, British English reverses that convention, and French uses guillemets with a thin space.</p>
+<p>The quotes property declares the order for each language through :lang(). The native q element then inserts the right pair through open-quote and close-quote. The same markup can render correctly in each locale without hardcoding characters into the content.</p>
+<p>Wrapping the rules in :where() keeps them at zero specificity, so a project can override the quote style with one plain class.</p>
+<p>Default sub and sup styling is synthesized. The browser just shrinks the text and shifts the baseline, rather than using glyphs actually designed for that position.</p>
+<p>font-variant-position switches to the font’s own purpose-built sub and superscript glyphs where they exist, resetting vertical-align, font-size, and line-height so they don’t fight against the real glyph’s intended size and position. Most typefaces only include proper numerals rather than letters, so check the specific font before applying this broadly.</p>
+<p>:where() always resolves to zero specificity, which is useful for a reset. Every rule here is an opinionated default, and wrapping it in :where() lets a project override a property with a plain class.</p>
+<p>:is() solves a different problem: repetition. The heading selector list appears several times in a typographic stylesheet, and grouping it avoids the risk of forgetting a level.</p>
+<p>Unlike :where(), :is() carries the specificity of its most specific argument.</p>
+<p>Here’s the complete reset, combining the stable layers. Unsupported declarations are ignored by the browser, so the stylesheet can be adopted gradually.</p>
+<p>Much of this CSS removes work that used to leak into other parts of a build. text-wrap can take over orphan handling from JavaScript, container query units keep a component’s type scale tied to its own width, and text-box-trim avoids the negative margins once used to compensate for leading. quotes, font-variant-position, and font-optical-sizing hand several smaller details back to the language and the font instead of a collection of one-off fixes.</p>
+<p>Browser support will continue to change, especially for text-wrap and text-box-trim. Unsupported declarations are ignored, but that only helps when the unenhanced typography is acceptable in its own right.</p>
+<p>Some of these rules are still too new for a baseline reset. A news article, a marketing page, and an editable product interface do not ask the same things of their text; the set that belongs in yours depends on the font, the content, and the browsers you still need to support.</p>
+<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>"English nests single quotes inside double quotes, British English reverses that convention,"</p>
+<p>"English nests double quotes inside single quotes, American English reverses that convention (like it usually does),"</p>
+<p>It’s nowhere near that cut-and-dried, and double has historically and geographically been much more popular. For some reason, UK publishing mostly switched to single for the 1900s, but they seem to be returning to double these days. Very few other countries followed them to single—Canada and Australia, for example, stuck with double.</p>
+<p>A couple of links to start with (and you can find plenty more elsewhere): https://en.wikipedia.org/wiki/Quotation_mark#In_English, https://en.wikipedia.org/wiki/Quotation_marks_in_English#Quotations_and_speech</p>
+<p>Overall, :lang(en) double-first with :lang(en-GB) single-first is a decent balance. If you had :lang(en) single-first, you’d want :lang(en-US, en-CA, en-IN, en-AU, en-NZ, …) for double-first.</p>
+<p>A more accurate wording of the first sentence would be:</p>
+<p>Quote style and character order differ by locale and house style.</p>
+<p>I don’t understand the reason to use font-synthesis: none;. Isn’t synthesis just a fallback for when the author makes a mistake with the font faces or when the font file doesn’t load? Users’ fallback font-families likely have weight and style variants but probably not small-caps, maybe it at least should be allowed to be synthesized.</p>
+<p>Instead of max-width: 65ch; being applied to p, li, dd, I’d consider applying it to p, dl, ol, ul. Limiting the width of the lists, rather than the list items, prevents longer items from “sticking out” relative to the paragraphs above and below, do to the items’ inline-start margins, padding.</p>
+<p>The browser should automatically use French-style quotes (« ») within lang=fr; appears the British quote convention is not automatically used when lang=en-GB, at least not on my USian computer.</p>
+<p>It might be worth noting more clearly that some of these are experimental/straight up don’t work today.</p>
+<p>hanging-punctuation is Safari-only and doesn’t seem to support quotation marks in my testing, so the text is perhaps inaccurate on that point?
+Many of the hyphenation properties also only work in Safari, and require the prefixes described as “legacy” in the article.</p>
+<p>It’s mentioned briefly in the intro that some stuff is experimental, but being more explicit in the sections about what does/doesn’t work currently would be great.</p>
+<p>Definitely cool to explore the upcoming features, but feels a bit odd to frame it as a “reset” when it will likely change how text looks in the future in untested/unexpected ways, and includes superfluous code that won’t actually impact rendering today.</p>
+<p>Limiting body, p, li and dd width is not the job of a reset. That’s a per-site choice and should be with other per-site css, not part of a reset block. And there’s lot’s of other very opinionated stuff as well. I’ll stick with my old friend Eric Meyer.</p>
+<p>-webkit-font-smoothing: antialiased; is contentious (ill-advised);
+text-rendering: optimizeLegibility; is unwarranted;
+font-synthesis: none; has implications the typical user may not realise or like (though avoiding the need for synthesis is definitely preferable);
+font-size-adjust: from-font; has problematic side-effects, trading one problem for another that is in my opinion at least as bad;
+text-box is not widely supported and has layout implications that mean your layout will be somewhat broken in other browsers;
+Given the preceding ruleset, [contenteditable="true"] { text-wrap: stable; } doesn’t work if the content is within an inner p, li, dd (which it typically will be);
+Hyphenation is just all-round dodgy and generally better avoided;
+Hanging punctuation is contentious and current implementations are really not very pleasing;
+Turning contextual alternatives on generally is not necessarily a good idea—there’s a reason it’s opt-in and separated from the normal set of ligatures;
+font-kerning: normal; is ill-advised: let the browser decide, if it decides not to do kerning, it’ll be for a good reason;
+font-variant-position: [sub|super]; is a terrible idea when combined with font-synthesis: none, because you can’t know what font the text will be rendered in (no, your web font is not guaranteed to work; more people than you might realise block them and/or force the use of their own chosen fonts—I for one, it makes the web so much better), and the fallback font is unlikely to support the feature; and finally,
+:is(h1, h2, h3, h4, h5, h6), p, blockquote, figcaption, li is a completely useless example of :is().</p>
+<p>Thank you for gathering these typography rules into one tidy reset — the section on font-size-adjust stood out to me, as fallback fonts so often change the apparent size of a page while a webfont loads. I also appreciated the honest note that text-box-trim and hanging punctuation are still unevenly supported, so the guardrails matter as much as the declarations themselves. It is a genuinely useful starting point that I will try on a small project first.</p>
+<p>A reset that handles fluid type and vertical rhythm together is the part most resets skip. Hyphens in the same file is a nice touch.</p>
+<p>I'd test the trimmed text beside an SVG icon with the webfont blocked, especially when the label wraps.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-is-model-routing-in-ai/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/taming-typography-modern-css-reset/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

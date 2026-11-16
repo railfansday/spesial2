@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Use Transformers.js in a Chrome Extension</title>
+    <title>Architecting Governed, Self-Evolving AI Agents on Google Cloud</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10183.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,52 +15,36 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Use Transformers.js in a Chrome Extension</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>Architecting Governed, Self-Evolving AI Agents on Google Cloud</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformersjs-chrome-extension/thumbnail.jpg" alt="How to Use Transformers.js in a Chrome Extension" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Gemini_Generated_Image_g9d0nag9d0.2e16d0ba.fill-1200x600.jpg" alt="Architecting Governed, Self-Evolving AI Agents on Google Cloud" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformersjs-chrome-extension/thumbnail.jpg" alt="How to Use Transformers.js in a Chrome Extension" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Gemini_Generated_Image_g9d0nag9d0.2e16d0ba.fill-1200x600.jpg" alt="Architecting Governed, Self-Evolving AI Agents on Google Cloud" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We recently released a Transformers.js demo browser extension powered by Gemma 4 E2B to help users navigate the web.</p>
-<p>While building it, we ran into several practical observations about Manifest V3 runtimes, model loading, and messaging that are worth sharing.</p>
-<p>This guide is for developers who want to run local AI features in a Chrome extension with Transformers.js under Manifest V3 constraints.</p>
-<p>By the end, you will have the same architecture used in this project: a background service worker that hosts models, a side panel chat UI, and a content script for page-level actions.</p>
-<p>In this guide, we will recreate the core architecture of Transformers.js Gemma 4 Browser Assistant, using the published extension as a reference and the open-source codebase as the implementation map.</p>
-<p>Before diving in, a quick scope note: I will not go deep on the React UI layer or Vite build configuration. The focus here is the high-level architecture decisions: what runs in each Chrome runtime and how those pieces are orchestrated.</p>
-<p>If Manifest V3 is new to you, read this short overview first:
-What is Manifest V3?.</p>
-<p>In MV3, your architecture starts in public/manifest.json. This project defines three entry points:</p>
-<p>The background service worker also handles chrome.action.onClicked to open the side panel for the active tab.
-Related entry point to know: a popup can be defined with action.default_popup and works well for quick actions. This project uses a side panel for persistent chat, but the orchestration pattern is the same.</p>
-<p>The key design decision is to keep heavy orchestration in the background and keep UI/page logic thin.</p>
-<p>One practical consequence of this division is that the conversation history also lives in background (Agent.chatMessages): the UI sends events like AGENT_GENERATE_TEXT, background appends the message, runs inference, then emits MESSAGES_UPDATE back to the side panel.</p>
-<p>This split avoids duplicate model loads, keeps the UI responsive, and respects Chrome's security boundaries around DOM access.</p>
-<p>Once runtimes are separated, messaging becomes the backbone. In this project, all messages are typed through enums in src/shared/types.ts.</p>
-<p>The orchestration rule is simple: the background is the single coordinator; side panel and content script are specialized workers that request actions and render results.</p>
-<p>In src/shared/constants.ts, this extension uses two model roles:</p>
-<p>The split is intentional: Gemma 4 handles reasoning/tool decisions, while MiniLM generates vector embeddings for the semantic similarity search in ask_website and find_history.</p>
-<p>All inference runs in background (src/background/background.ts):</p>
-<p>This gives a single model host for all tabs/sessions, avoids duplicate memory usage, and keeps the side panel UI responsive. Because models are loaded from the background service worker, artifacts are cached under the extension origin (chrome-extension://<extension-id>) rather than per-website origins, which gives one shared cache for the whole extension install.</p>
-<p>MV3 lifecycle note: service workers can be suspended and restarted, so model runtime state should be treated as recoverable and re-initialized when needed.</p>
-<p>Why keep this narrow: permissions define user trust and Chrome Web Store review risk. Request only what your features actually need, and state clearly that inference runs locally in the extension runtime so users understand where their data is processed.</p>
-<p>Before the execution loop, it helps to understand how model tool calling works (the basis for any agentic workflow). You pass messages plus a tool schema (name, description, and parameters), and Transformers.js formats the actual prompt from those inputs using the model's chat template. Because chat templates are model-specific, the exact tool-call format depends on the model you use. With Gemma-4-style templates, the model emits a special tool-call token block when it decides to call one.</p>
-<p>At generation time, the model can emit output like:</p>
-<p>That is exactly why this project has a normalization layer (webMcp) and a parser (extractToolCalls): model output must be converted into deterministic tool executions.</p>
-<p>src/background/agent/webMcp.tsx normalizes extension tools into a model-friendly shape:</p>
-<p>Example tools include get_open_tabs, go_to_tab, open_url, close_tab, find_history, ask_website, and highlight_website_element.</p>
-<p>The core design choice here is to separate internal model messages from UI-facing chat messages:</p>
-<p>This keeps user communication clean while preserving a deterministic tool loop in the background.</p>
-<p>State placement is another architectural decision that matters a lot in MV3. In this implementation, state is split by lifecycle and access pattern:</p>
-<p>As described in section 1.2, keeping conversation history in background gives one canonical state across UI updates. This keeps short-lived state in memory, durable settings in extension storage, and heavy retrieval data in a local database.</p>
-<p>You do not need a complex build setup, but MV3 does require predictable outputs for each runtime.</p>
-<p>The goal is simple: one artifact per Chrome entry point, in the exact place public/manifest.json expects.</p>
-<p>The architecture choice that unlocks this whole project is clear separation of concerns: background owns orchestration and model execution, UI surfaces stay thin, and content scripts handle page access.</p>
-<p>This project uses a side panel, but the same approach works for other setups:</p>
-<p>The practical rule is simple: decide where state lives (global, tabId, or site-scoped), keep that state and the model inference in background (basically as background services), and let UI/content runtimes act as focused clients.</p>
+                <p>As enterprise cloud platforms scale to serve millions of concurrent users, tightly coupled microservices introduce cascading failure modes that no static runbook or threshold alert can anticipate. During high-velocity events like a Black Friday flash sale, Site Reliability Engineers (SREs) face an unforgiving reality: diagnose noisy distributed telemetry in seconds, or suffer cascading outages costing millions of dollars per minute.</p>
+<p>While generative AI copilots have accelerated code authoring and log summarization, AI agents struggle to reliably remediate live production outages. An on-call engineer battling connection pool starvation does not need an AI agent offering troubleshooting tips or unverified pull requests that might not fix the root cause; they need a governed, self-evolving AI system that can:</p>
+<p>In this Google Cloud research reference architecture, codenamed Project Chrysalis, we demonstrate how three foundational research breakthroughs combine into a unified, production-grade architecture that can run on Gemini platform and the Agent Development Kit (ADK). Across simulated Black Friday cache-stampede outages, this governed architecture cut time-to-first-mitigation from 15 to 45 minutes down to 1.8 seconds, reduced HTTP 5xx error rates from 72.7% to 80.0% down to 0.0%, dropped P99 latency from 519.8 ms to 18.2 ms, and evaluated 400 counterfactual traffic policies in BigQuery in ~0.5 ms.</p>
+<p>Crucially, this self-evolving architecture does not operate as an unconstrained "black box". To ensure the agent remains secure, reliable, aligned, and contained against rogue behavior, every autonomous action is cryptographically bounded by Google Cloud's defense-in-depth security stack: Model Armor to sanitize incoming telemetry against prompt injections and data leaks; Google Cloud Key Management Service (Cloud KMS) and Binary Authorization middleware to cryptographically sign synthesized patches and block unverified code from mounting; Open Policy Agent (OPA) Policy Controller to enforce strict SLA guardrails that prevent self-inflicted outages; and Dual-Custody Human-in-the-Loop (HITL) governance to require explicit SRE sign-off before any permanent changes are made to the agent hierarchy.</p>
+<p>To see why static playbooks and advisory copilots fail under pressure, consider a classic distributed failure cascade:</p>
+<p>Conventional AI agents are frozen at deployment with fixed system prompts and pre-registered tools. When a novel infrastructure bottleneck strikes, a self-evolving AI architecture extends those baseline capabilities by synthesizing situation-specific mitigation tools at runtime, scoring the telemetry impact of every intervention, and codifying verified guardrails for future incidents.</p>
+<p>For true autonomous resilience, the agent itself must evolve based on empirical evidence of what worked and what failed:</p>
+<p>Self-evolving cloud agents are an active area of applied research focused on resolving the SRE Trilemma (balancing exploration safety, structural adaptability, and multi-step credit assignment) by unifying three research pillars on Google Cloud:</p>
+<p>1.Serverless Counterfactual Simulation (Dream-RSI):Challenge: Testing unvetted rate-limiting parameters in live production risks throttling legitimate revenue or re-triggering outages.Mechanism: Production request traces are exported to Google BigQuery, where the engine replays hundreds of candidate token-bucket configurations in sub-millisecond vectorized memory sweeps to identify Pareto-optimal policies offline.</p>
+<p>2. Tri-Level Co-Evolution (APEX):Challenge: Single-layer prompt tuning provides fragile band-aids, while unconstrained code self-modification risks system instability.Mechanism: Agent evolution is separated into three governed timescales:</p>
+<p>3. Step-Level Shapley Attribution (AgentEvolver):Challenge: During chaotic incidents, multiple interventions occur in sequence; coarse outcome rewards cannot isolate which step healed the service and which caused collateral damage.Mechanism: AgentEvolver computes marginal Shapley credit across each execution span using pre- and post-intervention telemetry deltas (P99 latency, HTTP 5xx rate, and database pool saturation), isolating beneficial patches from erroneous ones.</p>
+<p>We implemented this architecture as an interactive application on Gemini platform. The diagram above illustrates the closed-loop workflow across the Production Target Service, Agent Development Kit (ADK) Multi-Agent Plane, Self-Evolution Engine, and Defense-in-Depth Governance Pipeline.</p>
+<p>Each phase of the interactive demonstration showcases a distinct stage of the agent's self-evolution:</p>
+<p>To deploy self-evolving agents safely in production, our architecture enforces an unbroken four-gate defense-in-depth chain of custody. Every synthesized patch, distilled memory, and topology update must clear four sequential verification boundaries:</p>
+<p>Across automated evaluations of Black Friday cache-stampede workloads, the self-evolving architecture delivered decisive operational gains over both manual triage and static advisory copilots:</p>
+<p>Explore the reference implementation and Google Cloud documentation below:</p>
+<p>Build Generative UI Apps with A2UI & CopilotKit Agents</p>
+<p>A2UI 1.0: Build delightful, fast, reliable, agentic experiences</p>
+<p>Catch Go bugs that fuzzing misses with Gemini and a constraint solver</p>
+<p>How Agent Anomaly Detection scores on benchmarks we didn't write</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformersjs-chrome-extension" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://developers.googleblog.com/architecting-governed-self-evolving-ai-agents-on-gemini-agent-platform/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

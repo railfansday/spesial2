@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agentic Resource Discovery: Let agents search</title>
+    <title>Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10056.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Agentic Resource Discovery: Let agents search</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/agentic-resource-discovery-launch/thumbnail_.png" alt="Agentic Resource Discovery: Let agents search" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/08/07/Image-2-2_1-no-footer-1260x630.png" alt="Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/agentic-resource-discovery-launch/thumbnail_.png" alt="Agentic Resource Discovery: Let agents search" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/08/07/Image-2-2_1-no-footer-1260x630.png" alt="Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>If you build with agents today, you probably know three protocols. MCP gives agents a standard way to call tools. Skills give agents a way of consuming instructions. A2A gives agents a way to call other agents. All three assume the user already knows which tool, instruction, or agent they need. The user is still responsible for discovering, integrating, and maintaining those capabilities.</p>
-<p>The Agentic Resource Discovery (ARD) specification is the discovery layer that sits in front of them. It is a draft, open specification developed by contributors from Microsoft, Google, GoDaddy, Hugging Face, and others, with broad participation across the industry. It defines how agents and tools are cataloged, indexed, and searched across federated registries, so an agent can find capabilities at runtime instead of needing them pre-installed. It is not a product or a marketplace. It is a shared standard that any company can implement independently, and that any agent or tool can participate in.</p>
-<p>In this post, we'll explore the specification, how Hugging Face has implemented it, and how you can start building on ARD.</p>
-<p>The current model for agent capabilities is install-first, use-later. A developer hardcodes an MCP server URL into a config file. A user connects a service to their AI app via a plugin and reuses it. This works for the handful of tools an agent uses every day, but it doesn't scale to thousands of ad-hoc surfaces.</p>
-<p>The fallback is to dump every available tool description into the LLM's context window and let the model pick. This is limited by the context budget. There are search-based strategies here too, but the descriptions are often too thin to disambiguate well.</p>
-<p>ARD moves selection outside the LLM. A registry indexes capabilities with richer signals such as publisher identity, representative queries, compliance attestations, and tags. It exposes a REST endpoint. The client searches in natural language, and the model invokes whatever the search returns. The shift is from manually installed, static catalogs to intent-based search that lets an agent find the right capability dynamically, and reach a growing ecosystem of MCP tools, A2A agents, and other services without pre-configuring each one.</p>
-<p>The Hugging Face Discover Tool is our reference implementation of ARD. It provides search access to thousands of Skills, ML applications, and MCP Servers — on Hugging Face and across other ARD discovery services.</p>
-<p>It works by combining the Hub's existing semantic search over Spaces, alongside our Agent Skills, and serving the results as ARD catalog entries. The Hub already hosts a catalog of Spaces running Gradio apps, MCP servers, and demos. Its semantic search supports an agents=true flag that returns Spaces ranked by agent-oriented metadata, and Discover translates that search into the ARD specification.</p>
-<p>The adapter applies two filters. First, the response includes only Spaces whose runtime stage is RUNNING. Second, the response media type is driven by the request. Three media types are supported:</p>
-<p>The skill type involves an additional transformation. Many Spaces ship an agents.md file describing how an agent should interact with them. Discover reads that file and wraps it with the frontmatter a skill consumer expects: name, description, and source metadata covering the Space ID, Hub URL, app URL, and original agents.md URL. The result is a skill any skill-aware client can install or load through its normal skill flow.</p>
-<p>For MCP-tagged Spaces, the adapter generates a catalog entry pointing at the Space's Gradio MCP endpoint over HTTP transport. The URL uses the Space's runtime domain when the Hub provides one, otherwise the standard .hf.space slug convention.</p>
-<p>discover is built into the Hugging Face CLI (hf). To get started and give you or your agent access:</p>
-<p>You can also Search the catalog directly using either the REST API or an MCP Server.</p>
-<p>The Hugging Face catalog is published at its well-known URL:</p>
-<p>Alternatively, connect any MCP Client to search via MCP endpoint using https://huggingface-hf-discover.hf.space/mcp to search the catalog.</p>
-<p>ARD separates discovery from execution. The static manifest format is driven by media type, so any artifact protocol can ride the same envelope without specification-level changes. The registry API is plain HTTP REST, so any client can federate against it. Discover is one of several reference implementations of the specification across the ecosystem, and because federation is built into the protocol, a search through one service can surface capabilities hosted by another.</p>
-<p>The Discover Tool is a working test of that design. It does not invent a new artifact format. It wraps an existing search backend, the Hub, in the specification's envelope, and lets the same Spaces surface as skills or MCP servers depending on what the client asked for.</p>
-<p>Next steps are tighter integration with the specification's federation modes (auto, referrals, none) and Hub-side support for static ai-catalog.json manifests on user and organization profiles. Once that lands, any Space publisher will be able to advertise their capabilities through the standard well-known URI mechanism.</p>
-<p>Google just published Agentic Resource Discovery — an open standard (with the Linux Foundation) for how AI agents find and connect to capabilities across the web. Think DNS + a phone book for agents.</p>
-<p>The model is simple: you publish an ai-catalog.json at a well‑known path on your domain → registries crawl it → an agent searches by intent → it verifies the publisher → then it connects (over MCP, A2A, or a plain API). Publish → crawl → search → verify → connect.</p>
-<p>Most of the coverage will fixate on discovery. I want to flag step 4, because it's the one that actually matters: verify. The agent is about to act on what it finds — call a tool, pull data, make a decision. "I found a capability" is worthless if it can't check who published it and whether it's been tampered with. Discovery without verification just industrialises trusting strangers.</p>
-<p>That's the half we've been building the whole time — so when the spec dropped this week, we shipped our catalog the same week. Dynamic Feed is now a verifiable ARD publisher: domain‑anchored identity, every datapoint Ed25519‑signed and checkable against our public key.</p>
-<p>The agentic web is going to be discovered and verified. Good to see the standard treat the second half as a first‑class citizen.</p>
-<p>If you publish an API, an MCP server, or an agent — you can host an ai-catalog.json today. It's a single file. Spec's open: github.com/ards-project/ard-spec</p>
+                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
+<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
+<p>Get started with one of these featured services or browse all</p>
+<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
+<p>Today, we’re announcing the public preview of AWS Well-Architected Agent, an AI-powered service that analyzes your AWS environment to deliver targeted, contextual recommendations for improving your applications’ cost, security, performance, and resilience. The AWS Well-Architected Agent analyzes your infrastructure, understands unique business goals, and delivers contextual recommendations with ready-to-implement fixes. It delivers context-aware optimization without relying on manual audits or generic checklists.</p>
+<p>The agent evaluates your environment as an experienced cloud architect would. It automatically correlates utilization metrics, resource configurations, and application topology, and analyzes against Well-Architected best practices across 65+ AWS services. It generates recommendations aligned to your declared business goals, delivers implementation packages with every finding, and surfaces cross-pillar trade-offs making it simpler to remediate the findings.</p>
+<p>Here are the three main features of this service:</p>
+<p>AWS Well-Architected Agent in action
+         To get started, create an agent profile to define the scope of what Well-Architected Agent can access and provide recommendations on, complete the IAM role setup to access resources, conduct architecture review, and remediate recommendations.</p>
+<p>Create an agent profile
+         In the AWS Well-Architected console, choose Get started with Well-Architected Agent. You can define an agent profile that specifies which AWS accounts and applications to monitor, which optimization pillars to focus on, and the permissions required.</p>
+<p>You can choose AWS accounts or AWS Regions to monitor and optimization pillars that matter most to your business. You can also set goals for each pillar: cost optimization, performance, resilience, and security.</p>
+<p>To give access to the agent for your AWS environment, provision customer-managed IAM roles the agent uses to read resource configurations, utilization metrics, and application topology. To learn more, visit the IAM prerequisite for AWS Well-Architected Agent.</p>
+<p>When you choose Get Started, the agent creates your agent profile. Resource and application recommendations will be generated within 24 hours after profile creation.</p>
+<p>You can conduct an architecture review on pre-deployment workloads by uploading an IaC project in Terraform, AWS CloudFormation, or AWS Cloud Development Kit (CDK) to be analyzed. Choose Conduct architecture review in the dashboard, upload a.zip file containing IaC project or repository file, and select which Well-Architected lens to use for reviewing your infrastructure.</p>
+<p>You can define your applications to add context which will enhance the relevancy and further contextualize recommendations. Choose Add application context in the dashboard, add your applications with AWS accounts, AWS Regions, AWS services, tags if you want to narrow the scope to specific resources, and the details of applications.</p>
+<p>Review prioritized recommendations and start remediating
+         Now you can see generated prioritized recommendations generated by the agent across your resources and applications, selected pillars, ranked against your declared goals, with automation-ready remediation included.</p>
+<p>When you choose the specific recommendation, you can see the details, insights into why the agent are suggesting the recommendation, impacts and trade-off, and recommended fixes across affected AWS resources.</p>
+<p>Choose Start remediation to address recommended fixes. You can choose the console, updated IaC template, CLI commands to remediate by the resolution type. It provides detailed step-by-step instructions and you can roll out this instruction and verify the result.</p>
+<p>When you choose Using updated IaC template, the agent provides the code changes needed to update your existing IaC templates such as the CDK function shown above which you can copy directly into your codebase.</p>
+<p>You can also configure API access to integrate recommendations directly into your existing development and operations workflows. To interact with the agent programmatically, including calling APIs and searching documentation, try the AWS MCP Server and plugins with your preferred AI coding tool. To learn more, visit the AWS Well-Architected Agent documentation.</p>
+<p>Things to know
+         Here are some things that you should know about the Well-Architected Agent.</p>
+<p>You can still use existing AWS Well-Architected Tool to manually evaluate your cloud architecture with user-defined lenses that measure your workload using your own best practices.</p>
+<p>Join the preview
+         Access to the AWS Well-Architected Agent and its recommendations is available in US East (N. Virginia), US East (Ohio), and US West (Oregon). You can onboard workloads from any AWS commercial Region. AWS Well-Architected Agent is delivered by AWS Support and available to AWS customers with an AWS Support plan.</p>
+<p>Give it a try today in the AWS Well-Architected console and send feedback through your usual AWS Support contacts.</p>
+<p>Channy is a Lead Blogger of AWS News Blog and Principal Developer Advocate for AWS Cloud. As an open web enthusiast and blogger at heart, he loves community-driven learning and sharing of technology.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/agentic-resource-discovery-launch" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://aws.amazon.com/blogs/aws/announcing-aws-well-architected-agent-an-ai-powered-intelligence-to-optimize-your-cloud-environment-preview/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I built a decision graph on HydraDB that learns from corrections. Here&#x27;s what broke.</title>
+    <title>Replicate</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9645.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>I built a decision graph on HydraDB that learns from corrections. Here&#x27;s what broke.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>Replicate</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F100w85ygftyx6luyxkgl.jpeg" alt="I built a decision graph on HydraDB that learns from corrections. Here&#x27;s what broke." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F100w85ygftyx6luyxkgl.jpeg" alt="I built a decision graph on HydraDB that learns from corrections. Here's what broke." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Agents keep acting on engineering decisions that were reversed years ago. A 48-hour HydraDB build, the bugs I hit, and an honest baseline.</p>
-<p>Every engineering team writes its decisions down. Then it changes its mind and writes another one. Two years later, search finds the old decision as easily as the new one, and an AI coding agent will happily build on a choice the team reversed long ago.</p>
-<p>For the HydraDB hackathon I built DecisionGraph to fix that. It links each architecture decision record (ADR) to the records that replaced it. When an agent asks "what did we decide about X?", it walks those links to the decision that still stands and hands back that decision and its history, in about 130 tokens instead of 590. When someone corrects an answer, the correction is written into the graph, so the next question on that topic lands right even in different words.</p>
-<p>Asked "Does each business unit get its own Cloud Platform cluster now?", vector search returns the closest text: a 2019 decision to run one shared cluster, which has been replaced three times since. DecisionGraph starts at the same record, then follows the "replaced by" links to the decision that stands today.</p>
-<p>The data is about 130 real, public ADRs from three UK government engineering teams: MoJ Cloud Platform, MoJ Modernisation Platform and GOV.UK on AWS (all MIT licensed). The test set is 50 questions I wrote, scored before each correction is applied.</p>
-<p>Every REPLACED_BY link has a cost: 1 if trusted, 100 if not. Walking only trusted links is then a single algo.MSpaths call with maxCost set to the path length, so one untrusted hop rules the path out:</p>
-<p>"Follow only what we trust" stopped being a loop in my Python and became one query inside the database.</p>
-<p>Links come from rules: an ADR's status line naming its replacement, a body that cites an older ADR next to "replace" or "migrate", and so on. Each rule has a trust score (a Beta count). When a correction proves a rule right or wrong, the new trust flows to every link that rule proposed that nobody has judged yet, in one statement:</p>
-<p>The graph that answers the next question is already the corrected one.</p>
-<p>Every corrected question becomes a Question node with a RESOLVED_TO edge to the right decision, an ABOUT edge to the topic and IN_QUESTION edges from its distinctive terms. "Has someone asked this before?" is a two-hop walk from the new question's terms, not a separate cache.</p>
-<p>The public demo runs on one HydraDB cell. The "replay all 50 corrections" demo runs on a second cell, so a visitor pressing replay never resets anyone else's graph.</p>
-<p>HydraDB is built from source into one Docker image with the app. GitHub Actions builds the image and pushes it to GitHub's container registry, and it runs on Render's free tier.</p>
-<p>1. Building from source. My Rust toolchain was a version behind what the build asked for, and a dependency (LAGraph) wouldn't download as a release archive. I built LAGraph from a git clone, pinned the HydraDB commit, and used a two-stage Docker build so the final image carries only the graph-node binary.</p>
-<p>2. A 500 on every startup. On a small (512 MB) config, graph-node refused to serve until the unflushed-write limit was larger than the first-level SST file size:</p>
-<p>Obvious once you know it, painful until you do.</p>
-<p>3. Restarts broke writes. HTTP query ids start again from 1 in each new process, so a restarted node pointed at an old store hit idempotency-key conflicts. My graph is derived from the records anyway, so the fix was to start from an empty store on every boot and rebuild it (about 20 seconds).</p>
-<p>4. Writing the queries. HydraDB speaks a subset of OpenCypher. What made loads fast and predictable: batch everything through UNWIND, merge nodes by id and then set labels, and create edges between ids.</p>
-<p>5. One bad correction poisoned the graph. Early on, a single wrong correction confirmed a whole chain of wrong links, and answers for unrelated questions got worse. Now a correction only confirms a link if the two decisions are actually related (similar text or a shared distinctive term) or the link was stated in the record itself. A brand-new link the rules never proposed stays "proposed" until a second correction agrees.</p>
-<p>Test-then-train over 50 questions, 5 question orders, with 95% intervals from resampling the questions:</p>
-<p>My first "plain store" baseline was too easy to beat. An outside reviewer built a much stronger one with no graph database: the same starting points, chasing each record's "superseded by" note in a Python dictionary, plus a memory of corrections. It scored 78% to DecisionGraph's 80%. On about 130 records that mostly state their own replacements, you don't need a graph database to win on accuracy.</p>
-<p>What the graph does give you is everything it learned, in the open: every link, how far it trusts it, and the question that changed it, all queryable by an agent (/api/learned).</p>
-<p>That matters more as the records get bigger and messier, where replacements have to be worked out rather than read off a status line. I put the stronger baseline and its numbers in the README, because a result nobody else can reproduce isn't a result.</p>
-<p>The repo ships an MCP server with three tools: current_decision(question), find_decisions(search) and correct_decision(question, correct_decision_id).</p>
-<p>If your team keeps ADRs and lets agents work in your repos, I'd like to hear whether the "outdated decision" problem bites you too.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Turn Webflow/Framer app into a Claude/Codex project for free
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/replicate-10?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1314761?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/0xnexuz/i-built-a-decision-graph-on-hydradb-that-learns-from-corrections-heres-what-broke-5c7d" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/replicate-10" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

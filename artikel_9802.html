@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rust 1.100.0 released</title>
+    <title>tokenizers v1: encode, decode and scaling, measured</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9802.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,218 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Rust 1.100.0 released</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-15</p>
+        <h1>tokenizers v1: encode, decode and scaling, measured</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Version
-1.100.0 of the Rust language has been released. Notable changes include the
-stabilization of the never type,
-core parts of the Allocator API, reporting of unused dependencies in
-Cargo, and more.</p>
-<p>Posted Nov 13, 2026 10:58 UTC (Fri)
-                               by swilmet (guest, #98424)
-                              [Link] (21 responses)</p>
-<p>Talking about unused deps and dead code removal:
-
-I'm still a C developer, and the C language has many tools, but I don't know a tool that works for shared libraries (with unstable API) with code scattered in multiple repositories (for a monorepo that's easier). Do you know the existence of such tool?
-
-C is a more "greppable" language than Rust, so I simply use `git grep` for each symbol, but it can be time consuming. Rust and other modern languages facilitate a lot this task.
-
-(Sorry if it's slightly off-topic for a Rust news).</p>
-<p>I'm still a C developer, and the C language has many tools, but I don't know a tool that works for shared libraries (with unstable API) with code scattered in multiple repositories (for a monorepo that's easier). Do you know the existence of such tool?
-
-C is a more "greppable" language than Rust, so I simply use `git grep` for each symbol, but it can be time consuming. Rust and other modern languages facilitate a lot this task.
-
-(Sorry if it's slightly off-topic for a Rust news).</p>
-<p>C is a more "greppable" language than Rust, so I simply use `git grep` for each symbol, but it can be time consuming. Rust and other modern languages facilitate a lot this task.
-
-(Sorry if it's slightly off-topic for a Rust news).</p>
-<p>(Sorry if it's slightly off-topic for a Rust news).</p>
-<p>I agree this does seem a low-hanging fruit. But it's not that big a deal because it's the dependencies in Cargo, the tool that will fetch external dependencies, not the C equivalent of #include for which there was already a warning. Also, like said in the release notes, it should check all the build target, so the C equivalent of checking all the #ifdef, so you can't just compile one time and check if the symbols are used.</p>
-<p>Posted Nov 13, 2026 14:20 UTC (Fri)
-                               by swilmet (guest, #98424)
-                              [Link] (19 responses)</p>
-<p>From a security point of view, was fetching an unused dependency a potential attack vector? (like changing global state even without calling exported functions or using global data).
-
-A little like the use of pkg-config in C. pkg-config is usable (mainly) thanks to packaging efforts done by distributions, so it's not an upstream-only thing (unlike Cargo, Npm, PyPI, etc).</p>
-<p>A little like the use of pkg-config in C. pkg-config is usable (mainly) thanks to packaging efforts done by distributions, so it's not an upstream-only thing (unlike Cargo, Npm, PyPI, etc).</p>
-<p>From a security point of view, was fetching an unused dependency a potential attack vector? (like changing global state even without calling exported functions or using global data).</p>
-<p>I don't know Rust enough to be sure but I don't think so. It only affect the package manager and not the compiler.</p>
-<p>There is a risk in Cargo from unused dependencies - Cargo has a build graph based on the declared dependencies in Cargo.toml, and chooses what build steps to run based on that graph. One thing a crate can contain is a build script - which is code that's built and run on the build host at the time of compilation, and can do anything that code running as part of the build system can do.</p>
-<p>In theory, an unused dependency can contain a build.rs that's got a security-relevant bug in it; that would then cause a security issue on the build host if you built the unused dependency. Removing it means that's not a problem :-)</p>
-<p>Posted Nov 13, 2026 18:15 UTC (Fri)
-                               by swilmet (guest, #98424)
-                              [Link] (15 responses)</p>
-<p>That's the kind of "high-level ergonomics" that I like from the Rust language. Getting rid of whole classes of bugs with a good compiler and tools.</p>
-<p>I'm less fond of the succinct syntax and prefer the verbosity and explicitness of C. See for example what I wrote about type inference or having a safe SubC language thoughts.</p>
-<p>First and most important: Safety is cultural. Rust's safety culture uses Rust's safety technology to deliver safety, but you can't just apply that technology and magically get safety, you need the culture. You're damn sure not getting the culture from C. I was a C programmer for decades.
-
-Secondly and maybe more understandably to people focused on technology, ALL of Rust follows the same rules and those rules achieve safety. What's different about Safe Rust is that the compiler can check everything you have done in Safe Rust follows the rules, so in Safe Rust following the rules isn't your problem, the compiler will check that. The "safe subset" technology can't work without a language where everybody else is following the safety rules all the time.
-
-So leaving aside the harder culture problem, step one is to have safety rules for C and get everybody to follow them all the time. This is extremely hard - I believe impossible - but it's a pre-requisite, you can't start with the safe subset.</p>
-<p>Secondly and maybe more understandably to people focused on technology, ALL of Rust follows the same rules and those rules achieve safety. What's different about Safe Rust is that the compiler can check everything you have done in Safe Rust follows the rules, so in Safe Rust following the rules isn't your problem, the compiler will check that. The "safe subset" technology can't work without a language where everybody else is following the safety rules all the time.
-
-So leaving aside the harder culture problem, step one is to have safety rules for C and get everybody to follow them all the time. This is extremely hard - I believe impossible - but it's a pre-requisite, you can't start with the safe subset.</p>
-<p>So leaving aside the harder culture problem, step one is to have safety rules for C and get everybody to follow them all the time. This is extremely hard - I believe impossible - but it's a pre-requisite, you can't start with the safe subset.</p>
-<p>"safe SubC"
-
- Posted Nov 14, 2026 6:48 UTC (Sat)
-                               by swilmet (guest, #98424)
-                              [Link] 
-      
-
-
-As a proof of concept, my idea with SubC was for the compiler to treat certain library functions specially. Instead of syntactic sugar, having just functions to call, which would follow the Rust culture but with a verbose approach. (A standard C compiler would understand the code as well).
-In other words, "C-ify" Safe Rust concepts (and culture, like you explain). Emmanuele Bassi from the GNOME community has put together a strawman proposal for this.
-A small proof of concept would be doable I think, but as a toy project. Real-world C codebases would need a gradual approach and that's much trickier.
-SubC as a project is like the equivalent of 10 PhDs or something. Not trivial, not something I'm able to do by myself. Just some thoughts and desires at this point of time.</p>
-<p>Posted Nov 14, 2026 6:48 UTC (Sat)
-                               by swilmet (guest, #98424)
-                              [Link]</p>
-<p>As a proof of concept, my idea with SubC was for the compiler to treat certain library functions specially. Instead of syntactic sugar, having just functions to call, which would follow the Rust culture but with a verbose approach. (A standard C compiler would understand the code as well).</p>
-<p>In other words, "C-ify" Safe Rust concepts (and culture, like you explain). Emmanuele Bassi from the GNOME community has put together a strawman proposal for this.</p>
-<p>A small proof of concept would be doable I think, but as a toy project. Real-world C codebases would need a gradual approach and that's much trickier.</p>
-<p>SubC as a project is like the equivalent of 10 PhDs or something. Not trivial, not something I'm able to do by myself. Just some thoughts and desires at this point of time.</p>
-<p>Could you say more about what you mean by this? This is the first time I've ever heard somebody call rust "succinct" as a negative.
-
-I'm always looking for feedback on the language from people who have different experiences with it.</p>
-<p>I'm always looking for feedback on the language from people who have different experiences with it.</p>
-<p>Posted Nov 14, 2026 20:19 UTC (Sat)
-                               by swilmet (guest, #98424)
-                              [Link] (11 responses)</p>
-<p>For me Rust is more a successor to C++, but less so for C.</p>
-<p>The C language has a small core language, while both C++ and Rust have a larger set of core features (so without taking into account the standard library).</p>
-<p>I use the C language in combination with GLib/GObject, where all symbols need to be used with their fully qualified names. For instance when reading a gtk_widget_set_visible() function call, you know that it comes from the GTK library (the namespace), from the GtkWidget class and it's the set_visible() method. A fully-qualified name improves the comprehension when reading the code. (Code is read more often than written, so it's useful to ease code understandability; also for reviewing patches).</p>
-<p>Type inference: I prefer explicit/manifest typing for all variables. It also improves code reasoning IMHO. Same problem for code review tools that may lack some features present in the text editor or IDE to show type information when hovering the mouse on a variable name.</p>
-<p>The shadowing feature for variables looks to me a bad practice. It should be: one variable name, one usage. So something like</p>
-<p>The .. operator versus ..= (creating half-open and closed ranges, respectively). Off-by-one errors are so frequent in programming that such succinct syntax can be misleading when reading quickly some piece of code. Example:</p>
-<p>It doesn't follow the more standard mathematics notation:</p>
-<p>At some point, in programming languages a more classic for loop with an integer variable is clearer:</p>
-<p>Succinct code creates more logic errors IMHO. Even though Rust is much safer with the compiler, I suspect there will be more such kind of logic bugs. Code obfuscation and backdoors are perhaps trickier to detect with such subtle operators.</p>
-<p>BTW, the "fn" keyword is not really fun in some countries (political parties).</p>
-<p>The lack of a semicolon which means that it's the return value looks also something weird and subtle to catch for the eyes. I prefer an explicit return keyword.</p>
-<p>Natural languages have many redundancies (plural forms in a sentence, e.g.). When reading or listening, a small inattention is not a problem because you can catch up thanks to the redundancies.</p>
-<p>That was also my opinion when I started programming in Rust.
-But soon I realized that the return is just redundant and it's actually much easier to read without it.
-A function always returns something. Even if it's (). Why write `return` then? The last thing is always returned.
-Rust actually is much more consistent than C and C++ here, where void is kind of a special case.
-
-All of the other things you said: You can just do as you wish. Rust doesn't prevent you from adding a return statement to the end of the function. Or adding types to all local variables. Or using full path syntax all over the place, or just use plain C-style function names all over the place, etc. Except for the for-loop thing everything can be done, if you like it better. The for-loop thing can probably easily be implemented with a macro.</p>
-<p>All of the other things you said: You can just do as you wish. Rust doesn't prevent you from adding a return statement to the end of the function. Or adding types to all local variables. Or using full path syntax all over the place, or just use plain C-style function names all over the place, etc. Except for the for-loop thing everything can be done, if you like it better. The for-loop thing can probably easily be implemented with a macro.</p>
-<p>Posted Nov 14, 2026 20:56 UTC (Sat)
-                               by swilmet (guest, #98424)
-                              [Link] (3 responses)</p>
-<p>For a project that I start alone, yes. Not really for bigger projects involving many collaborators where idiomatic Rust is already present.</p>
-<p>Succinct syntax versus verbosity
-
- Posted Nov 15, 2026 6:22 UTC (Sun)
-                               by swilmet (guest, #98424)
-                              [Link] 
-      
-
-
-It's not false.
-Also C usually needs to be used with an additional foundational library like GLib (from GNOME), ELL (Embedded Linux Library), APR (Apache Portable Runtime), ZeroMQ, C-Util (Common Utility Libraries for C11) or what systemd provides.
-It creates even more differences between C projects.</p>
-<p>Posted Nov 15, 2026 6:22 UTC (Sun)
-                               by swilmet (guest, #98424)
-                              [Link]</p>
-<p>Also C usually needs to be used with an additional foundational library like GLib (from GNOME), ELL (Embedded Linux Library), APR (Apache Portable Runtime), ZeroMQ, C-Util (Common Utility Libraries for C11) or what systemd provides.</p>
-<p>It creates even more differences between C projects.</p>
-<p>You couldn't simultaneously complain about things that were settled many decades ago and then complain that others don't want to do things in way that you like.</p>
-<p>Most properties that you complain about have come into Rust from ML, language that's as old as C — and it's entirely not clear why people should go with what C did and not what ML did.</p>
-<p>Yes, Rust doesn't do things in a way C does… but then, there are no one single way that C does things like, every project is unique.</p>
-<p>Fully-qualified function call syntax is possible to use everywhere, again modulo unnameable types, but it looks quite ugly. While I agree that (for example) foo.into() is a bit ambiguous about what conversion we're performing, you can fix that by writing Bar::from(foo) if you prefer. Nobody in their right mind is going to write <Foo as Into<Bar>>::into(foo) or <Bar as From<Foo>>::from(foo).
-
-(Those latter syntaxes exist to disambiguate the case where multiple traits define from() or into() methods or associated functions, or where Foo and Bar have inherent implementations of those methods or associated functions. But From and Into are well-known stdlib traits, so such a collision is unlikely in practice. It would be more plausible with more obscure traits, and fully qualified syntax is commonly used in macros because you can't know ahead of time that a collision is impossible.)</p>
-<p>(Those latter syntaxes exist to disambiguate the case where multiple traits define from() or into() methods or associated functions, or where Foo and Bar have inherent implementations of those methods or associated functions. But From and Into are well-known stdlib traits, so such a collision is unlikely in practice. It would be more plausible with more obscure traits, and fully qualified syntax is commonly used in macros because you can't know ahead of time that a collision is impossible.)</p>
-<p>Posted Nov 15, 2026 9:33 UTC (Sun)
-                               by adobriyan (guest, #30858)
-                              [Link]</p>
-<p>shadow_reuse lints cases where you re-use the value, for example maybe "width" on line 10 doesn't including padding but "width" on line 20 onwards adds 10 for padding.
-
-shadow_same lints cases where the shadow is just fiddling with the mutability or references, so maybe "goose" on line 10 is an actual Goose, but on line 20 onwards it's now just a mutable reference to the same goose.
-
-shadow_unrelated lints almost the opposite case from shadow_reuse, maybe "depth" on line 10 is an integer number of pixels while on line 20 onwards it's a 3D buffer.
-
-It might seem as though, since Rust has lints for so many misuses of shadowing, the whole idea of shadowing comes into disrepute, but in fact the argument for shadowing is that it is more readable - when done appropriately. Some codebases where shadowing is forbidden have to work around this. In languages like Rust with a good static type system this can encourage use of weaker, rubbish types and mutability when you'd be better off with immutable strong types and some shadowing.
-
-let delay : bool = /* somehow we discover a bool --- yes or no we want a delay here */
-let delay : Duration = /* we make a (perhaps zero) Duration -- representing some amount of time */
-let delay : MyHTMLType = /* some HTML about that delay */
-
-If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>shadow_same lints cases where the shadow is just fiddling with the mutability or references, so maybe "goose" on line 10 is an actual Goose, but on line 20 onwards it's now just a mutable reference to the same goose.
-
-shadow_unrelated lints almost the opposite case from shadow_reuse, maybe "depth" on line 10 is an integer number of pixels while on line 20 onwards it's a 3D buffer.
-
-It might seem as though, since Rust has lints for so many misuses of shadowing, the whole idea of shadowing comes into disrepute, but in fact the argument for shadowing is that it is more readable - when done appropriately. Some codebases where shadowing is forbidden have to work around this. In languages like Rust with a good static type system this can encourage use of weaker, rubbish types and mutability when you'd be better off with immutable strong types and some shadowing.
-
-let delay : bool = /* somehow we discover a bool --- yes or no we want a delay here */
-let delay : Duration = /* we make a (perhaps zero) Duration -- representing some amount of time */
-let delay : MyHTMLType = /* some HTML about that delay */
-
-If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>shadow_unrelated lints almost the opposite case from shadow_reuse, maybe "depth" on line 10 is an integer number of pixels while on line 20 onwards it's a 3D buffer.
-
-It might seem as though, since Rust has lints for so many misuses of shadowing, the whole idea of shadowing comes into disrepute, but in fact the argument for shadowing is that it is more readable - when done appropriately. Some codebases where shadowing is forbidden have to work around this. In languages like Rust with a good static type system this can encourage use of weaker, rubbish types and mutability when you'd be better off with immutable strong types and some shadowing.
-
-let delay : bool = /* somehow we discover a bool --- yes or no we want a delay here */
-let delay : Duration = /* we make a (perhaps zero) Duration -- representing some amount of time */
-let delay : MyHTMLType = /* some HTML about that delay */
-
-If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>It might seem as though, since Rust has lints for so many misuses of shadowing, the whole idea of shadowing comes into disrepute, but in fact the argument for shadowing is that it is more readable - when done appropriately. Some codebases where shadowing is forbidden have to work around this. In languages like Rust with a good static type system this can encourage use of weaker, rubbish types and mutability when you'd be better off with immutable strong types and some shadowing.
-
-let delay : bool = /* somehow we discover a bool --- yes or no we want a delay here */
-let delay : Duration = /* we make a (perhaps zero) Duration -- representing some amount of time */
-let delay : MyHTMLType = /* some HTML about that delay */
-
-If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>let delay : bool = /* somehow we discover a bool --- yes or no we want a delay here */
-let delay : Duration = /* we make a (perhaps zero) Duration -- representing some amount of time */
-let delay : MyHTMLType = /* some HTML about that delay */
-
-If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>If you forbid shadowing, you tempt somebody to decide booleans, durations and pointers to some HTML are all just basically integers, so we can say this is an integer and make it mutable then re-assign it, changing what it means repeatedly but sneaking past our "no shadowing" rule. Alternatively maybe they name these variables delay_bool, delay_duration and delay_html but we already HAVE a type system, why are you shovelling this into variable names?</p>
-<p>(Systems) Hungarian notation needs to accrete its way into new codebases somehow, one supposes.</p>
-<p>Succinct syntax versus verbosity
-
- Posted Nov 15, 2026 8:52 UTC (Sun)
-                               by swilmet (guest, #98424)
-                              [Link] 
-      
-
-
-
-> (Systems) Hungarian notation
-
-I needed to look what it means, and today I learned something new :-)
-
-https://en.wikipedia.org/wiki/Hungarian_notation</p>
-<p>Posted Nov 15, 2026 8:52 UTC (Sun)
-                               by swilmet (guest, #98424)
-                              [Link]</p>
-<p>I needed to look what it means, and today I learned something new :-)
-
-https://en.wikipedia.org/wiki/Hungarian_notation</p>
-<p>https://en.wikipedia.org/wiki/Hungarian_notation</p>
-<p>Posted Nov 15, 2026 6:35 UTC (Sun)
-                               by swilmet (guest, #98424)
-                              [Link]</p>
-<p>Or, in C: "Lets put this data in this struct field because the field is anyway unused during the code path I'm implementing" kind of hack (instead of adding a new field, or have an union).</p>
-<p>Only fetching, no, but compiling, yes (with build scripts or proc macros).</p>
-<p>Copyright © 2026, Eklektix, Inc.
-            
-            Comments and public postings are copyrighted by their creators.
-            Linux  is a registered trademark of Linus Torvalds</p>
+                <p>The tokenizer has not historically been the bottleneck within ML workflows. Compute-wise, tokenization is light compared to the heavy modeling happening in the rest of the pipeline. Yet, in some cases, it has rapidly become key to accelerating (or slowing down) your machine learning work.</p>
+<p>As models become faster and workloads scale, that balance begins to shift. Training on massive datasets, serving many concurrent requests, or repeatedly processing long inputs can put enough pressure on the tokenizer that it starves the model of data.</p>
+<p>This is why we have chosen to heavily focus on performance for the upcoming version 1 of tokenizers. Tokenization should be light and should scale with your workflow. Your GPUs should never sit idle waiting for the CPU to complete its tokenization.</p>
+<p>In this article, we look at what makes v1 faster than v0.23, often by tens of times.</p>
+<p>This work was entirely possible thanks to the rest of the ecosystem. Tokenization is a very active area of open source work, and libraries such as gigatoken, tiktoken, kitoken, tokie, fastokens, wordchipper and ai-tokenizer, as well as many others, have each pushed on what a fast tokenizer can be. We read that work, and several of the ideas below reached us because another project showed they were worth trying.</p>
+<p>Before this refactor, tokenizers was nowhere near the performance it could have had, so contributing to it may not have seemed worth it. With this refactor, we hope to make clear that we intend tokenizers to be a library worth contributing to.</p>
+<p>We also thank IBM, NVIDIA, and the ExecuTorch team for contributing patches and helping us test across a wide range of hardware to broaden platform support.</p>
+<p>We showcase results for the release candidate of tokenizers v1 against other widely used alternatives. We go over single-threaded, multi-threaded, scaling across threads, per-model comparison, per-language comparison, latency, decoding throughput, memory heap, as well as crate size.</p>
+<p>We run this from the tokbench repository, and add a command to rerun the benchmarks on your hardware if you would like to do so.</p>
+<p>v1 will produce the same token IDs as v0.23. The goal was to preserve the output, the API, the vocabulary and the merge ranks, and improve everything that can be improved. That includes breadth. The library stays general across tokenizer families rather than specialising on BPE, so v1 loads everything v0.23 loaded.</p>
+<p>A tokenizer converts text into the list of integers a model reads. tokenizers runs that conversion in four stages. Normalization applies operations such as lowercasing or Unicode normalization to the raw text. Pre-tokenization splits the text into smaller pieces called pre-tokens. The model turns each pre-token into tokens and maps them to IDs in its vocabulary. Post-processing adds any special tokens the model expects.</p>
+<p>The model stage is where most of the work described here happens. Eight of the ten model families measured in this article use byte pair encoding, or BPE. BPE starts from the bytes of a pre-token and repeatedly joins the highest ranked adjacent pair until no ranked pair remains. The ranking is learned when the tokenizer is trained and ships with it, so the same text always produces the same IDs. A merge never crosses a pre-token boundary. The other two families use WordPiece and Unigram, the two other model types the library supports.</p>
+<p>The tokenization pipeline page documents the four stages. Tokenization algorithms documents BPE, WordPiece and Unigram.</p>
+<p>Each stage was worked on. These are the changes that mattered:</p>
+<p>BPE models use a regular expression to split the input text into smaller, easier to process chunks called pre-tokens. Merges happen inside a pre-token and never across the boundary between two of them, so this split decides what the rest of the pipeline sees.</p>
+<p>That regular expression is a fixed parameter of the model. It ships with the tokenizer and never changes at runtime, so there is no need for a general-purpose regex engine to interpret it on every encode. An equivalent splitting function can be written by hand, once, for the pattern a given model actually uses.</p>
+<p>A hand-written function can then use the SIMD instructions (single instruction, multiple data) of a modern CPU, which apply one operation to many bytes at once and suit UTF-8 text well. bitcannon views the input's bytes as parallel streams of bits, so boundaries fall out of boolean operations across whole registers instead of a scan that advances one character at a time. It decides 64 bytes per register operation. The same idea drives Parabix for text processing and simdjson for JSON.</p>
+<p>This depends on recognising the pattern. A handful of grammars cover most byte-level BPE models, and a tokenizer whose pattern is not among them keeps the regex path and none of this speed-up. That is why the gains above vary as much as they do.</p>
+<p>Real text contains many repeated words. Because BPE always produces the same token IDs for a given pre-token, v1 can save the result after processing it once. A thread-local cache maps each pre-token's bytes to its token IDs, allowing later occurrences to skip the merge process.</p>
+<p>Naturally, as the input grows, the number of unique words can grow more slowly than the total number of words. Repeated words then account for an increasing share of the input. New words still appear, which accounts for the occasional misses in the animation below.</p>
+<p>Caching works best when the input contains repeated pre-tokens. Input with few repeated pre-tokens can pay for lookups without receiving many hits.</p>
+<p>The next major cost comes from the BPE merge loop. For each pre-token, the loop repeatedly finds the highest-priority adjacent pair and merges it. The previous implementation allocated new memory for every call and built a new priority queue for every pre-token.</p>
+<p>v1 reuses a scratch buffer owned by the caller, removing those repeated allocations. It stores symbols in a flat array and links adjacent symbols by their positions in that array, which makes updates during merging cheaper. It also processes a batch of pre-tokens in a single model call.</p>
+<p>Each candidate pair is also packed into a single 64-bit value, with the merge rank in the high bits. Comparing two candidates is then just comparing two integers, and "no merge here" is the largest possible value, so the loop finds its next merge without a branch.</p>
+<p>Small differences in benchmark design can produce large differences in tokenizer performance. We used the following rules to keep the comparison consistent across engines.</p>
+<p>Repeatedly encoding one document can be faster than encoding a stream of distinct documents on the same build. The first approach measures performance when the entire document is already represented in the cache. The second measures performance on new input while allowing previously seen pre-tokens to remain cached.</p>
+<p>Both conditions are sometimes described as "warm," even though they measure different workloads. Our headline results use distinct documents, and the complete corpus is too large to fit in the cache. Tokenizer benchmarks should identify which workload they use because the choice can dominate the result.</p>
+<p>Across the ten model families v1's encode path covers, it encodes text 3 to 30 times faster than v0.23 with one thread on an Apple M4 Max. The low end is t5-base, the high end gpt2. It scales at 76% of linear across eight workers. Throughout these changes, v1 produces exactly the same token IDs as the released library.</p>
+<p>The overall improvement comes from several changes working together: a hand-written splitter in place of a regex engine, a cache that answers a repeated word without merging it again, a merge loop that never touches the allocator, and one model call per batch of pre-tokens instead of one per pre-token. Each reduces the work done at a different point in the pipeline.</p>
+<p>The next priority is support for more model families. We will move additional models onto the new merge loop before 1.0.0. Once the release candidates stabilize, the next step will be bringing about the improvements within the transformers library and the rest of the ecosystem which depend on the tokenizers library.</p>
+<p>This post is generated from tokbench results and will be updated as support expands.</p>
+<p>A release candidate for v1 is on crates.io. The API you call is the one you already call, so the only thing that changes is which build you install.</p>
+<p>Training is behind a default-on feature that pulls a C++ dependency with it. If you only need to encode, turn it off to exclude the training implementation:</p>
+<p>Encoding is unchanged: same call, same ids.</p>
+<p>Every figure in this post was measured against this crate. The Python bindings wrap the same code and are built from bindings/python, but they add per-call overhead that none of these measurements include.</p>
+<p>The benchmarks in this post cover the completed release-candidate work listed first. The remaining sections show what is still required for 1.0.0 and what we plan to explore afterward.</p>
+<p>This work is in the Rust pre-release on crates.io:</p>
+<p>Will have to try it out. Data seems real good.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lwn.net/Articles/1107187/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/tokenizers-v1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
