@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers now runs llama.cpp quants</title>
+    <title>Welcome Le Chonk: Mistral Large 4 on Hugging Face</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9797.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers now runs llama.cpp quants</h1>
+        <h1>Welcome Le Chonk: Mistral Large 4 on Hugging Face</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/ml4/thumbnail.png" alt="Welcome Le Chonk: Mistral Large 4 on Hugging Face" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers_llama_cpp_quants/thumbnail.png" alt="Transformers now runs llama.cpp quants" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/ml4/thumbnail.png" alt="Welcome Le Chonk: Mistral Large 4 on Hugging Face" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We're adding support for running GGUF models efficiently in transformers, so you can use checkpoints sized for your laptop's memory through the familiar transformers APIs. Pick a GGUF from the Hub, load it with from_pretrained, and start generating on your own machine.</p>
-<p>Running AI models on your laptop has become much easier, and llama.cpp has been a big part of that. Its inference engine powers local AI tools such as Ollama, LM Studio, and Jan. Alongside projects like MLX, it has helped make local inference a practical option for everyday use.</p>
-<p>A recent example of what local AI can feel like:</p>
-<p>This is where we are right now. And i’m not gonna lie it feels pretty magical 🧙‍♀️Qwen3.6 27B running inside of Pi coding agent via Llama.cpp on the MacBook ProFor non-trivial tasks on the @huggingface codebases, this feels very, very close to hitting the latest Opus in Claude… pic.twitter.com/lsIxLoUneU</p>
-<p>GGUF, developed by the llama.cpp team, is a widely used format for local inference. The team also shares quantized checkpoints under ggml-org on the Hub. Publishers such as Unsloth, LM Studio Community, and bartowski also provide ready-to-use GGUF checkpoints in a range of quantizations, so users can pick the version that fits their machine. GGUF models have been downloaded millions of times.</p>
-<p>We want to make it easier to run these models locally with transformers, too. Compatibility is only useful if the model is pleasant to run. To bring performance close to llama.cpp, we're reusing its underlying ggml kernels through the kernels library, and reducing overhead in generate. Our initial focus is local inference on Apple Silicon, starting with the Qwen3.5 architecture.</p>
-<p>GGUF packages model weights and metadata, including tokenizer information and an optional chat template, in one file. It supports different quantization levels, letting you trade some precision for a smaller memory footprint. Variants such as Q4_K_M mix tensor precisions, using mostly 4-bit weights while keeping sensitive tensors at higher precision.</p>
-<p>Here's how quantization changes the file size of Unsloth's Qwen3.5-4B:</p>
-<p>We suggest starting with Q4_K_M, then trying Q5_K_M or Q6_K if you have more memory available. More aggressive quantization can help larger models fit, but the quality tradeoff depends on the model and the task. Evaluate it on the work you actually want the model to do. The Hub's GGUF documentation describes the available quantization types.</p>
-<p>To load a GGUF model, pass its Hub model_id and filename as gguf_file to from_pretrained.</p>
-<p>No extra configuration is needed: when the weights stay packed on Metal, transformers automatically loads the compatible ggml/Metal layer kernels and uses ggml-org/ggml-attn as the attention implementation. If that kernel cannot be fetched, the model falls back to "sdpa" with a warning, and you can always force "sdpa" by passing attn_implementation="sdpa" explicitly. See the GGUF documentation for more loading options.</p>
-<p>That is the only GGUF-specific step. Everything after it is the standard transformers API:</p>
-<p>Without a compatible quantization kernel, the loader falls back to dequantizing the model and uses more memory.</p>
-<p>You can also use the same checkpoint with transformers serve, which exposes an OpenAI-compatible API:</p>
-<p>The model argument uses <model_id>:<filename>.gguf: before the colon is the Hub repository (unsloth/Qwen3.5-4B-GGUF), and after it is the file to load (Qwen3.5-4B-Q4_K_M.gguf). This selects a specific quantization from a repository that may contain several.</p>
-<p>For models whose chat template supports thinking, add --reasoning off to skip it or --reasoning on to enable it. The default, --reasoning auto, follows the chat template’s default. See the reasoning options for details.</p>
-<p>You can connect a client such as Jan or Pi by adding a custom OpenAI-compatible provider with these settings:</p>
-<p>transformers runs the model on your Mac, while the client provides the conversation interface. The same endpoint can be used by other clients that support this API.</p>
-<p>Our reference for local inference performance is llama.cpp. The comparison below focuses on three GGUF checkpoints: a small dense model, a larger dense model, and a mixture-of-experts model.</p>
-<p>The llama.cpp column comes from the llama-bench tool (build 5f55650a7, release b10200, Metal backend from ggml 0.18.0), run as llama-bench -m <file> -p 0 -n 128 -r 3, which reports tg128: the token-generation rate over 128 decoded tokens, averaged across three repetitions, with prompt processing excluded. The transformers column is generate producing the same 128 tokens from a 12-token prompt, best of three warmed runs, and it includes prefill.</p>
-<p>Measured on a MacBook Pro M2 Max, 32 GB unified memory, macOS 26.6, PyTorch 2.12.1, kernels 0.17.0,
-plugged in.</p>
-<p>Transformers is close to llama.cpp across all three checkpoints. The chart uses the same measurements described above; it does not imply identical benchmark conditions, since the Transformers measurement includes prefill while llama-bench reports decode-only throughput.</p>
-<p>When GGML and llama.cpp joined Hugging Face, we described their complementary roles: llama.cpp provides a foundation for local inference, while transformers provides a foundation for model definition. GGUF support brings those two closer together.</p>
-<p>llama.cpp remains our recommended engine when your priority is efficient local inference. Its dedicated runtime, memory management, and broad hardware support are built around that goal. This integration gives developers a convenient way to work with the same GGUF checkpoints inside transformers:</p>
-<p>For that last case, use GgufConfig(dequantize=True):</p>
-<p>The bigger opportunity is bringing ggml's performance to models that llama.cpp does not support.</p>
-<p>transformers already provides the PyTorch implementations of these architectures. With ggml kernels and quantization schemes available in PyTorch, we can work toward accelerating their supported operations without first implementing the entire model in llama.cpp. This is especially useful for new architectures, research models, and custom variants that may never receive a dedicated llama.cpp implementation.</p>
-<p>That opportunity extends beyond the GGUF format itself. A kernel operates on tensors; it does not require the whole model to come from a GGUF file. The same building blocks can be integrated into other transformers models and loading workflows. This also opens a path to other modalities: computer vision models, audio models, and multimodal models could reuse compatible attention, normalization, and matrix multiplication kernels without first having a full implementation in llama.cpp. Each architecture still needs integration and validation; the initial GGUF examples here cover text generation.</p>
-<p>We also wanted to show how far we can get while keeping the model and generation loop in Python. With the right kernels and an efficient generation loop, Python and PyTorch can deliver strong local inference performance. The kernels handle the heavy computation, while the generation loop keeps the GPU busy by avoiding unnecessary synchronization.</p>
-<p>Our focus was to make eager execution fast without requiring torch.compile. For interactive use, we wanted a quick start and a steady stream of tokens, without compilation pauses or recompilation when input shapes change. The two main pieces of that work are the kernels and generate itself.</p>
-<p>A kernel is a small program that performs an operation on the GPU. PyTorch supplies general-purpose implementations; a specialized kernel can do less work, combine several operations, or read quantized weights directly in their stored format.</p>
-<p>The kernels library lets us distribute compatible builds of ggml's Metal kernels on the Hub and call them from transformers. That brings ggml's work into the PyTorch model without replacing the model with a separate inference runtime.</p>
-<p>The first four packages build on ggml's kernels; the top-k kernel addresses a separate bottleneck in MoE routing. Together they reduce the GPU work needed for each generated token.</p>
-<p>To show the contribution of the layer kernels, we compare the same packed GGUF checkpoints with and without them. The quantization kernel stays enabled in both configurations: disabling it would also change how weights are represented and would measure a different tradeoff.</p>
-<p>Faster kernels only help if the GPU has work to do. During generation, the CPU schedules GPU operations and controls the loop that produces the next token. Reading a result back from the GPU can force the CPU to wait until queued operations finish. Repeating even a small wait for every token can noticeably reduce throughput.</p>
-<p>Two changes address this in generate, which results in improvements for all transformers models (not just when running GGUF files):</p>
-<p>These changes improve the generation loop around the model, so their usefulness extends beyond GGUF. They complement the kernel work: kernels reduce the cost of an operation, while fewer synchronization points let CPU scheduling and GPU execution overlap.</p>
-<p>These measurements keep all layer kernels enabled; the bars isolate the changes to the generation loop.</p>
-<p>The initial target is a single interactive conversation on Apple Silicon. There are a few boundaries to keep in mind:</p>
-<p>If you have a GGUF model you would like to use in transformers, open an issue with the checkpoint and your use case. That will help us prioritize support for the models people are running locally.</p>
-<p>We would like to thank Arthur Zucker for initiating this work and reviewing all of my PRs, and Cyril Vallez for the generate PRs. We are grateful to Sayak Paul, the llama.cpp team, and Bertrand Chevalier for their help integrating the kernels. We also thank Aritra Roy Gosthipaty and Pedro Cuenca for reviewing this blog post, and Lysandre Debut for overseeing the project.</p>
+                <p>Mistral Large 4 (aka Le Chonk) is a multimodal, multilingual, Mixture-of-Experts (MoE) model from Mistral. It takes text and images as input and generates text. It has about 1T total, 49B active parameter, and a context window of 1M tokens.</p>
+<p>The model is released in two official variants:</p>
+<p>There are also GGUFs created by Unsloth and the llama.cpp team. It’s distributed under the Mistral Ecosystem Open-Weight License (an MIT derivative that establishes limitations for model-as-a-service offerings).</p>
+<p>Mistral Large 4 is particularly strong for cybersecurity, coding agents, and multimodality. In this post, we look at how the model works, its capabilities, architecture and more!</p>
+<p>Mistral Large 4 combines a large pool of experts with sparse attention and a Pixtral vision encoder. The language model selects a small group of experts for each token, while its attention indexer selects which earlier token positions to attend to. These are two different forms of sparsity, where one selects feed-forward networks, the other selects context positions.</p>
+<p>You can find all the checkpoints in the Mistral Large 4 collection.</p>
+<p>Mistral Large 4 scores 82% on the Artificial Analysis Cyber Index test that asks a model to reproduce a real vulnerability in open-source software and then patch the software. Mistral reports that several closed frontier models score near zero on the same test because they refuse to attempt the work. This is super important for defenders, because fixing a vulnerability usually requires reproducing the vulnerability. In Mistral’s internal testing, Mistral Large 4 was also useful for malware analysis, vulnerability prioritisation and writing detection rules, which the model was not explicitly trained for.</p>
+<p>Mistral mainly positions the model for defensive security work. Vulnerability research and incident response often appear like attacks in model input, so closed source filters can block them. A team that depends on an API can also lose access in the middle of an incident. Crucially, open weight models put both the usage policy and the deployment under the user’s control. That said, the model still declines harmful requests: on cyber prompts from JailbreakBench, StrongREJECT and AgentHarm, its average refusal rate is higher than any other open weight model.</p>
+<p>For community builders, an open weight model like Mistral Large 4 unlocks a load of downstream use cases. You could build your own cyber system around your code base, crash logs, and malware samples. For example, with TRL you could fine-tune smaller models from Mistral Large 4 traces patching your code base. In fact, reproduce-then-patch tasks use a verifiable reward, so it fits with RL environments that could be used to further RL smaller security models. Open weights also let researchers measure the model’s refusal behaviour directly instead of relying on the provider’s description.</p>
+<p>In short, cyber capabilities like ML4’s in the open are a huge boost for the community.</p>
+<p>We have interviewed Pierre Stock about the cyber capabilities of the model, you can watch it here.</p>
+<p>Mistral Large 4’s text decoder has 72 layers, a hidden dimension of 6,144, and 64 attention heads. Its attention blocks combine Multi-head Latent Attention (MLA) with a DeepSeek Sparse Attention (DSA) indexer (a direction in other models such as GLM 5.3). MLA keeps a compressed KV representation, and DSA selects up to 2,048 key positions for each query.</p>
+<p>For each decoder block, there’s a 3:1 RoPE to NoPE pattern, i.e. 3 decoder layers employ RoPE and every fourth layer uses NoPE. The model also shares KV state across layers.The first decoder layer uses a dense feed-forward network. The other 71 layers use MoE blocks, in which a softmax router selects four of the 128 experts for each token. One shared expert always runs alongside the selected experts, for a total of 5 active experts per token.</p>
+<p>Regarding RoPE, Mistral uses LeRope, a YaRN-scaled RoPE with one learned multiplier per frequency.</p>
+<p>Mistral Large 4 employs a 1.6B Pixtral encoder. Pixtral has 30 layers, a hidden dimension of 2,048, and 16 attention heads. It uses 14 × 14 patches and a patch-merge projector with spatial merge size 2. You can see the encoder pipeline below.</p>
+<p>Mistral Large 4 delivers strong benchmark performance across coding, cybersecurity, multimodal understanding, and agentic workflows, positioning it as a competitive addition to the open-weight ecosystem. As of October 29, 2026, the model is the fifth best open weights model on Artificial Analysis Intelligence index.</p>
+<p>On coding, ML4 achieves 61.7% on DeepSWE v1.1, 59.4% on SWE-Atlas-QnA, and 28.3% on Terminal-Bench 4. Its combined Coding Agent Index score of 49.8% places it ahead of DeepSeek V4 Pro 0813 and Qwen3.8 Max.</p>
+<p>Coding capabilities of ML4 extend to knowledge work, with 59.9% on AutomationBench and 1,393 Elo on AA-Briefcase, which evaluate business workflows and long-horizon professional tasks.</p>
+<p>Cybersecurity is one of Mistral Large 4’s standout capabilities, with strong results across real-world vulnerability assessment and security competition tasks. Three benchmarks highlight the model’s cyber performance:</p>
+<p>Mistral Large 4 also demonstrates 93.3% attack resistance on Lakera’s B3 benchmark, adding evidence of robustness against prompt-injection attacks. Beyond benchmarks, internal testing showed promising results in malware analysis, vulnerability prioritization, and detection-rule generation.</p>
+<p>Mistral Large 4 is shipped with day-0 support for transformers, vLLM and llama.cpp. GGUF quants are available from GGUF and the llama.cpp team. We provide options to deploy remotely with Inference Endpoints, and use serverless inference through Inference Providers.</p>
+<p>The Transformers implementation provides AutoModelForMultimodalLM, with AutoProcessor preparing the conversation and image inputs. Mistral Large 4 can take low, medium, high as reasoning effort. The default is high, and note that reasoning cannot be disabled, so using reasoning_effort: none would still use high.</p>
+<p>To run the model, upgrade the transformers package</p>
+<p>You can run the script above by saving it in a python file script.py and then run</p>
+<p>vLLM supports the high-quality NVFP4 Mistral Large 4 checkpoint, which has a smaller memory footprint and requires NVIDIA Blackwell GPUs. The model also ships with a DSpark drafter for additional speed-ups with vLLM. Launch the server like this:</p>
+<p>Once the server is up and running, you can run the following.</p>
+<p>Llama.cpp and Llama App already support Mistral Large 4.</p>
+<p>You can install Llama App with the following command:</p>
+<p>Then you can start the server as follows, indicating the quant suffix after the model ID:</p>
+<p>Here’s the repository with the  quants derived from the FP8 checkpoint, and this is the NVFP4 one, converted from the official NVFP4 repo.</p>
+<p>Once the server has started, you can head to localhost:9931 to chat using the built-in WebUI. From the web UI you can add images for inference and adjust the reasoning lever.You can also query the server as follows. Feel free to check out the API reference for multimodality, tool calls and more.</p>
+<p>You can run image-text inference as follows.</p>
+<p>The llama.cpp team ships the following quants: IQ2_XXS, Q2_K, Q4_K_M, NVFP4, Q8_0, and BF16 for further conversions. The 2-bit quants run on a single Apple Silicon Ultra computer with 512 GB of unified RAM. The others require distributed inference. You can also run on multiple NVIDIA or AMD cards.</p>
+<p>Running Q2_K on a single M3 Ultra, we got a prefill throughput of about 90 tokens per second, and a generation speed of 15 tok/s. On 4 x RTX6000 Pro, we observed the following results:</p>
+<p>We also ship day 0 support of fine tuning Mistral Large 4 using TRL. All you have to do is upgrade to the latest version of transformers, trl and peft.</p>
+<p>In the following example we train the model to perform multilingual thinking. The fine tuned model would be able to reason in the language the system prompt asks for!</p>
+<p>The script runs on the FP8 variant on a node of 8xB300s. The full example, with a Slurm launcher, is in TRL's examples.</p>
+<p>Mistral Large 4 is also available on Inference Endpoints, with a ready-to-deploy recipe on 8 x NVIDIA H200 GPUs. The recipe runs vLLM with the FP8 weights split across all eight GPUs using tensor and expert parallelism, and uses the model's built-in DSpark draft head for faster generation through speculative decoding. It serves up to 131K tokens of context and processes up to 16 requests at a time, and we observed the following results:</p>
+<p>You can deploy it with the hf CLI as follows:</p>
+<p>Once the endpoint is running, you can query its OpenAI-compatible API, using the endpoint URL and your Hugging Face token. The reasoning_effort field controls how much the model reasons before answering, and can be set to low, medium, or high (default).</p>
+<p>The answer comes back in choices[0].message.content, and the reasoning in choices[0].message.reasoning. The endpoint also supports tool calls, structured outputs, image inputs, and streaming through the standard Chat Completions fields.</p>
+<p>The easiest way to get up and running with your Dell AI Servers (NVIDIA H200, B200, GB200 or GB300) is by installing the dell-ai CLI:</p>
+<p>And use it to run an optimized recipe for Mistral Large 4 on e.g., a NVIDIA B300 node.</p>
+<p>You can find more about this release in the Dell Enterprise Hub (DEH).</p>
+<p>Grab the weights from the Mistral Large 4 collection, run them locally with the GGUFs, or deploy them with Inference Endpoints. We can't wait to see what you build with Le Chonk. Share your fine-tunes, quants and other artefacts on the Hub!</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-llama-cpp-quants" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/mistral-large4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

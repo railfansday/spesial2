@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐯 Liger GRPO meets TRL</title>
+    <title>A tiny supercurrent could unlock quantum information without destroying it</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10533.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,50 +15,91 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>🐯 Liger GRPO meets TRL</h1>
+        <h1>A tiny supercurrent could unlock quantum information without destroying it</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/liger-grpo/thumbnail.png" alt="🐯 Liger GRPO meets TRL" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/supercurrent-enables-reading-of-quantum-information.webp" alt="A tiny supercurrent could unlock quantum information without destroying it" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/liger-grpo/thumbnail.png" alt="🐯 Liger GRPO meets TRL" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/supercurrent-enables-reading-of-quantum-information.webp" alt="A tiny supercurrent could unlock quantum information without destroying it" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>TL; DR
-Liger supercharges TRL’s Group Relative Policy Optimization GRPO Trainer by slashing memory usage by 40% with zero drop in model quality. We also added support for FSDP and PEFT, making it easier than ever to scale GRPO across multiple GPUs.</p>
-<p>Fine-tuning language models using reinforcement learning (RL) is a crucial step in a model's training lifecycle for steering models towards desirable behaviours which are more complex than can be achieved through typical supervised fine-tuning. RL has traditionally been applied to optimize large language models (LLMs) using the Proximal Policy Optimization (PPO) algorithm. This approach, often associated with Reinforcement Learning from Human Feedback (RLHF), utilizes a separately trained reward model to guide the fine-tuning of the primary model.</p>
-<p>However, RLHF with PPO is a very resource-hungry approach - PPO requires loading multiple models in memory (policy, value, reward, and reference models), and also requires several iterations of fine-tuning reward and base models to achieve the desired results. The success of RLHF also depends on the capability of the reward model to effectively discriminate between desired and un-desired behaviour from our model.</p>
-<p>Group Relative Policy Optimization (GRPO) has seen significant recent popularity alongside DeepSeek's R1 model. GRPO eschews the pre-trained reward model and value models used in RLHF and instead relies on verifiable reward functions which can check the correctness of a model's output in a closed-form manner without needing an external reward model. This has resulted in massive improvements when using GRPO instead of PPO for fine-tuning on domains which are easily verifiable, such as teaching a model to reason, and perform well on math and coding tasks.</p>
-<p>The following diagram shows the GRPO vs PPO training pipeline (ref: Figure 4 of DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models):</p>
-<p>That said, RL training still eats up a ton of GPU memory, so there's still plenty of room for optimizations here. In this blog post, we talk about an optimization that we recently added to TRL that cuts peak memory usage by 40% during GRPO Training, and we also dive into how to scale GRPO to multiple GPUs and nodes without losing performance or correctness.</p>
-<p>We extended the Liger Chunked Loss approach to the GRPO Loss, which lets us avoid having to store the full logits in memory for every training step. The calculation of logits, which involves the model's output head, is a significant contributor to peak memory usage, especially when dealing with large vocabularies, long sequence lengths, or large batch sizes. We address this by chunking the input to the lm_head across the batch and running the forward pass one chunk at a time.</p>
-<p>But if you just implement it in a straightforward way, you won't actually be able to reduce the peak memory since you'd still need to keep all the logits in GPU memory for the backward pass. To get around that, we calculate the gradients for each loss chunk (with respect to the input chunk and the lm_head weight) during the forward pass, and then accumulate them as we go through each chunk.</p>
-<p>Here's the visualization of the optimization (ref: Byron Hsu):</p>
-<p>We recently integrated Liger GRPO with TRL in PR #3184, so now you can use the Liger GRPO loss just by setting use_liger_loss to True in your GRPOConfig and enjoy the memory savings!</p>
-<p>Heads up: these features aren't in the latest TRL release yet, so you'll need to install TRL from source for now:</p>
-<p>We ran a bunch of GRPO experiments with and without the Liger GRPO Loss to see how things compare. For the policy model, we used Qwen3-0.6B and played around with different batch sizes. All the experiments were run on the gsm8k dataset using its reward functions.</p>
-<p>Here's the plots of peak memory usage vs batch size for both FP32 and BF16 training. As expected, the memory savings get better with larger batch sizes since we chunk along the batch dimension. So when the batch size goes up, the Liger chunked loss ends up using a lot less memory, up to 40% less, compared to the regular (non-liger) version.</p>
-<p>Quick note: Right now, we only support FP32, but we're working on open-sourcing BF16 support for Liger GRPO in TRL. The BF16 results shown here are from internal patches we've been testing.</p>
-<p>We also show that Liger Loss is effectively accurate. As seen in the plot, rewards over training steps stay pretty much the same as what you'd see using the standard TRL implementation.</p>
-<p>We also added FSDP and PEFT support to Liger GRPO Loss in PR #3260 and PR #3355, respectively, allowing users to easily scale their experiments across multiple GPUs or nodes. PEFT techniques such as LoRA and QLoRA reduce the number of trainable parameters by only tuning the weights of smaller adapter weights on top of the original model, significantly lowering memory pressure as gradients, activations, and optimizer states for the entire model don't need to be held in memory. Additionally, using PEFT in GRPO allows one to forgo loading a separate reference model during training, as we can obtain the original, unmodified model during training by simply disabling the LoRA adapters.</p>
-<p>Here, we show a multi-GPU GRPO training plot using FSDP and PEFT, where we compare the maximum training batch size possible with and without the Liger Loss across different Qwen3 model sizes. We found that with Liger, we were able to bump up the batch size by around 1.5 to 1.8x!</p>
-<p>To accelerate text generation during training, Liger Loss can be effectively combined with TRL's integrated vLLM server. This significantly speeds up the collection of rollout data with minimal overhead and offers a seamless integration experience.</p>
-<p>Start the vLLM Server:
-First, launch the vLLM server. This server will handle the generation requests from your training script. Open a terminal and run:</p>
-<p>Note: We assign CUDA_VISIBLE_DEVICES=1 to run the vLLM server on a specific GPU (GPU 1 in this case), leaving other GPUs free for training.</p>
-<p>Configure and Run Your Training Script:
-Next, modify your training script to use the vLLM server. The key change is setting use_vllm=True in your GRPOConfig.</p>
-<p>Launch the Training:
-Finally, run your training script using accelerate launch (or python if not using Accelerate for multi-GPU/distributed training). Make sure to target a different GPU for training if your vLLM server is occupying one.</p>
-<p>(Assuming your script is named train.py and you want to run training on GPU 0).</p>
-<p>By following these steps, you can leverage vLLM for faster generation turnarounds during your GRPO training with Liger Loss.</p>
-<p>With the integration of Liger-GRPO into TRL, alongside FSDP and PEFT support, fine-tuning language models with GRPO is now more memory-efficient and scalable than ever. We encourage the community to try out these new features and share their feedback to help us further improve RL training for LLMs.</p>
-<p>Does Liger Kernel affect training speed at all? Is it faster, slower, or no difference compared to regular GRPO?</p>
-<p>it depends on the setup usually, might be effective in boost, and may not either!</p>
-<p>In our experiments, we observed no significant difference in training speeds with and without liger</p>
-<p>Anyway, I tested the liger loss with deepspeed zero3 using Qwen/Qwen2.5-0.5B-Instruct in a bf16.I met an shape mismatch as stated below:</p>
-<p>Does liger GRPO support multi-gpu training with deepspeed zero3?</p>
+                <p>One of the biggest obstacles in quantum computing is surprisingly simple to describe: how do you read information without changing or destroying it? Unlike the bits used in ordinary computers, quantum bits, or qubits, are extraordinarily sensitive to measurement. Trying to determine their state can cause that state to collapse, potentially erasing the very information scientists want to retrieve.</p>
+<p>Researchers have now proposed a way to overcome much of this difficulty by using an unusual electrical signal produced by the qubit itself. Their approach focuses on a special type known as an "Andreev qubit," which can generate an oscillating electric supercurrent through its own quantum behavior. By monitoring this current, scientists may be able to determine the qubit's state without directly measuring it or significantly disturbing the information it contains.</p>
+<p>The research, supported by FAPESP, was published in Physical Review B Letters. It was led by José Carlos Egues, a full professor at the São Carlos Institute of Physics at the University of São Paulo (IFSC-USP) in Brazil, and Yugui Yao of the School of Physics at the Beijing Institute of Technology in China. If experimentally confirmed, their method could simplify quantum computing by removing the need for extra qubits used in certain measurement techniques.</p>
+<p>Why Measuring Quantum Information Is So Difficult</p>
+<p>Conventional computers store information in bits that have one of two values, 0 or 1. These values can be checked repeatedly without changing the information. Quantum computers work differently because their qubits can exist in superpositions, meaning they can combine the states 0 and 1 in ways that are not possible with conventional bits.</p>
+<p>This unusual ability is central to the potential power of quantum computing. However, it also creates a major vulnerability. Quantum states can be disrupted by interactions with their surroundings, including the instruments scientists use to examine them.</p>
+<p>"In the conventional formulation of quantum mechanics, a projective measurement causes the system to assume one of the states associated with the measured quantity. Thus, if a qubit has been prepared in a certain superposition of 0 and 1, its direct measurement tends to destroy that superposition and, consequently, the information it contained," says Egues.</p>
+<p>To minimize this problem, physicists developed techniques known as "quantum nondemolition measurements," or QND. Many of these approaches use an additional quantum system called an ancilla. Rather than measuring the original qubit directly, researchers transfer information to the ancilla and measure that auxiliary system instead.</p>
+<p>The term "ancilla" comes from a Latin word meaning "slave" or "servant." In modern scientific usage, it describes something that performs a supporting function. Here, the ancilla acts as an intermediary, allowing researchers to obtain information while preserving the original qubit as much as possible.</p>
+<p>Although effective, these procedures come with practical disadvantages. Scientists must prepare the auxiliary qubits, connect them to the qubits being studied, transfer information between them, and perform repeated measurements. These additional steps require time and equipment, and the complexity becomes increasingly significant as the number of qubits grows.</p>
+<p>"Our strategy is different. Instead of transferring the information to an auxiliary qubit, we seek to obtain it from a signal produced by the qubit under study itself," says the researcher.</p>
+<p>A Special Quantum Bit That Produces Its Own Signal</p>
+<p>The proposed technique relies on the unusual properties of an Andreev qubit. Its name honors Soviet physicist Alexander Andreev (1939-2023), who identified a distinctive quantum process in 1964 that occurs where normal materials meet superconductors.</p>
+<p>Superconductors are materials that can conduct electricity without electrical resistance under appropriate conditions. At the boundaries involving these materials, special quantum states known as "Andreev states" can form. In the system studied by the researchers, these states are confined to an extremely small region between two superconducting materials.</p>
+<p>These quantum states can represent the basic values 0 and 1, along with superpositions of those values, making them suitable for storing quantum information.</p>
+<p>"In the system under consideration, this region is a quantum dot - that is, a nanoscale structure in which electrons are spatially confined - formed in an indium arsenide [InAs] nanowire connected to superconducting materials on both sides. It's in this environment that the states characterizing the Andreev qubit are formed," Egues explains.</p>
+<p>The key to the new approach is an electrical phenomenon called a "supercurrent." Unlike the current flowing through ordinary electrical conductors, a supercurrent moves without resistance.</p>
+<p>The researchers found that when the Andreev qubit exists in a superposition, the supercurrent develops a component that oscillates over time. These fluctuations arise from quantum interference between the different states making up the superposition.</p>
+<p>Crucially, the oscillations are not random. Their behavior contains information about the qubit's underlying quantum state, potentially allowing scientists to determine what that state is without directly measuring the qubit.</p>
+<p>"It's precisely that property that we use to read the qubit. It's that supercurrent that lies at the heart of our proposal," the researcher points out.</p>
+<p>How a Tiny Electrical Current Reveals Quantum Information</p>
+<p>To understand how the technique works, it helps to consider how physicists describe a qubit's state mathematically.</p>
+<p>One common representation is the "Bloch sphere," a geometric model in which every possible pure state of a single qubit corresponds to a point on the surface of a sphere. Two angles determine the location of that point.</p>
+<p>The first angle describes how much each of the two basic states contributes to the superposition. The second describes their relative phase, which specifies how the quantum components are aligned with one another. Together, these two measurements provide the information needed to identify the qubit's state.</p>
+<p>According to the new research, both pieces of information can be extracted from the supercurrent. Its steady component and the size of its oscillations reveal the relative contributions of the two basic states. Meanwhile, the timing of the oscillations provides information about their phase relationship.</p>
+<p>"Our study showed that this information is encoded in the supercurrent itself. The supercurrent has a constant component and a fluctuating component. The value of the constant component and the amplitude of the oscillation reveal the proportion of each state (0 and 1) in the superposition, and the moment when that oscillation begins reveals the phase relationship between them. Thus, by measuring how the current varies over time, it's possible to reconstruct the initial state of the qubit," Egues explains.</p>
+<p>This means the electrical current effectively carries a signature of the quantum information stored in the system. By observing how that signature changes over time, researchers could reconstruct the qubit's original state.</p>
+<p>A Supercurrent That Oscillates Without Voltage</p>
+<p>Another surprising feature of the proposed system is that the electrical current can oscillate without an externally applied voltage.</p>
+<p>Ordinarily, producing an oscillating supercurrent in this type of superconducting system requires a voltage. This familiar phenomenon is called the "AC Josephson effect."</p>
+<p>The researchers predict something different in their Andreev qubit. Here, the current's oscillations arise naturally from the qubit's own quantum evolution. No outside voltage is required to generate them.</p>
+<p>"Our system generates a supercurrent that varies over time like an alternating current but without voltage. It's the very evolution of the qubit's state that produces that oscillation," says Egues.</p>
+<p>This behavior is important because it transforms quantum activity occurring on an extraordinarily small scale into a detectable electrical signal. The current provides a connection between the microscopic world of quantum states and the larger physical systems scientists can measure.</p>
+<p>That connection is what makes the proposed reading technique possible.</p>
+<p>Detecting Quantum States With an Extremely Sensitive Sensor</p>
+<p>The researchers envision placing the Andreev qubit inside a closed superconducting circuit, allowing its supercurrent to circulate continuously.</p>
+<p>Next to the circuit would sit a SQUID (superconducting quantum interference device), a highly sensitive instrument capable of detecting extremely weak magnetic fields.</p>
+<p>Whenever an electric current flows, it produces a magnetic field. Because the supercurrent in this system oscillates, the magnetic field it generates also changes over time.</p>
+<p>The nearby SQUID could detect these tiny magnetic variations and use them to determine the behavior of the circulating current. Since the current contains information about the qubit's quantum state, the researchers could then reconstruct that state without measuring the qubit directly.</p>
+<p>Egues compares the arrangement to two compasses that interact through a magnetic field.</p>
+<p>"We can think of the qubit as one compass and the SQUID as another compass. The current in the circuit produces a magnetic field, and the SQUID 'senses' that field. Since the coupling between the two is very weak, the effect of the measuring instrument on the qubit tends to be very small."</p>
+<p>The weak interaction between the sensor and the qubit is especially important. It offers a way to gather information while minimizing the disturbance that normally accompanies quantum measurements.</p>
+<p>Reading Quantum Information With Almost No Disturbance</p>
+<p>In quantum physics, observing a system is not necessarily a harmless process. A measuring instrument interacts with whatever it is attempting to measure, and that interaction can change the system's behavior.</p>
+<p>This fundamental difficulty puzzled the earliest researchers studying quantum mechanics. It remains an unavoidable feature of quantum measurements today.</p>
+<p>The proposed technique does not eliminate this effect entirely. The SQUID still interacts with the circuit, creating a small amount of feedback that can influence the qubit. However, the team's simulations suggest that this disturbance can be reduced to a level so small that it becomes effectively negligible.</p>
+<p>"Our method doesn't eliminate the fundamental problem of quantum measurement. But it can approach the limit of a non-destructive readout and, at the same time, avoid the use of auxiliary qubits - the ancillas - employed in other non-destructive quantum measurement protocols," Egues notes.</p>
+<p>The approach could also remove another complication found in some existing techniques. Because researchers would not need to restore the qubit to its original state after every measurement, they could make repeated observations as the state changes.</p>
+<p>This would allow scientists to follow the qubit's quantum evolution over time, rather than obtaining information only through separate measurement and reset cycles.</p>
+<p>Simulations Achieve Up to 99.85% Accuracy</p>
+<p>To investigate whether the method could work outside ideal theoretical conditions, the researchers performed computer simulations designed to account for imperfections that would arise in real experiments.</p>
+<p>These calculations included measurement noise, as well as the small amount of feedback introduced by the detection coil. The goal was to determine whether the qubit's state could still be reconstructed accurately despite these disturbances.</p>
+<p>The results were encouraging. Depending on the number of measurements used, the simulations produced accuracies of 99.52%, 99.81%, and 99.85%.</p>
+<p>According to the researchers, these values fall within the standard thresholds used in quantum error correction schemes, which are designed to manage errors in quantum information processing.</p>
+<p>The findings suggest that the method could provide highly accurate quantum state reconstruction without the additional complexity of auxiliary qubits.</p>
+<p>However, the technique has not yet been demonstrated experimentally. The results come entirely from theoretical analysis and computer simulations, so researchers still need to establish whether a physical device can achieve comparable performance.</p>
+<p>Could This Make Quantum Computers Simpler?</p>
+<p>Despite the lack of experimental confirmation, the researchers emphasize that their proposal does not depend on technologies that have yet to be invented.</p>
+<p>The calculations use realistic properties drawn from existing quantum systems, and SQUID sensors are already established tools for detecting exceptionally weak magnetic fields and electric currents.</p>
+<p>What remains to be built is the specific arrangement of components required to implement the proposed measurement technique.</p>
+<p>"All the numbers we used are realistic. In principle, this can be achieved. In fact, we used parameters from existing systems in our calculations. What doesn't yet exist is that geometry, that setup that we proposed," he argues.</p>
+<p>This makes the approach different from theoretical concepts that cannot be realized until scientists develop entirely new materials or manufacturing techniques. In principle, the necessary components already exist, although assembling them into the proposed configuration and demonstrating the predicted behavior remain important challenges.</p>
+<p>The research offers two potentially significant advances.</p>
+<p>From the standpoint of fundamental physics, it predicts that a qubit can produce an oscillating supercurrent resembling the AC Josephson effect, but without requiring an external voltage. Instead, the oscillations emerge from the qubit's own coherent quantum evolution.</p>
+<p>From a technological perspective, the study shows how those oscillations could serve as a measurable signature of the qubit's internal state. By analyzing the electrical current, researchers could recover quantum information while causing very little disturbance to the system.</p>
+<p>If future experiments confirm these predictions, the method could make reading Andreev qubits substantially simpler. Eliminating auxiliary qubits and repeated resets could reduce the equipment and procedures needed to retrieve quantum information.</p>
+<p>More fundamentally, the work points toward an intriguing possibility: information hidden in the microscopic quantum world may be accessible through an electrical current produced by the quantum system itself, offering a promising new way to observe delicate quantum states without destroying them.</p>
+<p>Materials provided by FundaÃ§Ã£o de Amparo Ã  Pesquisa do Estado de SÃ£o Paulo. Original written by JosÃ© Tadeu Arantes. Note: Content may be edited for style and length.</p>
+<p>Scientists Just Challenged a 50-Year-Old Theory About How Evolution Work</p>
+<p>âA Magnetar Is Bornâ: Supercomputer Simulates One of the Universeâs Most Violent Collisions</p>
+<p>Powerful New Weight-Loss Drug Could Change How Millions Treat Painful Knee Arthritis</p>
+<p>A 3-Million-Year-Old Fossil Is Turning the Story of Human Evolution Upside Down</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/liger-grpo" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/11/261102202831.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

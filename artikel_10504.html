@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KV Cache from scratch in nanoVLM</title>
+    <title>Microsoft 365 outage leads to chlorine gas poisoning of 15 hotel guests</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10504.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,50 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>KV Cache from scratch in nanoVLM</h1>
+        <h1>Microsoft 365 outage leads to chlorine gas poisoning of 15 hotel guests</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/kv-cache/thumbnail.png" alt="KV Cache from scratch in nanoVLM" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn.mos.cms.futurecdn.net/LVU3kxMU42xw93Lbc2p2Wc-1920-80.jpg" alt="Microsoft 365 outage leads to chlorine gas poisoning of 15 hotel guests" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/kv-cache/thumbnail.png" alt="KV Cache from scratch in nanoVLM" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn.mos.cms.futurecdn.net/LVU3kxMU42xw93Lbc2p2Wc-1920-80.jpg" alt="Microsoft 365 outage leads to chlorine gas poisoning of 15 hotel guests" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We have implemented KV Caching from scratch in our nanoVLM repository (a small codebase to train your own Vision Language Model with pure PyTorch). This gave us a 38% speedup in generation. In this blog post we cover KV Caching and all our experiences while implementing it. The lessons learnt are general and can be applied to all autoregressive language model generations. Implementing from scratch on a small codebase is a great learning experience, come along for the ride!</p>
-<p>Autoregressive language models generate text by sampling one token at a time. During inference, the model processes a given input sequence, predicts the next token, appends it to the sequence, and repeats this process until some stopping criterion:</p>
-<p>This step-by-step generation is inherently sequential:</p>
-<p>This repetition also leads to computational redundancy. In this post, we explore KV Caching, an optimisation technique that mitigates this inefficiency.</p>
-<p>Before diving into caching, let’s revisit how attention operates in transformer models. A Transformer language model consists of stacked layers, each composed of:</p>
-<p>To understand where KV Caching helps, we focus on the self-attention mechanism, specifically within a single attention head.</p>
-<p>Let’s walk through a simple PyTorch implementation to visualise the key computations.</p>
-<p>For a sequence of T T T input embeddings represented as X∈RT×D X \in \mathbb{R}^{T \times D} X∈RT×D, self-attention is computed as:</p>
-<p>Attention(X;Q,K,V)=softmax(QK⊤⋅Mdk)V
-\text{Attention}(X; Q, K, V) = \text{softmax}\left( \frac{QK^\top \cdot M}{\sqrt{d_k}} \right)V
-Attention(X;Q,K,V)=softmax(dk​​QK⊤⋅M​)V</p>
-<p>Here’s a minimal PyTorch equivalent using a causal mask:</p>
-<p>In autoregressive generation, the model generates one token at a time. With each step, it recomputes Q Q Q, K K K, and V V V for the entire sequence, even though the earlier tokens haven’t changed.</p>
-<p>These checks show that for all but the newest token, K K K and V V V are identical to previously computed values.</p>
-<p>Most of the attention computation is repeated needlessly. This gets more expensive as sequences grow.</p>
-<p>To eliminate this inefficiency, we use KV Caching:</p>
-<p>This changes generation from full-sequence re-computation to a lightweight, incremental update.</p>
-<p>✅ In practice, this cache is a per-layer dictionary with keys "key" and "value", each of shape (batch_size, num_heads, seq_len_cached, head_dim).</p>
-<p>This is the foundation of how modern LLMs can generate long outputs efficiently.</p>
-<p>Now that we understand the theory behind KV Caching, let’s see how it’s implemented in practice inside our nanoVLM repository. This is an ideal testbed, as it's a super concise and self-contained codebase.</p>
-<p>KV caching is enabled across three key components in our model:</p>
-<p>In the LanguageModelGroupedAttention class, we modify the forward function to accept and update a cache of keys and values (block_kv_cache).</p>
-<p>Previously, the model recomputed K K K and V V V at every generation step. Now we only compute Knew K_{\text{new}} Knew​, Vnew V_{\text{new}} Vnew​ for the current token, and append them to the cached values.</p>
-<p>In the LanguageModel class, we introduce layer-wise cache tracking. The start_pos argument helps the model compute correct rotary positional encodings for newly generated tokens.</p>
-<p>The biggest architectural change is in the generate() method of the VisionLanguageModel.</p>
-<p>By separating these phases, we avoid redundant computation and dramatically speed up inference, especially for long prompts.</p>
-<p>KV caching eliminates unnecessary computation during autoregressive generation, enabling faster and more efficient inference, especially in long sequences and real-time applications. This is a trade-off between speed and memory, and its drawbacks can be more complex code and restricting fancier inference schemes, like beam-search, etc. KV caching is a popular method for speeding up LLM inference, making it possible to run them on consumer hardware, and now you know how it works too!</p>
-<p>Special thanks to Tushar Dhar for their comment and helping us make the blog better.</p>
-<p>Thanks  for this great article! I'm learning a lot from the nanoVLM project.I'm not an expert in gen ai but I noticed the attention calculation example seems to be missing the scaling √(d_k). Is this intentional for simplification?</p>
-<p>From my understanding this scaling prevents the dot product growing too large and control the softmax region</p>
-<p>Would you like to raise a PR to the blog post with the changes to the code?</p>
-<p>Here is the source for the blog post: https://github.com/huggingface/blog/blob/main/kv-cache.md</p>
-<p>Nice read, I found the prefill and decode explanation very intuitive. Good job 👏</p>
-<p>made this visual representation of what happens inside the attention mechanism when using kv caching.thought i'd share it with the community 🤗</p>
-<p>Hi Team,kv_cache only for text? Is it doing for images in this Articles.</p>
-<p>caching results can be used for diffusion applications as well, although not similar to KV caching since kv caching is optimized for next token prediction while in diffusion the full sequence already exists.the short answer to your question is yes kv caching is only for next token prediction but there are other caching techniques out there for other taskstry checking what PrunaAI has been doing to optimize diffusion models, here's a link to one of their previous presentations :  LINKEDIN_POST</p>
-<p>Hi,Thanks for helping me understand KV caching,</p>
-<p>I just had a clarifying question,in the diagram for this attention matrix (mentioned above in the article):</p>
-<p>Original (5×5):                     Extended (6×6):■ ■ ■ ■ ■   ->                   ■ ■ ■ ■ ■ □■ ■ ■ ■ ■       ->              ■ ■ ■ ■ ■ □■ ■ ■ ■ ■    ->              ■ ■ ■ ■ ■ □■ ■ ■ ■ ■    ->                       ■ ■ ■ ■ ■ □■ ■ ■ ■ ■     ->                          ■ ■ ■ ■ ■ □.......................                            □ □ □ □ □ □</p>
-<p>you say that :"□ = Recomputed unnecessarily"</p>
-<p>But is that not the part we need to compute and the white ones are recomputed unnecessarily,I might be taking the wording the wrong way I feel so needed to askThanks anyways! great read! 🤗</p>
-<p>You are absolutely right! Thanks for catching it. We have updated the blog and also credited you for the comment. 🤗 https://github.com/huggingface/blog/pull/3593</p>
+                <p>Join for quick access. Enter your email below and we'll send confirmation plus sign you up to our newsletter.</p>
+<p>Get started with free access to reviews, badges and discussions.</p>
+<p>Unlock exclusive tools and insights for enthusiasts who want more.</p>
+<p>Access Bench, Roadmaps, deep analysis and other exclusive tools.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Keep exploring and earning more as a member.</p>
+<p>Reviews, benchmarks, and updates on current GPUs.</p>
+<p>Join for quick access. Enter your email below and we'll send confirmation plus sign you up to our newsletter.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Unlock instant access to exclusive member features.</p>
+<p>Get full access to premium articles, exclusive features and a growing list of member rewards.</p>
+<p>Safety systems depending on a single service could lead to catastrophic results if that service fails.</p>
+<p>When you purchase through links on our site, we may earn an affiliate commission. Here’s how it works.</p>
+<p>Fifteen guests at a hotel in Germany suffered from chlorine gas poisoning because of the recent Microsoft cloud services outage. The establishment had a “maintenance safety system” for its sauna area that relied on sending emails to warn the operators if the chlorine level in the area was too high. Unfortunately, the service disruption meant that the system's messages could not be sent, leading to increased levels that precipitated human injuries, writes Notebookcheck. German emergency services had to deploy 40 first responders to the site, with local media reporting that four victims were taken to the hospital for treatment, with one remaining for further observation.</p>
+<p>The tech giant experienced a global outage affecting Outlook and other services from November 12 to 14, which led some Japanese workers to dust off their fax machines to keep their business running. Although this Microsoft outage wasn’t as large as the CrowdStrike fiasco in 2024, which led to a massive service disruption to a good number of corporate computer systems and sent shockwaves across the world, this incident has caused injuries and could’ve even led to something more catastrophic if the issue wasn’t caught earlier.</p>
+<p>This is one of the issues that institutions must consider when using online services or the Internet of Things to automate systems, especially those that are crucial for safety. Architects of such systems should always have a physical or analog backup that will continue operating even if everything goes offline. More importantly, their people should know that they exist and be familiar with how they work. Alternatively, businesses can host their own servers, build their own automations, and run everything locally, although this would require a bit more involvement in building and programming the entire system. And there could be local infrastructure impacting issues like power cuts, still.</p>
+<p>Aside from that, the Microsoft outage also highlights the corporate world’s increasing reliance on a few big tech companies. While tech giants like Microsoft, Google, and AWS have the advantage of economies of scale, allowing them to offer their services reliably and more affordably compared to smaller rivals or an in-house deployment, it also means that if they go down, they affect millions of businesses that rely on them and cause economic activity to grind to a halt.</p>
+<p>Download the Tom's Hardware app for up-to-the-minute updates on iOS and Android. Also follow Tom's Hardware on Google News, or add us as a preferred source, to get our latest news, analysis, & reviews in your feeds.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Jowi Morales is a tech enthusiast with years of experience working in the industry. He’s been writing with several tech publications since 2021, where he’s been interested in tech hardware and consumer electronics.</p>
+<p>Tom's Hardware is part of Future US Inc, an international media group and leading digital publisher. Visit our corporate site.</p>
+<p>©
+Future US, Inc. Full 7th Floor, 130 West 42nd Street,
+New York,
+NY 10036.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/kv-cache" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.tomshardware.com/tech-industry/data-centers/microsoft-365-outage-leads-to-chlorine-gas-poisoning-of-15-hotel-guests-email-warning-system-fails-40-first-responders-deployed-for-triage-four-hospitalized" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

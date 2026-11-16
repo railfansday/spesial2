@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AWS Weekly Roundup: AgentCore Runtime V2, Amazon DynamoDB bulk put items, and more (November 9, 2026)</title>
+    <title>Where did the ACK go?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10005.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,46 +15,98 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>AWS Weekly Roundup: AgentCore Runtime V2, Amazon DynamoDB bulk put items, and more (November 9, 2026)</h1>
+        <h1>Where did the ACK go?</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2023/08/13/AWS-WIR-default.png" alt="AWS Weekly Roundup: AgentCore Runtime V2, Amazon DynamoDB bulk put items, and more (November 9, 2026)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://s3.yashgarg.dev/posts/where-did-the-ack-go/cover.webp" alt="Where did the ACK go?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2023/08/13/AWS-WIR-default.png" alt="AWS Weekly Roundup: AgentCore Runtime V2, Amazon DynamoDB bulk put items, and more (November 9, 2026)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://s3.yashgarg.dev/posts/where-did-the-ack-go/cover.webp" alt="Where did the ACK go?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
-<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
-<p>Get started with one of these featured services or browse all</p>
-<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
-<p>Most of the cost of adopting something new isn’t the new thing, it’s the move. Moving a Hive table to Apache Iceberg has typically meant weeks of engineering work. Last week, Amazon S3 Tables turned that into three steps: start, sync as often as you need, complete. The source stays writable except for a few minutes at cutover. The same week, Amazon DynamoDB started loading data from S3 into tables that already exist.</p>
-<p>The pattern I like is that neither one asks you to stop what’s running. That’s also the way to read the agent news this week. The new Amazon Bedrock AgentCore Runtime is a single field on the runtime you already have, and Web Answer is a tool you attach to a gateway you already run. Now, let’s get into this week’s AWS news…</p>
-<p>HeadlinesThe new AgentCore Runtime: elastic, optimized, and consistently fast starts – If you run agents on AgentCore and haven’t tried the new runtime since it became generally available, it’s worth a look. It changes two things. First, memory: sessions start small, page in more on demand, and give memory back when it goes cold instead of holding the peak, so you pay for what your agent uses. Second, cold starts: AgentCore prepares your environment once, snapshots it, and restores the snapshot for every new instance. In the team’s tests, that kept P75 cold starts at about 2 seconds for images from 200 MB up to 2 GB, while the original runtime rose from roughly 5.4 seconds to nearly 30 seconds as images grew. The per-unit rate is higher, but you use far fewer GB-hours, so the team expects most agents to see a lower bill, though that isn’t guaranteed.</p>
-<p>To opt in, you set platformVersion to V2 when you create or update a runtime. Create and update take several minutes while the snapshot is prepared, and your container must report healthy on /ping within 120 seconds, so report health only after initialization finishes. The docs cover how to optimize your agent for V2. V2 is available in 10 Regions, and committed baseline pricing is coming soon.</p>
-<p>Amazon S3 Tables now offer managed migration of Apache Hive tables to Apache Iceberg – You can now migrate Parquet tables registered in the AWS Glue Data Catalog into S3 Tables without building a pipeline or provisioning compute. S3 Tables validates the source and produces a compatibility report covering every object in scope. Each sync copies only what changed, so production keeps writing until cutover. Afterward you can query the table with Amazon Athena, Amazon SageMaker Unified Studio, or any engine that speaks the Iceberg REST API. You pay only for the data copied, with no charge for the conversion, and objects in S3 Intelligent-Tiering keep their tier. At launch it works within the same account and Region, in 10 Regions.</p>
-<p>Last week’s launches
-         Here are some launches and updates from this past week that caught my attention:</p>
-<p>Amazon DynamoDB now supports bulk put items – You can now load line-delimited DynamoDB JSON or Amazon Ion files from Amazon S3 into existing tables as a managed, asynchronous job. Each record can carry its own condition expression, so one file can mix plain, insert-only, and version-guarded writes. Writes use dedicated system capacity and cost less than the equivalent per-request writes. An Accelerated tier handles deadline-bound jobs. The Database blog post gives illustrative Accelerated times of less than 1 hour for 100 million 1 KB items. One thing to know before you start: canceling doesn’t roll back items already written.</p>
-<p>Announcing Web Answer on Amazon Bedrock AgentCore – You can now give an agent a single tool call that returns a synthesized, cited answer to a natural-language question, instead of building your own search, retrieval, and citation pipeline. Web Answer plans its own searches, runs several in parallel, and decides when it has enough evidence. You attach it as a target on AgentCore Gateway and call it over MCP, and you can limit it with domain include and deny lists and publish-date filters. It’s available in US East (N. Virginia). The getting started post explains when to use it instead of Web Search, which returns ranked results for your own model to synthesize.</p>
-<p>AWS Lambda now supports queues for Apache Kafka in self-managed Kafka event sources – You can now process records from a single Kafka partition across many parallel AWS Lambda invocations. Classic consumer groups cap parallelism at the partition count. Queue mode uses Kafka share groups and needs Kafka 4.2 or later with share groups enabled. It works with self-managed clusters and managed offerings such as Confluent Cloud. You give up ordering and get at-least-once delivery, so your functions need to be idempotent. The Compute blog walkthrough covers poller scaling and when to keep stream mode.</p>
-<p>AWS announces AWS Interconnect – last mile preview with Equinix – You can now set up a private, managed connection from Equinix’s network of 282 data centers to AWS without ordering cross-connects or configuring routers. Capacity is quad-redundant across two locations and four links, with BGP and VLANs configured for you, a 99.99% availability SLA, and MACsec by default. You pick a Region, bandwidth, and AWS Direct Connect gateway, then paste the activation key into Equinix Fabric. The preview covers the San Jose metro and, as of last Thursday, Northern Virginia, with 1 Gbps connections at no charge.</p>
-<p>AWS Security Hub now provides an SBOM inventory for your compute resources – You can now see every software package installed across your organization’s Amazon EC2 instances, Amazon ECR images, and Lambda functions in AWS Security Hub, with each package’s version and how many resources run it. That’s the list you want the next time a widely used library has a vulnerability. The inventory builds on the SBOMs that Amazon Inspector already generates, so it fills in automatically wherever Inspector is enabled. It’s included in Security Hub Essentials at no additional cost.</p>
-<p>For a full list of AWS announcements, be sure to keep an eye on the What’s New with AWS page.</p>
-<p>Other AWS news
-         Here are some additional posts and resources that you might find interesting:</p>
-<p>Serverless ICYMI Q3 2026 – Julian Wood’s quarterly recap is a quick serverless catch-up before re:Invent: Lambda SnapStart for container images, a 90-minute timeout on Lambda Managed Instances, Lambda MicroVMs in 10 Regions, 1 MiB payloads in Amazon SNS, and the new AgentCore Runtime.</p>
-<p>AWS contributes a large-transaction binary log optimization to MySQL – With binlog on, a huge transaction holds a global commit lock while its events are copied, blocking every other commit. The optimization, which Amazon Aurora MySQL has run in production since 2019, promotes the spill file into the binlog instead of copying it. In AWS’s tests, commit latency for a 50 GiB transaction dropped from about 7 minutes to about 2 to 2.5 seconds. It has now shipped to community MySQL.</p>
-<p>How OrderServ achieved up to 64% cost savings with multi-tenant ECS – Cognizant’s food-ordering platform went from one Amazon ECS cluster per brand on AWS Fargate to a shared cluster on EC2 Auto Scaling groups with warm pools. The 64% applies to a 3-year Compute Savings Plan (47% with a 1-year plan). Scaling time also fell from 5–7 minutes to 30–60 seconds.</p>
-<p>Upcoming AWS events
-         Check your calendar and sign up for upcoming AWS events:</p>
-<p>AWS re:Invent – re:Invent returns to Las Vegas from November 30 to December 4. The event catalog is live and reserved seating is open, so register and claim your spots before they fill up.</p>
-<p>AWS Community Days – Community-led conferences planned and delivered by community leaders, with a few more before the year ends: Belém, Brazil (November 14), JAWS FESTA 2026 in Akita, Japan (November 17), and Port Harcourt, Nigeria (December 12).</p>
-<p>Join the AWS Builder Center to connect with builders, share solutions, and access content that supports your development. Browse here for upcoming AWS-led in-person and virtual events and developer-focused events.</p>
-<p>That’s all for this week. Check back next Monday for another Weekly Roundup!</p>
-<p>This post is part of our Weekly Roundup series. Check back each week for a quick roundup of interesting news and announcements from AWS!</p>
-<p>Daniel Abib is a senior specialist solutions architect at AWS, focused on generative AI and Amazon Bedrock — and passionate about serverless. He helps startups and enterprises build AI-powered applications and modernize with cloud-native architectures. A three-time Ironman finisher and four-time re:Invent speaker, he brings the same endurance mindset to building cloud solutions.</p>
+                <p>Breaking things with JioFiber, SIP and Asterisk.</p>
+<p>I know the title is a bit clickbaity but it works for this post :P This is probably going to be a LONG one. I spent almost 3-4 days debugging and fighting on this and this is gonna be a proper log of what all I did. Fair warning though, I did exhaust my Cursor, OpenCode, and Claude limits debugging this one.â #</p>
+<p>Bear with me as I try to explain all the complicated abbreviations that you might come across ð­â #</p>
+<p>Some context as to what exactly I decided to do? My ISP, Jio provides a landline number with their Fiber connections and ever since Iâve removed their ONT box and replaced with my own Router, this did not really work and stayed broken.â #</p>
+<p>While I was at home this month, a friend told me multiple times to extract those credentials from their box and set it up like heâs done.â #</p>
+<p>Thatâs what this whole thing is about.â #</p>
+<p>Before going into all the technicalities, Iâd like to explain the readers on how do calls over internet travel? Itâs pretty straightforward (well, not really). Thereâs a protocol known as the Session Initiation Protocol (SIP) which was introduced in 1999 (crazy!).â #</p>
+<p>But how does it work? Letâs look at this sequence diagram:â #</p>
+<p>Looks pretty simple right? But SIP only handles the signaling, the âletâs have a callâ part. The actual audio is described separately using SDP (Session Description Protocol), which gets sent inside the SIP messages. Itâs basically a note that says âsend audio here, in this formatâ:â #</p>
+<p>This becomes important later when calls start failing with âinvalid SDP offer or answerâ.â #</p>
+<p>Now onto the actual process. First thing I needed was the SIP credentials stored on the ONT by Jio.â #</p>
+<p>I already had telnet access on the box since I enabled that earlier, theyâve since patched it in newer firmwareâs! One of the reasons I donât connect it to the Internet.â #</p>
+<p>ð Note: One key thing to note here is, it needs to be connected to internet at least once so it can get SIP credentials from their servers and store it on the disk!</p>
+<p>What I wanted was basically a dump of the whole filesystem and somehow copying it back to my Mac (without internet). Luckily for this, I found that they use lighttpd for their admin interface which is great!â #</p>
+<p>I connected to the WiFi exposed by the ONT and ran these commands:â #</p>
+<p>Then, I could just simply do a curl request for the archive:â #</p>
+<p>The actual credentials were in a file called FixedVoiceCcsXML.dat under /flash/juice and it looked something like:â #</p>
+<p>The key parts here are the Realm,UserName and UserPwd as you wouldâve guessed and, Voila ðâ #</p>
+<p>Another term that might feel complicated, PBX also known as Private Branch Exchange. Iâll be using Asterisk for my setup.â #</p>
+<p>Remember how the ONT was handling both, the internet, and landline? When I swapped it out, the internet kept working but the landline died. Nothing was talking to Jioâs voice servers anymore. Asterisk takes over that job.â #</p>
+<p>It sits in the middle: on one side, my phone apps (Linphone on iOS, Zoiper on Mac) connect to it like itâs the carrier. On the other side, it connects to Jioâs IMS network and pretends to be a phone. When I make a call, it bridges the two.â #</p>
+<p>Solid lines are signaling, dashed lines are audio. They travel separately, which matters a lot later.â #</p>
+<p>I use NixOS for my servers so Iâll be going through how I set it up on that, though itâs not that different if one is setting it up separately as well!â #</p>
+<p>The Asterisk service is enabled with a custom overlay that swaps the default package for asterisk-with-jio â a patched build that includes the three extra modules we need (more on those later).â #</p>
+<p>The sensitive config files (pjsip.conf, extensions.conf) are kept encrypted via SOPS and written directly to /etc/asterisk/ at activation.â #</p>
+<p>Asterisk has quite a few config files and hereâs what I ended up with:â #</p>
+<p>modules.conf â disables the old chan_sip and requires the three Jio-specific modules to be present at startup:â #</p>
+<p>rtp.conf â sets the local UDP port range for audio:â #</p>
+<p>The firewall opens exactly those same ports:â #</p>
+<p>pjsip.conf â this is where most of the actual SIP configuration lives. It has two sides, the Jio-facing trunk and the local phone apps.â #</p>
+<p>First thing I noticed I had to set was the user_agent â weâre spoofing the routerâs user agent so Jio thinks weâre a real CPE device:â #</p>
+<p>For transports, I used UDP and TCP for local apps and ended up using TLS over IPv6:â #</p>
+<p>The Jio trunk endpoint ended up looking like this:â #</p>
+<p>And for Linphone and Zoiper on the local side:â #</p>
+<p>pjsip_jio.conf â some Jio-specific registration fields that come from the ONT dump11 access_network tells the IMS what access type youâre connecting from (GPON = fiber). instance_id is a unique device identifier that comes from the ONTâs config â Jio uses it to identify your device during registration. :â #</p>
+<p>extensions.conf â the dialplan, which tells Asterisk what to do with calls.â #</p>
+<p>For inbound calls from Jio, I wanted it to ring all my registered apps:â #</p>
+<p>For outbound I added some number normalization so I could dial in any format and itâd work:â #</p>
+<p>Jio also needs a P-Asserted-Identity header on every outgoing call, so I added a small handler for that:â #</p>
+<p>Before I even got to the interesting stuff, I managed to shoot myself in the foot a few times.â #</p>
+<p>I had my dialplan set up like this initially:â #</p>
+<p>What I didnât realise is that Asterisk treats the first argument as an endpoint name, not a SIP URI. My endpoint was named jiofiber, so every outbound call just failed with âendpoint not foundâ. Took me quite a while to figure out that the correct way is:â #</p>
+<p>This one was annoying. Every time Linphone restarts on iOS it registers a fresh contact, but the old one doesnât go away. So when an inbound call came in, Asterisk tried to ring all of them at the same time including the dead ones from previous sessions. The dead contact would fail immediately and bring the whole call down with a 503. Adding these two lines fixed it:â #</p>
+<p>So I could make calls and they would connect, but there was no audio on either side. The issue was that just opening port 5060 for SIP is not enough. The actual audio travels over RTP on a completely separate range of UDP ports, 52000-52200 in my case as configured in rtp.conf. I had not opened those on my MikroTik router.â #</p>
+<p>I had to add two IPv6 forward rules on the MikroTik to let SIP and RTP through from the WAN interface to the server:â #</p>
+<p>There was also an IPv6 issue where my server has multiple IPv6 addresses and Asterisk was advertising one in the SDP but the actual RTP socket was binding to a different one. I had to be explicit about which address to use:â #</p>
+<p>media_address alone only sets what gets advertised in SDP, it doesnât actually bind the socket. bind_rtp_to_media_address = yes is what makes the packets go out from the right address.â #</p>
+<p>Every time I restarted Asterisk during debugging it would fire a fresh REGISTER. I was restarting a lot. At some point Jioâs registrar started responding with 401 Unauthorized with stale=true on every attempt and the registration just stayed stuck in Rejected.â #</p>
+<p>My first thought was that Jio had blocked the line or the credentials were wrong. But stale=true on a 401 just means the nonce expired, itâs a normal challenge telling you to retry with a fresh one. Itâs not a ban.â #</p>
+<p>What was actually happening is that with max_retries = 10 and retry_interval = 60, Asterisk was sending up to ten authenticated REGISTERs per minute. Each one triggered another auth attempt. Jioâs rate limiter blocked further attempts and the lockout kept extending because Asterisk kept retrying.â #</p>
+<p>To confirm the credentials were actually correct I manually recomputed the Digest response from scratch and it matched byte for byte what Asterisk was sending:â #</p>
+<p>The credential was fine, I was just hammering the registrar too fast. The fix was to back off:â #</p>
+<p>Once the lockout expired and Asterisk fired one clean authenticated REGISTER, it went straight to Registered.â #</p>
+<p>This is the one the title is about. And it happened twice.â #</p>
+<p>The first time, I noticed inbound calls were dying at exactly 32 seconds and set timers=no on the trunk endpoint. That removes the session timer requirement from the 200 OK and it seemed to stop the drops, so I moved on. That was a mistake because it wasnât actually the cause.â #</p>
+<p>Later, the same 32-second symptom came back and this time I had to actually understand it. Inbound calls were going through the full signaling flow, Jio would send the INVITE, Asterisk would send back a 200 OK, and then nothing. No ACK ever came from Jio. Asterisk would retransmit the 200 OK eleven times, Timer H22 64 Ã T1 (500ms) = 32 seconds. SIP uses this to give up waiting for an ACK after sending a final response.  would fire, and Asterisk would hang up the call with cause=408.â #</p>
+<p>To make sure this wasnât a network issue I ran a packet capture on all IPv6 traffic on the server. It showed that Jioâs P-CSCF was receiving every byte of the 200 OK, TCP was acknowledging it, but Jio was sending absolutely nothing back. No ACK, no CANCEL, no ICMPv6 error. The problem was inside Jioâs SBC, not in the network path.â #</p>
+<p>I went through six hypotheses one by one:â #</p>
+<p>Every fix was correct on its own terms but none of them moved the specific symptom. The unfiltered packet capture was the most useful tool here because it eliminated every reachability hypothesis and proved the silence was coming from inside Jioâs SBC. I never fully resolved this one at the time.â #</p>
+<p>This was the most frustrating part. Some calls to some numbers would just fail every time. Both Linphone and Zoiper, so it wasnât the app. The failing sequence looked like this:â #</p>
+<p>The 183 would come back with a Contact header containing rn and npdi parameters44 rn is a routing number used after a port. npdi means a portability lookup was done â it can appear even for non-ported numbers.  and an identifier pointing to an Alcatel-Lucent 5060 MGC. These are MNP markers, they show up when a number has been ported to another carrier.â #</p>
+<p>So the initial hypothesis was that these were ported numbers and the carrierâs routing database was broken for them. It looked very convincing. Roughly one out of fifteen attempts would go through on a visibly different route without those markers, and the rest would die with 487 / P-14018.â #</p>
+<p>I went too far and called it a carrier-only problem. That was wrong.â #</p>
+<p>Over two days I tried a lot of things. Hereâs a short summary of that:â #</p>
+<p>The PCMU attempt was especially good at producing false hope. I called my mom, she picked up, I could hear her. Then the next attempt failed with the same error on a marked route. The first call had just taken a different path.â #</p>
+<p>At some point I found sivatheja10/jiofiber-bridge which had a full DIRECT_IMS implementation for Jio. This was much more useful than a random config snippet because it was an actual working client implementation I could compare against. It offered PCMU, AMR and AMR-WB to the carrier, handled Jio-specific registration quirks, and had its own transport and signaling choices.â #</p>
+<p>I also found a fix in another project, gsm-sip-bridge, where the exact same P-14018 error text had appeared but the cause was completely different. That project was treating a 200 OK for PRACK as though it were a 200 OK for INVITE and sending a premature ACK. Our traces didnât show that mistake at all, but it completely overruled the idea that P-14018 uniquely meant an MNP database problem. The same error text but a totally different bug!â #</p>
+<p>The rule I should have applied earlier: compare the exact transaction, not just the error string.â #</p>
+<p>Rather than replace the production setup I put a temporary bridge behind a *88 dial prefix. So dialing *88 9876543210 would route through the bridge to Jio instead of going through native Asterisk directly. This let me test a completely different SIP implementation against the same carrier path without touching the working setup.â #</p>
+<p>The bridge was built from the jiofiber-bridge code and handled two SIP legs with its own signaling behavior. I paused the production Asterisk registration while testing so there wouldnât be two things registering at the same time.â #</p>
+<p>The result was pretty clear. A PCMU-only call to a number with rn and npdi markers in the Contact went all the way through, then 180 Ringing, then 200 OK, then two-way audio. The same kind of marked route that had been rejecting everything from native Asterisk.â #</p>
+<p>This broke the âcarrier-only problemâ conclusion completely. The endpoint implementation was what mattered, not just the codec or the destination.â #</p>
+<p>I also tested an AMR-only offer through the bridge. It got reliable progress and ringing, then I cancelled it to avoid making yet another call to my mom. So AMR at least got past the early rejection point, but I didnât let it complete.â #</p>
+<p>After the bridge experiment I wanted a proper solution instead of keeping a temporary bridge running forever. The bridge worked but it wasnât something I could maintain long term and it wasnât packaged for NixOS.â #</p>
+<p>Stock Asterisk 22 has no AMR support at all. allow = amr in the config does nothing if the codec module isnât there. I needed three things:â #</p>
+<p>I started from traud/asterisk-amr for the codec work and built on top of it. The result is asterisk-jio, packaged as a Nix flake that builds against stock Asterisk 22.11.0 headers. The NixOS overlay we saw earlier swaps the default Asterisk package for asterisk-with-jio which includes all three modules.â #</p>
+<p>After deploying and restarting the service, everything worked! Outbound calls, inbound calls, MNP numbers that were failing before! Yay ð¥³â #</p>
+<p>If you want to try this yourself, the asterisk-jio repo has build instructions and the config structure we went through here should get you most of the way there. Youâll need your own credentials from the ONT dump and your own realm and proxy addresses.â #</p>
+<p>access_network tells the IMS what access type youâre connecting from (GPON = fiber). instance_id is a unique device identifier that comes from the ONTâs config â Jio uses it to identify your device during registration. â©</p>
+<p>64 Ã T1 (500ms) = 32 seconds. SIP uses this to give up waiting for an ACK after sending a final response. â©</p>
+<p>rewrite_contact rewrites Record-Route headers with the observed source IP and port. Jioâs Record-Route had no port, but we were echoing it back with :34588 â the ephemeral source port of the P-CSCFâs TCP connection, which is not a listener. Jio was routing its ACK to an unreachable socket. â©</p>
+<p>rn is a routing number used after a port. npdi means a portability lookup was done â it can appear even for non-ported numbers. â©</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://aws.amazon.com/blogs/aws/aws-weekly-roundup-agentcore-runtime-v2-amazon-dynamodb-bulk-put-items-and-more-november-9-2026/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://yashgarg.dev/posts/where-did-the-ack-go/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

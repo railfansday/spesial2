@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>(LoRA) Fine-Tuning FLUX.1-dev on Consumer Hardware</title>
+    <title>Nvidia engineer leaves company over lack of transparency around Jensen Huang’s exit, details decision</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10471.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,79 +15,66 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>(LoRA) Fine-Tuning FLUX.1-dev on Consumer Hardware</h1>
+        <h1>Nvidia engineer leaves company over lack of transparency around Jensen Huang’s exit, details decision</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/flux-qlora/thumbnail.png" alt="(LoRA) Fine-Tuning FLUX.1-dev on Consumer Hardware" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn.mos.cms.futurecdn.net/V58pCYCTU9ChhLRLiLHMe5-2560-80.jpg" alt="Nvidia engineer leaves company over lack of transparency around Jensen Huang’s exit, details decision" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/flux-qlora/thumbnail.png" alt="(LoRA) Fine-Tuning FLUX.1-dev on Consumer Hardware" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn.mos.cms.futurecdn.net/V58pCYCTU9ChhLRLiLHMe5-2560-80.jpg" alt="Nvidia engineer leaves company over lack of transparency around Jensen Huang’s exit, details decision" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post, Exploring Quantization Backends in Diffusers, we dived into how various quantization techniques can shrink diffusion models like FLUX.1-dev, making them significantly more accessible for inference without drastically compromising performance. We saw how bitsandbytes, torchao, and others reduce memory footprints for generating images.</p>
-<p>Performing inference is cool, but to make these models truly our own, we also need to be able to fine-tune them. Therefore, in this post, we tackle efficient fine-tuning of these models with peak memory use under ~10 GB of VRAM on a single GPU. This post will guide you through fine-tuning FLUX.1-dev using QLoRA with the diffusers library. We'll showcase results from an NVIDIA RTX 4090. We'll also highlight how FP8 training with torchao can further optimize speed on compatible hardware.</p>
-<p>We aim to fine-tune black-forest-labs/FLUX.1-dev to adopt the artistic style of Alphonse Mucha, using a small dataset.</p>
-<p>The model consists of three main components:</p>
-<p>In our QLoRA approach, we focus exclusively on fine-tuning the transformer component. The text encoders and VAE remain frozen throughout training.</p>
-<p>We used a diffusers training script (slightly modified from here designed for DreamBooth-style LoRA fine-tuning of FLUX models. Also, a shortened version to reproduce the results in this blogpost (and used in the Google Colab) is available here. Let's examine the crucial parts for QLoRA and memory efficiency:</p>
-<p>LoRA (Low-Rank Adaptation) Deep Dive: LoRA makes model training more efficient by keeping track of the weight updates with low-rank matrices. Instead of updating the full weight matrix W W W, LoRA learns two smaller matrices A A A and B B B. The update to the weights for the model is ΔW=BA \Delta W = B A ΔW=BA, where A∈Rr×k A \in \mathbb{R}^{r \times k} A∈Rr×k and B∈Rd×r B \in \mathbb{R}^{d \times r} B∈Rd×r. The number r r r (called rank) is much smaller than the original dimensions, which means less parameters to update. Lastly, α \alpha α is a scaling factor for the LoRA activations. This affects how much LoRA affects the updates, and is often set to the same value as the r r r or a multiple of it. It helps balance the influence of the pre-trained model and the LoRA adapter. For a general introduction to the concept, check out our previous blog post: Using LoRA for Efficient Stable Diffusion Fine-Tuning.</p>
-<p>QLoRA: The Efficiency Powerhouse: QLoRA enhances LoRA by first loading the pre-trained base model in a quantized format (typically 4-bit via bitsandbytes), drastically cutting the base model's memory footprint. It then trains LoRA adapters (usually in FP16/BF16) on top of this quantized base. This dramatically lowers the VRAM needed to hold the base model.</p>
-<p>For instance, in the DreamBooth training script for HiDream 4-bit quantization with bitsandbytes reduces the peak memory usage of a LoRA fine-tune from ~60GB down to ~37GB with negligible-to-none quality degradation. The very same principle is what we apply here to fine-tune FLUX.1 on a consumer-grade hardware.</p>
-<p>8-bit Optimizer (AdamW):
-Standard AdamW optimizer maintains first and second moment estimates for each parameter in 32-bit (FP32), which consumes a lot of memory. The 8-bit AdamW uses block-wise quantization to store optimizer states in 8-bit precision, while maintaining training stability. This technique can reduce optimizer memory usage by ~75% compared to standard FP32 AdamW. Enabling it in the script is straightforward:</p>
-<p>Gradient Checkpointing:
-During forward pass, intermediate activations are typically stored for backward pass gradient computation. Gradient checkpointing trades computation for memory by only storing certain checkpoint activations and recomputing others during backpropagation.</p>
-<p>Cache Latents:
-This optimization technique pre-processes all training images through the VAE encoder before the beginning of the training. It stores the resulting latent representations in memory. During the training, instead of encoding images on-the-fly, the cached latents are directly used. This approach offers two main benefits:</p>
-<p>Setting up 4-bit Quantization (BitsAndBytesConfig):</p>
-<p>This section demonstrates the QLoRA configuration for the base model:</p>
-<p>Defining LoRA Configuration (LoraConfig):
-Adapters are added to the quantized transformer:</p>
-<p>Only these LoRA parameters become trainable.</p>
-<p>Before we launch the QLoRA fine-tune we can save a huge chunk of VRAM and wall-clock time by caching outputs of text encoders once.</p>
-<p>At training time the dataloader simply reads the cached embeddings instead of re-encoding the caption, so the CLIP/T5 encoder never has to sit in GPU memory.</p>
-<p>By combining this with cached VAE latents (--cache_latents) you whittle the active model down to just the quantized transformer + LoRA adapters, keeping the whole fine-tune comfortably under 10 GB of GPU memory.</p>
-<p>For this demonstration, we leveraged an NVIDIA RTX 4090 (24GB VRAM) to explore its performance. The full training command using accelerate is shown below.</p>
-<p>Configuration for RTX 4090:
-On our RTX 4090, we used a train_batch_size of 1, gradient_accumulation_steps of 4, mixed_precision="bf16", gradient_checkpointing=True, use_8bit_adam=True, a LoRA rank of 4, and resolution of 512x768. Latents were cached with cache_latents=True.</p>
-<p>Training Time (RTX 4090):
-Fine-tuning for 700 steps on the Alphonse Mucha dataset took approximately 41 minutes on the RTX 4090 with train_batch_size of 1 and resolution of 512x768.</p>
-<p>Output Quality:
-The ultimate measure is the generated art. Here are samples from our QLoRA fine-tuned model on the derekl35/alphonse-mucha-style dataset:</p>
-<p>This table compares the primary bf16 precision results. The goal of the fine-tuning was to teach the model the distinct style of Alphonse Mucha.</p>
-<p>The fine-tuned model nicely captured Mucha's iconic art nouveau style, evident in the decorative motifs and distinct color palette. The QLoRA process maintained excellent fidelity while learning the new style.</p>
-<p>The results are nearly identical, showing that QLoRA performs effectively with both fp16 and bf16 mixed precision.</p>
-<p>For users with NVIDIA GPUs possessing compute capability 8.9 or greater (such as the H100, RTX 4090), even greater speed efficiencies can be achieved by leveraging FP8 training via the torchao library.</p>
-<p>We fine-tuned FLUX.1-dev LoRA on an H100 SXM GPU slightly modifieddiffusers-torchao training scripts. The following command was used:</p>
-<p>The training run had a peak memory usage of 36.57 GB and completed in approximately 20 minutes.</p>
-<p>Qualitative results from this FP8 fine-tuned model are also available:</p>
-<p>Key steps to enable FP8 training with torchao involve:</p>
-<p>For a more detailed guide and code snippets, please refer to this gist and the diffusers-torchao repository.</p>
-<p>After training your LoRA adapters, you have two main approaches for inference.</p>
-<p>One approach is to load your trained LoRA adapters on top of the base model.</p>
-<p>For when you want maximum efficiency with a single style, you can merge the LoRA weights into the base model.</p>
-<p>While we showcased results on an RTX 4090, the same code can be run on more accessible hardware like the T4 GPU available in Google Colab for free.</p>
-<p>On a T4, you can expect the fine-tuning process to take significantly longer around 4 hours for the same number of steps. This is a trade-off for accessibility, but it makes custom fine-tuning possible without high-end hardware. Be mindful of usage limits if running on Colab, as a 4-hour training run might push them.</p>
-<p>QLoRA, coupled with the diffusers library, significantly democratizes the ability to customize state-of-the-art models like FLUX.1-dev. As demonstrated on an RTX 4090, efficient fine-tuning is well within reach, yielding high-quality stylistic adaptations. Furthermore, for users with the latest NVIDIA hardware, torchao enables even faster training through FP8 precision.</p>
-<p>Sharing your fine-tuned LoRA adapters is a fantastic way to contribute to the open-source community. It allows others to easily try out your styles, build on your work, and helps create a vibrant ecosystem of creative AI tools.</p>
-<p>If you've trained a LoRA for FLUX.1-dev, we encourage you to share it. The easiest way is to add the --push_to_hub flag to the training script. Alternatively, if you have already trained a model and want to upload it, you can use the following snippet.</p>
-<p>Check out our Mucha LoRA and the TorchAO FP8 LoRA. You can find both, plus other adapters, in this collection.</p>
-<p>Hi! Great blog post, thank you for your work.</p>
-<p>The link to the script train_dreambooth_lora_flux_nano.py(in this section) is not working - perhaps the branch on which it was developed is not merged yet ?</p>
-<p>It's not merged yet ! https://github.com/huggingface/diffusers/pull/11743We will merge it soon ;)</p>
-<p>Typo: CLIP is not a text encoder :PThis is good</p>
-<p>Hi all, I managed to make it run on a dataset of numerical art of my own (mostly 512x512 flame fractals), and am glad to share the LoRA - happy to get some feedback on it ! I'll update the model card soon ...</p>
-<p>Thank you team for the great work, easy to use !</p>
-<p>Awesome! glad to hear it worked well with your flame fractal dataset, results in model card looks cool</p>
-<p>I don't remember you being this cocky. This is how you lose respect.</p>
-<p>The script was already available since October 2024, just made a more detailed version :P</p>
-<p>https://github.com/huggingface/diffusers/tree/main/examples/research_projects/flux_lora_quantization</p>
-<p>it's called Terminus Research, for what it's worth, but we contributed the original flux training script, which was then redone for inclusion by Linoy, with modifications. and then we ensured PEFT and Diffusers worked with quantised training on LoRA.</p>
-<p>✅ 1. Do these instructions work with Flux Schnell?✅ 2. Can you export the merged model as a .safetensors file after merging a LoRA?✅ 3. Does a LoRA merge increase the size-on-disk of the model? 4. I recently bought a refurbed RTX 3090 for AI workloads, will these instruction still work on the RTX 3090 or should I return it for a RTX 4090?</p>
-<p>An LLM I asked stated yes for three but I wanted to ask the experts.</p>
-<p>I would say it should work for Schnell but you might have to change the loss function a bit to account for the fact it's a timestep-distilled model.</p>
-<p>I don't think LoRA merge should increase the final state dict size.</p>
+                <p>Join for quick access. Enter your email below and we'll send confirmation plus sign you up to our newsletter.</p>
+<p>Get started with free access to reviews, badges and discussions.</p>
+<p>Unlock exclusive tools and insights for enthusiasts who want more.</p>
+<p>Access Bench, Roadmaps, deep analysis and other exclusive tools.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Dive into our proprietary testing data and compare hardware with detailed benchmarks.</p>
+<p>Go beyond the headlines with expert reporting on the hardware industry.</p>
+<p>Track upcoming CPUs, GPUs and tech releases before they arrive.</p>
+<p>In-depth features, interviews and insider stories from the world of hardware.</p>
+<p>Expert insights and analysis delivered to your inbox.</p>
+<p>Keep exploring and earning more as a member.</p>
+<p>Reviews, benchmarks, and updates on current GPUs.</p>
+<p>Join for quick access. Enter your email below and we'll send confirmation plus sign you up to our newsletter.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Unlock instant access to exclusive member features.</p>
+<p>Get full access to premium articles, exclusive features and a growing list of member rewards.</p>
+<p>Darrel Dai wants to know the exact reasons why Jensen resigned.</p>
+<p>When you purchase through links on our site, we may earn an affiliate commission. Here’s how it works.</p>
+<p>Just days after Jensen Huang suddenly resigned from his position at Nvidia, an Nvidia Robot Research Engineer said that he would leave the company as well. But more than just showing support for the former CEO with a generic “I stand with Jensen” message, Darrel Dai laid out several reasons for the decision on X.</p>
+<p>I’ve decided to leave NVIDIA. There are a few things I want to say.
+As a robotics engineer at NVIDIA, I have seen Jensen as much more than the company’s CEO.
+I admire his willingness to invest in a future that was not yet obvious. He committed to CUDA long before the deep learning boom and positioned NVIDIA for AI before it became everyone’s priority. Those decisions helped build the infrastructure that powers today’s AI.
+I have seen that same vision in physical AI: investing in robotics, sharing open-source tools and projects, and building computing platforms that bring AI into the physical world. This is the work I do every day—and a future I believe in.
+But what matters most to me is the culture he helped build.
+Engineers are encouraged to explore, take risks, and learn from mistakes. Jensen reads employees’ Top 5 emails, follows their work, and engages directly. In a company this large, that connection matters. It makes an individual engineer feel that their ideas can still be heard.
+That is why this has been so disappointing.
+I do not have all the facts surrounding the allegations, and I cannot prejudge the investigation. My admiration for Jensen does not put him above scrutiny.
+What I find difficult to accept is having to come to terms with his departure before receiving an explanation that helps me understand it. What this means for our direction, our culture, and the people doing the work remains unclear to me.
+I have felt that engineers’ perspectives matter here. On this decision, I have not felt heard. That gap has been more painful than I expected.
+I understand that some information cannot be shared immediately. But that does not erase the feeling of being left outside a decision that affects the company we help build every day.
+A company’s greatness comes from its leadership, its governance, and the people who turn its ambitions into reality. Employees’ trust and sense of belonging are part of that, too.
+Jensen’s vision and the engineering culture he shaped were important reasons I wanted to stay. His departure led me to decide that my own chapter here should also come to a close.
+I leave with sadness and gratitude. The colleagues I have worked with, and the work we believed in together, will always matter to me.
+These are my personal views.November 15, 2026</p>
+<p>“What I find difficult to accept is having to come to terms with his departure before receiving an explanation that helps me understand it. What this means for our direction, our culture, and the people doing the work remains unclear to me,” the engineer posted. “I have felt that engineers’ perspectives matter here. On this decision, I have not felt heard. That gap has been more painful than I expected.”</p>
+<p>It seems that Jensen Huang has gained the respect of the people working under him, with many calling for his reinstatement despite the many controversies he is currently facing. There’s also an online petition demanding that the Nvidia board “Bring Jensen Back,” with over 150,000 signatures at the time of writing.</p>
+<p>Nvidia is centered around Jensen Huang, with the former chief executive reportedly having a small army of 60 people directly reporting to him. But despite his busy schedule and legendary persona, Dai said that “Jensen reads employees’ Top 5 emails, follows their work, and engages directly,” and that “It makes an individual engineer feel that their ideas can still be heard.” Dai also pointed out that “employees’ trust and sense of belonging” are part of what makes a company great. More importantly, Nvidia is known as one of the tech companies with the most generous pay packages. Jensen was even quoted saying, “I pay my employees as much as I can.”</p>
+<p>It remains unclear what the former Nvidia CEO will do after all these issues. Elon Musk has already said on X that “it would be an honor” to hire Jensen Huang, especially as he’s embarking on his own ambitious chipmaking journey. As for the employees left behind at Nvidia, some are staying and have shown their full support to interim CEO Colette Kress, while many more want him back. However, there has also been talk that various Silicon Valley tech and semiconductor firms are aggressively attempting to poach Nvidians, although these are just rumors so far.</p>
+<p>Download the Tom's Hardware app for up-to-the-minute updates on iOS and Android. Also follow Tom's Hardware on Google News, or add us as a preferred source, to get our latest news, analysis, & reviews in your feeds.</p>
+<p>Get Tom's Hardware's best news and in-depth reviews, straight to your inbox.</p>
+<p>Jowi Morales is a tech enthusiast with years of experience working in the industry. He’s been writing with several tech publications since 2021, where he’s been interested in tech hardware and consumer electronics.</p>
+<p>Tom's Hardware is part of Future US Inc, an international media group and leading digital publisher. Visit our corporate site.</p>
+<p>©
+Future US, Inc. Full 7th Floor, 130 West 42nd Street,
+New York,
+NY 10036.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/flux-qlora" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.tomshardware.com/tech-industry/robotics-engineer-leaves-nvidia-over-lack-of-transparency-around-jensen-huangs-exit-details-decision-joins-chorus-of-disgruntled-staff-as-petition-to-reinstate-former-ceo-passes-150-000-signatures" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
