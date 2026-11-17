@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RabbitMQ on Kubernetes: Fixing “Failed to create dirty CPU scheduler thread” (Error 11)</title>
+    <title>AI Gave Your Incident Archive a Second Job</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9766.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>RabbitMQ on Kubernetes: Fixing “Failed to create dirty CPU scheduler thread” (Error 11)</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>AI Gave Your Incident Archive a Second Job</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/pcMZLlNl1gWe7jtKjqBuvKejO8B3-kr03l9q.png" alt="RabbitMQ on Kubernetes: Fixing “Failed to create dirty CPU scheduler thread” (Error 11)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltfb0f3465591962e4/6aee1cd77073b469ffb052f4/archive_-3alexd-Getty-95769788.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="AI Gave Your Incident Archive a Second Job" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/pcMZLlNl1gWe7jtKjqBuvKejO8B3-kr03l9q.png" alt="RabbitMQ on Kubernetes: Fixing “Failed to create dirty CPU scheduler thread” (Error 11)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltfb0f3465591962e4/6aee1cd77073b469ffb052f4/archive_-3alexd-Getty-95769788.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="AI Gave Your Incident Archive a Second Job" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We deploy RabbitMQ across single-node and three-node Kubernetes clusters in both staging and production environments to enable asynchronous messaging across our microservices architecture. High availability and predictable message queuing are critical to keeping our downstream processing pipelines operational.</p>
-<p>A few weeks back, our infrastructure and SRE teams ran into a frustrating crash loop on one of our high-availability RabbitMQ statefulsets. RabbitMQ liveness probes kept failing randomly and repeatedly, throwing severe thread creation errors into the kubelet logs and causing unexpected pod restarts.</p>
-<p>We observed this issue in at least five deployments. The measurements described in this article were collected with RabbitMQ 3.13.3 and Erlang/OTP 26; CPU limits, PID limits, and scheduler counts can differ across deployments.</p>
-<p>When inspecting the cluster logs, we repeatedly observed the following log entries emitting from the pod container:</p>
-<p>To begin troubleshooting, we analyzed the root mechanics of the system call error. In standard Linux error definitions (errno.h), Error 11 maps directly to EAGAIN (Resource temporarily unavailable). When emitted during process creation via fork() or thread creation via pthread_create(), EAGAIN indicates that the OS kernel or execution context refused to allocate a new task because a configured resource limit was reached.</p>
-<p>In containerized environments, this error typically points to one of three underlying system constraints:</p>
-<p>Our Kubernetes cluster nodes enforce a default pod PID limit of 1024 (podPIDsLimit: 1024). Our initial hypothesis was that the combined workload inside the RabbitMQ pod was breaching this limit and exhausting available task IDs.</p>
-<p>To test this hypothesis systematically, we logged into the running container to check standard user limits:</p>
-<p>Because ulimit -u reported unlimited inside the container user namespace, standard POSIX limits were not enforcing the block. However, we</p>
-<p>still needed a controlled method to verify whether the container environment was hitting cgroup enforced process cap under execution.</p>
-<p>We authored a lightweight bash script (eat_pid.sh) designed to rapidly spawn background sub-processes and hold them open:</p>
-<p>We executed ./eat_pid.sh 1000 inside the container, script failed almost immediately with the error: fork: retry: Resource temporarily unavailable. Concurrently, the RabbitMQ runtime threw the exact same log: Failed to create dirty CPU scheduler thread 138, error = 11,</p>
-<p>The stress test reproduced EAGAIN when the pod approached its configured PID ceiling. Together with the probe-correlated thread spikes and the improvement after disabling the probes, this supports PID pressure as the likely cause in this environment. A contemporaneous reading of pids.current and pids.max during an incident would provide direct confirmation of the cgroup limit.</p>
-<p>Having validated that thread exhaustion was occurring, our next step was determining which process inside the container was consuming hundreds of tasks. We opened an interactive session inside the pod and monitored active threads in real time:</p>
-<p>While observing the task list, we noticed distinct thread spikes occurring every 30 seconds. This 30-second interval matched our RabbitMQ liveness and readiness probe configurations exactly under our initial deployment setup, the health probes executed shell-based rabbitmqctl CLI commands (such as rabbitmqctl status or rabbitmqctl ping) inside the container.</p>
-<p>To isolate the probes, we temporarily disabled the liveness and readiness definitions in the pod spec and monitored the baseline thread count. Without the probes, thread allocation flattened into a completely stable baseline. Re-enabling the probes caused immediate thread spikes. The health checks were unambiguously responsible for the task accumulation.</p>
-<p>We needed to profile rabbitmqctl to quantify its exact system call behavior and understand why a basic status check generated massive thread spikes. We used strace to count clone() system calls during a single invocation.</p>
-<p>These calls create tasks; the count is useful for comparing runs, but it does not by itself identify every task as an Erlang scheduler thread:</p>
-<p>The trace counted more than 700 clone() system calls for one rabbitmqctl invocation in this test. Across the node types we tested, the clone() count increased with the logical CPU capacity visible to the CLI VM. This observation is specific to the tested RabbitMQ/Erlang image and container CPU configuration.</p>
-<p>Understanding Erlang OTP Scheduler Mechanics</p>
-<p>To understand why a simple CLI utility requires 700 system calls, it helps to examine the internal architecture of the Erlang Runtime System (ERTS), rabbitmqctl is not a self-contained compiled binary (like a Go or C executable). It is an Erlang application wrapper. Launching rabbitmqctl boots an entire Erlang VM instance inside the container.</p>
-<p>By default, the Erlang VM is designed for high-concurrency server workloads and automatically optimizes itself for multi-core hardware. When ERTS initializes, it inspects the operating system to count physical/logical CPU cores and automatically initializes three distinct pools of native OS scheduler threads:</p>
-<p>This auto-scaling behavior creates a severe architectural friction point inside Kubernetes.</p>
-<p>Container runtimes share the underlying host kernel. Unless explicitly restricted at the application runtime layer, Erlang inspects /proc/cpuinfo or host cgroups and detects all CPU cores available on the physical worker node (e.g. 32, 64, or 128 cores), completely ignoring CPU request/limit throttles assigned to the container.</p>
-<p>As a result, on a 32-core node, executing rabbitmqctl attempts to initialize 32 Normal Schedulers, 32 Dirty CPU Schedulers, a large Dirty I/O pool, and supporting VM management threads.</p>
-<p>When Kubernetes triggers liveness and readiness probes concurrently every few seconds, multiple rabbitmqctl instances run simultaneously alongside the main RabbitMQ server daemon (beam.smp). Combined, these short-lived VMs spawn hundreds of threads, breaching the pod's 1024 PID cap and causing pthread_create to fail with error = 11.</p>
-<p>Standard RabbitMQ documentation does not prominently detail CLI thread tuning. However, inspecting the Erlang startup wrapper scripts for rabbitmqctl revealed an environment variable designed for runtime customization: RABBITMQ_CTL_ERL_ARGS.</p>
-<p>By defining RABBITMQ_CTL_ERL_ARGS, we can pass explicit Erlang VM startup flags to every rabbitmqctl invocation without altering the thread settings of the primary RabbitMQ server.</p>
-<p>We configured the following VM restriction flags:</p>
-<p>We exported the configuration inside the container environment:</p>
-<p>After exporting the environment variable, we re-ran strace against rabbitmqctl:</p>
-<p>The results were immediate: clone() system calls dropped from ~700 down to just 8 per invocation. Total thread consumption remained negligible, eliminating probe-induced crashes and stabilizing pod execution.</p>
-<p>1: Configure RABBITMQ_CTL_ERL_ARGS in Pod Manifests</p>
-<p>Include RABBITMQ_CTL_ERL_ARGS="+S 1:1 +SDcpu 1:1 +SDio 1:1" in your StatefulSet environment definitions if your health checks rely on CLI utilities:</p>
-<p>2. Account for Host-Level Multi-Core Scaling</p>
-<p>Be aware that runtimes like Erlang, Java (JVM), and Node.js often auto-detect host physical cores rather than container limits. Always restrict thread pools explicitly in containerized environments.</p>
-<p>Whenever possible, replace CLI exec probes (rabbitmqctl) with native HTTP probes pointing to the RabbitMQ Management Plugin (port 15672). HTTP health checks execute against the existing server process and eliminate subprocess fork overhead entirely. RabbitMQ’s HTTP API requires authentication. Configure probe access using a secure method supported by your deployment, and do not put credentials directly in a plain-text manifest. Verify that these endpoints are available in the RabbitMQ version you run.</p>
-<p>Why a Slow HTTP Call Could Delay Other Kong Requests</p>
+                <p>Security records are increasingly being used by vendors to train their models, creating new risks for enterprises.</p>
+<p>Traditionally, security incident records have served a singular, very important purpose: to document what the organization observed, decided, and did. Closure notes, rule text, false-positive dispositions, and the reason why an alert was dropped are treated by security teams as records contained in the ticket queue. For organizations to reconstruct their decisions and, crucially, be accountable for them later, all of this evidence must be retained.</p>
+<p>To be sure, security automation is anything but new. For years, SOAR platforms have executed playbooks, closed alerts, and recorded dispositions. They run a rule that customers wrote. The change is what happens to the record afterward, as a portion of the evidence has an alternate destination for a different purpose. Once incident records are ingested into a security AI system with permission to capture data for model building or validation, this evidence can become data the vendor uses for model development and validation.</p>
+<p>Related:AI Raises the Stakes for Cyber Resilience</p>
+<p>A sufficiently large collection of prompts and related records can offer more than a glimpse into which signals are treated by the organization as meaningful, which detections are suppressed, what analysts mark as benign, and where it misses something.</p>
+<p>A single closure is a comparatively harmless note. A series, however, presents a map; suppressing the same class of alerts delineates boundaries of concern. The rationales for closures indicate acceptable levels of PowerShell noise or failed logins that warrant a ticket. Tuning decisions encode which signals the team stops trusting and when. The contents of the ticket do not need to be accessed by an external party for it to understand the pattern, which is the sensitive portion.</p>
+<p>This isn't about reconstructing an AI incident; that's a logging decision. Nor is it about prompt injection, or the familiar case of a vendor training on customer chat logs. The problem is what happens when ordinary security records acquire a second use.</p>
+<p>Microsoft Security Copilot provides an option for the owner to allow Microsoft to capture and human-review Security Copilot data to enhance and validate Microsoft's security-specific model, which is built on the Azure OpenAI foundation model. The data captured for model improvement can include whatever Microsoft plug-ins and Security Copilot agents have used while interacting with the product. The documentation states that this data is not used to train the foundation model and is not shared with OpenAI. A second setting controls the capture of data for the purpose of product-performance reviews.</p>
+<p>Related:AI Coding Agents Leak Thousands of Secrets to GitHub</p>
+<p>The default for each setting depends on the method of provisioning the workspace. With the exception of Microsoft 365 E5 and E7 auto-provisioning, data sharing is enabled by default. The customer that enabled the setting has made an intentional decision, but the customer that has not viewed the settings page may not know which default applies. Using the service and allowing a vendor to capture data for model development or validation are different decisions, and Microsoft has already made them separable.</p>
+<p>The archive had one job: namely, to help the organization reconstruct and defend its own decisions. Now the same records may be held by a vendor for model development or validation, which in turn creates new risks. A vendor breach puts the records outside the customer's network, while a legal demand can expose them without the customer's control. The retention rules and access controls were built for an archive the organization controlled, but they were not built for a second copy elsewhere.</p>
+<p>An auditable record has to preserve more than the final decision. It has to distinguish what the organization knew, what the analyst decided, what the system was given, and what the system recommended. Otherwise, the model's observation effectively becomes the decision. Counsel asking what the organization knew at the time of the incident will not be satisfied by this. An auditor asking why the detections were tuned down should not be met with the closure rationale that also appears in the evidence stream.</p>
+<p>Related:People Are Getting Weird About AI</p>
+<p>This belongs in the procurement contract. A vendor's use of customer security records to provide a service does not by itself authorize their use for model improvement, and evidence retention and model development are different things that should require separate permission. Rule content, closure notes, and ticket text should not be covered by a generic AI clause. If the vendor wants the data for model improvement, then this should be an explicit, revocable choice.</p>
+<p>Until these uses are formally separated, the archive has two functions. One of them continues, as expected, to be operated by the organization. The other turns all the evidence into the vendor's resource.</p>
+<p>Gerald Mako has more than a decade of experience advising European and Asian governments on artificial intelligence, cybersecurity, and technology strategy. His work focuses on AI governance, cyber resilience, and the security challenges created by increasingly autonomous systems.</p>
+<p>Chief Information Security Officer, Cobham Satcom</p>
+<p>Lemuel Valdez has led cybersecurity and security transformation across private equity portfolios, government, and critical infrastructure environments. He has advised and supported more than 20 PE-backed companies on cyber risk, due diligence, incident response, security architecture, and regulatory compliance.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>Securing Active Directory: Defending Against Modern Attack</p>
+<p>When the Plumbing Breaks: Lessons from PHP2Shell and LiteLLM</p>
+<p>From Shadow AI to Rogue Agents: Securing the AI You Can't See</p>
+<p>Resilient Architecture: Designing Systems That Survive Compromise</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/rabbitmq-on-kubernetes-fixing-failed-to-create-dirty-cpu-scheduler-thread-error-11?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyber-risk/ai-gave-your-incident-archive-second-job" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Engineering Zero-State Search</title>
+    <title>Java News Roundup: Lazy Constants, Spring for Apache Pulsar, GlassFish, Hibernate, TomEE, Seed4J</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9763.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,75 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Engineering Zero-State Search</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>Java News Roundup: Lazy Constants, Spring for Apache Pulsar, GlassFish, Hibernate, TomEE, Seed4J</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/VJSxJ51FtucQWwVsw4tEhem4ka32-9b83bfw.jpeg" alt="Engineering Zero-State Search" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/java-news-roundup-nov09-2026/en/headerimage/java-news-roundup-image-1794842460564.jpg" alt="Java News Roundup: Lazy Constants, Spring for Apache Pulsar, GlassFish, Hibernate, TomEE, Seed4J" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/VJSxJ51FtucQWwVsw4tEhem4ka32-9b83bfw.jpeg" alt="Engineering Zero-State Search" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/java-news-roundup-nov09-2026/en/headerimage/java-news-roundup-image-1794842460564.jpg" alt="Java News Roundup: Lazy Constants, Spring for Apache Pulsar, GlassFish, Hibernate, TomEE, Seed4J" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I am an Engineering leader with over 15+ years experience building multi billion user, large scale, low latency and ML driven monetization</p>
-<p>I am an Engineering leader with over 15+ years experience building multi billion user, large scale, low latency and ML driven monetization</p>
-<p>I am an Engineering leader with over 15+ years experience building multi billion user, large scale, low latency and ML driven monetization</p>
-<p>Open Spotify, Netflix, or almost any modern delivery app, and tap the search bar. Before you type a single letter, the screen is already full. You see recent genres, trending queries, categories tailored to the time of day, or items you lingered on yesterday.</p>
-<p>In information retrieval, this is the zero-state search.</p>
-<p>Traditional search engines are reactive. They wait for a text string, parse tokens, hit an inverted index or vector store, and rank candidates against explicit intent. zero-state search flips that sequence. The ranking decision happens before the user expresses any intent at all.</p>
-<p>That shift sounds like a minor UI convenience, but it changes the underlying systems problem. When you populate a search screen ahead of the first keystroke, you are trading explicit intent for latency and convenience. Get it right, and the user saves five seconds of typing. Get it wrong, and you have built a high-speed wall of stale, repetitive guesses that gets in the way of actual search.</p>
-<p>Here is how the engineering problem changes when ranking moves ahead of the query—and why standard offline relevance metrics usually fail to catch the worst UX bugs.</p>
-<p>When a user taps into a search bar, your latency budget is unforgiving. If  zero-state suggestions take 400ms to pop in, the user has already started typing, and the UI jump when the suggestions finally render will cause mis-taps. To feel native, zero-state payloads need to resolve in under 50ms to 100ms—often served straight from a local device cache or an edge key-value store.</p>
-<p>Because you cannot run heavy multi-stage ranking at tap time, the work moves earlier. Candidate generation and scoring happen asynchronously: in nightly batch jobs, on app launch, or triggered by background event streams.</p>
-<p>Precomputation buys you speed, but it creates an immediate freshness problem.</p>
-<p>Suppose a user spends twenty minutes browsing hiking boots on an e-commerce app, buys a pair, and closes the app. If your  zero-state pipeline relies on a batch job that recomputes user embeddings every six hours, the next time that user taps the search bar, your system will proudly suggest hiking boots. The prediction had a high offline probability score, but in the real world, the task is over.</p>
-<p>To make precomputed rankings work without feeling broken, teams usually have to split the scoring pipeline into two layers:</p>
-<p>The Slow Layer (Batch/Nearline): Computes broad affinity scores, collaborative filtering candidates, and long-term category preferences. This populates the candidate pool.</p>
-<p>The Fast Re-ranker (Edge/Client-side): Applies lightweight, deterministic rules at read time. It checks local session state, filters out items purchased or dismissed in the last ten minutes, and adjusts weights based on immediate context (like time of day or device connection).</p>
-<p>If you only build the slow layer, your app will feel like it has amnesia about what the user just did.</p>
-<p>The most common mistake in  zero-state ranking is reusing the exact same objective function used for standard search or home-feed click-through rate (CTR).</p>
-<p>When a user types "wireless mechanical keyboard", narrowing the results to ten nearly identical keyboards is a win. You have an explicit constraint. Before a query, you have no constraint. If your model notices a user clicked on Italian restaurants twice last week and responds by filling every slot on the  zero-state screen with pasta places, you haven't built a discovery tool. You've built a rut.</p>
-<p>High pointwise scores do not equal a useful screen. If five candidates each have a 15% probability of being clicked, but all five represent the exact same intent cluster, showing all five wastes four slots.</p>
-<p>Instead of pure relevance sorting, zero-state ranking has to be treated as a portfolio optimization problem (or a slated recommendation problem). The goal isn't for every item on the screen to be right; the goal is for at least one item on the screen to match the user's unspoken mood.</p>
-<p>In practice, this requires a few structural guardrails in the ranking logic:</p>
-<p>Intent Clustering & Deduplication: Group candidates by semantic category or task before final slot allocation. Cap how many slots any single cluster can claim, regardless of raw model score.</p>
-<p>Impression Decay (Fatigue Penalties): If a user has seen a  zero-state suggestion three times across three sessions and ignored it every time, its score should decay aggressively. Without impression discounting, static high-prior items (like a user's all-time top genre) will squat on the top slot forever.</p>
-<p>Dedicated Exploration Slots: Reserve 10% to 20% of the visible real estate for low-confidence, high-variance candidates or trending global queries. If you never show anything outside the user's historical profile, the model can only reinforce its own past predictions.</p>
-<p>Every proactive recommendation carries an implicit risk: it is a guess made on the user's behalf, and most of the time, guesses miss.</p>
-<p>When a recommendation misses on a passive browse feed, the cost is low—the user just keeps scrolling. When a recommendation misses on a search screen, the user is often trying to accomplish a specific task. If your  zero-state interface hijacks the screen, pushes the keyboard down, or requires an extra tap to clear a pre-filled suggestion, a wrong guess actively slows the user down.</p>
-<p>Good  zero-state systems are designed to be ignored at zero cost.</p>
-<p>That means the boundary between "browsing suggestions" and "typing a query" has to be frictionless. The text cursor should be focused and ready. The moment the first character is typed, the  zero-state state should yield immediately to prefix autocomplete without layout lag. Users shouldn't have to fight the system's prediction to state their actual intent.</p>
-<p>How do you know if your  zero-state ranking is actually helping users, rather than just farming accidental taps?</p>
-<p>Looking at the click-through rate on the  zero-state screen in isolation is a trap. You can easily inflate zero-state CTR by making the suggestion cards huge, hiding the keyboard by default, or showing clickbait trending topics. Your  zero-state metrics will go up while overall search satisfaction tanks.</p>
-<p>Engineers working on pre-query systems should evaluate the entire session trajectory, not just the first tap:</p>
-<p>Downstream Task Completion (Assisted Success): When a user clicks a  zero-state suggestion, do they actually complete a downstream action (play a song, read an article, add to cart), or do they immediately bounce back to the search bar and type a manual query? A click followed by an immediate back-navigation within 3 seconds is a false positive.</p>
-<p>Time-to-Success: Compare sessions that start with a  zero-state tap against sessions that start with manual typing. Does the precomputed screen actually reduce the time it takes for a user to find something they engage with?</p>
-<p>Query Reformulation & Abandonment Rate: If introducing a new  zero-state ranking model increases the rate at which users abandon the search tab entirely, your suggestions are likely creating visual noise or decision fatigue.</p>
-<p>Slot Entropy / Refresh Rate: Measure how often the top N slots actually change for a given user across consecutive sessions. If your jaccard similarity between Tuesday's screen and Wednesday's screen is 0.95, your freshness signals are under-weighted.</p>
-<p>Moving ranking ahead of the first keystroke doesn't replace search. Plenty of users open an app knowing the exact string they want to type, and the best thing a system can do for them is stay out of the way.</p>
-<p>But for the users who open search with a half-formed goal—looking for something to watch, something to eat, or a topic they were researching yesterday—the  zero-state screen is where retrieval actually begins. Treating that screen as a first-class systems problem means looking past raw prediction scores. It requires balancing precomputed speed with real-time session context, penalizing repetition, and designing an interface that lets the user overrule the algorithm without missing a beat.</p>
-<p>The Millisecond Conundrum: Balancing Latency, Freshness, and Intelligence at Scale</p>
-<p>I am an Engineering leader with over 15+ years experience building multi billion user, large scale, low latency and ML driven monetization</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Live Webinar and Q&A: Scaling OpenTelemetry: Managing Collectors, Configuration, and Cost (Nov 19, 2026)
+
+                            Save Your Seat</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites and Chief Security Architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>The article describes an architecture for agentic AI in regulated utility operations. Agents reason and propose actions, but a deterministic policy gate and a governed tool gateway control execution, with human approval where required. It covers an AWS reference implementation, grounding in runbooks, governed prediction, outcome validation, audit evidence, and phased autonomy.</p>
+<p>Hannes Hapke shares how Dataiku’s open-source Kiji Inspector applies Sparse Autoencoders (SAEs) directly to decision tokens to expose why agents pick specific tools. Moving past superficial chain-of-thought narratives, he discusses causal ablation, layer activation extraction via patched vLLM engines, and production monitoring workflows for software architects and senior engineering leaders.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>Oli Lane and Julian Wreford share how Gearset replaced guesswork in distributed asynchronous queues with OpenTelemetry tracing. They explain why traditional metrics fall short, how to implement user-centric SLOs based on latency distributions, and share practical debugging tips to help senior developers, software architects, and engineering leaders improve system reliability and team culture.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Java News Roundup: Lazy Constants, Spring for Apache Pulsar, GlassFish, Hibernate, TomEE, Seed4J</p>
+<p>Nov 16, 2026
+								
+								
+								
+									
+									5
+									min read</p>
+<p>This week's Java roundup for November 9th, 2026, features news highlighting: Lazy Constants proposed to target for JDK 28; TornadoVM jitLLM 3.0; point releases of Seed4J; second release candidates of Spring AI and Spring Boot; first release candidates of Hibernate ORM and Hibernate Reactive; fourth milestone release of GlassFish; and the second milestone release of Apache TomEE.</p>
+<p>JEP 547, Lazy Constants (Fourth Preview), has been elevated from Candidate to Proposed to Target for JDK 28. This JEP proposes a fourth preview, with no changes, after three rounds of preview delivered in the upcoming release of JDK 27 and JDK 26 through JDK 25. Formerly known as Stable Values and Computed Constants, this feature introduces the concept of computed constants, defined as immutable value holders that are initialized at most once. This offers the performance and safety benefits of final fields, while offering greater flexibility as to the timing of initialization. The name change from Stable Values to Lazy Constants with the release of JDK 26, better captures the intent of a high-level use case. The review is expected to conclude on Wednesday, November 18, 2026.</p>
+<p>Build 24 of the JDK 28 early-access builds was made available this past week featuring updates from Build 23 that include fixes for various issues. More details on this release may be found in the release notes.</p>
+<p>For JDK 28, developers are encouraged to report bugs via the Java Bug Database.</p>
+<p>The second release candidate of Spring AI 2.1.0 delivers new features such as: a new DecisionModel API, anchored by the DecisionModel interface, that returns the probability of different outcomes instead of generated text based on yes/no answers, questions about text or a set of fields; and a new similaritySearch(float [], SearchRequest) method, added to the VectorStoreRetriever interface to complement the corresponding overloaded methods, to search with a user's embeddings in more vector stores. Further details on this release may be found in the release notes.</p>
+<p>The second release candidate of Spring Boot 4.2.0 ships with bug fixes, documentation improvements, dependency upgrades and new features such as: support for reading the value defined in a X-Forwarded-Prefix HTTP header in a WebFlux application on Reactor Netty when the server.forward-headers-strategy property is set to native; and a database assigned to the spring.data.redis.database property is now properly applied to master/replica connections if a value is assigned to the spring.data.redis.masterreplica.nodes property. More details on this release may be found in the release notes and this wiki page.</p>
+<p>The Spring for Apache Pulsar team has announced that the project is moving as a subproject within Apache Pulsar at the Apache Software Foundation to "foster even deeper integration and collaboration with the broader Pulsar community." As stated in the blog post:</p>
+<p>Bringing this integration directly into the Apache Pulsar project allows the community to streamline development, accelerate feature support, and ensure long-term alignment with the evolution of Apache Pulsar.</p>
+<p>Spring for Apache Pulsar 2.0.8, released in October 2026, was the final release under the auspices of the Spring ecosystem.</p>
+<p>The fourth milestone release of GlassFish 9.0.0 provides bug fixes, documentation improvements, dependency upgrades and new features such as: implementation of the Jakarta Persistence 4.0.0-M7 specification with EclipseLink 6.0.0-M1; a move of the Sun Theme module out of the out of the external GlassFish Woodstock Components repository into its own module in GlassFish so that Sun Theme and the Admin Console can be modified together; and an update to versions 1.2.0-M2 and 2.0.0-M1 of Eclipse JNoSQL. Further details on this release may be found in the release notes.</p>
+<p>Beehive Lab, makers of TornadoVM, has released version 3.0 of jitLLM, a JVM-native LLM inference and serving engine, delivers notable changes such as: 1.43 times faster startup with GraalVM Native Image; an up to 9.3 times faster prefill phase; and a more efficient reading of model weights by eliminating the copy from the mapped GGUF file into a Apple Metal buffer. More details on this release may be found in the release notes.</p>
+<p>The first release candidate of Hibernate ORM 8.0.0 ships with notable changes such as: an implementation of the Jakarta Persistence 4.0.0-M7 and Jakarta Data 1.1.0-M4 specifications (the latter via Hibernate Data Repositories); and support for coordination of graph-based flushing that builds a dependency graph for pending entity and collection mutations. Further details on this release may be found in the what's new page.</p>
+<p>The first release candidates of Hibernate Reactive 5.1.0 and 5.0.0 provide notable changes such as: the EXTENDED constant, defined in the Jakarta Persistence PessimisticLockScope enum class, now locks the collection tables as intended to align with the same functionality in Hibernate ORM; and an update to the VertxFactory interface to allow for adding observability without changing the functionality in using the DefaultVertxInstance class. These versions are compatible with Hibernate ORM 8.0.0.CR1. More details on these releases may be found in the release notes for version 5.1.0.CR1 and version 5.0.0.CR1.</p>
+<p>The second milestone release of Apache TomEE 11.0.0 delivers bug fixes, documentation improvements, dependency upgrades and new features such as: resolutions to 38 CVEs; completion of their implementation of the Jakarta Authorization 3.0 specification; and TomEE Plume, the enterprise version, now ships the modular EclipseLink JPA artifact instead of the eclipselink Uber-Jar. Further details on this release may be found in the release notes.</p>
+<p>The release of JobRunr 9.0.4 ships with bug fixes and one new feature that improves build caching and security by moving to hardened Docker images. More details on this release may be found in the release notes.</p>
+<p>The first rolling release of JReleaser 2.0.0-SNAPSHOT provides a new feature in which the -a and -d short option flags, for their respective corresponding --assembly and --download long versions, were removed from the CLI due to the lack of short option flags for the --changelog and --announce flags. Further details on this release may be found in the release notes.</p>
+<p>Versions 2.4.0 and 2.3.0 of Seed4J, formerly known as JHipster Lite, deliver bug fixes, dependency upgrades and new features such as: install Playwrite only on applications that execute the relevant Playwright component tests; and improved efficiency by creating one global Maven cache that is shared by the Seed4J build and every generated Maven application that replaces a Maven cache for each generated application. More details on these releases may be found in the release notes for version 2.4.0 and version 2.3.0.</p>
+<p>The Quarkus team has introduced the Quarkus Resiliency Testing utility that allows developers to reproduce various failure scenarios and their respective responses while testing an application with the @QuarkusTest annotation. An example application using this new utility may be found here.</p>
+<p>PostgreSQL Built for Time-Series Scale
+Handle massive time-series data with PostgreSQL, without sacrificing performance. Discover how Tiger Data delivers high-speed ingest, fast queries, and scalable storage. Learn More.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/engineering-zero-state-search?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/java-news-roundup-nov09-2026/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

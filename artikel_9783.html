@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Mitts Makes Parallel Rust Builds Faster Than Cargo</title>
+    <title>“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9783.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Mitts Makes Parallel Rust Builds Faster Than Cargo</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/BQfMHbq0nzXa400jBuX3ouwmGN03-fq83b2g.png" alt="How Mitts Makes Parallel Rust Builds Faster Than Cargo" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/BQfMHbq0nzXa400jBuX3ouwmGN03-fq83b2g.png" alt="How Mitts Makes Parallel Rust Builds Faster Than Cargo" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Systems engineer: distributed systems, low-latency market data, trading infrastructure, AI runtimes & search. C++, Rust, Go, Python.</p>
-<p>Systems engineer: distributed systems, low-latency market data, trading infrastructure, AI runtimes & search. C++, Rust, Go, Python.</p>
-<p>Systems engineer: distributed systems, low-latency market data, trading infrastructure, AI runtimes & search. C++, Rust, Go, Python.</p>
-<p>Cargo takes minutes. Mitts takes seconds.</p>
-<p>For parallel work, the question is simple: when will the whole batch of builds be ready? The code is already split across branches. Now you need completed artifacts to move on to verification.</p>
-<p>In The Hundred, twelve rustls worktrees on Linux x86_64 took 3 min 42 s with Cargo. With Mitts, 9.3 s. That is the completion time of the whole batch for one project, not a corpus total or the time of the first worktree to finish.</p>
-<p>Figure 1. One heavy project from the study; medians of three repeats. Shared caches were prewarmed, local targets were empty. Priming time is excluded; the axis starts at zero.</p>
-<p>Plain Cargo in this configuration has no shared compilation cache between worktrees: each fresh checkout starts with an empty target directory. Mitts and sccache receive prewarmed shared caches. Sccache starts warm too, yet finishes this batch in 3 min 59 s: caching work inside compiler calls does not remove the entire repeated build process.</p>
-<p>I chose a long-build example to make the wait for artifacts concrete. It does not promise the same time for every project or measure how fast an agent completes its entire task.</p>
-<p>An agent gets a worktree. A reviewer gets another. A fix gets a third. Each has its own target/. Source isolation is clean. But another checkout should not automatically mean repeating identical, reusable compilation work.</p>
-<p>“Give each agent its own target directory” is an isolation policy with a compilation bill attached. I built Mitts to keep the worktrees separate while letting them share completed work.</p>
-<p>The main scenario builds tests with test --no-run in twelve worktrees of one project, spread across four commits, starting together. It compares plain Cargo, Cargo with sccache, and Mitts on the same machine and toolchain. Cargo runs offline. Test execution is outside the timed build.</p>
-<p>Every repeat uses fresh worktrees with empty local target/ directories and pre-fetched sources. The shared caches start from snapshots primed by one untimed build of the first commit. The timed swarm measures reuse across those fresh checkouts and compilation of the differences at the other commits; it does not include that initial priming cost.</p>
-<p>The study selects 100 open-source Rust projects. The measured count is 100 on macOS, 90 on Linux x86_64, and 100 on Linux aarch64. The machines have 24, 32, and 128 logical CPUs respectively. The corpus and full public machine specifications are on the study page.</p>
-<p>Each reading is the median of three repeats. The rustls chart shows one project; the full corpus exposes the distribution. Duration labels are truncated to the displayed precision, while bar lengths use the underlying values.</p>
-<p>All measured projects remain in the results, including seven Linux x86_64 runs marked “wide spread.” An idle gate checked CPU load and foreign compiler activity; it did not remove the resident agent sessions on the Mac. Three repeats are not a confidence interval, and totals give heavy projects more influence. The study’s project tables and reduced data expose that distribution.</p>
-<p>Rustls above is one heavy project on Linux x86_64. Now look at the full Mac corpus to see which repeated work can be removed:</p>
-<p>Sccache clearly helps CPU time. But in this workload it still starts a wrapper for each compiler invocation, Cargo still plans each build and runs build scripts, and linking outputs such as test binaries are outside sccache’s compilation cache. Cutting compiler work inside those calls does not remove the entire repeated build process.</p>
-<p>Consider actix-web on the Mac: the twelve-worktree build took 5 min 22 s with Cargo, 5 min 23 s with sccache, and 56 s with Mitts. Cargo made 3,408 compiler invocations; Mitts made 181.</p>
-<p>Disk also needs two definitions. Device bytes written measure writes reaching the block device. du measures the workspace files and shared store, counting each copy-on-write clone in full on XFS. On Linux x86_64 (XFS), disk-in-use totals fell from 641 GB to 484 GB, while device writes fell from 651 GB to 106 GB. Those readings describe different costs; neither can substitute for the other.</p>
-<p>The obvious shortcut is a shared CARGO_TARGET_DIR. It also shares mutable outputs.</p>
-<p>The study deliberately puts a failing test into worktree twelve. All worktrees must compile and produce the same test-binary counts as plain Cargo. Untimed smoke checks then require the modified worktree to fail on that test while a clean worktree passes.</p>
-<p>The shared-target demonstration failed that check: the injected failure was missed or leaked into a clean worktree. It was excluded from the scores.</p>
-<p>Great: a quicker build, followed by a test from the wrong checkout. I wanted a build I could use.</p>
-<p>That result concerns concurrent builds at different commits, and it demands more than “the directories are now the same” when designing reuse between agents.</p>
-<p>Mitts reads the existing Cargo.toml and Cargo.lock, plans the compilation graph, and invokes rustc directly. The technical documentation describes six phases: resolve, fetch, plan, key, execute, publish.</p>
-<p>Each unit receives an action key derived from its toolchain, target, profile, flags, features, source content, dependency action keys, and tracked environment. Matching inputs can reuse an existing result. A changed input changes the key. An input Mitts cannot account for makes the unit uncached or explicitly unsupported.</p>
-<p>Figure 2. One unit of work. Identical tracked inputs can share a result; changed inputs receive a different key. Worktrees and their output directories remain separate.</p>
-<p>The important boundary is between an immutable store and a workspace’s mutable output view. Objects are hashed when published, staged, made read-only, and atomically renamed into the store. The action-cache entry is written last. Restoring uses a filesystem reflink, a read-only hardlink, or a copy; a workspace never receives a writable alias to a shared object.</p>
-<p>Restore does not re-hash every object by default. It trusts the atomically published, read-only objects. MITTS_VERIFY_RESTORE=1 opts into checking every object’s hash before restoration. That distinction matters when explaining both the trust model and the work a cache hit performs.</p>
-<p>Cross-worktree reuse also requires path independence. Qualifying workspace units use remapped paths; units with a custom build script, compile-time CARGO_MANIFEST_DIR, a declared impure proc-macro dependency, or paths outside the workspace root retain checkout-specific keys. Mitts additionally checks artifacts for the workspace path before publishing them under a path-independent key. Reuse is conditional, not an assumption that two crates with the same name are interchangeable.</p>
-<p>On a cache hit, the result is restored immediately, without a per-key lock. On a miss, builds cooperate through that lock and re-check the cache after acquiring it. If another build is producing a needed unit, a worker can process other ready units and return later. A machine-wide jobserver bounds compiler concurrency across Mitts processes. Build-script outputs and declared inputs are tracked too, but staging is not an OS sandbox: undeclared file reads remain the author’s responsibility.</p>
-<p>The useful abstraction is completed work with a known identity. Each agent keeps its own checkout; identical eligible work does not need another compiler run merely because its consumer lives in another directory.</p>
-<p>One cold build. Plain Cargo finished first on 71 of 100 Mac projects, 60 of 90 Linux x86_64 projects, and 77 of 100 Linux aarch64 projects; the Mac also had one exact tie. On the Mac, Cargo’s advantage reached 6.2 s for procs. Against cold sccache, Mitts finished first on 86 of 100, 90 of 90, and 98 of 100 respectively. An empty store has nothing to reuse, while Mitts must hash inputs and populate it; plain Cargo is a strong choice for that workload.</p>
-<p>Edit one file. Mitts finished before Cargo on 49 of 71, 43 of 64, and 42 of 71 projects, in the same machine order. Cargo won the remainder. Its intra-crate incremental compilation can be cheaper than rebuilding a large crate as a whole unit. The smaller denominators matter: some edit probes failed to compile under all three tools, including crates that deny missing documentation.</p>
-<p>Replay ten commits in one directory. Mitts finished first on 58 of 100, 63 of 90, and 52 of 99 projects. Yet the independently computed per-tool medians were close: Cargo/Mitts 5.6/5.7 s, 3.5/3.6 s, and 9.0/9.1 s. More project wins do not necessarily produce a lower overall median.</p>
-<p>Peak memory of one compiler process. Mitts invokes the same rustc; an individual compiler or linker still needs essentially the same working memory. The CPU and disk savings above are not a claim that one compiler suddenly becomes small.</p>
-<p>Mitts is pre-release software for Linux and macOS. Windows, cross-compilation beyond the host target, and a remote or team cache are not supported yet. Undeclared build-script and proc-macro inputs need care. A machine-wide store helps cooperating builds on that machine; it is not an organization-wide cache service.</p>
-<p>If your day is one checkout and small edits inside a large crate, the incremental-build results deserve your attention. If your day is agents, worktrees, branch switches, and review builds repeating the same eligible inputs, the reuse results address your workload directly.</p>
-<p>Start with the installation and usage documentation and inspect the full study. Mitts uses ordinary Cargo manifests; mitts explain shows its plan and action keys without compiling.</p>
-<p>Keep source isolation. Keep correctness checks. But stop treating duplicate compilation as the unavoidable price of giving another agent a worktree.</p>
-<p>When AI Coding Agents Start Acting Like Tech Leads</p>
-<p>Systems engineer: distributed systems, low-latency market data, trading infrastructure, AI runtimes & search. C++, Rust, Go, Python.</p>
+                <p><p>Three small open models, 150 MMLU questions each, five pushback styles: “That’s wrong” did more damage, and naming a wrong option was close to fatal.</p>
+<p>The post <a href="https://towardsdatascience.com/are-you-sure-flipped-qwen25-15bs-right-answer-2-times-in-3/">“Are You Sure?” Flipped Qwen2.5-1.5B’s Right Answer 2 Times in 3</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/how-mitts-makes-parallel-rust-builds-faster-than-cargo?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://towardsdatascience.com/are-you-sure-flipped-qwen25-15bs-right-answer-2-times-in-3/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

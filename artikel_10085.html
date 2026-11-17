@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</title>
+    <title>What’s !important #19: CSS Refraction Effects, Scroll State Queries, @custom-media, and More</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10085.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,60 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>What’s !important #19: CSS Refraction Effects, Scroll State Queries, @custom-media, and More</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/zero_tim_tpu_blog_header_1600x900.2e16d0ba.fill-1200x600.png" alt="Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/09/wi19.jpg" alt="What’s !important #19: CSS Refraction Effects, Scroll State Queries, @custom-media, and More" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/zero_tim_tpu_blog_header_1600x900.2e16d0ba.fill-1200x600.png" alt="Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/09/wi19.jpg" alt="What’s !important #19: CSS Refraction Effects, Scroll State Queries, @custom-media, and More" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Reinforcement learning (RL) for large language models is notoriously sensitive to numerical instability: even tiny discrepancies between rollout generation and gradient updates can destabilize training or stall convergence. In LLM RL, the model serves as the policy, π(action | previous tokens), and true on-policy learning requires every action in an update to be generated and evaluated by that exact same policy. While a synchronous loop ensures each rollout batch is scored using the same weights that generated it, a critical numerical requirement remains: the sampler and trainer must evaluate that policy identically.</p>
-<p>In practice, production RL stacks run sampling and training through separate, specialized execution paths. The sampler chooses each action token during incremental decoding and records its behavior logprob. The trainer evaluates the same token in batched forward-backward passes to compute its current logprob and gradients. Under the same weights, these differing execution paths can still assign different logprobs to the same token and context. The training schedule is on-policy, but the numerical execution has introduced a hidden off-policy gap that compounds over multi-turn trajectories.</p>
-<p>Our zero train–inference mismatch (Zero-TIM) implementation, developed in Tunix and verified at multi-host scale across 64 TPU v5p chips (DP8×TP8), closes this numerical gap. At the same weights, the sampler and trainer assign bitwise-identical logprobs to the same action and token history—bringing state-of-the-art, true on-policy stability to TPU RL training.</p>
-<p>A reduction is a tree of floating-point additions. Floating-point addition is not associative, so changing the tree changes where rounding occurs. The effect is easier to expose in bfloat16, which retains less precision than float32.</p>
-<p>The following bfloat16 example isolates the effect of reduction order:</p>
-<p>The same issue appears in model reductions: matrix products accumulate partial sums, normalization computes statistics, and tensor-parallel shards combine partial outputs. In our original stack, sampler decode and trainer forward used different token-array shapes and forward implementations. JAX specializes computations to their input shapes, and the training forward also runs inside a differentiated program.</p>
-<p>Across these paths, reduction order and intermediate precision were not consistently aligned. Floating-point rounding turned those arithmetic differences into different logprob bits. The weights and model equations were identical; the arithmetic was not.</p>
-<p>The contract is simple: across sampler decode, serving prefill, and trainer forward, all three paths must produce bitwise-identical logprobs for every sampled action—comparing raw floating-point bytes under the same rollout weights, token history, and sampling settings, with zero rounding or tolerance.</p>
-<p>Why three paths instead of two? In a decoupled RL stack, a direct sampler–trainer disagreement shows that a numerical gap exists, but not where it enters. Introducing serving prefill as a middle checkpoint turns alignment into a systematic two-step diagnostic that any RL stack can adopt:</p>
-<p>Sampler decode vs. prefill verifies that the serving engine agrees with itself between incremental token generation and full-sequence re-scoring, while prefill vs. trainer verifies that the serving and training engines agree across compilation and differentiation boundaries.</p>
-<p>Achieving Zero-TIM does not require merging the sampler and trainer into a single monolithic engine. Instead, we use a generalizable four-part recipe that bridges separate serving and training pipelines across multi-host TPU meshes: locking within-shard kernel accumulation, ordering cross-shard reductions, standardizing the logprob scoring tail, and wrapping serving kernels with custom differentiation rules.</p>
-<p>Inside each tensor-parallel rank, batch-invariant Pallas kernels control accumulation order and intermediate precision. Projection kernels traverse fixed contraction blocks in order, keeping the reduction blocking independent of token-row count. Partial products accumulate in float32, with explicit output casts.</p>
-<p>The production kernel initializes its scratch accumulator before the tile traversal, then applies this core to each tile:</p>
-<p>The next tile continues from the float32 accumulator, not the cast output. This construction covers the attention and MLP projections and the LM head. Dedicated kernels fix RMSNorm reductions and SwiGLU’s intermediate casts. The existing Pallas paged-attention forward is retained.</p>
-<p>For row-parallel projections, each tensor-parallel rank produces a partial output. We separate communication from addition: ppermute transports the partials, then every rank adds them in the same source-rank order.</p>
-<p>The reduction order is explicit in the program rather than selected by a collective implementation.</p>
-<p>Alignment must extend beyond model logits to the probability of the sampled action. Decode, prefill, and trainer apply matching sampling transforms, use the same fixed Pallas log-softmax construction, and select the recorded action token.</p>
-<p>Prefill and trainer score the action generated during rollout rather than choosing another action. We also preserve sampled token IDs across environment turns so that every path evaluates the same token history.</p>
-<p>The trainer reuses the serving prefill computation. Custom vector–Jacobian products retain the serving kernels for forward evaluation and provide their backward rules. The matmul example shows this separation:</p>
-<p>The differentiable replica mirrors the kernel’s accumulation and casts, but is used only to construct the pullback. Forward values still come from the serving Pallas kernel.</p>
-<p>Training places that forward inside a differentiated JAX program. We pass --xla_allow_excess_precision=false through XLA_FLAGS to the compiler process, constraining excess intermediate precision in the operations surrounding the Pallas kernels.</p>
-<p>Long trajectories are evaluated in fixed-size chunks, carrying the paged KV cache forward. All action logprobs feed the complete train-batch RL loss. The reverse pass propagates gradients through those cache connections and combines parameter-gradient contributions before the optimizer update.</p>
-<p>Across the AI systems community, eliminating train–inference mismatch has rapidly become a state-of-the-art requirement for stabilizing large-scale RL convergence. Recent open-source efforts—including vLLM with TorchTitan and RadixArk/LMSys Miles—have demonstrated how batch-invariant kernels and bitwise numerical alignment prevent off-policy drift during policy optimization.</p>
-<p>Our work delivers an open-source, modular JAX/XLA and Pallas implementation of this contract for TPU in Tunix. Verified across a multi-host 64 TPU v5p (DP8×TP8) mesh, these kernel and collective patterns provide a reusable blueprint that teams can adopt to achieve bit-exact on-policy RL across distributed JAX/TPU stacks.</p>
-<p>To benchmark our TPU kernels, we run a 200-step numerical verification test on the synthetic FrozenLake environment using a public Qwen3-8B checkpoint as a baseline test case using 64 TPU v5p chips with a DP8×TP8 mesh. The recipe uses a GSPO-token loss with leave-one-out advantages. We compare Standard training with trainer-old logprobs and no additional sampler correction, token-level truncated importance sampling (TIS), and Zero-TIM.</p>
-<p>The Zero-TIM configuration also uses token-in/token-out (TiTO) handling to preserve sampled token IDs across environment turns. The comparison runs retain their existing tokenization paths.</p>
-<p>Zero-TIM records zero mean absolute sampler–trainer logprob difference at every logged step in this window, while its training solve rate increases. Standard and TIS retain nonzero differences: TIS adjusts their contribution to the update without removing the underlying mismatch. Zero-TIM reaches higher observed solve rates in these runs.</p>
-<p>We developed Zero-TIM prototype as part of Tunix, Google's open-source, JAX-native library for LLM RL and post-training on Cloud TPU. The kernel patterns and three-way verification contract are modular by design—making them straightforward to adopt across existing multi-host JAX/TPU serving and training pipelines—and we are actively extending support to linear-attention and Mixture-of-Experts (MoE) architectures.</p>
-<p>TPU Model Design Considerations and Optimization Guide</p>
-<p>A2UI 1.0: Build delightful, fast, reliable, agentic experiences</p>
-<p>Agents are sessions, not requests: size GKE node pools for AI agent sessions</p>
-<p>Securing Your Agents: A Hands-On Guide to Agent Anomaly Detection</p>
+                <p>We’re back! Don’t worry, this isn’t a trick (despite what our name suggests!). However, due to the hiatus, we’re also a little behind. That’s why this issue of What’s !important is absolutely stacked. All killer, no filler. Here’s what you missed.</p>
+<p>By the way, before we dive in, Mat Marquis’ highly recommended JavaScript for Everyone course is currently -30% off (code: CSSTRICKSFRIENDS). You don’t want to miss this.</p>
+<p>Preethi Sam demonstrated how to create background image refraction effects with CSS. The effects are stunning, can be animated, don’t need very much CSS (no JavaScript), and we don’t need to duplicate the image either.</p>
+<p>Brecht De Ruyte demonstrated how to build customizable components using container style queries and advanced attr(), showcasing some incredible interactive demos, including the two below:</p>
+<p>Dan Holloran showed us how to use the different scroll-state() queries (scrollable, scrolled, snapped, and stuck). It’s not a long read, which is exactly what you want for a new but simple feature like this.</p>
+<p>A quick, no-context CSS snippet to entice you:</p>
+<p>Declan Chidlow shared some of the craziest CSS to ever exist, and I mean craziest. Most of it comes from Internet Explorer, but let’s face it, you knew that already. Thankfully, they don’t build them like they used to.</p>
+<p>Bramus demonstrated how to animate CSS grids using anchor positioning. The idea is that we anchor content to its corresponding cell, and then as the grid reflows, it’s the content (not the cell) that animates with it.</p>
+<p>(But it doesn’t work in Firefox due to what sounds like a bug.)</p>
+<p>Chris Coyier talked about a bunch of new HTML features, and honestly, there’s a whole lot in there that you definitely haven’t heard of. Like, I’m certain of it.</p>
+<p>Victor Ayomipo contemplated why container query adoption has been so terrible despite them topping CSS wishlists for years. Victor thinks that we’re using them wrong, so he’s here to set the record straight.</p>
+<p>Cory LaViska demonstrated how to use @custom-media in addition to container style queries as a fallback.</p>
+<p>Also, don’t forget that Declan has an extremely thorough @custom-media deep-dive in our Almanac.</p>
+<p>Ahmad Shadeed tackled an interesting topic — detecting overlapping elements (with CSS, of course). If you’re keen on anchor positioning, scroll-driven animations, and again (!), container style queries, then this walkthrough is for you.</p>
+<p>I want to know when the decorative element hits the section from the left edge, taking into consideration that the element might have a fluid position or size that changes with the viewport size or container size. Basically, it’s a dynamic problem. It’s not about using a media query to hide the decorative element, I want to hide it upon overlapping.</p>
+<p>Maybe container queries are finally picking up?</p>
+<p>Patrick Brosset walked us through a proposal for the previewsrc HTML attribute, which would enable us to supply preview images for images that haven’t yet loaded using only HTML. For example, we could supply a blurry preview image. However, I’d rather have something like :loaded/:not(:loaded) so that we can style/transition unloaded images with CSS rather than needing to create extra images.</p>
+<p>Temani Afif shared a custom borders demo, where the trick is to declare a transparent border, use border-shape to define its shape, then declare a background in addition to background-clip: border-area so that it only shows up within the border, like this (requires Chrome at the moment):</p>
+<p>In a similar manner, Leon Arnott shared this awesome trick for animating the background color of ::selection, something that’s actually forbidden (or so we thought, anyway…):</p>
+<p>Today in CSS:
+
+We all know you can change the highlight colour of selected text, but it's impossible to animate that colour.
+
+Unless…
+the colour was just a variable inherited from the parent element, using @​property to make it animatable…
+
+Hahahahaha… [image or embed]</p>
+<p>And that’s it, really. Simply use var(--bg-color) on ::selection or some other visually restrictive element.</p>
+<p>Chris Coyier demonstrated how to random()ly animate an element along the edge of another element. There’s a cute doggo, by the way. Probably should’ve led with that.</p>
+<p>Polypane explained how we might disable the root scroller accidentally (which is surprisingly easy to do — I’ve definitely done it), what we lose in doing so, and what to do instead.</p>
+<p>Also, have you ever completely misunderstood how the root (:root/html) works? This is a solid explainer for that, too.</p>
+<p>Speaking of accidents, have you ever tapped on a target twice, apparently in quick succession, and ended up zooming in? Andy Bell revealed that touch-action: manipulation disables the double-tap-to-zoom-in functionality. It isn’t new, but I don’t see many web developers using it. One for the CSS reset, I think?</p>
+<p>Chrome and Firefox now ship every two weeks. The inaugural releases were fairly exciting (not smaller, as I assumed they’d be). In addition, Safari 27 (along with iOS, iPadOS, and macOS 27) shipped with some of the same features as Firefox, making them Baseline in the same release window. High fives all around!</p>
+<p>We've got lots of ways to help you connect with the greatest front-end community in all the land.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>For the CSS grid animation with anchor positioning, there is indeed a Firefox bug, tracked at https://bugzilla.mozilla.org/show_bug.cgi?id=1924226</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/unlocking-stable-on-policy-rl-on-tpu-with-bitwise-zero-traininference-mismatch/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/whats-important-19/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

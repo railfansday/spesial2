@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python AI-Generated Image Lifecycles: Object Storage, Database BLOBs, and Disk</title>
+    <title>AnyLanguageModel 1.0: One Year of Local Models on Apple Platforms</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9741.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,35 +15,87 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Python AI-Generated Image Lifecycles: Object Storage, Database BLOBs, and Disk</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>AnyLanguageModel 1.0: One Year of Local Models on Apple Platforms</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fd37ac3hi5nvix6xkcdic.png" alt="Python AI-Generated Image Lifecycles: Object Storage, Database BLOBs, and Disk" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/anylanguagemodel-1-0/banner.png" alt="AnyLanguageModel 1.0: One Year of Local Models on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fd37ac3hi5nvix6xkcdic.png" alt="Python AI-Generated Image Lifecycles: Object Storage, Database BLOBs, and Disk" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/anylanguagemodel-1-0/banner.png" alt="AnyLanguageModel 1.0: One Year of Local Models on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The simplest production choice is usually to put generated image bytes in object storage and keep the object key plus searchable workflow state in a database. Use database binary columns only when the payload is deliberately small and atomic byte-plus-metadata commits matter; treat local disk as a development cache or a consciously single-host deployment boundary. This split keeps a Python generation worker replaceable, makes retries understandable, and prevents a successful model eval from hiding a persistence failure.</p>
-<p>Short answer: for durable AI-generated images in a multi-worker SaaS, store bytes as objects, store metadata in relational rows, and test the gap between those two writes.</p>
-<p>The data flow is plain. A worker receives validated image bytes, computes a content digest, writes them under an application-owned key, then records a row that says which tenant owns the output and where it lives. Reads authorize against that row before retrieving the object. The model provider is outside this contract, so swapping a notebook stub for a real image endpoint does not alter the storage rules.</p>
-<p>Start by separating identity from a display filename. A filename may be changed for a download, while an object key needs to stay stable for retries and cleanup. When a response needs to suggest a name to a browser, Content-Disposition is the HTTP response header intended for controlling inline display or attachment handling and can carry a filename parameter. It belongs at delivery time, not in the durable identity of the image. The MDN reference at the end documents the header semantics.</p>
-<p>For a generated image, I want the durable record to include the tenant identifier, a generation or job identifier, object key, content type, byte count, digest, and lifecycle state. Prompt text and model settings should be stored only when the product needs them, with the same access controls as the rest of the request data. An image gallery needs metadata for authorization and pagination; it should not need to scan bytes to answer either question.</p>
-<p>The critical ordering is object first, metadata second. A cross-system write cannot be assumed to be one transaction, so there are two partial outcomes to plan for: an object with no row, and a row that points to a missing object. The first can be identified by an age-based reconciliation job. The second should never be visible as ready. This is less glamorous than a storage SDK demo, but it is the difference between a retry-safe pipeline and a gallery that looks correct until a worker is restarted. The reconciliation task needs a grace period because the object write may complete just before the database transaction gets its turn; it should inspect candidate keys, check whether a matching metadata row now exists, and only then remove a genuinely abandoned output. Conversely, an incomplete row should remain non-deliverable until a retrieval check sees the expected digest and content type. Those are explicit states, not exceptional mysteries, and the queue can retry them without inventing a new image identity.</p>
-<p>Here is a runnable Python example using an in-memory object adapter and SQLite. It demonstrates the contract, including deterministic object identity and an idempotent metadata insert, without turning the application into a tutorial for any hosted service.</p>
-<p>The adapter must reject a key collision with different content; accepting an overwrite would make a retry indistinguishable from corruption. Keep model generation outside the database transaction as well. Generation time varies, and holding a transaction through it converts external latency into contention for unrelated application writes.</p>
-<p>These options solve different failure boundaries. Object storage plus metadata is usually the cleanest shape when independent web and worker processes must retrieve the same durable output. It trades one large database payload for reconciliation between the object store and the metadata record. Database BLOBs keep bytes and metadata in the same transactional system, but image growth then travels through its backups, replicas, restores, and query path. Local disk is wonderfully direct for a notebook fixture cache. It stops being a storage contract when a deployment can reschedule a worker or add another replica.</p>
-<p>Database BLOBs are a valid choice for small, bounded artifacts whose bytes must commit with their metadata. The catch is operational coupling: a growing image collection changes the behavior and cost of the database path that also carries users, jobs, and permissions. Keep it when that single-transaction property is genuinely the requirement. Do not choose it because a migration is shorter.</p>
-<p>An attached volume can also be right for a controlled one-machine tool with explicit backup ownership. It is not suitable when stateless SaaS workers may run on arbitrary hosts, or when serving an output requires locating the process that created it. Your mileage may vary with the durability and snapshot guarantees of the environment, so read those guarantees and test a restore rather than inferring durability from a familiar filesystem path.</p>
-<p>Object storage is an interface category, not a magic safety property. Services in this category commonly expose objects inside buckets and offer controls around access and delivery; the storage documentation in the references is one concrete example of the vocabulary. The portable decision criterion is simpler: can an authorized worker address the same durable key without sharing a local machine?</p>
-<p>Image quality evals should have a persistence companion. A prompt can pass visual review while the resulting bytes have the wrong media type, reach the wrong tenant prefix, or create two records when a queue redelivers a job. Build an integration case that writes a fixed PNG fixture, calls the persistence function twice, checks for one metadata identity, retrieves through the authorization path, and confirms the digest and byte count. Then run that test against a disposable adapter in CI and against the chosen production boundary in a staging environment.</p>
-<p>Track generation latency and storage latency separately. Otherwise a slow retrieval is blamed on prompt tuning, while a costly image workload gets counted only in model tokens and misses retained bytes, retrieval volume, and backup growth. Per-tenant counts and age distributions make retention policy visible before a cleanup job becomes a product surprise. I am not sure what retention policy fits every application; the answer depends on whether an image is a transient preview, a customer asset, or evidence attached to a workflow. That uncertainty is a reason to record the lifecycle state, not a reason to hard-code deletion.</p>
-<p>Operationally, validate the media type and size before persistence, generate keys in the application, and log a job identifier, key, digest, byte count, and retry attempt without making sensitive prompt data a default log field. Reconcile orphaned objects on a schedule, make missing-object rows non-deliverable, verify restores, and alert when ready metadata cannot be retrieved. Those checks keep the notebook-to-production transition honest, and they leave the storage backend as an implementation detail where it belongs.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Last November, we introduced AnyLanguageModel on this blog:
+a drop-in replacement for Apple's Foundation Models framework
+that lets you choose the model and provider your app uses.
+We heard from app developers who were curious about local models
+but weren't always sure how to get started.
+They also wanted to avoid the added complexity
+of supporting multiple inference providers.
+AnyLanguageModel grew out of that feedback.</p>
+<p>Local and hosted inference each have their strengths,
+and both have a role in building this new generation of intelligent apps.
+A shared API makes it easier to choose the right model for each task.</p>
+<p>A year and dozens of releases later,
+AnyLanguageModel 1.0 is out,
+along with swift-huggingface 1.0
+and swift-xet 1.0.</p>
+<p>The core idea of AnyLanguageModel remains the same:
+use the Foundation Models API with the model that fits your app.
+To get started, change your import statement:</p>
+<p>The same session code then works with the system model,
+with open-weight models through llama.cpp, MLX, and Core ML,
+and with the hosted providers below.</p>
+<p>Over the past year, we've added several major features:</p>
+<p>On OS 27, AnyLanguageModel also works with
+any model that conforms to Foundation Models' LanguageModel protocol,
+including Core AI models.</p>
+<p>Alongside AnyLanguageModel, we've built out
+swift-huggingface
+and swift-xet
+to bring accelerated model downloads from the Hub to Swift apps.</p>
+<p>Support for hosted models expanded this year, too.
+AnyLanguageModel now supports:</p>
+<p>With Inference Providers,
+you can use open-weight models that are too big to run on the device
+with the same session code:</p>
+<p>Hosted providers get the same features as local models:
+guided generation, tool calling with streaming,
+and token usage on responses.</p>
+<p>Reasoning is now part of the transcript too.
+When you switch providers,
+reasoning blocks are automatically omitted from requests if the new provider can't replay them.</p>
+<p>API keys come from a closure instead of a string,
+so your app can fetch short-lived tokens from your own server.
+The README
+explains when to let people bring their own keys
+and when to route requests through a proxy.</p>
+<p>AnyLanguageModel also runs on Linux,
+so the same code can work on a server.</p>
+<p>While we've made local models easier to use,
+the models themselves have become more capable,
+making the small ones a good place to start.
+Here are some of the most downloaded models on the Hub right now:</p>
+<p>The first two fit on an iPhone,
+and Qwen3.8 27B runs on a Mac with 32 GB of memory or more.
+Selecting the MLX model takes one line:</p>
+<p>And if you have four maxed-out Mac Studios handy,
+GLM-5.3 from Z.ai takes about 1.5 TB in BF16.
+For the rest of us, it's available through Inference Providers.</p>
+<p>If you're upgrading an existing app, see the migration guidance in the
+AnyLanguageModel,
+swift-huggingface,
+and swift-xet release notes
+for help updating your code.</p>
+<p>Community feedback and contributions have shaped several of our major features.
+Thank you to everyone who contributed
+for helping make AnyLanguageModel more useful to app developers.</p>
+<p>Language models have proven to be a powerful tool
+for building intelligence into products.
+They're also one of many kinds of models developers can put to work.
+We're excited to bring the same approach to more capabilities:
+familiar Swift APIs with a choice of models running on the device.
+Coming soon: models that decide, and models that listen.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/lukasschmidt295/python-ai-generated-image-lifecycles-object-storage-database-blobs-and-disk-2paa" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/anylanguagemodel-1-0" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

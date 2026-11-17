@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tokenizers v1: encode, decode and scaling, measured</title>
+    <title>‘123456’ has been the world’s most popular password for 7 out of the last 8 years</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9876.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>tokenizers v1: encode, decode and scaling, measured</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-16</p>
+        <h1>‘123456’ has been the world’s most popular password for 7 out of the last 8 years</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5228156.jpg?imageId=5228156&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="‘123456’ has been the world’s most popular password for 7 out of the last 8 years" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/tokenizers-v1/thumbnail.png" alt="tokenizers v1: encode, decode and scaling, measured" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5228156.jpg?imageId=5228156&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="‘123456’ has been the world’s most popular password for 7 out of the last 8 years" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The tokenizer has not historically been the bottleneck within ML workflows. Compute-wise, tokenization is light compared to the heavy modeling happening in the rest of the pipeline. Yet, in some cases, it has rapidly become key to accelerating (or slowing down) your machine learning work.</p>
-<p>As models become faster and workloads scale, that balance begins to shift. Training on massive datasets, serving many concurrent requests, or repeatedly processing long inputs can put enough pressure on the tokenizer that it starves the model of data.</p>
-<p>This is why we have chosen to heavily focus on performance for the upcoming version 1 of tokenizers. Tokenization should be light and should scale with your workflow. Your GPUs should never sit idle waiting for the CPU to complete its tokenization.</p>
-<p>In this article, we look at what makes v1 faster than v0.23, often by tens of times.</p>
-<p>This work was entirely possible thanks to the rest of the ecosystem. Tokenization is a very active area of open source work, and libraries such as gigatoken, tiktoken, kitoken, tokie, fastokens, wordchipper and ai-tokenizer, as well as many others, have each pushed on what a fast tokenizer can be. We read that work, and several of the ideas below reached us because another project showed they were worth trying.</p>
-<p>Before this refactor, tokenizers was nowhere near the performance it could have had, so contributing to it may not have seemed worth it. With this refactor, we hope to make clear that we intend tokenizers to be a library worth contributing to.</p>
-<p>We also thank IBM, NVIDIA, and the ExecuTorch team for contributing patches and helping us test across a wide range of hardware to broaden platform support.</p>
-<p>We showcase results for the release candidate of tokenizers v1 against other widely used alternatives. We go over single-threaded, multi-threaded, scaling across threads, per-model comparison, per-language comparison, latency, decoding throughput, memory heap, as well as crate size.</p>
-<p>We run this from the tokbench repository, and add a command to rerun the benchmarks on your hardware if you would like to do so.</p>
-<p>v1 will produce the same token IDs as v0.23. The goal was to preserve the output, the API, the vocabulary and the merge ranks, and improve everything that can be improved. That includes breadth. The library stays general across tokenizer families rather than specialising on BPE, so v1 loads everything v0.23 loaded.</p>
-<p>A tokenizer converts text into the list of integers a model reads. tokenizers runs that conversion in four stages. Normalization applies operations such as lowercasing or Unicode normalization to the raw text. Pre-tokenization splits the text into smaller pieces called pre-tokens. The model turns each pre-token into tokens and maps them to IDs in its vocabulary. Post-processing adds any special tokens the model expects.</p>
-<p>The model stage is where most of the work described here happens. Eight of the ten model families measured in this article use byte pair encoding, or BPE. BPE starts from the bytes of a pre-token and repeatedly joins the highest ranked adjacent pair until no ranked pair remains. The ranking is learned when the tokenizer is trained and ships with it, so the same text always produces the same IDs. A merge never crosses a pre-token boundary. The other two families use WordPiece and Unigram, the two other model types the library supports.</p>
-<p>The tokenization pipeline page documents the four stages. Tokenization algorithms documents BPE, WordPiece and Unigram.</p>
-<p>Each stage was worked on. These are the changes that mattered:</p>
-<p>BPE models use a regular expression to split the input text into smaller, easier to process chunks called pre-tokens. Merges happen inside a pre-token and never across the boundary between two of them, so this split decides what the rest of the pipeline sees.</p>
-<p>That regular expression is a fixed parameter of the model. It ships with the tokenizer and never changes at runtime, so there is no need for a general-purpose regex engine to interpret it on every encode. An equivalent splitting function can be written by hand, once, for the pattern a given model actually uses.</p>
-<p>A hand-written function can then use the SIMD instructions (single instruction, multiple data) of a modern CPU, which apply one operation to many bytes at once and suit UTF-8 text well. bitcannon views the input's bytes as parallel streams of bits, so boundaries fall out of boolean operations across whole registers instead of a scan that advances one character at a time. It decides 64 bytes per register operation. The same idea drives Parabix for text processing and simdjson for JSON.</p>
-<p>This depends on recognising the pattern. A handful of grammars cover most byte-level BPE models, and a tokenizer whose pattern is not among them keeps the regex path and none of this speed-up. That is why the gains above vary as much as they do.</p>
-<p>Real text contains many repeated words. Because BPE always produces the same token IDs for a given pre-token, v1 can save the result after processing it once. A thread-local cache maps each pre-token's bytes to its token IDs, allowing later occurrences to skip the merge process.</p>
-<p>Naturally, as the input grows, the number of unique words can grow more slowly than the total number of words. Repeated words then account for an increasing share of the input. New words still appear, which accounts for the occasional misses in the animation below.</p>
-<p>Caching works best when the input contains repeated pre-tokens. Input with few repeated pre-tokens can pay for lookups without receiving many hits.</p>
-<p>The next major cost comes from the BPE merge loop. For each pre-token, the loop repeatedly finds the highest-priority adjacent pair and merges it. The previous implementation allocated new memory for every call and built a new priority queue for every pre-token.</p>
-<p>v1 reuses a scratch buffer owned by the caller, removing those repeated allocations. It stores symbols in a flat array and links adjacent symbols by their positions in that array, which makes updates during merging cheaper. It also processes a batch of pre-tokens in a single model call.</p>
-<p>Each candidate pair is also packed into a single 64-bit value, with the merge rank in the high bits. Comparing two candidates is then just comparing two integers, and "no merge here" is the largest possible value, so the loop finds its next merge without a branch.</p>
-<p>Small differences in benchmark design can produce large differences in tokenizer performance. We used the following rules to keep the comparison consistent across engines.</p>
-<p>Repeatedly encoding one document can be faster than encoding a stream of distinct documents on the same build. The first approach measures performance when the entire document is already represented in the cache. The second measures performance on new input while allowing previously seen pre-tokens to remain cached.</p>
-<p>Both conditions are sometimes described as "warm," even though they measure different workloads. Our headline results use distinct documents, and the complete corpus is too large to fit in the cache. Tokenizer benchmarks should identify which workload they use because the choice can dominate the result.</p>
-<p>Across the ten model families v1's encode path covers, it encodes text 3 to 30 times faster than v0.23 with one thread on an Apple M4 Max. The low end is t5-base, the high end gpt2. It scales at 76% of linear across eight workers. Throughout these changes, v1 produces exactly the same token IDs as the released library.</p>
-<p>The overall improvement comes from several changes working together: a hand-written splitter in place of a regex engine, a cache that answers a repeated word without merging it again, a merge loop that never touches the allocator, and one model call per batch of pre-tokens instead of one per pre-token. Each reduces the work done at a different point in the pipeline.</p>
-<p>The next priority is support for more model families. We will move additional models onto the new merge loop before 1.0.0. Once the release candidates stabilize, the next step will be bringing about the improvements within the transformers library and the rest of the ecosystem which depend on the tokenizers library.</p>
-<p>This post is generated from tokbench results and will be updated as support expands.</p>
-<p>A release candidate for v1 is on crates.io. The API you call is the one you already call, so the only thing that changes is which build you install.</p>
-<p>Training is behind a default-on feature that pulls a C++ dependency with it. If you only need to encode, turn it off to exclude the training implementation:</p>
-<p>Encoding is unchanged: same call, same ids.</p>
-<p>Every figure in this post was measured against this crate. The Python bindings wrap the same code and are built from bindings/python, but they add per-call overhead that none of these measurements include.</p>
-<p>The benchmarks in this post cover the completed release-candidate work listed first. The remaining sections show what is still required for 1.0.0 and what we plan to explore afterward.</p>
-<p>This work is in the Rust pre-release on crates.io:</p>
-<p>Will have to try it out. Data seems real good.</p>
+                <p>It’s been eight years since NordPass released the first edition of its most common passwords of the year list, and the world has learned nothing about password security in the meantime.</p>
+<p>NordPass’ eighth edition of its most common passwords list, as culled from data breaches, was released Monday, and it looks suspiciously like the previous ones in the worst possible way.</p>
+<p>“Once again, ‘123456’ is the most commonly used password in the world,” NordPass said in the report. “That makes it seven out of eight years this password has stood at the top of the leaderboard.”</p>
+<p>Even when 123456 wasn’t number one, it was still near the top of the heap, as the top three passwords in the list remain unchanged in the eight years NordPass has published its list: 123456, admin, and 12345678. It’s not like the rest of the most common passwords are showing any variety either.</p>
+<p>According to NordPass, the only real shuffling among the 10 most popular passwords was the entry of the worryingly short 1234 into the top ten and the migration of the ever-popular password “password” down slightly in the top 10 from 6th to 7th place.</p>
+<p>“We still have a lot of work to do to spread awareness about password safety,” NordPass concluded of that data – and there’s no more pressing time than the present.</p>
+<p>AI adoption has made password cracking an easier exercise than ever, with more credentials being sucked up in more data breaches at a faster pace. AI has also made cracking hashed passwords a snap too. In other words, if you’re reusing a password that’s been exposed in a breach, even if it’s just a hash that was exposed, you’re more likely than ever before to have another account compromised.</p>
+<p>The best advice NordPass gives is to move away from passwords toward biometric authentication or passkeys and you're insane not to enable MFA.</p>
+<p>But for the places you still have to use passwords, there are a few things to avoid – like the 200 passwords in NordPass’ list, for example.</p>
+<p>Beyond that, NordPass also recommends steering clear of pop cultural trends.</p>
+<p>“Fandoms make for terrible passwords,” NordPass notes. There are several reasons for that – namely the fact that they follow trends, meaning that “minecraft” password in the early 2000s was a simple one to add to a password stuffing dictionary, just like “skibiditoilet” in recent years.</p>
+<p>The one thing that connects all those pop-culture passwords is that “they all could be cracked in seconds,” NordPass said.</p>
+<p>We’re sure our readers are conscientious about their online habits, carefully protecting their accounts with the proper security measures and ensuring each and every password is unique, long, complicated, and random. Unfortunately for you smarties reading El Reg, the person down the hall whose security you’re responsible for may not be so disciplined, so be sure you’re enforcing good practices – Nord knows the average user just isn’t doing it despite years of begging and reminders. ®</p>
+<p>Attackers try logging in to Earth’s ninth most powerful machine after status page hack exposed credentials</p>
+<p>Bunnings Warehouse needs a technology model its current employees somehow can’t deliver</p>
+<p>PARTNER CONTENT: AI agents are making security vulnerabilities easier to find and exploit in your code. Software engineering and application security teams need new ways to find and fix them</p>
+<p>Commerce dept runing criminal investigation into Nvidia-linked Megaspeed</p>
+<p>Microsoft pulls the plug on free student email, but people are learning fast</p>
+<p>A-G cites Hugging Face incident as example of why industry must be accountable</p>
+<p>In the age of AI, the top spot on the bi-annual ranking is whoever willing to run HPL instead of LLMs</p>
+<p>Securing supply chains or coercing other nations to help Washington sideline Beijing and its AI ambitions?</p>
+<p>Appliances can share 16 TB of DRAM and half a terabyte of HBM across up to 16 systems</p>
+<p>More than 173,000 signatures, a few famous billionaires, and absolutely no guarantee they're genuine</p>
+<p>Forensic report finds Blackwell's fingerprint in DeepSeek, Moonshot AI, MiniMax and Ant Group models</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Mint 27 to land before Christmas, with stable Wayland display upgrades, as punters try out Cinnamon 6.8</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/tokenizers-v1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/security/2026/11/16/123456-has-been-the-worlds-most-popular-password-for-7-out-of-the-last-8-years/5310189" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
