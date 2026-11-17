@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Herb Butter Roast Turkey Breast</title>
+    <title>Learn Rails 8 by Building Study Flow, Part 4: Associations, Scopes and Callbacks</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9532.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,47 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Herb Butter Roast Turkey Breast</h1>
+        <h1>Learn Rails 8 by Building Study Flow, Part 4: Associations, Scopes and Callbacks</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fi5729cq535ojhioj1mm5.jpg" alt="Learn Rails 8 by Building Study Flow, Part 4: Associations, Scopes and Callbacks" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fi5729cq535ojhioj1mm5.jpg" alt="Learn Rails 8 by Building Study Flow, Part 4: Associations, Scopes and Callbacks" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This roast turkey breast is rubbed with garlic, lemon and fresh herb butter, then roasted over vegetables until golden and ready to carve.</p>
+                <p>In Part 3 we built study plans. A plan alone isn't much use, so now we give it structure:</p>
+<p>This post is about modeling data: associations, validations, callbacks and scopes. It's the most "Active Record" post in the series, and the one that makes the rest of the app easy to write.</p>
+<p>Each arrow means "has many". A user has many plans, a plan has many topics, a topic has many sessions. Each child table holds the foreign key to its parent.</p>
+<p>Edit the two migrations before running them:</p>
+<p>The new part is through. It lets you jump across tables:</p>
+<p>Rails writes the SQL joins for you. In the console:</p>
+<p>Now remember the rule from Part 3: always start from the current user. With these associations, one line does it for any level:</p>
+<p>If the record belongs to someone else, find raises RecordNotFound and Rails answers 404.</p>
+<p>Callbacks are powerful and a little dangerous: they run "invisibly". Use them for small, predictable housekeeping like this, and be careful once they start sending emails or touching other records. We'll meet that in Part 8.</p>
+<p>validate (singular) takes the name of your own method. If the method adds something to errors, the record is invalid. Here, a topic can't have two sessions running at once. errors.add(:base, ...) attaches the message to the whole record instead of one field.</p>
+<p>A scope gives a name to a query you'll use again:</p>
+<p>The patch :complete, on: :member line adds a custom action on one specific session: PATCH /study_sessions/:id/complete, with the helper complete_study_session_path(session). Use member for "an action on one record" and collection for "an action on the whole list" (you'll see that one in Part 7).</p>
+<p>Why resources :topics and not nested inside plans? It keeps URLs and helpers short: edit_topic_path(topic). The one place we need the parent is when creating, and we pass it as a parameter: new_topic_path(study_plan_id: plan.id). (Nested routes like /study_plans/1/topics are a valid alternative, so use whichever you find clearer.)</p>
+<p>StudySessionsController has the same structure. A session is created under a topic the user owns, and found again with Current.user.study_sessions.find. It adds one action:</p>
+<p>Completing a session is just setting finished_at. Since active means finished_at: nil, the session instantly stops being active.</p>
+<p>Part 3 skipped show. Now there's something to show:</p>
+<p>render "topics/topic", topic: topic renders a partial, a reusable snippet stored in app/views/topics/_topic.html.erb (partials always start with an underscore):</p>
+<p>See how the scope pays off: topic.study_sessions.active.empty? reads like English. We only show the "Start" link when nothing is running, and the model validation guarantees it even if someone forges the request.</p>
+<p>Look at the chain: of_user(...).active.includes(...). Three small scopes combine into a precise question.</p>
+<p>What does includes do? In the view we print study_session.topic.study_plan.name for each session. Without includes, Rails runs one query for the sessions, then one more query per session for its topic, and another for its plan. Ten sessions means 21 queries. That's the N+1 problem. With includes(topic: :study_plan), Rails loads all the topics in one query and all the plans in another: 3 queries total, however many sessions you have.</p>
+<p>Use Date.current rather than Date.today. current respects Rails' configured time zone. We'll make that per-user in Part 10.</p>
+<p>Run bin/dev and try it: create a plan, add topics, start a session, end it, and watch it move from "Active" to "Completed Today".</p>
+<p>Automated tests. test/models/topic_test.rb:</p>
+<p>And the most important controller test, test/controllers/topics_controller_test.rb:</p>
+<p>The second and third controller tests are the point of this post's security rule, and they will catch you if anyone ever "simplifies" Current.user.topics.find to Topic.find.</p>
+<p>Our "only one active session per topic" rule is checked in Ruby. If two requests arrive at the exact same moment, both can pass the check and both save. A validation can't prevent that, only the database can. In Part 14 we'll add a unique index for it. Until then, remember: validations are for friendly messages, constraints are for guarantees.</p>
+<p>Right now, every click reloads the whole page. In Part 5 we add Hotwire: Turbo Frames and Turbo Streams, so adding a topic or finishing a session updates just the part of the page that changed.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.gimmesomeoven.com/herb-butter-roast-turkey-breast/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/shroukabozeid/learn-rails-8-by-building-study-flow-part-4-associations-scopes-and-callbacks-8id" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

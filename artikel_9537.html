@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Falafel</title>
+    <title>Why WireGuard Fails on LXC NAT VPS (and How to Fix It)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9537.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,50 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Falafel</h1>
+        <h1>Why WireGuard Fails on LXC NAT VPS (and How to Fix It)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fn3sy4fha02hx7ay6vcol.png" alt="Why WireGuard Fails on LXC NAT VPS (and How to Fix It)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fn3sy4fha02hx7ay6vcol.png" alt="Why WireGuard Fails on LXC NAT VPS (and How to Fix It)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Crispy homemade falafel made with dried chickpeas, fresh herbs, lemon and warm spices. Serve with tahini sauce, pita and crunchy vegetables.</p>
+                <p>Posted on Nov 17
+•
+Originally published at vpsfree.io 
+•
+
+
+
+
+AI-assisted</p>
+<p>You've got a cheap NAT VPS – shared IPv4, a small range of forwarded ports, maybe 192 MB of RAM inside an LXC container – and you want your own WireGuard VPN on it.</p>
+<p>You run the popular install script and get this:</p>
+<p>…or a script that refuses to run with "LXC is not supported".</p>
+<p>This post explains why that happens, how to tell in one line whether your box can do it, and the minimal setup that works on a NAT VPS with only a handful of forwarded ports. I tested every step on a 192 MB LXC container on an AMD EPYC host – screenshots below.</p>
+<p>WireGuard lives in the Linux kernel. A VM (KVM) has its own kernel and can load the module itself. An LXC container shares the host's kernel and isn't allowed to load modules. So it depends entirely on the host:</p>
+<p>The user-space alternatives (wireguard-go, boringtun) need /dev/net/tun passed into the container – which many hosts don't do either.</p>
+<p>If you run the host yourself (Incus/LXD), the fix is two commands on the host:</p>
+<p>If you don't run the host, ask your provider to load the wireguard module for containers.</p>
+<p>WIREGUARD OK → continue. Not supported → the host doesn't allow it, no amount of apt installing will fix that.</p>
+<p>The only NAT-specific part: WireGuard must listen on one of your forwarded UDP ports. In my case the range is 20001-20019, so I use 20001. Replace it with yours.</p>
+<p>Only the user-space tools – the kernel part comes from the host, so don't install wireguard-dkms.</p>
+<p>The accept_ra = 2 line matters: turning on IPv6 forwarding normally makes Linux ignore router advertisements, which can silently kill your VPS's own IPv6.</p>
+<p>Clients get private IPv4 + ULA IPv6 addresses and are masqueraded out, so the tunnel works for both IPv4 and IPv6 sites even though the IPv4 is shared.</p>
+<p>Scan it in the WireGuard app (+ → Scan from QR code). The QR contains a private key – don't post it anywhere.</p>
+<p>PersistentKeepalive = 25 is worth keeping on NAT setups: it stops the connection-tracking entries on both sides from expiring while the tunnel is idle.</p>
+<p>A recent latest handshake and growing transfer = done. Browsing to ifconfig.co from the phone now shows the VPS address:</p>
+<p>The port is wrong or blocked. ListenPort and the port in Endpoint must match and be inside your forwarded range. If you run ufw in the container: ufw allow 20001/udp.</p>
+<p>Forwarding or NAT is missing. Check sysctl net.ipv4.ip_forward returns 1 and iptables -t nat -S shows the MASQUERADE rule.</p>
+<p>Classic MTU issue. Add MTU = 1280 under [Interface] in the client config and reconnect.</p>
+<p>ping prefers IPv6, and some routes filter ICMPv6 echo. Try ping -4 google.com – if that works, your network is fine.</p>
+<p>Questions or a setup that behaves differently? Drop it in the comments.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.gimmesomeoven.com/falafel-recipe/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/vpsfreeio/why-wireguard-fails-on-lxc-nat-vps-and-how-to-fix-it-1om5" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Routing Is Simple. Until It Isn’t.</title>
+    <title>vLLM V0 to V1: Correctness Before Corrections in RL</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9954.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,104 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Model Routing Is Simple. Until It Isn’t.</h1>
+        <h1>vLLM V0 to V1: Correctness Before Corrections in RL</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-thumbnails.huggingface.co/social-thumbnails/blog/ServiceNow-AI/correctness-before-corrections.png" alt="vLLM V0 to V1: Correctness Before Corrections in RL" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-thumbnails.huggingface.co/social-thumbnails/blog/ServiceNow-AI/correctness-before-corrections.png" alt="vLLM V0 to V1: Correctness Before Corrections in RL" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Building a router into your agent sounds like an easy win. Send simple requests to cheaper models, reserve expensive ones for harder tasks, or route by specialty — Claude for code, Gemini for multimodal, and so on. A classifier or heuristic makes the call, costs go down, performance stays up. Done.</p>
-<p>Except it’s not. Most routing systems assume that model selection is a classification problem. In our experience building routing into agentic systems, what looks like a model-selection problem quickly becomes a systems optimization problem. Three dimensions made this surprisingly hard for us.</p>
-<p>We expected GPT-4.1 to be cheaper than Claude Sonnet 4.6. It wasn’t.</p>
-<p>Across 417 tasks on the AppWorld Test Challenge using the same CodeAct agent, Sonnet cost $79 total ($0.19/task) while GPT-4.1 cost $155 ($0.37/task) — nearly double. On paper, this makes no sense. GPT-4.1’s token pricing is lower on both input and output, and Sonnet takes roughly three times as many reasoning steps to finish the same tasks. By sticker price alone, GPT-4.1 should win easily.</p>
-<p>The explanation? Caching — something most routing discussions ignore entirely.
-Agent workloads tend to reuse large chunks of context across steps. When cache hit rates are high, effective input costs drop dramatically. Sonnet’s lower cache-read pricing meant it benefited disproportionately from this pattern, enough to overcome both its higher base pricing and its longer trajectories.</p>
-<p>The takeaway: actual cost depends on the interaction between the model, the workload, and the serving infrastructure. A router that only looks at pricing sheets is optimizing against the wrong numbers.</p>
-<p>A common routing strategy is to estimate how hard a task is and send harder tasks to stronger models. Intuitive, but it breaks down in two ways.</p>
-<p>First, difficulty is often invisible at routing time. A request like "summarize this contract" looks simple, but might trigger retrieval, compliance checks, tool use, and multiple rounds of refinement before it’s done. Meanwhile, a highly technical prompt might be handled efficiently by a smaller specialized model. You often don’t know how hard a task actually is until execution is underway.</p>
-<p>Routers aren’t solving one problem. They’re constantly juggling cost, quality, latency, compliance, and reliability all at once.</p>
-<p>It’s tempting to think about latency purely in terms of model size — bigger models are slower, smaller ones are faster. But what the user actually experiences depends on much more than that.</p>
-<p>Routing itself adds overhead. Infrastructure factors — which hardware a model is running on, whether the cache is warm, how busy the endpoint is — often dominate end-to-end response times. A theoretically faster model can still produce a slower experience if the serving conditions aren’t right.</p>
-<p>Then there’s routing granularity. Routing once per task adds minimal overhead. But routing at every step — which gives you more flexibility to adapt mid-execution — means every additional decision point introduces latency and operational complexity.</p>
-<p>A router that ignores the serving system is optimizing against the wrong reality.</p>
-<p>These lessons shaped how we built our router. The key shift: we stopped treating routing as a classification problem and started treating it as an optimization problem. Rather than asking "which model is best for this task?", our algorithm optimizes across cost, quality, and latency simultaneously — while staying lightweight enough to avoid becoming a bottleneck itself.</p>
-<p>The figure below shows the result on the AppWorld Test Challenge with a CodeAct agent. Each blue square is a different configuration of our router, tracing out a cost-accuracy frontier. The important thing isn't any single point — it's that the router gives you a range of operating points to choose from depending on whether you want to prioritize cost, latency, or accuracy. Configuration 1 (latency-optimized) lands at 84% accuracy for $93 and 83s — a 21% cost reduction and 9% latency reduction compared to running Opus alone, with only a 4% accuracy drop. Configuration 2 pushes cost even lower.</p>
-<p>Notice that a standard difficulty-based router (the teal diamond) lands in a similar accuracy range but at higher cost — it doesn't explore the full tradeoff space the way an optimization-based approach can. And because the optimization itself is lightweight (roughly 6 ms and 2 kB of memory per task), the router doesn't become the bottleneck we warned about earlier.</p>
-<p>The lesson we took away from this work is that routing isn’t really about choosing models. It’s about optimizing systems. Models are one variable — an important one, but just one among caching behavior, infrastructure state, compliance constraints, and workload patterns.</p>
-<p>When routing works well, it’s rarely because it found the "best" model for a given task. It’s because it found the best operating point for the entire system. That’s a harder problem than classification, but it’s the one worth solving.</p>
-<p>We’ll be sharing more about the technical details behind our approach in a follow-up post. In the meantime, if you’re building routing into your own agentic systems, we’d love to hear what tradeoffs you’re running into.</p>
-<p>This post was influenced by numerous conversations with colleagues, whose thoughtful questions, feedback, and insights helped refine our thinking.</p>
-<p>So I've always felt that model routing is a false proposition; it should have been part of the harness all along.</p>
-<p>Agreed, routing should disappear into the harness and just be part of the system's execution logic. Our goal is exactly that—making model choice an intrinsic capability rather than a separate concern.</p>
+                <p>PipelineRL uses vLLM as the inference engine for rollout generation. The
+inference engine samples tokens and returns token logprobs; the trainer uses
+those logprobs to compute policy ratios, KL, clip rate, entropy, and reward.
+Any discrepancy in how those logprobs are computed can change the training
+dynamics. This is the train-inference mismatch we needed to eliminate during
+the vLLM V0 to V1 migration.</p>
+<p>TL;DR. vLLM V1 matched our vLLM V0 reference after we fixed four things:
+processed rollout logprobs, V1-specific runtime defaults, the inflight
+weight-update path, and the fp32 lm_head used for the final projection. We
+fixed the backend behavior before changing the RL objective.</p>
+<p>The reference run used vLLM 0.8.5; the V1 runs used vLLM 0.18.1. Figure 1
+shows the final result. The red run is the initial V1 attempt, and the green
+run is the final V1 run after the fixes described below.</p>
+<p>vLLM V1 is a substantial rewrite of the V0 engine. Our migration target was
+therefore deliberately narrow:</p>
+<p>Those metrics came from a GSPO training run, the objective used for this
+experiment. The same class of mismatch can surface in PPO, GRPO, or any online
+RL system that treats rollout-side logprobs as part of the optimization target.</p>
+<p>The initial V1 run showed the problem clearly. The trainer-side logprobs and
+reward moved away from the V0 reference early in training.</p>
+<p>The same pattern appears in the trainer metrics. Clip rate is the easiest signal
+to read in the initial comparison.</p>
+<p>We separated the possible causes into three layers:</p>
+<p>We initially suspected the third category too early. The useful diagnosis came
+from treating the first two as backend behavior problems and ruling them out
+first.</p>
+<p>The first issue was semantic. vLLM V1 returns logprobs from the raw model
+outputs by default, before logits post-processing such as temperature scaling,
+penalties, and top-k/top-p filtering. PipelineRL expected logprobs from the
+processed distribution used by the sampler.</p>
+<p>This removed the obvious mean offset in rollout logprobs. The training curves
+still showed a gap relative to the known-good reference, so the next issue had
+to be in the inference path.</p>
+<p>The policy-ratio plot shows this directly. Once processed_logprobs is on for
+V1, the mean policy ratio stays centered extremely close to 1.0 across all
+three runs. That establishes the mean-bias fix. The remaining mismatch shows up
+in clip rate, KL, entropy, and downstream training behavior.</p>
+<p>The early V1 run mixed the engine version with V1 runtime defaults:</p>
+<p>For the parity run, we made these choices explicit:</p>
+<p>Prefix caching deserves a separate note. It is normally a
+correctness-preserving inference optimization for a fixed model state. In this
+online RL setup, it was a V1-only difference in cache lifetime and reuse
+relative to the V0 reference path. The actor was also handling repeated
+prefixes, concurrent requests, async scheduling, and inflight weight updates.</p>
+<p>A prefix-cache hit can reuse state computed before a weight update when the
+cache policy ignores the weight-update boundary. Disabling prefix caching
+removed one V1-only degree of freedom from the parity comparison.</p>
+<p>Weight synchronization also had to match the online-RL update model. One option
+was to make V1 stricter than V0 by draining requests and clearing caches at
+every update. That would answer a separate question. We first needed to verify
+that V1 could match the existing V0 behavior.</p>
+<p>Lag was a useful runtime diagnostic. The initial V1 path carries more
+persistent lag later in training than the corrected V1 run.</p>
+<p>The V1 backend fixes above removed the obvious migration issues, but final
+parity still required matching the numerical path used to compute logits. The
+trainer used an fp32 lm_head for the final projection. The rollout backend
+had to match that behavior.</p>
+<p>A closely related issue appears in the
+MiniMax-M1 technical report: their RL run
+showed a training/inference token-probability mismatch that they traced to the
+LM output head and fixed by computing the head in fp32.</p>
+<p>This matters because the RL update consumes token logprobs directly. Small
+changes in logits can become visible in policy ratios, KL, and clipping. The
+final projection precision is therefore part of the correctness surface for
+online RL. The
+ScaleRL paper later includes fp32
+logits/head computation as part of its RL recipe and ablates it as a useful
+design choice for large-scale RL.</p>
+<p>With the fp32 lm_head path included, reward gives a compact view of the final
+parity result. In Figure 6, the final V1 run tracks the V0 reference; the
+initial V1 attempt produces a clearly different reward curve.</p>
+<p>The negative results are important because they rule out common explanations.</p>
+<p>Objective-side corrections such as truncated importance sampling,
+importance-ratio reweighting, and related methods are useful tools. If rollouts
+are intentionally stale, generated asynchronously, or produced by a backend
+where equivalence to the trainer-side policy is unavailable, then some form of
+correction is often the right thing to add.</p>
+<p>The first problem here was inference correctness. After moving to V1, the
+rollout backend returned logprobs and runtime behavior that broke the trainer
+assumption. Adding an objective-side correction at that point would have mixed
+two questions:</p>
+<p>Those questions need to be separated. Otherwise an objective-side correction
+can compensate for broken inference-backend behavior, which makes the training
+curve harder to interpret.</p>
+<p>The current objective can still improve. After inference parity is restored,
+the next improvement is the usual async/off-policy cleanup:</p>
+<p>The main lesson from this migration is narrower: fix backend correctness first,
+then add corrections for the mismatch that remains.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/model-routing-is-simple-until-it-isnt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/ServiceNow-AI/correctness-before-corrections" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

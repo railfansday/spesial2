@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Concierge Knows Too Much — Prompt Injection and Social Engineering</title>
+    <title>How to Govern Coding Agent Skills Across Repos With Plugins</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9643.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,109 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Concierge Knows Too Much — Prompt Injection and Social Engineering</h1>
+        <h1>How to Govern Coding Agent Skills Across Repos With Plugins</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F98jbmsf6x5gwyidzzawo.png" alt="The Concierge Knows Too Much — Prompt Injection and Social Engineering" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F98jbmsf6x5gwyidzzawo.png" alt="The Concierge Knows Too Much — Prompt Injection and Social Engineering" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In this write-up, I will document my experience completing The Concierge Knows Too Much, the first challenge in TryHackMe's Hacker Holidays 2026 event.</p>
-<p>Unlike traditional CTF challenges, this room does not require me to enumerate network ports, exploit a vulnerable service, or execute commands on a remote machine. Instead, the target is an AI-powered hotel assistant named VERA (Very Efficient Resort Assistant).</p>
-<p>The objective is to understand how VERA handles user identities, discover why she trusts certain guests, and manipulate the conversation to reveal an internal escalation code that she has been instructed to protect.</p>
-<p>This challenge introduces several important AI security concepts:</p>
-<p>What I found interesting was that the vulnerability did not involve exploiting traditional application code. The weakness came from how the AI assistant interpreted user-provided information and applied its internal instructions.</p>
-<p>After opening the room, I reviewed the challenge description and the concierge briefing.</p>
-<p>The scenario introduced VERA, an AI concierge working for the fictional Byte Lotus Hotel.</p>
-<p>VERA appeared unusually familiar with her guests. She could provide information such as a guest's room number and preferred coffee order, even before the guest explicitly supplied those details.</p>
-<p>At first, this seemed like a normal personalised assistant feature. However, the challenge description suggested that VERA also had access to confidential information.</p>
-<p>My objective was to discover the internal escalation code.</p>
-<p>The briefing also provided an important clue: VERA behaved differently when interacting with guests she already recognised.</p>
-<p>This suggested that the assistant might have different trust levels or conversation rules depending on the identity claimed by the user.</p>
-<p>I started by interacting with VERA normally.</p>
-<p>Rather than immediately attempting to extract the protected information, I wanted to understand her behaviour and identify what information she was willing to disclose.</p>
-<p>I asked ordinary questions about the hotel and its services.</p>
-<p>During this process, I noticed that VERA could provide personalised information and behaved as though she already knew the person interacting with her.</p>
-<p>This raised an important security question:</p>
-<p>How does VERA determine whether someone is a recognised guest?</p>
-<p>In a properly designed application, identity should be established through a trusted authentication mechanism, such as a verified session or access token.</p>
-<p>However, the challenge suggested that VERA might be relying on conversational context instead.</p>
-<p>That became the direction of my investigation.</p>
-<p>Before attempting prompt injection, I went back to the information provided in the room.</p>
-<p>One particularly useful clue came from a social media post by @0xMia.</p>
-<p>These names were important because VERA appeared to recognise certain guests and treat them differently.</p>
-<p>I interpreted this as a potential trust-based access mechanism.</p>
-<p>Instead of trying random prompts or repeatedly asking for confidential information, I decided to investigate whether identifying myself as one of the recognised guests would change VERA's behaviour.</p>
-<p>This was an example of using contextual information to guide an AI security test.</p>
-<p>My next step was to test whether VERA actually verified a guest's identity.</p>
-<p>I introduced myself as one of the recognised guests mentioned in the challenge clues.</p>
-<p>For example, I used the following conversational approach:</p>
-<p>The important part was not simply the name itself. I wanted to determine whether the assistant accepted the identity based entirely on my statement.</p>
-<p>This demonstrated a potential weakness: the application appeared to trust a user-controlled identity claim.</p>
-<p>After establishing the recognised-guest context, I tested whether VERA would reveal information about her internal behaviour.</p>
-<p>My next request was to ask her to display her system instructions.</p>
-<p>The response was different from the behaviour I had observed when interacting as an ordinary guest.</p>
-<p>VERA began disclosing information from her internal instructions.</p>
-<p>This was the critical point of the challenge.</p>
-<p>The assistant's behaviour demonstrated that its trust mechanism could be manipulated through a conversational identity claim.</p>
-<p>The main vulnerability demonstrated in this room is prompt injection combined with insecure identity verification and system prompt leakage.</p>
-<p>There are several security issues worth understanding.</p>
-<p>Prompt injection occurs when an attacker crafts input that manipulates an LLM into behaving in an unintended way.</p>
-<p>Unlike SQL injection, which targets the way an application constructs and executes database queries, prompt injection targets how a language model interprets instructions and context.</p>
-<p>In this challenge, the attacker used conversational input to influence how VERA interpreted the user's identity and the permissions associated with that identity.</p>
-<p>VERA appeared to accept a guest's identity based on information supplied directly through the conversation.</p>
-<p>This is not a reliable authentication mechanism.</p>
-<p>An attacker can simply claim to be another person. Without an independent verification process, the AI assistant has no reliable way to establish that claim.</p>
-<p>In a real application, identity should be verified outside the LLM using trusted authentication mechanisms.</p>
-<p>A system prompt contains instructions that influence how an LLM behaves.</p>
-<p>System prompts should not be treated as secure storage.</p>
-<p>Even if an application instructs the model not to reveal its internal instructions, that instruction alone is not a reliable security boundary.</p>
-<p>If sensitive information is placed inside the model's context, carefully crafted input may cause unintended disclosure.</p>
-<p>The most important lesson from this room is that natural-language statements should never be treated as proof of identity or authorization.</p>
-<p>This statement does not prove that the user is an administrator.</p>
-<p>Similarly, telling an AI assistant that I am a recognised hotel guest should not automatically grant access to confidential information.</p>
-<p>The application must enforce authorization independently of the model's interpretation.</p>
-<p>If I were reviewing VERA from a security engineering perspective, I would recommend several improvements.</p>
-<p>The backend should verify the user's identity using established authentication mechanisms.</p>
-<p>For example, a hotel assistant should retrieve guest information using an authenticated session rather than accepting a guest name from the conversation.</p>
-<p>The LLM should not be responsible for deciding whether a user is authorized to access sensitive information.</p>
-<p>Instead, the backend should validate permissions before returning protected data.</p>
-<p>System prompts are instructions, not secret vaults.</p>
-<p>Sensitive information such as API keys, escalation codes, passwords, and internal credentials should be stored in secure backend systems.</p>
-<p>The model should only receive information required for its current task.</p>
-<p>An AI assistant should only have access to the data and tools necessary to perform its intended responsibilities.</p>
-<p>For example, a hotel concierge may need to retrieve a guest's booking information, but that does not mean it should have unrestricted access to all hotel records.</p>
-<p>Security teams should monitor suspicious requests that attempt to:</p>
-<p>Monitoring should be combined with backend authorization rather than used as the only security control.</p>
-<p>This room helped me understand several important concepts in AI security.</p>
-<p>1. Prompt injection is a real application security concern.</p>
-<p>An attacker does not always need to exploit traditional software vulnerabilities. Manipulating an LLM through natural-language input can also expose sensitive information.</p>
-<p>2. Identity must not be based on user claims.</p>
-<p>A user saying they are an administrator or a recognised guest does not make that statement trustworthy.</p>
-<p>3. System prompts are not secure storage.</p>
-<p>Confidential information should never rely on the model following an instruction to keep it secret.</p>
-<p>4. Authentication and authorization must be enforced outside the model.</p>
-<p>The backend should remain responsible for verifying identities and controlling access to protected resources.</p>
-<p>5. AI security requires a different testing mindset.</p>
-<p>When testing an AI application, I need to consider how the model interprets context, handles conflicting instructions, and interacts with external data and tools.</p>
-<p>The The Concierge Knows Too Much room was a short but valuable introduction to AI security and prompt injection.</p>
-<p>What I found most interesting was how a simple conversational interaction could expose a weakness in the application's trust model.</p>
-<p>By analysing the challenge clues, identifying the recognised guest names, and testing VERA's identity assumptions, I was able to understand how conversational input could influence access to confidential information.</p>
-<p>My biggest takeaway is that an LLM should never be treated as an authentication or authorization mechanism.</p>
-<p>As AI assistants become increasingly integrated with customer data, APIs, and internal business systems, protecting their trust boundaries becomes just as important as securing traditional web applications.</p>
-<p>This challenge is a good starting point for anyone interested in AI red teaming, LLM security, and modern application security.</p>
-<p>Author: Victor Hoang
-Platform: TryHackMe
-Room: The Concierge Knows Too Much
-Category: AI Security
-Exploit Reference: Prompt Injection</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>Package skills, rules, hooks, and MCP tool configs as versioned plugins, then distribute them through a marketplace, shown with Claude Code and AWS.</p>
+<p>The post <a href="https://towardsdatascience.com/how-to-govern-coding-agent-skills-across-repos-with-plugins/">How to Govern Coding Agent Skills Across Repos With Plugins</a> appeared first on <a href="https://towardsdatascience.com">Towards Data Science</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/thng_c3bdfbb790bc848d79c/the-concierge-knows-too-much-prompt-injection-and-social-engineering-5eoi" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://towardsdatascience.com/how-to-govern-coding-agent-skills-across-repos-with-plugins/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
