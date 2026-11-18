@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Definitive Fine-Tuning Guide for 3D Generation Models</title>
+    <title>Nine Conversation-Starting Movies to Watch With Your Romantic Partner</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9559.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,83 +15,85 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Definitive Fine-Tuning Guide for 3D Generation Models</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-17</p>
+        <h1>Nine Conversation-Starting Movies to Watch With Your Romantic Partner</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/3d-lora-finetuning/thumbnail.gif" alt="The Definitive Fine-Tuning Guide for 3D Generation Models" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://ggsc.s3.us-west-2.amazonaws.com/assets/images/movies_not_to_watch_with_partner_2026_-_abcdef_-_0a21b39134b316e51cdc0dd96c5e6bca3c0093e9-fb_-_abcdef_-_94b15742ccdfc3b16fb1fe35872167fe8d42c35d.webp" alt="Nine Conversation-Starting Movies to Watch With Your Romantic Partner" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/3d-lora-finetuning/thumbnail.gif" alt="The Definitive Fine-Tuning Guide for 3D Generation Models" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://ggsc.s3.us-west-2.amazonaws.com/assets/images/movies_not_to_watch_with_partner_2026_-_abcdef_-_0a21b39134b316e51cdc0dd96c5e6bca3c0093e9-fb_-_abcdef_-_94b15742ccdfc3b16fb1fe35872167fe8d42c35d.webp" alt="Nine Conversation-Starting Movies to Watch With Your Romantic Partner" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>TLDR; In this blog, we provide fine-tuning scripts and containers to fine-tune TRELLIS.2, a popular 3D model on your 3D assets, that can run both locally and on Hugging Face Jobs. If you are interested in fine-tuning, you can use our scripts with few arguments (assuming you updated your dataset to Hugging Face Hub) or tinker with them yourself with this repository. If you want to learn more, we go through how the script works. Let’s go!</p>
-<p>3D generation has many uses in robotics, simulation, media, and entertainment. In these fields, it is difficult to make generated objects obey strict rules and standardize model and data representations. There are many file formats, such as GLB and PLY. There are also many representations, such as neural radiance fields (NeRFs) and 3D Gaussian splatting (3DGS). Each one has different advantages and disadvantages.</p>
-<p>TRELLIS introduced a common internal representation, called a unified latent representation. Its decoders convert this representation into 3D models in the required output format. Thus, you do not have to use different models for each representation format.</p>
-<p>The same team then released TRELLIS.2, which improves the model's representation of 3D structure. But neither model gives an easy way to adapt it to a specific task.</p>
-<p>A general-purpose model, such as TRELLIS.2, can make errors in details that are important for a specific application. For example, a user may need accurate geometry for furniture models. Without fine-tuning for that task, the pretrained model can produce geometry that is insufficiently accurate. We use a subset of GSO that has 188 footwear objects for our experiment. In our initial tests, the pretrained model usually produced shoes that looked correct, but the soles were incorrect. We test whether a LoRA can make the soles more accurate.</p>
-<p>Our goal is to use the Google Scanned Objects (GSO) dataset to improve the performance of TRELLIS.2 on a specific object category. We will explain which pipeline components to fine-tune and which to leave unchanged during training. The pipeline separates structure, detailed geometry, and materials. Thus, we will fine-tune only the components that are important for our task.</p>
-<p>Choosing what to freeze matters as much as choosing what to fine-tune.</p>
-<p>LoRA, short for low-rank adaptation, fine-tunes a model by training small adapter matrices while keeping the original weights frozen. This reduces the number of trainable parameters and the memory needed for their gradients and optimizer state. We use Hugging Face’s PEFT library to add and train these adapters. For more information, read our LoRA guide.</p>
-<p>Hugging Face Jobs runs containerized workloads on cloud hardware. We use it for preprocessing and for training. To use your own GPU instead, see the local Docker commands below. Before you start, make sure that you have:</p>
-<p>Before we train, let’s look at how TRELLIS.2 generates a 3D object and where we’ll add LoRA adapters.</p>
-<p>TRELLIS.2 has five main stages: remove the image background, encode the image, predict the coarse structure, generate detailed geometry, and generate materials. The pipeline then exports the result as a textured mesh.</p>
-<p>First, BiRefNet removes the background from the input image. DINOv3-L then encodes the image into feature tokens. The generation models use these tokens to guide the 3D object.</p>
-<p>The sparse-structure flow DiT predicts the object's coarse shape. It is a diffusion transformer (DiT) that makes a small latent of size 16³ × 8. A variational autoencoder (VAE) decoder then changes this latent into a 64 × 64 × 64 occupancy grid. Each voxel in the grid shows if that location is part of the object. A voxel is a pixel in three dimensions. We add LoRA adapters to this model because its output guides the geometry stage.</p>
-<p>O-Voxel is the 3D format of TRELLIS.2. It is a sparse voxel grid. It keeps only the voxels on the object's surface. Each voxel keeps local geometry, such as a mesh vertex, and material attributes. Because the format is small, a CPU changes a mesh into O-Voxel in seconds. A GPU changes O-Voxel back into a mesh in seconds.</p>
-<p>Structured sparse latents come from TRELLIS. They keep 3D data in sparse tensors, which makes computation faster. The model uses only approximately 10% of the voxels in the grid, so it does not spend compute on empty voxels. Thus, the shape flow DiT and the texture flow DiT are sparse transformers. The sparse-structure flow DiT is a dense transformer.</p>
-<p>The shape flow DiT uses the occupancy grid and the DINOv3 feature tokens to make a latent. Another VAE decoder then changes this latent into O-Voxel geometry at a resolution of 512 × 512 × 512.</p>
-<p>We add LoRA adapters to the DiT at this stage because it controls the object's shape.</p>
-<p>In the last stage, the texture flow DiT uses the shape latent and the DINOv3 features as input. It defines the materials and textures of the geometry's surface. A VAE decoder then changes the latent into base color, metallic, roughness, and alpha values for each voxel. We do not add LoRA adapters to this stage. Our dataset has diffuse color maps, but it lacks the separate material maps this stage needs for training. Also, our problem is the shoe's shape. The base model already makes good colors and textures.</p>
-<p>Finally, the pipeline combines the geometry and material attributes into a textured mesh and exports it as a GLB file.</p>
-<p>We add LoRA adapters only to the sparse-structure flow DiT and the shape flow DiT. These DiTs control the object's shape and geometry. We freeze the texture flow DiT to keep its current capabilities.</p>
-<p>Our dataset contains diffuse color maps that include baked lighting effects. To train the texture flow DiT, we need separate material maps. The color maps in our dataset mix surface color with lighting. Thus, they are not correct targets for this training.</p>
-<p>If we train the texture flow DiT on these maps, it can learn to show lighting as a surface property. It can also forget what it learned before, a problem called catastrophic forgetting.</p>
-<p>Our subset has 188 shoes from the 1,030 objects in GSO. For a dataset this small, LoRA is a better choice than full fine-tuning. Full fine-tuning costs much more. It can also overwrite what the model already does well (its learned priors). Our configuration trains approximately 9.3 million adapter parameters in total for both targeted DiTs. We use rank 8 adapters in the attention and feed-forward (MLP) layers of the sparse-structure flow DiT. We use rank 16 adapters in the attention layers of the shape flow DiT. The rank sets the size of the adapter matrices. A higher rank lets the adapter learn more.</p>
-<p>A 3D model setup can need many dependencies and installation steps. We supply two Docker images (that you can run on Jobs or your own machine) with the necessary software. One image is for preprocessing, and one is for fine-tuning.</p>
-<p>To train your LoRA adapters and upload them to the Hub:</p>
-<p>Then we explain the fine-tuning script, its settings, and how each setting affects training.</p>
-<p>We’ll walk through three parts of the experiment:</p>
-<p>We save the preprocessed dataset so that all training runs can reuse it.</p>
-<p>The preprocessing container uses Blender to render 16 views of each object. LoRA training will use these views as conditioning images. Blender runs without a display, through the xvfb-run utility. The container also processes each object through the preprocessing pipeline. See the footwear dataset here for an example intermediate output. For our 188 objects, the full run took approximately 1 hour on an a100-large job. A compact version of the preprocessing pipeline is also available in this companion repository.</p>
-<p>For Hugging Face Jobs, we pass the following arguments:</p>
-<p>This container accepts a few more arguments (regardless of being run on Hugging Face Jobs or with Docker), that you can find documented over here. The steps taken in the preprocessing pipeline are documented in this section later.</p>
-<p>The training container loads the prepared dataset and a configuration preset or file. It records training metrics with Trackio. Use the Trackio dashboard to monitor the run.</p>
-<p>We use ‘ss’ and ‘shape’ to indicate the two modes we have for training the LoRAs. The ‘ss’ mode will finetune only the Sparse-Structure Flow DiT, whereas the ‘shape’ mode will finetune the Shape Flow DiT. Under the hood, they simply reference different config.json files to use for each stage. More details about the process is available in this section later.</p>
-<p>If you set --push-to, the container uploads adapter checkpoints to the Hub. The container accepts parameters that are also documented here for brevity. A compact script is also available in the same repository.</p>
-<p>If you want to play around and fine-tune with the already-processed dataset we have, feel free to use the following set of commands.</p>
-<p>The commands and flags are the same as for Hugging Face Jobs. Only the Docker options are different.</p>
-<p>If you want to use our already-preprocessed dataset locally on your machine of choice, use the following commands:</p>
-<p>Our trained LoRA adapters are in this repository: suvadityamuk/trellis-2-finetune-gso</p>
-<p>We use TRELLIS.2’s frozen encoders to convert the input meshes into training latents. We save these latents, so later runs do not have to encode the meshes again.</p>
-<p>We also render 16 views of each object in Blender. During training, we select one random view for each sample as the conditioning image. We keep 9 of the 188 objects for evaluation and train on the other 179. These held-out objects show whether the adapters work on objects unseen by the model during training.</p>
-<p>Some of the views that Blender rendered for one object</p>
-<p>The first snippet sets up the data. FLOW selects the flow DiT to train (ss or shape), and STEPS sets the number of optimizer steps. A batch size of 4 with 4 gradient accumulation steps gives an effective batch size of 16. Then, the snippet loads the LoRA config file for the selected flow DiT, makes the dataset in the TRELLIS.2 format, removes the held-out objects, and makes the data loader for fine-tuning.</p>
-<p>We use the peft library to insert LoRA adapters into the selected layers. TRELLIS.2 has a custom forward pass, so the standard PeftModel() wrapper does not work. Instead, we call inject_adapter_in_model(). This function adds the adapters directly to the model and keeps its custom interface.</p>
-<p>We keep the trainable adapter weights in 32-bit floating point (fp32) for numerical stability and use bfloat16 (bf16) autocasting for the forward pass. Autocasting lets PyTorch use lower precision for some operations, which decreases memory use. Autocasting does not change how the frozen backbone weights are stored.</p>
-<p>It’s important to note that our objective function here is good-old rectified flow matching (as seen in popular image-generation models like Stable Diffusion 3, Flux 2, and others). TRELLIS.2 used the same objective in pretraining, so it is a good choice for fine-tuning. For the theory, read this blog about flow matching.</p>
-<p>We update only the LoRA parameters in the sparse-structure and shape DiTs. All original model weights remain frozen.</p>
-<p>The snippets below show the core training loop for one stage. They are simpler than the container code and do not include some setup steps. For the full workflow, use the container commands.</p>
-<p>We initialize the optimizer and load DINOv3 to extract features from the input images.</p>
-<p>We then follow these steps within the training loop:</p>
-<p>The training loop computes the loss and updates the adapter weights. Gradient accumulation adds the gradients from 4 small batches before each optimizer step. Gradient checkpointing saves GPU memory by recomputing some intermediate values during backpropagation. The outer loop runs for a given number of optimizer steps, whereas the inner loop accumulates gradients over a set of batches.</p>
-<p>For each batch, DINOv3 encodes the conditioning image. For classifier-free guidance (CFG) dropout, the loop sets the conditioning to zero for a random fraction (p_uncond) of the samples. Then, it calculates the flow-matching loss with bf16 autocasting. After the inner loop, it clips the gradients to prevent very large updates and does an optimizer step. It logs the loss every 10 steps and saves an adapter checkpoint every 500 steps.</p>
-<p>We trained two adapters: one for the sparse-structure DiT and one for the shape DiT. The LoRA config files in the container image contain the full training settings: ss_flow_lora_gso.json for the sparse-structure flow DiT and slat_flow_img2shape_lora_gso.json for the shape flow DiT. Each run used one A100 80 GB on Hugging Face Jobs. The sparse-structure run took 7.2 hours, and the shape run took 3.6 hours.</p>
-<p>The training loss of the sparse-structure flow DiT falls quickly at the start, then more slowly. The loss of the shape flow DiT stays at approximately the same level. These curves show how the training objective changes, but they do not directly measure the quality of the generated geometry.</p>
-<p>Flow-matching loss varies with the sampled objects, noise, and timesteps. To find out if fine-tuning improves the geometry, we must also compare outputs on the held-out objects.</p>
-<p>The figure below compares outputs for five of the nine held-out objects. It shows the input image, the base model’s generated output, the base output after a rotation adjustment, the output with the footwear adapters, and the reference scan. In these examples, the soles from the fine-tuned model are closer to the scans.</p>
-<p>We also use three metrics to evaluate the geometry on the test set:</p>
-<p>In the chart’s nine-object comparison, the base model has a mean F-score of 0.276, compared with 0.803 for the model with the footwear adapters. Chamfer distance falls from 0.174 to 0.033, and normal consistency rises from 0.530 to 0.804. With both adapters, the F-score is better on all nine held-out objects.</p>
-<p>For the statistics of all runs, see this Trackio space.</p>
-<p>Phew, so there we go! We fine-tuned TRELLIS.2 for footwear generation by adding LoRA adapters to the two model components that control geometry. We prepared the data once, trained the adapters in separate jobs, and evaluated the outputs on held-out objects.</p>
-<p>The main lesson is to select a training target that agrees with the problem and the data that you have. For this experiment, we fine-tuned the structure and shape stages and froze the texture stage.</p>
-<p>Next, we can examine if the same choices help other 3D generation models, such as Pixal3D and UniLat3D.</p>
-<p>Gaussian-splat and world-generation models, such as HunyuanWorld 2.0 and NVIDIA Lyra 2.0, are also possible next steps. Their representations and training pipelines can need different methods.</p>
-<p>Thank you for following along, and see you in the next one! 👋🤗</p>
-<p>Visualize how noise transforms into images in your browser</p>
-<p>An interactive guide to 3D representations.</p>
-<p>Visualize how noise transforms into images in your browser</p>
-<p>An interactive guide to 3D representations.</p>
+                <p>Become a subscribing member today. Help us continue to bring “the science of a
+                meaningful life” to you and to millions around the globe.</p>
+<p>Greater Good
+Science Center •
+Magazine •
+In Action •
+In Education</p>
+<p>Movie date nights have long been a ritual of romance, from first dates to married couples’ standing nights out. You can probably name movies that leave you feeling warm, hopeful, excited, stimulated, and sometimes a little more in love with your partner.</p>
+<p>But sometimes, the movies we watch become more than that—they become conversation starters, litmus tests, or unexpected mirrors of our own relationships.</p>
+<p>These nine movies expose the underbelly of romantic relationships: the resentments, fantasies, secrets, compromises, and alternative lives that can coexist alongside love. Watching them runs the risk of cracking open a door that would be better kept closed, for the longevity of your relationship.</p>
+<p>Last month’s The Invite, starring and directed by Olivia Wilde, tops our list of nine movies you might want to watch without your partner—or at least be very sure you know what conversation you’re signing up for in the post-screening debrief. Each movie asks a question that might be safer left unanswered.</p>
+<p>What happens when you say the quiet part out loud?</p>
+<p>The Invite turns the dinner-party setup into an examination of everything couples are usually too embarrassed, jealous, or afraid to say to each other.</p>
+<p>Angela (Wilde) and Joe (Seth Rogen) portray a married couple whose relationship has become strained by years of resentment and disappointment. When Angela invites their upstairs neighbors, Piña (Penélope Cruz) and Hawk (Edward Norton), over for dinner, what begins as an attempt at connection becomes a much more revealing conversation about sex, attraction, love, and what people want from their partners, when they’re being honest.</p>
+<p>As Piña and Hawk probe the tension between Angela and Joe—also glimpsed through their apartment windows and in elevator encounters—they force the quiet parts of the other couple’s relationship into the open. The questions Angela and Joe were afraid to ask each other come to the surface, like, “Do we love each other anymore? Can we salvage this relationship? Do you want to be with someone new?”</p>
+<p>“Novelty is a powerful aphrodisiac. In long-term relationships especially, cultivating novelty—whether through stories or experiences—is key for sustaining passion,” says Esther Perel, sex therapist and consultant on The Invite, on her blog. “Maintaining a sense of mystery and surprise helps counteract the routine and repetition that can sometimes lead to a decline in desire over time.”</p>
+<p>We tend to think of monogamy as a set of universally accepted rules: Don’t sleep with someone else. Don’t cross the line. But long-term relationships are also built on unspoken knowledge about what our partner wants, what they find attractive, what they would never do, and what they might secretly wish they could do. Lifting the lid on that box may reveal that the relationship is beyond repair.</p>
+<p>What’s more important: Love or money? Would you risk the former for the latter? Can a couple withstand different answers to this question?</p>
+<p>David (Woody Harrelson) and Diana (Demi Moore) are a financially struggling, yet happily married, couple, who are offered $1 million if the wife spends one night with a wealthy stranger, played by Robert Redford. The movie takes a question that sounds like a parlor game and puts it inside a marriage: What, exactly, would you be willing to sacrifice for a life-changing amount of money?</p>
+<p>Diana’s decision to revisit the proposal after David’s initial hesitation—an uncomfortable pause that both she and the audience notice—begins her agreed-upon one-night stand.</p>
+<p>From there, suspicion and mistrust begin to take hold, gradually eroding the relationship and ultimately pushing Diana toward the wealthy stranger.</p>
+<p>What happens when a hypothetical becomes real? When money, desire, jealousy, and pride enter a marriage, it becomes much harder to separate what you thought you would do from what you did.</p>
+<p>Indecent Proposal can turn a hypothetical into an uncomfortable inventory of your partner’s values—and your own.</p>
+<p>Although it’s not every day a millionaire asks to sleep with a spouse, the question, and the length of the pause before answering, can reveal a lot about both sides.</p>
+<p>Can anyone be tempted, and can one handle the consequences of infidelity?</p>
+<p>Unfaithful, starring Diane Lane and Richard Gere, is a movie about a married suburban woman who meets a younger man and becomes increasingly drawn to him. There is no grand declaration that her marriage is over, no decision to go looking for an affair. There is simply attraction, followed by curiosity, a series of small choices that gradually lead down a road from which there is no return.</p>
+<p>Some people believe that infidelity happens only to certain kinds of couples—unhappy couples, disconnected couples, couples whose marriages were already in trouble. But some people in loving relationships can still notice other people, feel chemistry, or wonder what it would be like to be with someone else.</p>
+<p>In fact, that is part of what sucks you into Unfaithful: Richard Gere’s character is a quintessentially good husband—a devoted father, attentive partner, and decent man.</p>
+<p>“I often find that the affair is a form of self-discovery. It’s not that the individuals having the affairs want to leave their partners, but the people they have become. They are looking for another version of themselves—which is the most powerful variety of ‘other’ there is,” says Perel in an interview with Goop.</p>
+<p>A crush can remain a crush. A fantasy can remain a fantasy. But sometimes people begin feeding the attraction, creating opportunities to see the person again, or keeping secrets that gradually become more important than the relationship they are protecting.</p>
+<p>Interesting fact: Both Indecent Proposal and Unfaithful were directed by Adrian Lyne, who’s been married since 1974 to his wife Samantha.</p>
+<p>Can you love someone and still need to leave them?</p>
+<p>Marriage Story begins with a husband and wife listing the things they love about each other. It’s tender enough to feel like the opening of a great romance, but the film quickly reveals a more complicated reality. Inspired by director Noah Baumbach’s own divorce, the story explores what happens when the things we love about our partner begin to pull us in different directions.</p>
+<p>Charlie (Adam Driver) loves that Nicole (Scarlett Johansson) makes people feel comfortable, knows how to handle difficult family situations, plays with their son, knows when to push him and when to leave him alone. Nicole loves Charlie’s determination, his energy, his intelligence, and the way he throws himself into the things he loves.</p>
+<p>It is an intimate portrait of a couple who, despite everything that will follow, genuinely know and admire one another.</p>
+<p>The film follows Charlie and Nicole through the painful mechanics of divorce: lawyers, custody arrangements, money, competing versions of the marriage, and the realization that ending a relationship does not mean you stop having to deal with the person you are leaving.</p>
+<p>Nicole has spent years adapting herself to Charlie’s life and putting parts of her own ambitions aside. Charlie has built a career and a world around his creative work but has failed to recognize how much his wife has sacrificed to support it. Neither is simply the villain. Neither is simply the victim.</p>
+<p>That is one of the film’s most uncomfortable truths about long-term relationships: Love does not necessarily disappear before a marriage ends. Their issues aren’t due to flat-out incompatibility; they are problems of identity, compromise, resentment, and the slow accumulation of problems that were never fully addressed.</p>
+<p>Another question the movie asks is whether love is enough to make a marriage work.</p>
+<p>Gone Girl turns marital secrets into psychological warfare; this is anything but a love story.</p>
+<p>Based on Gillian Flynn’s novel, the film follows Nick Dunne (Ben Affleck) on the day his wife, Amy (Rosamund Pike) disappears. As the investigation unfolds, the image of their marriage begins to unravel, leaving everyone—including the audience—to wonder whether Nick killed her.</p>
+<p>At the heart of the film is a deeply unsettling possibility about how little access we have to another person’s reality.</p>
+<p>One of the qualities that relationship researchers have found important is emotional responsiveness: the feeling that your partner understands you, validates your perspective, and cares about your well-being. In other words, a healthy relationship depends less on “I know everything about you” than on “I feel safe being known by you.”</p>
+<p>In Eyes Wide Shut, Alice (Nicole Kidman) and Bill Harford (Tom Cruise) appear to have a comfortable marriage—secure in the routines and flow of the life they built together. That is until Alice tells her husband about a sexual fantasy involving another man.</p>
+<p>Bill becomes consumed by the idea of what his wife has imagined. The fantasy begins to feel like a secret life, and the distinction between imagining something and wanting it becomes increasingly difficult for him to see.</p>
+<p>According to Perel, our “sexual fantasies are a fount of information about our internal lives and the relational dynamics of our partnerships.”</p>
+<p>People also can make complicated decisions about whether to disclose fantasies to their partners. Sometimes disclosure can create intimacy. Sometimes people keep fantasies private because they fear judgment or because the fantasy itself has nothing to do with what they want in real life.</p>
+<p>Eyes Wide Shut makes that ordinary fact feel like a threat.</p>
+<p>Are we living the life we actually wanted?</p>
+<p>In Revolutionary Road, Frank (Leonardo DiCaprio) and April Wheeler (Kate Winslet) have built the respectable suburban life they were supposed to want, in this movie set from the late 1940s to mid 1950s. But April begins to wonder whether they have mistaken a socially approved life for the life they truly desire.</p>
+<p>What happens when the pendulum swings too heavily toward one person’s idea of the life they could have lived, leaving the other to defend the life they have actually built? In Revolutionary Road, April’s longing for a different future increasingly collides with Frank’s investment in the life they have created together.</p>
+<p>Long-term relationships inevitably require compromise. But compromise can feel very different when it is experienced as a choice rather than a sacrifice. A relationship should provide a sense of “we” without erasing the “I.” Researchers have also found that relationships can be important sources of personal growth: Partners can help one another explore new identities, pursue goals, and become more fully themselves.</p>
+<p>Revolutionary Road painfully takes us through the psychological unraveling of Frank and April—who seem to experience their marriage as a narrowing of possibilities rather than an expansion of them.</p>
+<p>Content warning: The film explores difficult themes involving self-administered abortion, death, and questions autonomy.</p>
+<p>Can you love someone and still hurt them?</p>
+<p>Closer, directed by Mike Nichols and based on Patrick Marber’s play, strips relationships down to their most uncomfortable elements like attraction, jealousy, dishonesty, and the desire to be wanted.</p>
+<p>The film follows four people—Dan (Jude Law), Alice (Natalie Portman), Anna (Julia Roberts), and Larry (Clive Owen)—whose relationships become increasingly entangled. What begins with a chance encounter between Dan and Anna eventually develops into a complicated web of love affairs, betrayals, and shifting loyalties. It leaves viewers asking, “Do we want to be loved, or do we want to be desired?”</p>
+<p>The characters repeatedly demand honesty from one another, but when they get it, the truth often hurts more than the lie. They want to know whom their partners have slept with, what they felt, whom they wanted, and whether they were ever truly enough. Yet knowing the truth doesn’t necessarily bring them closer. Sometimes, it gives jealousy something concrete to attach itself to.</p>
+<p>Would you still love your partner if you knew the worst thing they ever did?</p>
+<p>The Drama takes place in the days surrounding the wedding of Emma Harwood (Zendaya) and Charlie Thompson (Robert Pattison), a young couple whose courtship seemed out of a storybook. Over drinks one night with their best man and maid of honor, they each confess the worst thing they’d done. This revelation sparks disgust and soul-searching, as they’re forced to confront the question: “Do you still love me?”</p>
+<p>We all seek unconditional love from our partner. The Drama stretches this promise to the breaking point, complicated by the judgment of friends who also know the ugly truth. If you dare to watch this film with your partner, you’d be wise to think twice before sharing each other’s deep, dark secrets.</p>
+<p>Yasmin Garaad is a freelance journalist. Her work has also been published in National Geographic, PEOPLE Magazine, Business Insider, and more.</p>
+<p>Couples who embrace their own “microculture”—pet names, inside jokes, and rituals—may be happier and more satisfied with their relationship.</p>
+<p>When we go straight to analyzing our own grief or someone else's, we are skipping an important step.</p>
+<p>Sending reels on social media may seem frivolous or distracting, but it actually functions as a form of relationship maintenance.</p>
+<p>What does it actually take to put people over politics? Republican and Democrat students discover ways to resist the pull to demean or villainize people with whom they strongly disagree.</p>
+<p>Psychologist and meditation teacher Tara Brach explores how practicing kindness and compassion can strengthen our relationships, ease loneliness, and help us feel more connected to others.</p>
+<p>The Greater Good Science Center studies the psychology, sociology, and neuroscience of well-being, and teaches skills that foster a thriving, resilient, and compassionate society.</p>
+<p>© 2026 The Greater Good Science Center at the University of California, Berkeley</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/3d-lora-finetuning" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://greatergood.berkeley.edu/article/item/nine_conversationstarting_movies_to_watch_with_your_partner" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
