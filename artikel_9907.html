@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wire It, Run It, Deploy It: AI Workflows in Gradio</title>
+    <title>Actual curl rewrites in rust</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9907.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,78 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Wire It, Run It, Deploy It: AI Workflows in Gradio</h1>
+        <h1>Actual curl rewrites in rust</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/gradio-workflow-guide/thumbnail.png" alt="Wire It, Run It, Deploy It: AI Workflows in Gradio" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://daniel.haxx.se/blog/wp-content/uploads/2023/09/old-machine.jpg" alt="Actual curl rewrites in rust" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/gradio-workflow-guide/thumbnail.png" alt="Wire It, Run It, Deploy It: AI Workflows in Gradio" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://daniel.haxx.se/blog/wp-content/uploads/2023/09/old-machine.jpg" alt="Actual curl rewrites in rust" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Most interesting AI apps are pipelines. You generate an image, then cut out its background if you want to, or edit it into something new. You write a script, then generate a voice for it, or swap the voice while keeping the script the same. We usually wire these steps together in Python, and the moment something looks off we go back to print-debugging to find which step produced the odd value.</p>
-<p>gr.Workflow, built right into Gradio, makes the pipeline the interface. You describe your steps as a graph of typed nodes, and Gradio serves a drag-and-drop canvas where every node is runnable and every intermediate result is visible. The same graph is also a REST API and a one-command deploy to Hugging Face Spaces.</p>
-<p>The best way to get the idea is to see a few workflows in action. Every app below is a live Huggingface Space you can open, run, and duplicate.</p>
-<p>Upload an image, type an edit ("turn it into a snowy winter scene", "add sunglasses", "make the car red"), and get the edited photo back. The whole app is a single node calling Qwen-Image-Edit on Hugging Face Inference Providers.</p>
-<p>One graph, three pipelines. Start with a prompt and generate an image with FLUX, then pass it to a background-removal Gradio Space to turn it into a sticker. A topic becomes a voiceover through a text-to-speech Gradio Space, while the same topic becomes a catchy episode title through an LLM call.</p>
-<p>That’s one canvas, two model calls through Hugging Face Inference Providers, and two calls to Gradio Spaces.</p>
-<p>Since this is a workflow, each of the three outputs also gets its own REST endpoint: /sticker, /voiceover, and /episode_title. You can call any of them directly from code without opening the UI. See Call it from code below for a runnable example.</p>
-<p>Type in one idea, and it turns into a set of generated artwork all at once: a base image from FLUX, two AI re-imaginings of that image (a soft watercolor version and a neon cyberpunk take), and a gallery title written by an LLM.</p>
-<p>Each image is generated directly from the prompt by a model node using Inference Providers, while the title comes from an fn node that calls an LLM. This is the fan-out pattern in action: one idea can feed multiple operators simultaneously, all generating in parallel.</p>
-<p>Type in a Hugging Face dataset ID, such as stanfordnlp/imdb or mteb/tweet_sentiment_extraction, and a single input fans out to four operator nodes that analyze the dataset live using the Datasets Server API.</p>
-<p>You get an overview card, a preview of the first few rows, per-column statistics, and a distribution chart, all computed independently and in parallel. That’s the power of workflows!</p>
-<p>Every node so far reaches out to Hugging Face. But an fn node is just Python, which means it can also run a model inside the Space on a GPU.</p>
-<p>Decorate the bound function with @spaces.GPU and, when the node runs, ZeroGPU grabs a GPU for that call, runs the model, and releases it. We don't always need to rely on Inference Providers or existing Gradio Spaces.</p>
-<p>Check out this demo that animates a still image using Lightricks/LTX-Video loaded through Diffusers, running entirely through one node. gr.Workflow doesn't need to know anything about your GPU setup. It simply calls the bound function.</p>
-<p>Every workflow is a graph with three kinds of nodes: references (your inputs), operators (the steps that do work), and subjects (your outputs). An operator can be your own Python function, a model on Hugging Face Inference Providers, another Gradio Space, or a row from a Hub dataset. You connect them by dragging between typed ports, hit Run, and watch each result appear in place.</p>
-<p>Every workflow you build  is also an API, with no extra work. Each output becomes a REST endpoint named after its label, and you can call it from Python with the Gradio client. Here is a live, no-token example against the multi-endpoint demo Space, exactly as-is:</p>
-<p>Endpoints that call a model or a Space run under a Hugging Face token, so pass one when you create the client:</p>
-<p>Prefer plain HTTP? Every endpoint is reachable over curl too:</p>
-<p>The fastest way in is to open any demo above, click Duplicate, and start rewiring. From Python, it is as short as:</p>
-<p>For the full walkthrough, the operator kinds, the JSON schema, and reusable patterns, see the official gr.Workflow guide in the Gradio docs.</p>
-<p>You can even build something as involved as AUTOMATIC1111 with gr.Workflow. Keep an eye out for our next post, where we walk through building it step by step. Here is a sneak peek 😉👇</p>
-<p>Fast, efficient, & multilingual text-to-speech</p>
-<p>Remove image background and get transparent PNG</p>
-<p>Create multiple art styles and a title from one prompt</p>
-<p>Explore Hugging Face datasets with instant visual summaries</p>
-<p>Edit images with custom text instructions</p>
-<p>¡Órale! gr.Workflow de Gradio está padrísimo porque te permite armar pipelines de IA súper complejos en un lienzo interactivo sin complicarte la vida con código enredado. Es una herramienta de verdad chida para visualizar cada paso del proceso, depurar en tiempo real y desplegar tus modelos directito a Hugging Face Spaces en un dos por tres. La neta, para cualquiera que trabaje creando herramientas de IA generativa, esto viene a aligerar el trabajo un buen.  https://starzbetmex.com/</p>
-<p>Fast, efficient, & multilingual text-to-speech</p>
-<p>Remove image background and get transparent PNG</p>
-<p>Create multiple art styles and a title from one prompt</p>
-<p>Explore Hugging Face datasets with instant visual summaries</p>
-<p>Edit images with custom text instructions</p>
+                <p>For a long time we have received repeated requests for, or questions about, a curl rewrite in rust. Often as a joke, but also seriously.</p>
+<p>In this modern world of AIs, we have only been waiting for someone to prove it possible and now it seems we don’t have to wait anymore.</p>
+<p>This fall seems to be the time of the curl-in-rust takes as we first saw urlx appear a few months ago, claimed to be a memory-safe, from-scratch reimplementation of curl and libcurl and now in November curl, rewritten in Rust – a rewrite of curl and libcurl in Rust. This second one confusingly enough not even using a different name.</p>
+<p>This latter one claims to have spent 8,600 USD to make it happen.</p>
+<p>Writing code once was never the big deal with software and it still isn’t. Sure, it’s fascinating that you can make a set of agents accomplish this in only a few weeks but let’s face it: it could do this because all the AIs of the world have trained on curl code for years. curl is extremely well documented, there are hundreds of existing open source application using its API and there are thousands of test cases to verify the implementation.</p>
+<p>The C code sits there and all the AI needs to do is convert it to rust, then polish until the tests work.</p>
+<p>curl has come to be what it is thanks to many decisions, lots of time, many users, oceans of feedback and many iterations. Sure, recreating what curl is at any specific single moment in time is certainly doable. Doable, because we have made a perfect specification for that project.</p>
+<p>During the time these agents converted 185,000 lines of C code into 340,000 lines of Rust code (I counted), we merged over 300 commits in the actual curl project. We actually improved curl during these a little more than three weeks. A little over 200 bugfixes actually. 200 bugfixes that none of those rust rewrites have. We also fixed a few vulnerabilities. In another month we have done another 200 and maybe fixed a few more vulnerabilities. Will these clones keep up?</p>
+<p>The constant tweaking, fixing, improving and extending is what makes a software project live, what makes it attractive to users and what makes it able to compete with alternatives.</p>
+<p>That fixing, and occasional new feature, is a direct result of a working community of users, contributors and maintainers. That goes way beyond the source code or which language that is used.</p>
+<p>A primary reason it is hard to make a competing curl alternative is because of the development speed, the development team and the community around curl.  It is not because of the chosen language it is implemented in. Only curl can boast decades of ABI and API stability and prove that we know this and can do it well – over time. An alternative that pops up today might be able to do it as well, and in a few decades we will know if they could.</p>
+<p>I know I’m repeating myself but: out of the 81 vulnerabilities we have confirmed in curl so far during 2026, 14 were the result of mistakes that most likely would have been avoided had we used a memory-safe language such as rust. That’s 17.3%.</p>
+<p>A Rust implementation of curl would thus still have had 67 of those vulnerabilities.</p>
+<p>I don’t believe in rewrites into any language. I believe in constant and never-ending polishing, iterating and refactoring.</p>
+<p>I should add that I have not been in contact with any of the people behind these rewrites, and if there are two I bet there are more that I just haven’t seen yet. I only know of them because people have pasted me links to their repositories.</p>
+<p>I don’t know what they will do with those projects going forward. Are they anything more than proof of concepts? I presume we will find out.</p>
+<p>They can of course follow along our commits and convert them to rust on the fly if they want – we only do about 11 commits per day on average. Or maybe they ignore the bugreports or maybe they take their projects in other directions?</p>
+<p>I wish them good luck whatever they decide!</p>
+<p>Imitation is the sincerest form of flattery that mediocrity can pay to greatness.  / Someone</p>
+<p>I’m amused. A little puzzled. Fascinated. They spent their money and effort on that?</p>
+<p>I find it quite interesting. I couldn’t possibly be part of the “just rewrite it in Rust” crowd, but I also do see the benefits in many cases.</p>
+<p>It feels like, while ideally it’d be good to have that effort put into curl itself and see things improved and fixed, the fact that it’s a problem space people are paying attention to at all is a Good Thing™?. I hope something useful comes of them, just so we’ve got something interesting and novel to look at, at least. Maybe it leads to better understanding of the big wonderful world of internet transfers.</p>
+<p>I appreciate the hubris – you’ve gotta start with blind, cocky optimism sometimes. 😛</p>
+<p>“81 vulnerabilities we have confirmed in curl so far during 2026, 14 were the result of mistakes that most likely would have been avoided had we used a memory-safe language such as rust. That’s 17.3%.”</p>
+<p>Nice, that sounds like very good motivation for a Rust rewrite.</p>
+<p>Something that is always missing from these post-hoc analyses is the changes and features that were never implemented because the language’s unsafety made it too expensive and risky (“that which is seen and that which is not seen”). A strong type system allows you to be much more scrappy and fearless.</p>
+<p>@Jesse: I disagree. What makes you “fearless” in development is A) a good architecture and B) a good test suite combined with C) good test and development tools. We have all that. We’re not holding back features because of the language. Never did.</p>
+<p>If there’s anything, we have too many features and we do too much. But hey, that’s what curl is.</p>
+<p>Isn’t a programming language just another development tool? We can talk about language capabilities just like any other.</p>
+<p>Types and tests go together as a pair of tools. Types can be validated incrementally in less than a second (eg in rust-analyzer), tests take seconds, minutes, sometimes hours for feedback. Tests can show the presence but not the absence of bugs, types prove the absence of whole classes of bugs but not their presence. Tests tell you about a specific execution, types reason about all possible executions. Test can validate any behaviour while types can only exclude bugs provable in its logic.</p>
+<p>The progress in programming languages has generally been towards stronger types, including lifetimes in Rust’s case. I don’t think its fair to say they have no advantages over tests.</p>
+<p>@Jesse: different languages have different advantages and quirks, sure. I just meant that I don’t think the choice of language holds us back.</p>
+<p>> Nice, that sounds like very good motivation for a Rust rewrite.</p>
+<p>But I feel like you’ve missed the forest for the single tree. This whole post is describing the value in curl being the maintainers that are willing to put in the time. A single observation doesn’t outweigh the reality that code is (and always has been) cheap. But maintainer time and effort is the important part.</p>
+<p>” This latter one claims to have spent 8,600 USD to make it happen”.  This is a wrong reading.</p>
+<p>They claim that amount in estimated API cost equivalent, but based on them running out of quota they use a subscription, which is a lot less cost. Not that it changes anything you said though.</p>
+<p>Thanks for keeping cURL going all these years. I doubt any of the clones are committed to similar maintainance quality and long term.</p>
+<p>I really like what this post is talking about everyone can make a copy but who can maintain and keep on adding features in long term that is what makes it competing and survival of the copied software.</p>
+<p>Everyone knows how Cloudflare made a copy of Next.js and everyone started posting about it for few weeks and it is dead or it is copying features from Next.js to keep up with the Next.js as it’s replacement</p>
+<p>@Joonas The artifact mentions weekly limit only on 28/10, one week after the start of the rewrite, and not until the end of the experience, so it surely started with some heavy subscription, it may switched to token billing after to keep up with the work.</p>
+<p>“If the work ran on a subscription plan, this is what it would have cost on the API, not what was billed.”
+So yes, for sure, it at least been partially subsidized, and once Anthropic will switch to token billed usage (like OpenAI will do next month, because money), it would certainly cost $8.6k for any clone, except if some “super agents” becomes the new hype and would burn way more tokens…</p>
+<p>Again, “humans made computers for humans” is still a thing nowadays, and AI will not replacing communities tomorrow. It would have been interesting to see a clean C ? Rust ? C rewrite just to compare how the C could have been rewritten, just out of curiosity.</p>
+<p>It is november 2026. You can use formal verification with Verus to get rid of other 67 logic bugs and then use it continuously to avoid bugs at all!</p>
+<p>https://microsoftedge.github.io/edgevr/posts/From-Bug-Hunting-to-Bug-Prevention-with-Rust-and-Verus/</p>
+<p>No other language yet provide such an ecosystem for error prevention.</p>
+<p>This is such a wonderfully grounded perspective! It’s a great reminder that a software’s true strength lies in its community, history, and endless iterations—not just the language it’s written in. Thank you for everything you do for curl!</p>
+<p>Similarly-shaped things used to happen at a much smaller scale on web 1.0. How many times I or my peers would share tarballs of our funny little webapps, only to be shown a few weeks later some proto-reactionary teenager trying so hard to impress his two or three followers with the website he “built” all on his lonesome in a day, and soon after that it’d be gone again in a fit of pique. Maybe these are the same people all aged up. Similarly-shaped things and all.</p>
+<p>But even those kids would have the sense to not brag that they gambled away thousands of dollars to put a Pyongyang Hotel in the metaverse. That’s just sad.</p>
+<p>I you don’t know Rust well, what makes you confident about the exact number of issues that Rust would have prevented? C is a barebone language, Rust brings much more to the table than memory safety only:
+– Sane type system, especially with sum types
+– Better error handling (mostly consequence of the previous point)
+– Trait-based polymorphism (no such abstraction in C)
+– RAII
+– Async (especially useful for curl)</p>
+<p>Even users’ misusage can be prevented with a good set of types: make invalid states unrepresentable. BTW, we talk about Rust, but any functional language would do.</p>
+<p>@Felix No one can know any exact number of problems curl would have had if written in another language. Not you, not I. What I do know though, and this is verifiable because all the details and data is public, is how many of the past curl vulnerabilities that were “C mistakes”. I think everything else in terms what other languages could do or not is mostly a distraction and “language religious talk”.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Time limit is exhausted. Please reload CAPTCHA.
+nine753four</p>
+<p>This site uses Akismet to reduce spam. Learn how your comment data is processed.</p>
+<p>Sponsor me: on GitHubFollow me: @bagderKeep up: RSS-feedEmail: weekly reports</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/gradio-workflow-guide" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://daniel.haxx.se/blog/2026/11/17/actual-curl-rewrites-in-rust/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

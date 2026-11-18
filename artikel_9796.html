@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta</title>
+    <title>A Seven-Slide Framework for Funding AI Transformation Without New Headcount</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9796.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,93 +15,76 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta</h1>
+        <h1>A Seven-Slide Framework for Funding AI Transformation Without New Headcount</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/meta-muse-spark-open/thumbnail.png" alt="Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/feyqEZyaZIS2XbpYv3g18xRk6Zy2-fa83b4y.jpeg" alt="A Seven-Slide Framework for Funding AI Transformation Without New Headcount" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/meta-muse-spark-open/thumbnail.png" alt="Welcome Muse Spark Open: open-weight frontier multimodal mixture-of-experts model from Meta" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/feyqEZyaZIS2XbpYv3g18xRk6Zy2-fa83b4y.jpeg" alt="A Seven-Slide Framework for Funding AI Transformation Without New Headcount" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Muse Spark Open is an open-weight model from Meta. The mixture of experts model brings text, images, audio, and video into a model with approximately 816 billion parameters, around 42 billion active per token, and a context window of up to one million tokens. It generates text, giving developers a common interface for asking questions about different kinds of input.</p>
-<p>Following Muse Glimmer, Muse Spark Open introduces a mixture-of-experts architecture at a much larger scale, and the most capable US open-weights model to date.</p>
-<p>Meta trained Muse Spark Open for agentic coding: reading a codebase, writing and debugging code, and calling tools. It also takes images, audio, and video as input, so the same model can read a screenshot, listen to a voice note, or watch a screen recording while it works on your code. This post shows you how to run it, how to fine-tune it, and what we built with it. Find all the models here.</p>
-<p>Meta describes Muse Spark Open as a coding-optimized model trained on real developer workflows such as multi-file refactors and long debugging sessions. Muse Spark Open is an agentic focused model that plans, acts, observes, and self-corrects over long tasks, including browsing the web with images.</p>
-<p>The checkpoint repositories are Muse-Spark-Open-816B-A42B and Muse-Spark-Open-816B-A42B-NVFP4.</p>
-<p>Muse Spark Open is the full-size model of the Muse series of models. Muse Glimmer, which Meta released in August, is a small dense model from the same series, ideal for running locally. Both models use the same tokenizer and vocabulary. The chat template follows the Muse Glimmer template, with additions for the new modalities. In Muse Spark Open the input embedding and the output layer are separate matrices of about 1.66B parameters each.</p>
-<p>The language model has 62 layers and a hidden dimension of 8192. Each layer has 128 query heads and 16 key-value heads (grouped-query attention). Each head has 64 dimensions. The attention block has an output gate and an output normalization layer. The model also applies normalization to the queries and the keys (QK-norm). Each block combines its input and its output through a learned residual gate, not through a plain sum.</p>
-<p>Muse Glimmer uses one dense feed-forward network in each layer. Muse Spark Open replaces this dense network with a Mixture-of-Experts (MoE) block. Each MoE block has 256 experts, and a router selects 8 experts for each token. Each expert is a feed-forward network that projects from 8192 to 4096 dimensions and back to 8192, then applies its own normalization to its output. The experts hold ~97% of the total model parameters.</p>
-<p>Only 8 experts run per token, so the model computes each token with about 42B parameters. All 256 experts stay in memory, so deployment needs the memory of an 816B-parameter model, but runs at the much faster speed of a 42B model. The BF16 checkpoint is about 1.5 TB in safetensors format. The NVFP4 checkpoint stores the parameters in 4-bit precision with negligible loss in accuracy, specifically for NVIDIA Blackwell GPUs. In transformers, the BF16 checkpoint runs across 4 nodes of 8 H200 GPUs with tensor parallelism (TP=32) and the NVFP4 runs on a single B200 node. If you want to deploy Muse Spark Open, check out the llama.cpp, vLLM, and SGLang recipes below.</p>
-<p>A perception encoder converts images and video frames into tokens for the language model, just like Muse Glimmer. The encoder has 1.8B parameters, 50 layers, a hidden dimension of 1536, and 16 attention heads. It splits each image into 14×14 patches and produces features with 4096 dimensions. Position information comes from learned absolute embeddings and 2D RoPE. The feed-forward network in each layer uses LayerNorm and GELU. Every fourth layer and the last layer use full attention, and the other layers use sparse attention.</p>
-<p>Muse Glimmer 30B uses an encoder with the same architecture. The design follows the  Perception Encoder work from Meta. Video input goes through the same encoder as images.</p>
-<p>Muse Spark Open accepts audio as input through its audio encoder. An audio tokenizer converts the audio into tokens, and the chat template marks the audio position with <|audio|> tokens. The encoder emits one audio token every 80 ms, which yields 12.5 tokens per second. So let’s say, you have an audio of 10 seconds, the number of input audio tokens would be 125.
-The encoder itself is a convolutional pyramid where each stage consists of a patch embedder of different patch sizes and 2 convolutional blocks of 1d kernels of size 7 with stride of 1. These stages are repeated for patch sizes of [16, 6, 5, 4]. At the end of the final stage, the temporal frames are fed to a final block of RMSNorm → linear projection → RMSNorm.</p>
-<p>The context window is 1M tokens at inference. The configuration sets max_position_embeddings to 1,048,576. This includes image, video, and audio tokens in the same window as text.</p>
-<p>Grouped-query attention keeps the KV cache small for a model of this size. Each token adds 2 × 16 heads × 64 dimensions × 62 layers = 126,976 values to the cache. In BF16, this is about 250 KB per token and about 266 GB for a full 1M-token context.</p>
-<p>The Muse Spark Open implementation provides MuseSparkForConditionalGeneration for text generation from multimodal inputs and MuseSparkProcessor for preparing conversations. The processor combines the tokenizer, image and video processors, audio feature extractor, and chat template.</p>
-<p>Use a DistributedConfig to configure the parallelism settings. tp_size is the number of devices across which the dense layers are sharded, and ep_size is the number of devices across which the experts are distributed.</p>
-<p>You can initialize the model and processor as follows.</p>
-<p>Prepare the conversation, then pass the messages to processor.apply_chat_template, enabling add_generation_prompt=True, tokenize=True, return_dict=True, and return_tensors="pt". Pass the processor output to model.generate and decode the newly generated tokens, excluding the input prefix. The processor has a lever for the reasoning effort, mapping symbolic levels (low/medium/high/xhigh) to the integers the model itself accepts (16, 64, 256, 512). Note that turning off reasoning is not possible with Muse Spark Open, so keep the model reasoning at “low” if you want to consume less tokens to solve an easier task. You can also set a numeric effort by including a line like Reasoning strength: 1 in the system prompt.</p>
-<p>The Muse Spark Open processor expands each image marker into the number of patch tokens required by the processed image, surrounded by image boundary tokens. This expansion keeps the text positions aligned with the visual features passed to the model. The processor also handles multiple images within a single prompt.</p>
-<p>Video prompts include frame timing as well as visual content. The processor handles videos with audios in them (which is an upgrade from Muse Glimmer thanks to the audio encoder). The processor downsamples video frames and audio to align frames together. By default, videos are sampled to 2 FPS, capped at 96 frames. You can modify this by setting the fps of the video processor:</p>
-<p>As a general rule of thumb, videos are frames in temporal sequence, and the more you downsample, the more you will lose frames in between specific events, so you need to keep fps high if you want more accurate generations. However, there’s a trade-off because you will require more memory and increase latency for prefill. The frames are interleaved with text input that states timestamps (e.g. “Time: 3.5s”). To enable passing in videos with audio, pass load_audio_from_video=True to apply_chat_template.</p>
-<p>Preserve the video's metadata when preparing inputs with return_metadata=True so the processor can assign the correct framerate.</p>
-<p>The Muse Spark Open audio tower consumes a raw waveform. The processor expects mono audio at 24 kHz and pads the waveform to a multiple of 1,920 samples, corresponding to one audio embedding per 80 milliseconds. Audio supplied directly to the processor at another sample rate must first be resampled. You can do this by using the load_audio util of transformers. load_audio uses torchcodec, librosa or torchaudio backends, so make sure to have one of these installed locally before running inference.</p>
-<p>If you want to simply use apply_chat_template with messages though, this is all handled for you under the hood:</p>
-<p>The processor inserts the matching number of audio tokens between audio boundary markers. It also returns a mask identifying real samples, allowing the model to exclude padded audio embeddings.</p>
-<p>Muse Spark Open can do text-only and multimodal tool calling. You can make the model call tools as follows.</p>
-<p>Muse Spark Open uses a channel-based chat template (Harmony, first introduced by gpt-oss). Note that you don’t have to know about the internals, but it’s useful to check the channels the model routes to, in case you get low quality outputs. In the input message below:</p>
-<p><|start|>assistant is intentionally left open, it’s the model that chooses recipient with to= . The model has different recipients, e.g. self asks the model to reason,</p>
-<p>self is for reasoning, commentary are comments before and between tool calls visible to the end user, user is the final response.Tool-call routing is parsed as follows (assuming you have passed tools to apply_chat_template:</p>
-<p>Muse Spark Open is integrated in llama.cpp and comes in the prebuilt binaries. You can install this with following command:</p>
-<p>You can start the server as follows with quant suffix attached to model ID:</p>
-<p>The repository containing quants is here. Once the server has started, you can head to localhost:9931 to chat with the built-in WebUI. From the web UI you can add audio and images for inference and adjust the reasoning lever.Note that turning off reasoning is not possible with Muse Spark Open, so keep the model reasoning at “low” if you want to consume less tokens to solve an easier task.We tested quants on Mac M3 Ultra (512GB). An imatrix-calibrated 2-bit quant runs at 18 tokens/s, with plenty of room free for the KV cache (304 GB used by the model).</p>
-<p>You can also query the server as follows. Feel free to check out the API reference for multimodality, tool calls and more.</p>
-<p>llama.cpp team ships different quantized versions. We have tested Q2_K, Q4_K_S and Q_8 on Apple Silicon chips. You can run each quant by adding the quant id as suffix, llama serve -hf ggml-org/Muse-Spark-Open-816B-A42B:Q2_K.</p>
-<p>The Muse Spark Open integration for SGLang supports text, image, audio, and video inputs. The NVFP4 reference configuration runs across four GB300 GPUs.</p>
-<p>From the SGLang integration environment, download the checkpoint from the Hugging Face Hub and start the server:</p>
-<p>The checkpoint includes the chat template, which we pass explicitly. The launcher configures the Muse reasoning and tool-call parsers.</p>
-<p>Send a request through the OpenAI-compatible API:</p>
-<p>The response separates the reasoning trace in reasoning_content from the final answer in content.</p>
-<p>The Muse Spark Open reference integration for vLLM supports text and image inputs with the NVFP4 checkpoint that require blackwell series GPUs.</p>
-<p>After installing the reference plugin and its dependencies, download the checkpoint from the Hugging Face Hub and launch the server:</p>
-<p>This configuration sets a 128K-token serving context. The plugin supplies the model implementation, checkpoint loader, and reasoning and tool-call parsers.</p>
-<p>Send a request using the same Hub model ID:</p>
-<p>Muse Spark Open is available in oMLX and mlx-lm today. oQ quants optimized for oMLX are available in 3-bit and 4-bit, ready to use right away.</p>
-<p>We tested the oQ3e quant on an M3 Ultra (512 GB). The model takes about 344 GB, leaving room for the KV cache, and runs at about 225 tok/s prefill and 21 tok/s generation with a 1024-token prompt and 128 generated tokens.</p>
-<p>Once you download the model through the oMLX interface, you can chat with it in the built-in chat UI. From the chat UI you can add images and adjust the reasoning effort on the fly, from low to xhigh. The model’s reasoning shows up as a collapsible thinking block, separate from the final answer.</p>
-<p>Note that it's not possible to turn reasoning off, and the default (Auto) uses xhigh. Set it to “low” if you want to use fewer tokens on easier tasks.</p>
-<p>The language model is also available in this PR of the official mlx-lm repository. You can run it on the same high-quality oQ3e quant like this:</p>
-<p>This is a big model, even the 3-bit quantization requires more than 256 GB of RAM, as explained above. You can also run distributed inference across multiple computers, please refer to the documentation for details.</p>
-<p>You can deploy Muse Spark Open on Inference Endpoints with a pre-validated SGLang recipe for the NVFP4 variant which runs on either 8 × NVIDIA RTX Pro 6000 98 GB with 131072 context length, or with 8 x NVIDIA H200 141GB if you want 1048576 context length instead.</p>
-<p>To deploy, run one command with the Hugging Face CLI:</p>
-<p>Or open endpoints.huggingface.co/new/meta-models/Muse-Spark-Open-816B-A42B-NVFP4 and select Create Endpoint.</p>
-<p>The endpoint exposes an OpenAI-compatible API with both Chat Completions API at /v1/chat/completions and Responses API at /v1/responses.</p>
-<p>Any OpenAI-compatible client works with the same URL and your Hugging Face token as the API key.</p>
-<p>You can fine-tune the 816B checkpoint with the TRL SFTTrainer. This section shows how we fine-tuned it with TRL on 8 nodes of 8 H100 GPUs. The recipe trains LoRA adapters on the attention layers. The experts stay frozen. The full script is in the TRL examples.</p>
-<p>First, we need to split the model across 64 GPU devices. Given the large size of the model, we need to parallelize it across multiple axes. We shard the model with FSDP and split the experts across GPUs, using DistributedConfig, which tells transformers how to split the model when it loads:</p>
-<p>In the snippet above, fsdp_size=64 shards the model across all 64 GPUs with FSDP2, and ep_size=8 splits the 256 experts of each layer into 8 groups. Transformers sends each token to the GPU that holds its expert, so each GPU trains on its own slice of the batch.</p>
-<p>Now, we can configure the SFTConfig for our training run. We’ve performed a simple task here to adapt the model’s chat template on an open source dataset, but you could apply it to your own use case.</p>
-<p>The core parts here are packing=True which joins examples into 2048-token sequences without padding. A block-diagonal mask keeps the examples separate. save_only_model=True saves the adapter and no optimizer state, because the trainer cannot resume a model that was sharded at load time. LoraConfig targets the four attention projections and the 256 experts of each layer stay frozen.</p>
-<p>Then we can run this command across each node:</p>
-<p>We trained for 500 steps, which took about 2 hours on 64 H100s, at about 8,000 tokens per second. Mean token accuracy rose from 72% to 84% and the loss fell from 1.26 to 0.57, which signals a good fine-tuning run.</p>
-<p>Muse Spark Open is a coding and agentic model. We wanted to see that for ourselves, so we tried a mixture of multi-modal and agentic tasks that use the model's image and audio inputs. Everything below is something you can run or fork.</p>
-<p>We combined 2-bit quantized Muse Spark open (served on llama.cpp) with the Pi coding agent to generate and iteratively improve 3D assets in Three.js. You can find the prompt here, as the model is quantized it requires a bit more steering. We get 18 TPS on llama.cpp on Mac Ultra.</p>
-<p>We initially describe the asset, and Pi uses the model to generate Three.js code for the asset, renders the result in a browser, and captures screenshots from multiple angles. It then sends those images back to the same model on llama server for visual feedback. Pi uses that feedback to edit the code and repeats the process.</p>
-<p>We tested Spark on computer use tasks and were amazed by the performance, so we have built a lean demo that also serves to teach you how a computer use agent works. You can also further customize this for your needs. This is both an educational example and something you can run in a few lines. You can find it here.</p>
-<p>Muse Spark NVFP4 Browser Agent with OpenEnv and HF Sandboxes</p>
-<p>Hugging Face Sandboxes are sandboxes built on Hugging Face Jobs for easy code execution. The demo consists of three components:</p>
-<p>where the remote sandbox contains the environment and the browser as illustrated below.</p>
-<p>You can easily try this with a few steps, described in the example. Start Inference Endpoint with Muse Spark Open (NVFP4 works well too!), add your endpoint URL as environmental variable, publish your OpenEnv server in Spaces and also provide that, then you can run the agent loop.
-Muse Spark Open sees the previous actions, system prompt, url and the screenshot of the browser to take an action, and nothing else (no DOM, no HTML code, nothing) so it’s a truly multimodal browser demo.</p>
-<p>Finally, we wanted to push Spark’s agentic multimodality to the limits, so we set up this space that combines the model’s audio, image, and agentic properties into a browser agent. We give the model a general description of a thing we need and it interacts with the integrated browser to find options on Amazon.</p>
-<p>Muse Spark Open takes the voice input and reasons over the type of product that meets the descriptions, searches for it on Amazon, and selects the most appropriate based on criteria.</p>
-<p>Muse Spark Open is a full-size open-weight model from the Muse series. Start with the BF16 or NVFP4 checkpoint, or try one of the great llama.cpp quants. If you build something with Muse Spark Open, share it, and tell us in the repository’s discussions.</p>
-<p>Talk to Muse Spark and watch a browser work</p>
-<p>i wish if i can run huge models like this on a phone or 4vram</p>
-<p>Talk to Muse Spark and watch a browser work</p>
+                <p>VP of Engineering @ Mews. SW Product Builder. See more at https://www.kamenistak.com/mentoring</p>
+<p>VP of Engineering @ Mews. SW Product Builder. See more at https://www.kamenistak.com/mentoring</p>
+<p>VP of Engineering @ Mews. SW Product Builder. See more at https://www.kamenistak.com/mentoring</p>
+<p>"Go. What will it cost?" That was the CTO's whole answer to the AI transformation pitch. Two days later the roadmap for next year was exactly the same size.</p>
+<p>An AI business case, for a VP of Engineering, is a request for roadmap capacity. In the org I'm thinking of, about 100 engineers shrank to roughly 40 or 50 available for next year's roadmap once production care and the AI work were counted honestly. The money question was answered in one sentence. The capacity question nearly killed the plan.</p>
+<p>Let's call the VP Tomas. He brought his deck to one of our sessions. The extra hires he'd planned for were gone, so the transformation had to be paid out of the roadmap.</p>
+<p>His Head of Product agreed with the numbers on his slides. Their wishlist for next year didn't lose a single theme.</p>
+<p>The planning offsite is a few weeks away.</p>
+<p>Tomas's capacity slide showed how ~100 engineers shrink to the people left for new work. Engineers read it in five seconds. His Head of Product read it as engineering's problem, not as a list of things to drop.</p>
+<p>Incidents, support, upgrades, the work that isn't on any roadmap</p>
+<p>What a roadmap silently assumes is the whole team</p>
+<p>The people building the AI setup, plus the slowdown in streams while they switch</p>
+<p>Ranges from one real engineering org, anonymised. Your numbers will differ, the shape won't.</p>
+<p>That table is the business case. The CFO question ("is it worth the money") was cheap, because there was no new money. The real cost is that half of what product thought it could build next year doesn't fit.</p>
+<p>If you're still hiring the person who will own this, my Head of AI transformation playbook covers the first six months of that seat. This post is about the sell before it.</p>
+<p>The CTO's yes is the cheap yes. The expensive one is your Head of Product's, because they pay for it with their roadmap, and the pressure from above to deliver all of it lands on them first.</p>
+<p>So they agree in the meeting and the roadmap doesn't move two days later. That's product denial, and from my experience it's part of the development, part of the battle. It isn't bad faith. It's what a person does when the only thing on the table is a loss.</p>
+<p>The standard advice points somewhere else. Oracle's guide to the business case for AI, the top US Google result for "AI transformation business case" on the day I wrote this (12 November 2026), is about justifying AI investments "based on solid ROI calculations", and its first step is an AI center-of-excellence committee. That's the right case for a company buying software.</p>
+<p>It wasn't Tomas's problem. The ROI wasn't the question; the CTO had already said go.</p>
+<p>The person whose roadmap pays for it hadn't been asked anything.</p>
+<p>Without an answer to "what's in it for me", they stay in denial. And from where they sit, that's rational.</p>
+<p>When Tomas walked me through his deck, his message was "you need to cut your roadmap". I stopped him there, because I've watched this exact sentence lose the room.</p>
+<p>It's not that I want you to cut your roadmap. It's that we cut our roadmap together. The moment you start using "you" instead of "we", you're screwed.</p>
+<p>I know it sounds stupid. It helped me enormously for the rest of my career.</p>
+<p>I learned it at Mews, while engineering grew from 8 to 80 teams. In one quarterly planning, I told our product lead: "You need to drop two features so we can rebuild the platform. The rest of the hour went into defending both. Next quarter, same numbers on the slide, I asked which two we drop together. We agreed in fifteen minutes. You take the weapon out of the other person's hands, because they no longer feel pushed into a corner.</p>
+<p>The slide has to say it too. Tomas had one cut slide with a lot of small numbers about product areas. What I wanted to see is two numbers: product minus x percent, platform minus y percent.</p>
+<p>In the example table further down that's product −60% of the wishlist and platform −33%. The platform team sits under the VP of Engineering, so the second number is his own cut, visible, next to theirs. Now you're playing the same game.</p>
+<p>Tomas's punchline, the gain, sat on slide 9. By slide 9 the Head of Product has spent eight slides hearing what they're losing. Move it to slide 2.</p>
+<p>One line: "We propose to fund the AI transformation from next year's roadmap: product −x%, platform −y%, for a gain we both commit to." The room knows from the first minute what it's being asked to approve.</p>
+<p>The payoff first. In Tomas's model a stream that's transforming drops to about 30% of its normal throughput for a few months, then comes back faster, with break-even around mid-year and roughly 3x by the end of the year. It's a model, not a measurement, and slide 7 is where somebody commits to it.</p>
+<p>The second card I gave him is a risk, not a gain: if we don't do it, customers churn to competitors who ship the AI features first. Ask your sales or customer-success lead which deals already mention it.</p>
+<p>The burndown table above. Colour it: what's under the line red, what's above the line green. Yes, it's basic. You want people to understand it in five seconds.</p>
+<p>Product −x%, platform −y%, side by side. Nobody in the room should be able to say "engineering wants us to cut".</p>
+<p>Not just that we cut, but how: reduce the scope, stretch the timeline, or drop the item. To go one step further, give an AI model your roadmap list and the capacity table and ask it to propose what to delay or drop. Careful: it's a proposal, not an order.</p>
+<p>Cost of delay is "a way of communicating the impact of time on the outcomes we hope to achieve": what does each month without this cost us? Put that number on every item you're stretching.</p>
+<p>Then translate it into CFO language: yes, we slow down and it shows in 2027, and here is what 2028 and 2029 look like if the model holds.</p>
+<p>The Head of Product commits to the option they picked, because they get the boost out of it. The VP of Engineering commits to the multiplier. Both commitments on the table, in writing. Without them the meeting is an opinion poll.</p>
+<p>Here's the table I asked Tomas to rebuild for the offsite, filled in for a made-up company so you can see the shape. Every name and number in it is invented.</p>
+<p>Keep, cut scope to the payment-provider switch</p>
+<p>The column that does the work is "% of plan". In Tomas's case one area's real capacity came out at roughly a third of what product had assumed, because the earlier estimate missed production care and the AI dip. A percentage per area lets your Head of Product decide what to cut, which is the point.</p>
+<p>Download the blank version: the AI business case template (zip, 3 KB) has the capacity table as a CSV for Excel or Google Sheets and the seven-slide outline as Markdown, with one example line per field that you delete.</p>
+<p>Ask yourself one question first: how do you want the offsite to end? Go backwards from that.</p>
+<p>The VP of Engineering and the Head of Product walk in as one team and say three things. This is the situation. This is our proposal, with one alternative and its impact. These are the initiatives we struck out, please challenge and confirm.</p>
+<p>By the end the impact is clear and you have a mandate. Let's be honest, two initiatives will still be argued about.</p>
+<p>Amazon replaced slide decks with six-page memos read in silence at the start of the meeting. You don't need to go that far. Send the seven slides plus one page of context two days before.</p>
+<p>Put the full capacity table in it, so in the room you can say "don't look at the table now, look at it later if you want". Expect people to throw it into their AI tools to check your math. Good, let them.</p>
+<p>The term comes from Henry Kissinger's 1974 rounds between Middle East capitals. Your version is cheaper: before the offsite, walk the proposal past each decision maker one by one and ask what would make them say no. Nothing in the room should be a surprise.</p>
+<p>If you need your boss to take pressure off your Head of Product for the next two quarters, ask here, in a one-to-one, not in the meeting. How to influence your manager is the same muscle.</p>
+<p>A strong product person removes the items with the lowest value. A weak one makes compromises: we keep everything on the roadmap, because removing it looks bad, and we just stretch it all. Stretching one item with a new date is a decision; stretching everything is avoidance.</p>
+<p>RICE, Intercom's reach × impact × confidence ÷ effort score, is enough for this. Score the list and the strikes become obvious.</p>
+<p>"If we don't do it, our financial results will hold" is the assumption to break. Your customers will get the AI features somewhere else.</p>
+<p>So this isn't about delivering something later. It's about whether the company is still in the race in 2028.</p>
+<p>Tomas had the go from the top in one sentence. He's rebuilding the deck around a peer, a table and two percentages, and the offsite is still ahead of him. The method is the bet; the room hasn't voted yet.</p>
+<p>Which of your peers owns the roadmap you're paying with?</p>
+<p>Price it in roadmap capacity, not in money. Start from total engineering FTE, subtract the people who keep production running, subtract the AI team and the transition dip, and show what is left for next year's roadmap. Then propose where product and platform each cut, with a percentage per side, and put the payoff on the second slide.</p>
+<p>Make it a shared cut. Show product minus x percent and platform minus y percent on one slide, answer what product gets back before you show the cost, and offer two or three ways to cut instead of one order. Walk the proposal past each decision maker one by one before the planning meeting, so nothing in the room is a surprise.</p>
+<p>Seven: the decision you need, what's in it for product, where the capacity really goes, the shared cut as two percentages, two or three ways to cut, cost of delay against the gain, and what each leader commits to. Send it as a pre-read before the meeting.</p>
+<p>Both, together. When the VP of Engineering presents alone, the room hears an engineering ask and product defends its roadmap. When the VP of Engineering and the Head of Product present one proposal and each commits to a number, the room is approving a plan, not refereeing a fight.</p>
+<p>How to Structure AI Adoption Teams and Measure Software Delivery Improvements</p>
+<p>VP of Engineering @ Mews. SW Product Builder. See more at https://www.kamenistak.com/mentoring</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/meta-muse-spark-open" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/a-seven-slide-framework-for-funding-ai-transformation-without-new-headcount?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

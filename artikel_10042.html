@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelerating development for massive Git repositories</title>
+    <title>Website owners thumb their noses at EU privacy rules, researcher finds</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10042.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,52 +15,47 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Accelerating development for massive Git repositories</h1>
+        <h1>Website owners thumb their noses at EU privacy rules, researcher finds</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5310274.jpg?imageId=5310274&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Website owners thumb their noses at EU privacy rules, researcher finds" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5310274.jpg?imageId=5310274&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Website owners thumb their noses at EU privacy rules, researcher finds" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Android’s source code is big – the Android 17 open source release has 1,084 Git repositories, 1.62 million files, and takes 300 GB for a built workspace. Additionally, in a typical Android source tree with hardware vendor code and first-party applications, the size increases by 2-3x. Traditionally, it took over 30 minutes to fetch Android Open Source Project (AOSP) source code and well over an hour to build on even highly capable developer workstations. As software development evolved over the last 2 years, modern coding harnesses and LLMs have accelerated the development of many projects. These tools are used today for Android operating system development, but the long sync and build times make them less efficient. Both human developers and agents need quick setup, parallel workspaces, and fast build-and-test iteration times.</p>
-<p>We built Another Build File Service (ABFS) to address these bottlenecks. ABFS is a full suite of software across a Linux kernel filesystem module, user-space daemons, and server-side infrastructure. ABFS uses content-addressability across the entire stack to lazy-load and cache source code, developer workspaces, intermediate build files, and build results.</p>
-<p>Today, we are excited to announce that ABFS is open source on GitHub.The impact of ABFS to Android is:</p>
-<p>ABFS already powers parallel workflows for developers and agents in Android, but it is designed to scale to other massive Git-based projects.</p>
-<p>In the Android build system, developers define build rules in Blueprint files (Android.bp), Soong compiles them into Ninja files, and Ninja executes the final build graph (see the Android build overview). Similar to the Make build tool, Ninja is timestamp-based. If a build step’s input file is newer than the existing output file, Ninja rebuilds the output file.</p>
-<p>Analyzing the AOSP code for Android 17 shows the sheer disk footprint and file count involved in a single checkout and build.</p>
-<p>In a typical Android tree that includes hardware-specific repositories, board support packages, first-party applications, form-factor-specific code, etc., the code size is 2–3 times the size of AOSP (over 3,000 Git repositories), compounded across multiple active SKU and legacy maintenance branches.</p>
-<p>Building the Cuttlefish emulator target executes a build graph with 192,249 Ninja actions. While local incremental builds are fast once a tree is already built, every new workspace, branch switch, or ephemeral agent session starts cold.Even though typical developer changes touch only 1-10 different Git projects, someone building locally without any remote execution might waste up to 80 minutes on a 64-core machine repeating work their CI system already built. Even if a developer edits a core library like system/libbase, 97% of the build graph is identical to the CI build.</p>
-<p>Sharing cached build outputs across CI and local machines is also tricky in a codebase of Android's age and rate of change. Build rules occasionally introduce hidden dependencies (such as passing an undeclared schema file inside raw compiler flags), over-declared inputs, or undeclared outputs. In timestamp-based builds, hidden dependencies silently produce stale incremental artifacts, forcing developers to wipe output directories and run clean builds.</p>
-<p>ABFS makes building Android fast by replacing massive local source checkouts with a virtual, content-addressable filesystem (CASFS). ABFS streams files on demand only when a build actually touches them and utilizes shared build caching to help eliminate redundant downloads and compilation.</p>
-<p>On the server side, Git-pushers continuously ingest new Git objects from Gerrit or other Git hosts into a horizontally scalable gRPC ABFS Content-Addressable Storage (CAS) Server that indexes Git content, workspace snapshots, and build step results. On the developer host, a local Least Recently Used (LRU) Cacheman daemon, Mount Daemon, and Tap utility connect user-space build tools to the kernel filesystem so checkouts and builds stream only what they need. See the full ABFS architecture on GitHub.</p>
-<p>At the core of the client is a virtual filesystem called Content-Addressable Storage Filesystem (CASFS), a Linux kernel module that exposes Git SHA content hashes via extended attributes. When a file's hash is set, CASFS populates its metadata immediately and downloads file bytes via Cacheman only when needed:</p>
-<p>Initial checkouts download only lightweight directory metadata prepopulated with Git hashes. CASFS uses Git's object model natively, allowing standard git and repo operations to work transparently.</p>
-<p>CASFS can also tap build processes. Tapping records every file actually read, written, or deleted into lists called patches, which are stored alongside cached build outputs. Ninja-go replaces timestamp checks with two-phase content-addressable caching:</p>
-<p>Ninja-go accelerates Ninja-based builds like Android and Chrome; other build systems can integrate with ABFS's caching APIs using the same model (see the two-phase caching walkthrough on GitHub).</p>
-<p>Each mounted checkout attaches to a persistent workspace that eagerly syncs modified files, git state, and repo state through Cacheman to the ABFS CAS Server—keeping mounts synchronized across sessions or across multiple developer hosts.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>The benchmarks below show the mean time of 3 Android runs on a GCE n2d-standard-64 VM with 64 vCPUs and 256 GB of RAM. The ABFS remote server was running in the same cloud network as the client.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>Because ABFS does lazy loading and local cache deduplication, developers and their agents can now mount multiple concurrent Android workspaces on a single machine, benefit from a shared local build cache, and achieve massive scale in development time.</p>
-<p>An agent can check out a full Android tree in under 10 seconds and perform a full build in under 10 minutes. Agent swarms are empowered to iterate, review, and test in parallel, which can lead to higher quality solutions and speed.In the demo below, an agent makes a system/libbase fix on the latest AOSP release, then 4 parallel agents simultaneously backport, build, and test the fix across 4 more AOSP releases on a single VM.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>We released ABFS as open source because we want developers, Android partners, and any large-scale Git-based project to benefit from what we have learned and be able to scale.</p>
-<p>While Android’s Soong/Ninja pipeline was the first acceleration target, ABFS was built to be extensible to other build systems. Content-addressable build systems like Bazel map naturally onto CASFS and there is already a proof-of-concept integration with Bazel. Chromium, the Android Common Kernel, and other Google projects are exploring ABFS compatibility.</p>
-<p>Explore ABFS, CASFS, and Ninja-go on GitHub, and reach out to us at abfs@google.com.</p>
-<p>For help with the Google Cloud server-side, infrastructure-as-code, and CASFS for Cloud Workstations and Kubernetes, please reach out to abfs-gcp@google.com.</p>
-<p>We’d like to extend a special thanks to our significant contributors for their work on this project:</p>
-<p>Haamed Gheibi, Erik Sanders, Rob Seymour, Taylor Santiago, Andrew Hsieh, Eric Taseski, Kiyoung Kim, Hung-Wei Chen, Jose “Pepe” Galmes, Ronald Li, Yu-Che Wang, Roger Ellis, Sandeep Patil, Amith Dsouza and the entire Android Build team</p>
-<p>Build full-stack Android apps with Gemini in Google AI Studio</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
+                <p>From October 1 to 3, 2026, Hanff took a clean Google Chrome browser profile and measured what happens when the browser loads the 100 most visited English-language websites for five minutes, without any consent banner interaction.</p>
+<p>All 100 sites produced what the report characterizes as Tier 1 events – interception, exfiltration, or high-entropy fingerprinting (a total of 14,675). Tier 2 consists of storage on the device, capturing device characteristics, and script loads without consent (284,463 events recorded). Tier 3 includes protocol mechanisms and passive reads used for tracking (219,632 events).</p>
+<p>The median website triggered 2,695 events, for a total of 28,695 events deemed high or critical. And 92.4 percent of the servers contacted during this process were on networks outside the European Economic Area (EEA). Most of these servers – 1,247 out of 1,400 – were in the US, and 1,034 belonged to third-parties.</p>
+<p>The report, released in conjunction with a presentation at the Field Talk conference, also calculates the estimated environmental impact to load all this third-party content on websites without consent: 1,271,444 kWh per year, or enough to power 353 homes in Europe at 3.6 MWh per home annually.</p>
+<p>SOMI is hosting a data finder to help people request access to the personal data companies have collected about them.</p>
+<p>"Complaints will be filed against all of them and the EU supervisory authorities have a legal obligation to investigate them all – so we will have to wait and see," he said.</p>
+<p>"One of the things we are discussing with SOMI is mass claims under the EU’s Representative Actions Directive but we are hoping that the industry and the regulators do the right thing so we don’t have to file lawsuits – again we will have to wait and see." ®</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Robotaxi operator suspends driverless rides on high-speed roads nationwide after construction zone incursions and a run-in with patrol vehicles</p>
+<p>PARTNER CONTENT: As carriers tighten underwriting, a backup job marked green is no longer enough. Here’s the evidence underwriters expect</p>
+<p>In today's how-could-things-get-worse-for-Microsoft news, it seems someone's GitHub org admin creds have been compromised</p>
+<p>Pre-digital tech can't be transformed and automated</p>
+<p>Many have tried to marry analytics with transactions. The document DB posterchild takes another crack at it</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Nvidia unveils an HPC-optimized Rubin GPU to challenge AMD's 288 teraFLOPS MI430X</p>
+<p>Ride-hailing biz says stolen credentials allowed crooks to help themselves to driver's license data</p>
+<p>In the age of AI, the top spot on the bi-annual ranking is whoever willing to run HPL instead of LLMs</p>
+<p>Securing supply chains or coercing other nations to help Washington sideline Beijing and its AI ambitions?</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>We love this, but suspect this is the Marmite of GNOME extensions</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/accelerating-development-for-massive-git-repositories/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/legal/2026/11/17/website-owners-thumb-their-noses-at-eu-privacy-rules-researcher-finds/5310265" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
