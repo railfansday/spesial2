@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Add AI Content Detection to Your Node.js App</title>
+    <title>Artificial neurons successfully communicate with living brain cells</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10709.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,54 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Add AI Content Detection to Your Node.js App</h1>
+        <h1>Artificial neurons successfully communicate with living brain cells</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_nodejs_ai_cover_cc20b5de03.png" alt="How to Add AI Content Detection to Your Node.js App" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/aerosol-jet-printing.webp" alt="Artificial neurons successfully communicate with living brain cells" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_nodejs_ai_cover_cc20b5de03.png" alt="How to Add AI Content Detection to Your Node.js App" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/aerosol-jet-printing.webp" alt="Artificial neurons successfully communicate with living brain cells" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Sooner or later someone on your team asks it. Maybe it’s a product manager, maybe the head of content, maybe a teacher who’s just marked forty near-identical essays: can we tell when people are pasting in ChatGPT output?</p>
-<p>The short answer is no, not with certainty. Anyone who promises you that is selling something.</p>
-<p>But you can get a useful signal, and you can show it to the people who actually make the call: editors, teachers, moderators. In this tutorial you’ll build a small Express app that takes some text, sends it to an AI detector API, waits for the result, and highlights the sentences that look machine-written.</p>
-<p>I’m using the Quetext AI Detector API here. It scores each sentence, not just the whole document, and you can try it without a subscription. Most detection APIs follow the same submit, poll, fetch pattern, though. If you switch providers later, you’ll rewrite one file.</p>
-<p>Put the key in an environment variable. Don’t hard-code it, and don’t let it anywhere near the browser.</p>
-<p>You’ll make three calls. Analysis takes a few seconds, so the API hands you a ticket and makes you come back for the result. Keep the Quetext API docs open in another tab while you follow along; they list every endpoint, field and error code.</p>
-<p>Every request sends your key in an X-API-Key header. The minimum input is 50 words, which sounds annoying until you realise no detector can say anything useful about a two-line comment.</p>
-<p>And remember this number: 10 requests every 5 seconds, per account. Progress checks count. It’ll come back to bite you in the production section if you ignore it.</p>
-<p>Create quetext.js. I like keeping everything provider-specific in one file, so the rest of the app has no idea who’s doing the detecting.</p>
-<p>Three decisions in there that are worth a sentence each:</p>
-<p>The errors keep their HTTP status code. A 402 means you’ve run out of credit and a 429 means you’re polling too fast, and you’ll want to handle those differently from “something broke.”</p>
-<p>It polls every 2.5 seconds because Quetext’s docs suggest 2 to 3. Polling faster won’t speed the report up. You’ll just burn through the rate limit.</p>
-<p>And there’s a hard timeout. Leave it out and one stuck report can hang a request forever. That’s a miserable bug to track down at 11pm.</p>
-<p>Next, server.js. It checks the input, runs the three calls, and gives the frontend a simple response that doesn’t mention Quetext anywhere.</p>
-<p>Look at the mapping at the end. generated_prob becomes probability, and ai_score comes back as a string like "82.50", so it gets parsed into a number. It’s a small detail. But it means your frontend never learns which provider’s field names it’s dealing with, and that’s what makes swapping providers a one-file change.</p>
-<p>Show someone “64% AI” and they’ll jump to a conclusion. Show them a paragraph with three sentences shaded pink and they’ll actually read it.</p>
-<p>So the page shows every sentence, coloured by how likely it is to be AI-generated. Create public/index.html:</p>
-<p>Run node server.js and open http://localhost:3000. Try two samples: something you wrote yourself, then a raw chatbot answer on the same topic. Seeing which sentences light up teaches you more about how these detectors work than any diagram I could draw.</p>
-<p>A quick security point. Those sentences came from your users, then went through an outside service. Treat them as untrusted. That’s why the code uses textContent and never innerHTML, as the OWASP XSS prevention cheat sheet recommends.</p>
-<p>The demo keeps an HTTP request open while it polls. Fine on your laptop. Not fine with real traffic.</p>
-<p>Submit the text, save the report id with a pending status, and respond straight away. A worker (BullMQ, a cron job, a serverless queue, whatever you already use) does the polling and updates the record once it’s done. The UI says “Checking…” until the result shows up.</p>
-<p>Here’s how it goes wrong. It’s Monday morning, 20 editors open their review queues and click “Check” at roughly the same time. Each request polls on its own, and within a few seconds you’ve hit 429s across the board, because the 10-per-5-seconds limit covers your whole account, not each user.</p>
-<p>Use one worker that loops through every pending report, with a short pause between calls. Problem solved.</p>
-<p>You pay per word, so don’t check every blog comment. Article submissions, assignments and paid freelance work usually justify the cost. Cache results against a hash of the text too. Someone who submits the same draft three times shouldn’t cost you three times.</p>
-<p>AI detection doesn’t catch copying. Someone can lift a 2019 blog post word for word and it’ll score 0% AI, because a human wrote it. Just not this human. If originality matters to your product, the same API has plagiarism endpoints that work exactly the same way. The API documentation covers both.</p>
-<p>Developers skip this part. It’s also the part that ends up in angry support tickets.</p>
-<p>In 2023, Liang and colleagues at Stanford ran essays written by non-native English speakers (all human, written for the TOEFL) through seven AI detectors. On average, the detectors labelled more than 61% of them as AI-generated. Simple vocabulary and textbook grammar read as “predictable,” and predictability is exactly what detectors look for.</p>
-<p>Picture an international student getting an automatic zero because a script said so. You don’t want to be the person who built that.</p>
-<p>Do that and the detector is a fast first pass that points people at what’s worth a closer look. Your humans still make the call.</p>
-<p>You send text, the service checks how predictable each sentence would be to a language model, and you get back a probability that a machine wrote it. Most of these APIs are asynchronous. You submit, get a report ID, poll until it’s ready, then fetch the result. The better ones score individual sentences as well as the whole text, which makes building a sensible review screen much easier.</p>
-<p>More than you’d think. Quetext’s API won’t accept fewer than 50 words, and in practice scores settle down once you’re past about 300. A product title or a one-line comment just doesn’t give a detector enough to go on. For short content, either group related pieces together or don’t bother checking it.</p>
-<p>No. Detectors make mistakes, and research shows they flag non-native English writers far more often than native speakers. Use the score to decide what a human looks at first, not to block anything. Give reviewers the highlighted sentences, give users a way to explain themselves, and log what you decided. Your users get treated fairly and your support team avoids a pile of angry tickets.</p>
-<p>Poll at the speed the provider recommends (every 2 to 3 seconds for Quetext), and remember that those polls count against your limit too. Once you’re in production, move checks into a background queue and let one worker poll every pending report, rather than having each user request poll by itself. When you do get a 429, wait a moment and retry.</p>
-<p>No. If the browser calls the API directly, your key ends up in the frontend code where anyone can copy it and spend your credit. Keep the key in an environment variable on your server and send requests through your own endpoint, like the one in this tutorial. That also gives you somewhere to check input length, apply per-user limits and cache results before you pay for anything.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Engineers at Northwestern University have created printed artificial neurons that go beyond imitation and can directly interact with real brain cells. These flexible, low-cost devices produce electrical signals that closely resemble those generated by living neurons, allowing them to activate biological brain tissue.</p>
+<p>In experiments using slices of mouse brain, the artificial neurons successfully triggered responses in real neurons. This result shows a new level of compatibility between electronic devices and living neural systems.</p>
+<p>Toward Brain Interfaces and Energy-Efficient AI</p>
+<p>This advance moves researchers closer to electronics that can directly interface with the nervous system. Potential uses include brain-machine interfaces and neuroprosthetics, such as implants that could help restore hearing, vision, or movement.</p>
+<p>The technology also points toward a new generation of computing systems inspired by the brain. By replicating how neurons communicate, future hardware could perform complex tasks using far less energy. The brain remains the most energy-efficient computing system known, and scientists hope to apply its principles to modern technology.</p>
+<p>The study will be published on April 15 in the journal Nature Nanotechnology.</p>
+<p>"The world we live in today is dominated by artificial intelligence (AI)," said Northwestern's Mark C. Hersam, who led the study. "The way you make AI smarter is by training it on more and more data. This data-intensive training leads to a massive power-consumption problem. Therefore, we have to come up with more efficient hardware to handle big data and AI. Because the brain is five orders of magnitude more energy efficient than a digital computer, it makes sense to look to the brain for inspiration for next-generation computing."</p>
+<p>Hersam is an expert in brain-inspired computing and holds multiple roles at Northwestern University, including the Walter P. Murphy Professor of Materials Science and Engineering at the McCormick School of Engineering. He also is a professor of medicine at Northwestern University Feinberg School of Medicine and a professor of chemistry at the Weinberg College of Arts and Sciences. In addition, he serves as chair of the department of materials science and engineering, director of the Materials Research Science and Engineering Center, and a member of the International Institute for Nanotechnology. He co-led the study with Vinod K. Sangwan, a research associate professor at McCormick.</p>
+<p>Why the Brain Outperforms Traditional Silicon</p>
+<p>Modern computers handle increasing workloads by packing billions of identical transistors onto rigid, two-dimensional silicon chips. Each component behaves the same way, and once manufactured, the system remains fixed.</p>
+<p>The brain works very differently. It consists of many types of neurons, each with specialized roles, arranged in soft, three-dimensional networks. These networks are constantly changing, forming and adjusting connections as learning occurs.</p>
+<p>"Silicon achieves complexity by having billions of identical devices," Hersam said. "Everything is the same, rigid and fixed once it's fabricated. The brain is the opposite. It's heterogeneous, dynamic and three-dimensional. To move in that direction, we need new materials and new ways to build electronics."</p>
+<p>Although artificial neurons have been developed before, most produce overly simple signals. To achieve more complex behavior, engineers typically need large networks of devices, which increases energy use.</p>
+<p>Printable Materials Enable Brain-Like Behavior</p>
+<p>To better replicate real neural activity, Hersam's team built artificial neurons using soft, printable materials that more closely match the brain's structure. Their approach relies on electronic inks made from nanoscale flakes of molybdenum disulfide (MoS2), which acts as a semiconductor, and graphene, which serves as an electrical conductor. These materials were deposited onto flexible polymer surfaces using aerosol jet printing.</p>
+<p>Previously, researchers treated the polymer in these inks as a flaw because it interfered with electrical performance. As a result, they removed it after printing. In this work, the team used that same feature to enhance the device.</p>
+<p>"Instead of fully removing the polymer, we partially decompose it," he said. "Then, when we pass current through the device, we drive further decomposition of the polymer. This decomposition occurs in a spatially inhomogeneous manner, leading to formation of a conductive filament, such that all the current is constricted into a narrow region in space."</p>
+<p>That narrow conductive path produces a sudden electrical response similar to a neuron firing. The resulting device can generate a wide variety of signals, including single spikes, continuous firing, and bursting patterns, closely resembling real neural communication.</p>
+<p>Because each artificial neuron can produce more complex signals, fewer components are needed to perform advanced tasks. This could significantly improve computing efficiency.</p>
+<p>Testing Artificial Neurons on Real Brain Tissue</p>
+<p>To evaluate whether the artificial neurons could truly interact with living systems, the researchers partnered with Indira M. Raman, the Bill and Gayle Cook Professor of Neurobiology at Weinberg. Her team applied the artificial signals to slices of mouse cerebellum.</p>
+<p>The results showed that the electrical spikes matched key biological properties, including their timing and duration. These signals reliably activated real neurons and triggered neural circuits in a way similar to natural brain activity.</p>
+<p>"Other labs have tried to make artificial neurons with organic materials, and they spiked too slowly," Hersam said. "Or they used metal oxides, which are too fast. We are within a temporal range that was not previously demonstrated for artificial neurons. You can see the living neurons respond to our artificial neuron. So, we've demonstrated signals that are not only the right timescale but also the right spike shape to interact directly with living neurons."</p>
+<p>Low-Cost, Sustainable Manufacturing and AI Implications</p>
+<p>Beyond performance, the new approach offers environmental and practical advantages. The manufacturing process is simple and inexpensive, and the additive printing method places material only where it is needed, reducing waste.</p>
+<p>Improving energy efficiency is especially important as artificial intelligence systems grow more demanding. Large data centers already consume vast amounts of power and require significant water for cooling.</p>
+<p>"To meet the energy demands of AI, tech companies are building gigawatt data centers powered by dedicated nuclear power plants," Hersam said. "It is evident that this massive power consumption will limit further scaling of computing since it's hard to imagine a next-generation data center requiring 100 nuclear power plants. The other issue is that when you're dissipating gigawatts of power, there's a lot of heat. Because data centers are cooled with water, AI is putting severe stress on the water supply. However you look at it, we need to come up with more energy-efficient hardware for AI."</p>
+<p>The study, "Multi-order complexity spiking neurons enabled by printed MoS2 memristive nanosheet networks," was supported by the National Science Foundation.</p>
+<p>Materials provided by Northwestern University. Note: Content may be edited for style and length.</p>
+<p>Scientists Uncover a Natural Molecule That Makes Muscles Stronger and More Resistant to Fatigue</p>
+<p>Scientists Find That Mice, Not Deer, Hold a Major Clue to Lyme Disease Risk</p>
+<p>What Is a Thought Made Of? Scientists Reveal Why Human Consciousness May Be Beyond the Reach of AI</p>
+<p>Scientists Discover Mysterious Toxic Chemicals Floating in the Air Above America</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-add-ai-content-detection-to-your-node-js-app/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/04/260417225020.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

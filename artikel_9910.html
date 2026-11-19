@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training a coding model to paint watercolours with TRL and OpenEnv</title>
+    <title>How I made a custom game engine for Satelital</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9910.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,272 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Training a coding model to paint watercolours with TRL and OpenEnv</h1>
+        <h1>How I made a custom game engine for Satelital</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://spectralorbit.com/assets/screenshots/trium_2.jpg" alt="How I made a custom game engine for Satelital" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/train-to-paint-with-code/thumbnail.png" alt="Training a coding model to paint watercolours with TRL and OpenEnv" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://spectralorbit.com/assets/screenshots/trium_2.jpg" alt="How I made a custom game engine for Satelital" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On 23 August, Surya
-Narreddi posted a beautiful video
-of watercolours painted by a language model. The model writes JavaScript through
-p5.brush, a library that "adds natural
-drawing tools to p5.js". The video went viral fast, over 1.5M views at the time of
-writing.</p>
-<p>The video came with a blog
-post explaining the training
-behind an earlier and narrower stage of the project, close-up flowers rather than the
-full compositions in the video, sadly without open artifacts yet. His site says a full
-technical report is coming, so ensure you follow him. The original idea is his, coming from the art and design side, where his skills are way beyond mine. My attempt is on the engineering side, reproducing the recipe in the open with every piece published.</p>
-<p>Note: for the context behind the project, told by Surya himself, watch this
-video of his thesis.</p>
-<p>In this article I try and reproduce his idea with TRL and
-OpenEnv. The reference pool dataset, the RL
-environment, the training scripts and the trained models, all open.</p>
-<p>The whole pipeline runs on Hugging Face, end to end:</p>
-<p>Once the two Spaces are up, the recipe is one command. Duplicate the
-environment and the
-scorer model, set two
-environment variables for the reward mix, and launch:</p>
-<p>The rest of this article is the story of getting there, and every piece is in the
-repo.</p>
-<p>I have followed the original blog step by step, and only changed something when strictly needed. Every idea of my own went into a list instead of into the experiment, and that list became "What I would try next" at the end, next to the full list of published artifacts. If you have already read his post, the framing and
-the reward design will be familiar. The new material is the open implementation, the
-hand-rated pool, and three reward mixes trained and compared, and it starts at The RL
-environment you need to build.</p>
-<p>The paintings look loose, imperfect, handmade, at a moment when image models produce perfect (statistically average) pictures. My guess is that this contrast is a big part of why the video went
-viral. It reminded me of the early days of generative AI art, when the point was
-to explore the medium. DeepDream (2015) was a debugging tool that people turned into art, works like Edmond de
-Belamy (2018) came from artists probing
-what a GAN could do, and artists like Mario Klingemann spent those years making dreamy portraits with neural networks.</p>
-<p>This project feels closer to those early days. In his thesis, Surya describes the path
-that led here. He started by prompting text-to-image models, where the prompt is the
-only lever you can pull, and more detail buys more control only up to a point. Training
-the model itself goes further. The
-other half of the idea is the medium. The model writes a program of about 150
-lines of JavaScript that paints the image. That model output is code. You can read it, edit it and run it
-again, and the decision behind each brushstroke is visible. And the style comes from a
-restriction where the model is only allowed ten of the library's methods. More on that below.</p>
-<p>In that same period, Anna Ridler
-photographed thousands of tulips, hand-labelled every one, exhibited the dataset itself
-as the artwork, and later trained a model on it. I found her work through the references
-AI agents brought back while building this project and loved it because this
-project does something very similar by curating a set of images by hand, and then training against them.</p>
-<p>Most of the recent RL work on language models uses rewards you can verify. For example, math problems with a known answer, code that passes tests, or graders that are right or wrong and cheap to run. This project is closer to the older exception, RLHF, where the model learns a reward model from human preferences.</p>
-<p>Here the reward is aesthetic preference. There is no correct answer. The real question
-of the project is whether you can do RL over taste.</p>
-<p>The reward, as his blog defines it and as the RL environment I built implements it:</p>
-<p>HPSv3 is an open 7B preference model. Give it an image and a text description, and it returns
-a score for how much a person would prefer that image. It was trained on a large set of
-human choices between pairs of images, so its score is an average of many people's taste. The pairwise judge is
-Qwen3-VL-30B-A3B-Instruct, a
-general vision model called through HF Inference Providers. The pairwise judge sees the candidate
-painting
-next to four references randomly selected from the pool, guided by a written description of what to weigh (bleeds, translucent washes, soft edges),
-each comparison in both presentation orders, and its score is the share of comparisons
-the candidate wins. Its only standard is the pool, so its score is my taste, as encoded
-in those ratings.</p>
-<p>Those are the weights Narreddi converged on. The pool defines taste here. That moves the work from tuning hyperparameters
-to building the set that decides what is beautiful.</p>
-<p>I trained three runs with this reward. They differ only in how the weight splits between
-the two model judges:</p>
-<p>I started with hps-only to validate that the pipeline could learn at all. Once the reward was going up and the metrics were healthy, there was no reason to run it longer, so I launched the two longer runs instead. The question that the longer runs ask is how much of HPSv3's power can you hand to the pairwise judge? The more weight the judge carries, the more
-the reward means my taste instead of everyone's, and the harder it should be to climb. Incidentally, if you push it far enough or your style is too far from the average, the model could stop entirely.</p>
-<p>Fortunately, it did not stop and both runs with the pairwise judge on learned too. The hand-rated pool
-can steer the policy, at least as far as the metrics and the final paintings show. The
-numbers are below.</p>
-<p>Disclaimer. If we use a frontier model, it can already generate the JavaScript code that paints watercolour from a prompt. That's the starting point. The work here is about teaching a smaller model to do it combined with a person's own artistic preferences.</p>
-<p>The environment wraps everything that sits between the model and the reward, including the JavaScript library that the model uses for painting, the system prompt that restricts it, the headless Chromium that renders each sketch, and the gate that rejects cheats.</p>
-<p>The library does more of the work than it seems.
-p5.brush, by
-@acamposuribe, simulates a medium rather than drawing
-shapes: pigment bleeds past the edges of a fill, paper has texture, strokes have mass,
-flow fields drag brushwork around. When the model calls brush.fillBleed(0.25) it is deciding how far the ink
-runs.</p>
-<p>Note. The author of p5.brush had been trying to teach a machine to paint long
-before any of this. In 2022 he made a generative art series that hides a diary about
-teaching p5.js to draw like a child: "It is barely able to use the crayons [...] It
-cannot follow simple commands. I'm done for today, very infuriating." The series was
-meant to have three pieces, and he made two. When Surya's video went viral, he
-quoted it, sharing that diary
-and saying this work is the third piece arriving on its own.</p>
-<p>p5.brush exposes 47 methods. The prompt allows 10: scaleBrushes, noStroke, fill, noFill, fillBleed, fillTexture, beginShape, vertex, endShape and circle. What the other thirty-seven add, lines, hatching, custom brushes, would break the watercolour look. With these ten the model can only paint filled shapes, and the library adds the bleed to every one of them.</p>
-<p>His blog post saved me a lot of time I could have wasted iterating on the prompt. 
-A long API reference makes the model
-invent methods that do not exist, and his 200 GEPA iterations converged on a strict
-allowlist with no documentation. I saw the same failures and wrote the allowlist by
-hand. My only addition to that recipe is one sentence: paint
-each petal two or three times, a big pass first and a smaller, more opaque one inside
-it. This small change made my outputs a lot more colorful.</p>
-<p>Note. If it's the first time you hear about
-GEPA, it is an automatic prompt optimizer.
-A language model reflects in plain words on where the current prompt failed and
-proposes a better one, and the loop repeats.</p>
-<p>The gate is the final piece. The sketch has to compile, use the library instead of direct p5 calls, put real pigment on the canvas, and not try to trick the scorer, for example by writing text on the canvas.</p>
-<p>The pool consists of 178 paintings divided into
-two tiers based on my personal preferences, love and okay. All of them are actually generated by a model. Four open-weight models,
-called through Inference Providers, wrote p5.brush sketches, each one working from a
-real, openly licensed photo of a hibiscus from iNaturalist. A vision model gave written
-feedback on every sketch, over three refinement iterations. Every final render was then rated one at a time, by me, and 178 made the cut.</p>
-<p>Here I chose four different families of models to test their different styles. These four were the open models that produced a valid sketch every time in a quick reliability check, and two other candidates were dropped for failing it. If you want to produce your own pool, you might choose others.</p>
-<p>The tiers do real work in the reward. When the pairwise judge draws four references,
-half come from love and half from okay, so the policy always faces some rivals it
-can sometimes beat, and a win pays the same against either tier. This is one of my few
-deliberate changes: the original compares against its top tier only, and I kept the
-easier tier in the draw so a weak early policy still gets signal.</p>
-<p>No human-made painting is in there, which is a real limitation. p5.brush is a niche
-library, and the human work that exists in it with accessible code is a handful of pieces, nowhere near what a training corpus
-would need, as his blog also notes.</p>
-<p>The interesting idea here, as I've already discussed previously, is that the model will learn to imitate what the pool contains. If we point the environment at a different dataset, the reward would automatically change without touching a single line of code. For the dataset I generated and openly share, I also include the source sketch.</p>
-<p>If we look closer at the judges, the two of them answer different questions. HPSv3 decides whether it is a flower, and
-the pairwise judge decides whether it is well painted in the style I chose.</p>
-<p>Before anything worked, there was a long stretch of flat reward curves. If you've tried to reproduce a research paper/blog without open artifacts, you probably can relate. Every run
-tested what I thought was a reasonable theory about what was wrong. A run takes a lot
-of time, so I queued the next one while still going through the last one's results. As always, starting from something easier that works and then building on top of that was the answer.
-A simple control task, with no browser and no judges, was the first attempt that learned, and the reason was that my learning rate was just too low.</p>
-<p>Another change that cost me time to find was adjusting the LoRA parameters correctly. The usual target_modules list assumes a dense model, and Qwen/Qwen3.5-35B-A3B is a mixture of experts that names most of its projections differently, so the adapter was training ten layers out of forty. I solved this by changing it to all-linear, which reaches every linear layer. The routed experts in this architecture are fused tensors that even all-linear leaves frozen, but everything else gets an adapter, and that was enough to learn.</p>
-<p>The fix was four changes in TRL's GRPOTrainer:</p>
-<p>These four changes unlocked the first successful run (hps-only), with the reward clearly improving.</p>
-<p>With that configuration, all three runs learn. Both judge runs were launched for 200 steps and stopped at 110, with the reward still climbing slowly. A step takes fifteen to eighteen minutes, and the comparison between mixes was already stable, so I stopped both to save compute. Mean group reward over the first and final third of each run:</p>
-<p>The three curves line up with how much weight my taste carries. The more the judge
-weighs, the lower the start and the noisier the climb. judge-led spent its first thirty steps nearly flat
-before it moved. It is the same move that solved the debugging. Shrink the problem until
-something learns, then add the hard parts back one at a time.</p>
-<p>The pairwise judge term itself climbed in the two runs that used it. The model wins more
-comparisons against the pool as training advances, which is the claim hps-only could
-not make. No group in any run collapsed to identical rewards, the GRPO failure mode that
-kills the gradient. For the curious, the per-metric curves (HPSv3, paint coverage,
-entropy) are in the
-repository as CSV.</p>
-<p>The full launch command, the hardware and the two environment variables that turn this
-into the other two runs are in the
-recipe.</p>
-<p>In every run, the first thing the model learned was to stop producing bad
-paintings, the near-blank canvases and shapeless washes that score under 0.3 in total
-reward. In
-hps-only, three quarters of the rise in the group mean comes from bad paintings
-becoming rare. In the judge runs the collapse is even steeper: rollouts under 0.3 fall
-from 99 to 16 across judge-led's thirds, and from 37 to 4 in hps-led.</p>
-<p>This is why the obvious visual, the best painting of each step, shows almost no difference in
-hps-only. It moves +0.034 across the run while the median moves +0.155. The
-learning is visible in the middle of the distribution.</p>
-<p>What the pairwise judge changes is the top. In hps-only, paintings got more
-reliable without getting better. The quality of the good ones added just +0.03 to the
-group mean, and once HPSv3 saw petals around a centre and a stem, it stopped asking for
-more pigment. With the judge on, the other half of the story appears. Better here means closer to
-the pool, so closer to what I rated as "good" or something I liked more. That added +0.12 in judge-led and +0.16
-in hps-led, the best of each step rose too, and
-paint coverage doubled in both runs (0.11 to 0.23, and 0.13 to 0.30) where hps-only
-barely moved it. With a reference left to beat, a good painting can still get better,
-and the model starts being rewarded for using more pigment.</p>
-<p>One more finding. The model ignores an explicit instruction, and it is right to. The
-system prompt asks for fifteen to thirty filled shapes. If we look at the real mean, it is between 7 and 9, and
-n_shapes barely correlates with reward in any run (+0.000, −0.14, +0.07). The policy
-is not rewarded for obeying that sentence, so it does not obey it.</p>
-<p>There is also a ceiling on the hps-only route. If every rollout matched its good
-ones, that run's mean would sit at 0.771. Whether more steps would break it is
-an open question.</p>
-<p>The paintings also show something that the tables miss. Within each run, they all look
-similar. As training advances, the rewards inside each group get closer together, and the
-median paintings in the opening video look like takes of the same flower. That is GRPO
-doing what it is designed to do with a pool built from one subject. The pool decides
-what counts as variety, the same way it decides what counts as quality. If the reward
-only pays for matching one flower, the model learns to paint that one flower. More diverse output would need a
-more diverse pool, and building one is more curation work. Surya's newer compositions are an example of this. Alex Yango's animal
-paintings are the same recipe with
-different choices in the pool. This is the biggest difference between an aesthetic
-reward and a maths grader. Behind the number there is a very human job, deciding what
-belongs in the reward set. Jason Liu's essay on
-taste says the general version in one
-line. AI shifted the bottleneck from making to noticing.</p>
-<p>Surya closes his blog with some of his favourites. Instead of picking mine, below is a
-wall with the 178 paintings the reward scored highest across the two judge runs, the
-same number the reference pool holds, in no particular order. Open it and pick your own.</p>
-<p>To choose, you looked at many and kept a few, and that is exactly the job that built the
-reward of this project. Every painting of every run, with its sketch and its reward, is
-in the rollouts datasets, and browsable in this gallery.</p>
-<p>Since the reward was partly based on my taste, it is fair to close with my verdict as a viewer. To my
-eye, judge-led is the run that ends up the most diverse and the most artistically
-interesting. hps-led paints convincing watercolours, but its best ones share a soft,
-wet-on-wet look that is almost a style of its own. hps-only converges the hardest, and
-most of its paintings settle on the same colours. You can judge for yourself in the
-gallery, which has every painting of
-every run, sortable by step and by reward.</p>
-<p>This project is mostly infra. A run needs a trainer, two Spaces, an inference router and
-a websocket to stay healthy for hours straight, and every piece that fails quietly turns
-into a wrong number somewhere else. Half the work is checking that the number you read
-matches what actually happened.</p>
-<p>Failures of the infrastructure were entering the reward as zeros. A render that
-timed out or a scorer that did not answer scored the same as a bad painting, 0.0 inside
-the group. Across all my runs that was about 1.5% of rollouts, and in the worst run it
-reached 5.2%. That trains the model on noise, so those paths now
-return None and the rollout is excluded from the group.</p>
-<p>I also found a bug in OpenEnv, and sent the fix upstream. The client keeps one
-persistent websocket, and a socket closed by the far end stayed cached, so every later
-call failed even though the environment was healthy. It cost me two half-finished runs
-to find it. The fix is submitted
-upstream, and the runs launched with
-it have been running clean since.</p>
-<p>The reward of a step depends on which references it drew. The pairwise judge
-samples four references per step, so every step faces a different set of rivals, and
-some draws are simply harder. GRPO itself is mostly safe, because advantages are
-computed inside the group and a hard draw moves the whole group together. The curve I
-was reading was not safe, and some of what looked like a bad step was just a hard draw.
-The image above is one example. Step 12 scored half a point below step 11 mostly because
-it drew the hardest references of the run, while the paintings themselves look close.</p>
-<p>Rounded numbers, and only for the runs that finished.</p>
-<p>A step is eight rollouts and takes fifteen to eighteen minutes, of which 70 to 80% is
-rendering. A single render takes 69 to 96 seconds against a 90 second deadline. Part of that is
-expected, the Space has no GPU, so Chromium renders the WEBGL canvas in software and
-p5.brush's bleeds and textures are heavy pixel work. Even so, I expected it to be
-faster, and I have not found the full cause.</p>
-<p>A scorer can cost more than the training that uses it: HPSv3 has to be up for the whole
-run, so pause the Space, or set its sleep timer, when the run ends.</p>
-<p>Everything runs on HF
-Jobs, with the environment as
-a Docker Space and metrics in
-trackio.</p>
-<p>The rule of this project was to reproduce the recipe with every resource open, not to
-improve it, so a list of untried ideas piled up along the way. These are the ones I
-would actually try, in order of how much evidence there is.</p>
-<p>Multi-step, and letting the model see what it paints. This is the first thing I
-would try. The original blog trains single turn, so I trained single turn, and in this
-setup the model paints with its eyes closed. No image ever goes in, and the only
-feedback it gets is one number. The evidence that a feedback loop works is the pool
-itself. The reference paintings came from models iterating three rounds under a vision
-critic, and the later rounds are better. The material that defines the reward was made
-with a loop the policy never gets.</p>
-<p>Smaller models. There is evidence that 35B is more than needed. In my side
-experiments a 4B already wrote valid sketches that passed the gate. If a 4B can learn
-this, the cost of the experiment drops by an order of magnitude.</p>
-<p>Other ideas on the list are SFT on the pool sources before starting RL, rewarding pigment
-explicitly, moving the judge's reference mix from easy to hard as the run advances until
-only love remains, widening the ten-method allowlist for more visual range (my
-attempts on this crashed more sketches and broke the watercolour look), and checking how consistent the pairwise judge really is by
-scoring the same image twice.</p>
-<p>And the method is not specific to flowers. Alex Yango painted animals with the same
-mechanism, and Brendan Hogan
-trained canvas animations
-against a pool of hand-rated clips. I had also played with something similar before using Simon
-Willison's pelican
-benchmark, where code is
-rendered to an image and scored.</p>
-<p>And underneath all of it sits the question this project cannot close. 178 paintings
-made by models define what this trained model considers beautiful. The pool is the bottleneck,
-and it is the part of the pipeline with no principled answer.</p>
-<p>For anyone reproducing this, there are two deliberate divergences from Narreddi's
-recipe, both argued earlier in the article:</p>
-<p>The rest, all-linear for the LoRA, infrastructure failures returning None instead
-of 0.0, stopping the judge runs at step 110, are decisions I had to make along the way
-because his blog does not specify them. His implementation is not published, so
-I cannot tell whether they match his choices or diverge from them.</p>
-<p>The per-rollout numbers in this article can be recomputed from the published datasets.
-Nothing here depends on any Space staying switched on.</p>
-<p>The method and original idea are Surya Narreddi's. The library is Alejandro Campos Uribe's.</p>
+                <p>Seven years ago I decided to start learning how to make a game from scratch. And last week I released Satelital, a rule-discovery game about learning alien logic.</p>
+<p>As a solo developer, I decided to start this project from scratch. My motivation was to learn the actual fundamentals behind the technology of videogames. This meant I had to build most of the tools I would need myself, including the game engine, renderer, puzzles, editors, UX, design, art and music.</p>
+<p>Now that I've finally managed to release the game, I think it's a good moment to share how I built it.</p>
+<p>The main reason I got into programming was the idea of eventually working on games. I spent many years working on web and building mobile apps. It was fun, but I felt like I wasn't going in the direction I really wanted to.</p>
+<p>So one day, after listening to every Jonathan Blow talk I could find and playing too much The Witness, I decided to finally give it a try.</p>
+<p>I spent many days and countless hours looking for the best tool I could use to make a game, but nothing left me satisfied. The closest I got to having fun with gamedev was with the LÖVE framework making a few jam games. But even with that, it felt quite limiting to not really know what was happening behind the graphics I somehow managed to animate on my screen.</p>
+<p>I remember hearing about shaders and parallel programming. The concept always felt very arcane and mysterious to me, but now writing them is the thing I enjoy the most while coding.</p>
+<p>I finally decided to jump into the swimming pool and actually learn C⁠+⁠+. I had to learn how to manage memory and how not to shoot myself in the foot with the wrong tools. I started using SDL2 while trying to use the C⁠+⁠+ standard library as little as possible.</p>
+<p>Before getting too deep into the engine, I actually finished a prototype of the puzzles not long after learning how to draw some simple graphics with C⁠+⁠+. It had very early versions of four kinds of puzzles that mostly survived until the final game. It was made entirely with SDL2, but I soon realised that if I wanted more interesting graphics, I would need to use shaders and decided to switch to OpenGL.</p>
+<p>With the help of LearnOpenGL I quickly had a triangle on the screen. From there, learning things like lighting, tonemapping, normal maps, shader effects and everything else opened up a whole new way of looking at computers for me. Before, my idea of how a computer actually draws to the screen was quite naive. When I started learning graphics I just wanted to be able to manually change the color of each pixel individually, but in the end the idea of running a program in parallel for every pixel clicked for me.</p>
+<p>One thing that made a huge difference while working on shaders was having code reloading. Before that, I had a complex system that stored constant values in config files, which would later get passed through uniforms into shaders. Then a custom development menu would provide some UI to tweak those values at runtime. With that I stopped having to reload and compile everything for every little change I wanted to make.</p>
+<p>It worked, but having to maintain all this extra scaffolding was slowing me down. Another unexpected downside of this setup was that, in some cases, the shader compiler couldn't optimize the code as well as it otherwise could, since knowing constant values ahead of time helps it make better decisions.</p>
+<p>Having shader reloading made a huge difference. Being able to change some code, save the file and immediately see the result on screen was very useful. Iterating on shaders became much faster and more fun. This was probably my biggest regret about not having it from day one.</p>
+<p>For a big part of the development I was using SDL2, mainly to create a window, read input and get a surface to draw on. But it felt wrong to depend on a library that was several times bigger than my entire game just to handle a few seemingly simple tasks. I decided to drop that dependency and make my own platform layer that I could understand and maintain. I wouldn't have to wait for someone else to fix a bug anymore because now I could just change it myself. It wasn't that hard to end up with a single file with a few thousand lines of code that supported both macOS and Windows. I'm now looking forward to working on mobile and console ports, it feels like it might be a fun thing to work on.</p>
+<p>At some point during development, compile times were getting longer, so I decided to look into what was going on. I checked where all that time was going, and to my surprise a lot of it was spent compiling standard library things. Stuff like std::function was particularly slow for example.</p>
+<p>Eventually I realised that I wasn't actually forced to use the standard library just because it was there, and the subset I needed wasn't that hard to implement myself. It took me a month to replace it with my own base library, but it was so worth it. Not only did compile times get faster, but I also learned how a lot of things I had always taken for granted in other languages actually worked.</p>
+<p>At some point I started looking into Vulkan because I wanted HDR. I couldn't get it working on macOS through OpenGL and I was worried about OpenGL being deprecated in the future. Also I didn't really want to build the whole engine around an API that might become deprecated.</p>
+<p>Moving to Vulkan was rough at the beginning. There was so much boilerplate to type and understand. Also, when I started working on the engine, there wasn't much documentation around how to implement a good backend with it. In hindsight, I feel that even though I got a lot of valuable things from tutorials and books, most of them were overcomplicating something that could be much more straightforward. I still have nightmares about trying to resize a window...</p>
+<p>Getting Vulkan working on macOS was actually surprisingly easy thanks to MoltenVK. It was nice not having to learn Metal and being able to keep the same codebase on Windows. The engine started out only working on macOS, so I was afraid I'd run into a lot of issues when porting it to Windows. But I was quite nice to see Vulkan just working the same day I tried it.</p>
+<p>My philosophy from day one was to only grow the engine towards exactly what I needed. This was a long solo project, so trying to build a general purpose engine first, without knowing what I needed, would probably have meant never finishing the game. I did waste time on things I thought I would need, but I cut them when I knew I wouldn't be using them. Because I was also learning C/C⁠+⁠+ along the way, I made many coding mistakes but I wasn't afraid of big refactors. Cleaning the codebase helped me bring up my morale.</p>
+<p>From the beginning I wanted to avoid making a 3D engine since I knew that might complicate things too much. But after I finished the prototype, I kept learning about shader techniques and effects. So in the end, my goal was to get as close as possible to a 3D look without actually having to load any 3D polygons.</p>
+<p>To do this, I chose an orthographic top-down view so I could just prerender the assets in Blender and then load their albedo, normal and height maps as textures. Having a fixed camera meant I could render all the assets from exactly the same perspective, so they would always fit together properly in the game. Other things that needed to be animated were drawn in the pixel shader using SDFs. The terrain of the planets was too big to be stored entirely in textures, so in most cases I had to procedurally generate them in shaders too.</p>
+<p>Since I wanted a 3D look with dynamic lighting, I also needed dynamic shadows. The final approach I settled on was ray marching. With the height map of each prop, I could make them look as if they were actually sitting in a 3D space, even though everything was still rendered in 2D. In the shader I basically march along the direction of the light and sample the height map to figure out where a shadow should be drawn.</p>
+<p>Having the height map was also useful for other things. For example, I could use that information to make objects interact with the water in a convincing way. Objects can actually submerge in the ocean instead of looking like flat images drawn on top of it. This is also how the waves can interact with the shore around an island.</p>
+<p>The engine was only one part of making a complete game. I also had to build a custom level editor. I wanted to make it as easy as possible to design and iterate on puzzles, so I integrated an edit mode that allowed me to change puzzles and the enviroment at runtime and see the changes in real time.</p>
+<p>It was quite fun to quickly draw and tweak puzzles directly in the game. It helped me discover so many ideas. After making thousands of puzzles, you start to develop a sense of beauty about how a puzzle should be. Having this editor allowed me to get into the zone. I could spend hours making puzzles without actually thinking about the tool I was using.</p>
+<p>Alongside the in-game editor I made a custom Blender plugin that could load my level config files into Blender. The game had a file watcher that could detect changes in the baked textures of the 3D models rendered by Blender. But it could also load level data and provide another way to edit. The upside was being able to just use Blender tools like multi-select, but aside from that, it wasn't actually that useful. It was cool to make though, and it's an interesting demo. But just being able to edit things in-game was much better, since you can see how it will actually look in the end. Though having said that, looking at the levels in an actual 3D environment feels quite nice.</p>
+<p>Building the game with all these custom tools brought some issues. They worked on my machine, but when I started playtesting I began to find lots of bugs that were tricky to reproduce. The hardest ones were related to graphics, due to differences in hardware and drivers on machines I didn't have access to. Tools like Vulkan validation layers were quite useful, though they didn't catch everything.</p>
+<p>Another thing that was tricky to deal with was shader compatibility. When using GLSL, if you rely heavily on making visual effects with noise related functions, you will find issues with things like sin or pow because the specification doesn't guarantee their precision. So I had to be constantly checking that everything looked the same on as many different hardware configurations as I could find. For a while, I didn't notice that the distribution pattern of my stars looked different across vendors. It looked correct, but I wanted to have the same placement of stars wherever you played to make it feel more like an actual place.</p>
+<p>Having good logs to see how the internals of the game were working ended up being very useful. It was essential for me to have them after I released the demo and started getting feedback from users who were seeing errors I couldn't reproduce. Many of them reported a black screen when trying to open the game for the first time, and these were caused by many different kinds of problems. Sometimes it would be a missing extension, sometimes a third party Vulkan layer injecting code that prevented the frame from being drawn, or some other particular driver issue. Without the logs showing the exact point when the error happened, it would have been almost impossible to fix these bugs without having the actual hardware.</p>
+<p>The logs ended up being quite useful for performance. For example, when trying to do optimizations for Intel GPUs, I noticed that some of the biggest shaders were being compiled in a non-optimal way. I basically ran the whole game in just 2 big shaders, one to blend the scene with all the quads, and another pass where I do lighting, shadows and effects like water, where the final normal and height map of the scene are presented. Because these shaders were so big, they couldn't be compiled for SIMD16.</p>
+<p>These integrated Intel GPUs are quite common on laptops, and they can shade 16 pixels at once, but only if everything in the shader fits in a small amount of very fast memory. Because my shaders grew so much and I wasn't even aware that this would be an actual issue, the driver was quietly falling back to shading 8 pixels at a time, making the game run noticeably slower. Once I had this information in the logs, I could see what I needed to trim down. I reduced the number of values I needed to keep around as much as possible, while also avoiding duplicated code caused by things like macros until everything fit again.</p>
+<p>During development I was always careful about how demanding the game was, but after switching to a faster computer I started paying less attention to it. It's quite easy to just settle for something that looks good enough and move on to the next thing when you're busy. That's why I started targeting the Steam Deck and aiming for stable 90 FPS. It helped me keep performance in sight and avoid things that would make the game too slow on low-powered platforms.</p>
+<p>I feel like I threw away a lot of work during development because the art and design of the game changed several times. In hindsight, I think it was good to keep the mentality of avoiding things that would make the game slow and keeping an eye on the performance stats. But it was only towards the end of the game that I could simply focus on performance without worrying about optimizing things in a way that would make them hard to generalize or reuse in the future, since the game was finished.</p>
+<p>In the end I actually added a performance mode that tones down a few special effects, but I think it was a good decision to do that when the game was finished. Otherwise, you suddenly need to be testing and tweaking more than one version of the game while making changes and adding new things.</p>
+<p>A frame limiter was something else I added to help slower laptops maintain a stable framerate. This also brought the necessity of adding an option to draw the cursor in hardware. For the whole development I was drawing the cursor within the game in software, and that meant some lag was unavoidable. Many users complained about this when the demo was released.</p>
+<p>This happens when you use Vsync because the last frame you're seeing is actually buffered, so the frame is already behind the input. The OS has a special mode for drawing the cursor that prevents these issues, but then you lose the ability to apply effects to it, like fluid animations or doing some lighting around it. Being aware of this also helped me focus on reducing the input lag of the game as much as possible. When running the game with the frame limiter, you notice immediately that the cursor becomes super laggy. For that case, having a hardware cursor was necessary.</p>
+<p>Looking back on all these details, being able to change basic engine things like that is super hard, or almost impossible, with closed engines. I worked with Unity before, doing some ports, and the mentality there was that you had to follow a set of "good practices" and deal with whatever was decided for you, even though the hardware in most cases could do better. It was very rough and slow at the beginning when making a custom engine, but the freedom you get at the end of development is very satisfying.</p>
+<p>I feel lucky about how I got the chance to take this long journey and actually make it to the end. I feel like I stumbled into something really interesting that made me lose count of all the nice moments of realization I had while working on this project.</p>
+<p>After all these years, I'm quite happy now to have found the perfect excuse to actually study the things I love the most to work on.</p>
+<p>If you enjoyed this article, consider giving Satelital a try. The game is available on Steam, with a free demo available.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/train-to-paint-with-code" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://spectralorbit.com/blog/satelital_game_engine" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

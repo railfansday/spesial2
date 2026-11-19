@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Build a Unified Lead Tracking Pipeline for Web Forms and Phone Calls</title>
+    <title>CSS-Tricks, Version 20</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10146.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,117 +15,95 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Build a Unified Lead Tracking Pipeline for Web Forms and Phone Calls</h1>
+        <h1>CSS-Tricks, Version 20</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Web_Forms_and_Calls_Unified_18f30a93c9.png" alt="How to Build a Unified Lead Tracking Pipeline for Web Forms and Phone Calls" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/11/screenshot.png" alt="CSS-Tricks, Version 20" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Web_Forms_and_Calls_Unified_18f30a93c9.png" alt="How to Build a Unified Lead Tracking Pipeline for Web Forms and Phone Calls" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/11/screenshot.png" alt="CSS-Tricks, Version 20" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>A visitor clicks a search ad, submits a quote request, and calls your sales team ten minutes later. The form integration creates a CRM contact. The phone platform records a call. By Friday, the marketing report shows two leads, while sales remembers one conversation that turned into a deal.</p>
-<p>Both systems captured something useful. The problem is that neither record explains how the two interactions belong together.</p>
-<p>A unified tracking pipeline gives forms and calls a common event format, preserves their acquisition context, and connects them to CRM outcomes. It also needs to survive a less tidy reality: repeated callbacks, missing campaign data, delayed updates, and a CRM that occasionally refuses requests.</p>
-<p>This tutorial builds the core of that pipeline with JavaScript and PostgreSQL. We will capture campaign parameters, define a shared event contract, and persist events alongside the work needed to deliver them. Provider authentication and CRM requests belong in adapters around this core, using the documentation for the services you choose.</p>
-<p>Before writing an endpoint, decide what you are counting. A phone call can produce several status callbacks. A person can submit two forms. An existing customer can contact sales about a new purchase.</p>
-<p>Use separate identifiers for these different things:</p>
-<p>This separation prevents two common mistakes. Deduplicating by call ID alone can discard later status updates. Counting every callback as a lead inflates demand.</p>
-<p>For this implementation, each event is unique within a tenant and source. A tenant is the business whose data you are processing; the source identifies a website or provider account. The same provider event ID can therefore appear in two accounts without causing a collision.</p>
-<p>Keep the original interactions even after you connect them to one contact. The form and the call are both useful evidence. Your reporting layer decides whether they represent one opportunity.</p>
-<p>Campaign parameters are easiest to capture when the visitor first arrives. Waiting until the form submission can lose them if the visitor has already moved to another page.</p>
-<p>Google's campaign URL documentation explains the roles of utm_source, utm_medium, and utm_campaign. The following helper reads those fields and a few optional ones, without copying the entire query string:</p>
-<p>const params = new URL(url).searchParams;</p>
-<p>"utm_source", "utm_medium", "utm_campaign",</p>
-<p>return Object.fromEntries(keys.flatMap(key => {</p>
-<p>The browser's URLSearchParams interface handles query parsing and decoding. It saves you from writing string-splitting code that breaks on encoded characters.</p>
-<p>Run this helper through your site's existing consent and attribution flow. Where storage is permitted, associate the result with an opaque attribution reference in your backend and retain that reference through the visit. A later form submission sends the reference; the server resolves it within the correct tenant and visitor session. The form must still work when attribution storage is unavailable.</p>
-<p>Keep first-touch and current-touch records separately if you need both. Overwriting the first campaign every time someone returns makes the eventual report answer a different question.</p>
-<p>Treat campaign labels as untrusted input. Visitors can edit query strings and hidden fields. Validate them on the server, escape them when displayed, and never use them as authorization or as the sole evidence for commission payments. Avoid putting names, email addresses, or other personal information in UTM values.</p>
-<p>Missing tags also need careful handling. An empty UTM object only tells you that no accepted UTM values were captured. Classifying a visit as direct, organic, or referral requires additional evidence and an explicit attribution rule.</p>
-<p>Forms carry browser context naturally. Phone calls need a bridge between the number dialed and the marketing interaction that prompted the call.</p>
-<p>There are two useful levels of precision. A number assigned to one campaign can identify that campaign. Dynamic number insertion can support a more detailed association by displaying tracking numbers according to a visitor or session mapping. That association depends on the provider's number allocation and expiry rules.</p>
-<p>Providers differ in how they implement this, and in what they expose beyond it, such as keyword-level reporting or conversation analysis. If you are still choosing one, this comparison of attribution software with call tracking is a useful starting point. At the integration boundary, check which event identifiers, attribution fields, delivery mechanisms, and authentication options your configured product exposes.</p>
-<p>Keep that provider-specific work in an adapter. Its job is to turn an authenticated notification into your event contract and resolve any attribution reference supported by the provider's data. The application schema below is an internal contract; each provider adapter translates its documented payload into that contract.</p>
-<p>Store the basis of a match with the attribution record. For example, session_match, campaign_number, and unknown make different levels of evidence visible to reporting. If a number has been reassigned, use the mapping valid when the call occurred, not whichever mapping happens to be current when the callback arrives. If the evidence is ambiguous, leave the association unresolved.</p>
-<p>Caller ID is a separate issue. A shared office number, a withheld number, or an outdated contact record can make automatic identity matching unreliable. A confirmed CRM contact ID or an authenticated account provides a stronger link. Treat a matching phone number as a candidate for reconciliation rather than proof that two records belong to the same person.</p>
-<p>A shared event envelope lets the rest of your application work with a small, predictable vocabulary. Here is an illustrative call event:</p>
-<p>"occurred_at": "2026-11-06T10:14:00.000Z",</p>
-<p>The event ID identifies this occurrence. The interaction ID groups it with other events for the same call. contact_ref can remain empty until you have enough evidence to connect the interaction to a contact.</p>
-<p>Keep contact details in a controlled contact store and campaign details in an attribution store. The references above point to those records; they are not credentials and must not grant access on their own.</p>
-<p>The following factory checks the shared envelope. Each adapter still needs its own validation for provider fields and the contents of data.</p>
-<p>"form.submitted", "call.started", "call.completed",</p>
-<p>export function makeEvent(input, trusted) {</p>
-<p>const ids = [trusted.tenantId, trusted.source,</p>
-<p>if (ids.some(id => typeof id !== "string" ||</p>
-<p>throw new TypeError("Invalid event identifiers");</p>
-<p>throw new TypeError("Unsupported event type");</p>
-<p>const time = Date.parse(input.occurredAt);</p>
-<p>if (typeof input.occurredAt !== "string" ||</p>
-<p>new Date(time).toISOString() !== input.occurredAt) {</p>
-<p>throw new TypeError("Expected a canonical UTC timestamp");</p>
-<p>attribution_ref: input.attributionRef ?? null,</p>
-<p>Resolve trusted from server configuration and the authenticated integration. Never let a submitted tenant_id choose whose records a webhook can write. Resolve contact and attribution references within that same tenant.</p>
-<p>For a form, issue a submission ID and reuse it when retrying the same submission. Generate a new one when the visitor deliberately starts another inquiry. Preserve the originally accepted timestamp as well. For a phone event, prefer the provider's stable event ID. If the provider documents a sequence number, a call ID plus that sequence can identify an occurrence within a provider account.</p>
-<p>Twilio's call resource documentation provides a concrete example: call progress callbacks include a SequenceNumber, and separate HTTP requests can arrive out of order. Preserve that sequence in the adapter. A late “ringing” event should remain in the history without replacing a newer terminal state.</p>
-<p>Authenticate before calling this factory. Use the provider's supported validator and the exact request representation it requires. Twilio's webhook security guide describes signature validation, including the importance of the request URL and payload. Other providers may use different mechanisms. Public form endpoints need their own input limits, abuse controls, and appropriate CSRF protection.</p>
-<p>Consider a failure between these two operations: the application saves an event, then crashes before scheduling its CRM update. The event exists, but nothing is waiting to deliver it.</p>
-<p>A transactional outbox addresses that gap. Save the event and a delivery task in the same database transaction, then let a worker process the task. AWS explains this dual-write problem in its transactional outbox guidance.</p>
-<p>Here is a compact schema. received_at records ingestion time, while the envelope retains the event's original occurred_at value.</p>
-<p>received_at timestamptz NOT NULL DEFAULT now(),</p>
-<p>PRIMARY KEY (tenant_id, source, event_id)</p>
-<p>id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,</p>
-<p>available_at timestamptz NOT NULL DEFAULT now(),</p>
-<p>FOREIGN KEY (tenant_id, source, event_id)</p>
-<p>REFERENCES lead_events (tenant_id, source, event_id)</p>
-<p>The ingestion function below accepts a pg pool and a normalized event. Install pg in your Node.js project, save the function as persist.mjs, and initialize the pool using your application's database configuration.</p>
-<p>export async function persistEvent(pool, event) {</p>
-<p>const key = [event.tenant_id, event.source, event.event_id];</p>
-<p>const values = [...key, JSON.stringify(event)];</p>
-<p>await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");</p>
-<p>ON CONFLICT (tenant_id, source, event_id) DO NOTHING</p>
-<p>WHERE tenant_id = $1 AND source = $2 AND event_id = $3</p>
-<p>const error = new Error("Event ID reused with new data");</p>
-<p>INSERT INTO crm_outbox (tenant_id, source, event_id)</p>
-<p>return { inserted: inserted.rowCount === 1 };</p>
-<p>PostgreSQL's INSERT documentation defines the conflict handling used here. The unique key makes duplicate detection hold across application processes. A duplicate with the same normalized payload creates no second task; reuse of the key with different data raises a conflict for investigation.</p>
-<p>This depends on immutable event bodies. Do not add a fresh receipt timestamp, random identifier, or current CRM status to the normalized payload on each delivery. Store later enrichment separately or emit a new event. Otherwise an ordinary retry will appear to be a conflicting event.</p>
-<p>The function deliberately uses one database client throughout the transaction, as required by the node-postgres transaction documentation. Parameter values are passed separately from SQL, following its parameterized query guidance.</p>
-<p>After this function commits, acknowledge the notification using the response expected by the sender. An identical duplicate should also receive a successful acknowledgement. If persistence fails, return the appropriate failure response and rely on the configured retry or reconciliation process. A success response sent before durable storage can turn a temporary database failure into a missing event.</p>
-<p>For voice integrations, distinguish an informational status callback from a request asking your application how to handle a live call. They can require different response bodies, as explained in the Twilio webhooks FAQ.</p>
-<p>The outbox gives you durable work to process. It does not make a remote CRM operation happen exactly once.</p>
-<p>Imagine the CRM saves an update, but the worker crashes before setting processed_at. When the task runs again, the same request may reach the CRM twice. Design for that case explicitly.</p>
-<p>Use a stable external identifier for each contact, opportunity, and activity, and check which deduplication guarantees the destination supports. HubSpot's contacts API documentation, for example, describes upserts using unique properties. Support for a contact upsert does not automatically make every associated activity or workflow idempotent. Verify the behavior of each operation you send.</p>
-<p>If the destination cannot deduplicate a create request and a timeout leaves its result uncertain, reconcile that operation before repeating it. A local “sent” flag alone cannot prove whether the remote write happened.</p>
-<p>The worker should claim due tasks, commit a recoverable lease, and perform network calls outside the database transaction. A lease allows another worker to recover work after a crash. When multiple workers poll the outbox, PostgreSQL's SKIP LOCKED behavior can help claim separate rows, but the lease and its recovery logic still need to be implemented.</p>
-<p>Retry transient failures with increasing delays and jitter. Respect the destination's rate-limit instructions. Send persistent validation failures to a review queue with a useful error category, and provide a way to replay them after correction. The schema above is the ingestion foundation; a production worker needs lease fields, failure details, and a retry policy appropriate to its destination.</p>
-<p>Also preserve ordering where it changes meaning. If two events update the same contact or opportunity, process them serially or reject stale updates using a stored version. A historical event should not move a won opportunity back to an earlier stage.</p>
-<p>Once both channels reach the CRM, connect them to the result the business cares about. A form submission is an inquiry. A completed phone call is a technical outcome. Neither alone establishes that a lead qualified or a purchase happened. If agents record call dispositions, such as whether a call was qualified or transferred to a closer, that field is a richer signal than call completion status alone.</p>
-<p>Have the CRM or the system that owns the transaction emit explicit outcome events, such as lead.qualified and deal.won. Include the internal opportunity ID and the original outcome time. Model reversals or cancellations explicitly if they affect revenue reporting.</p>
-<p>Then choose the unit behind each metric. For a report about opportunities acquired during a particular month, a qualification rate can use qualified opportunities divided by all opportunities in that acquisition cohort. Counting qualification events received during the month would answer a different question and could include older inquiries.</p>
-<p>Deduplicate opportunities before calculating channel totals. A person who submits a form and calls about the same purchase should retain both interactions, while the opportunity receives credit according to your chosen attribution rule. Label that rule in the report so first-touch and last-touch numbers are not compared as though they measure the same thing.</p>
-<p>Measure data quality alongside performance. Track unresolved attribution, duplicate deliveries, ingestion failures, and the age of the oldest pending outbox task. Once several sources and destinations feed the same reports, a data observability platform can watch these signals across the whole pipeline instead of relying on checks inside a single worker. An apparently quiet campaign may actually have a broken integration.</p>
-<p>Operational logs should contain enough context to investigate failures without becoming another customer database. Use internal references and error categories, and avoid dumping webhook bodies into logs. The OWASP Logging Cheat Sheet provides guidance on excluding or protecting sensitive values.</p>
-<p>A successful form submission proves little about retries or missing data. Before connecting production traffic, test the cases that could distort reporting or lose an inquiry.</p>
-<p>Run database cases against PostgreSQL with separate connections so the tests exercise actual constraints and transaction behavior. Use the provider's test tools or signed fixtures for webhook authentication. Test CRM retries against a sandbox with the destination's real duplicate-handling rules.</p>
-<p>Start rollout with one form and one phone source. Trace a known inquiry from its captured campaign through its interactions to its CRM outcome. Reconcile event totals against the source systems over the same time window, allowing for delivery delays. Expand once that path is explainable and failures are visible.</p>
-<p>The same adapter pattern extends to inquiries that start offline, such as leads collected at a trade show and exported as a CSV or XLSX file. Import each row as a form.submitted event with the event as its source, a stable row identifier as event_id, and the original capture time as occurred_at. Because the outbox treats an identical event as a duplicate, re-importing the same export won’t create a second CRM task.</p>
-<p>What is a unified lead tracking pipeline?</p>
-<p>It is a workflow that converts inquiries from different channels into a shared data model, preserves their acquisition context, and connects them to business outcomes. Forms and calls keep their own interaction records, while contacts and opportunities provide the relationships needed for reporting.</p>
-<p>Can I connect a phone call to a website visit?</p>
-<p>Sometimes. Dynamic number insertion can provide a session or visitor association when the provider's mapping is available and valid. A campaign-specific number usually supports campaign-level attribution. If the caller uses a saved number, switches devices, or calls after a mapping expires, the available evidence may be less precise.</p>
-<p>Handle duplicate delivery and identity resolution separately. Stable event IDs and a database constraint prevent repeated notifications from producing repeated work. Connecting several interactions to one contact or opportunity requires a separate matching policy, with ambiguous cases left unresolved until there is enough evidence.</p>
-<p>Should a completed call count as a conversion?</p>
-<p>Only if that is the conversion your report explicitly measures. A completed call does not establish that a prospect qualified or bought something. Keep technical call status separate from CRM outcomes and use the latter when reporting qualified demand or revenue.</p>
-<p>Do I need a message broker for this architecture?</p>
-<p>You can begin with PostgreSQL and an outbox worker if that setup meets your throughput and latency needs. A broker becomes useful when several consumers need independent delivery, or when buffering and scale justify the additional operations. In either case, retries still require idempotent consumers.</p>
-<p>What happens when tracking consent is unavailable?</p>
-<p>Keep the inquiry flow usable and apply your site's existing consent rules to optional attribution collection and storage. Accept permitted form or call data, leave unavailable attribution empty, and avoid reconstructing a visitor identity through fingerprinting. Reports should expose that missing context instead of inventing a campaign match.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>I’ve been bashing on updating this site’s design for the last couple of weeks. It’s high time things get a fresh coat of paint, right? The last version of CSS-Tricks was pushed five years ago. That’s ancient in web (and dog) years.</p>
+<p>It’s not like the site has simply sat all that time. We pushed lots of changes and shipped new features, particularly since 2024, but we never really got the paint brushes out of storage.</p>
+<p>Now, before there’s a chorus of “things don’t look thaaaat different” I want to say I’m rarely a fan of complete re-builds and tend to lean into iterative releases. And the new v20 theme is what I’d call an iterative rollup that’s worthy of a version bump.</p>
+<p>Let’s go over the most notable updates to see why.</p>
+<p>First and foremost, some of the biggest changes are what you don’t see. As you might imagine, this site has carried over plenty of pieces across 19 years. I decided to excavate the theme and definitely found some ghosts to bust.</p>
+<p>For example, the global compiled JavaScript file retained some scripts that just weren’t being used anymore. Things like handling embedded versions of the newsletter from before we began self-hosting the posts. There were relics that catered specifically to the Flexbox Guide for handling toggles back before we had proper HTML <details>. There was a jQuery lazy-loader thing that is well-covered by WordPress core now. We had some scripts for serving third-party ads that are no longer needed now that we’re self-hosting ads. Things like that. The overall JavaScript was nicely trimmed from 151.6 KB (55.3 KB gzipped) to 133.8 KB (48.1 KB).</p>
+<p>I also decided to formally retire the CSS-Tricks Forum. We put it in “archive mode” back in, like, 2018. None of those discussions are particularly valuable for today as they were over 10 years ago, so I deactivated the bbPress plugin that powered it and cleared out the database… and wow, that carved a whopping 400 MB from the ol’ database, not to mention it allowed me to drop several custom templates from the theme.</p>
+<p>There were more ghosts busted along the way and, to be sure, there are still some lurking around. But it’s way less scary poking around the theme directory now, and further cleanup should be a lot easier from here on out.</p>
+<p>Yeah, yeah, raise your hand if you’re still running Gulp. We are 🙋‍♂️. That’s not a bad thing in and of itself, but keeping it in a fixed state for all this time is not the greatest. I think we’re sporting a more modern workflow than before, even if there’s still room to grow. A smattering of the related commits:</p>
+<p>For years, I endured the same errors every time I fired up a new terminal. Those are gone and things run super cleanly, not to mention quickly. Very happy here.</p>
+<p>Oof, this is everyone’s favorite job, right?! Aside from being able to spot and fix a few unescaped custom field calls here and there, I decided to ask Claude to help me with a holistic audit. I prompted it to review recent WordPress security release notes and identify areas where the theme could be hardened to comply with what WordPress is doing.</p>
+<p>Whoa, you used AI? Yeah, I sure did. But for things like this where it could be my little gopher and allow me more time to do what I do best: front-end. I’m still able to make most of the patches myself based on the output recommendations, but it’s nice to have a gut-check for things where I’m clearly no expert, like security.</p>
+<p>I still use and like Sass very much. I mean, yes, I would like to be straight-up vanilla CSS everywhere, but I can’t tear myself away from partials in particular.</p>
+<p>The previous theme had a fairly nice “flat” structure — very few partial directories and most things all in the same top-level source. Totally cool. But an organization nut like me (you should see my house) has to have a place for everything to live. It ain’t perfect, but I’m happy with what I was able to put together without leveling the building in the process.</p>
+<p>There are some compromises. Like, /header should really be in /layout. The ordering is really important, though, and some of my ideals were simply not possible. I’m hoping to eventually work in some sort of Cascade Layers structure.</p>
+<p>I’m pleased as punch to see the overall size of CSS drop in the process. It went from 180 KB (31.7 KB) to 169 KB (24.6 KB). Not hugely significant, but not not significant either. I had to do a couple tricky things to cheat my way there, like serving all the form styles I’m about to talk about into a separate forms.css file and serving it just on pages where WooCommerce, Restrict Content Pro, and Gravity Forms are enqueued.</p>
+<p>Are you starting to notice a trend? We’re still talking about fairly invisible work. CSS-Tricks has so many nooks and crannies that it’s nearly impossible to make things perfectly consistent across the board. But because of those nooks and crannies, so many fixed values, magic numbers, one-off styles, and older utilities were hiding about. I decided to tackle a good chunk of that while reorganizing the Sass.</p>
+<p>For example, there are now semantic design tokens that abstract away one-off colors. So many grays, let me tell you. Now there’s a maintainable palette that’s referenced throughout. Same with fonts, font styles, and font sizes. Same with paddings and margins. It feels a lot better to make a change at the “system” level with confidence that the change is taking effect everywhere it needs to.</p>
+<p>But this is also where some clearly visible changes happened! Most notably, link styles are consistent all over the place with a small handful of intended and maintained variations. Not only is it more pleasing visually, but it improves accessibility throughout because the inherited styles default to proper visual cues that do not rely solely on color or opacity changes.</p>
+<p>Oh, and my favorite piece of this? Forms and tables have both been redone. That’s tough to do in a WordPress theme where these components don’t always come from one source. For example, forms could come from any one of the Gravity Forms, WooCommerce, or Restrict Content Pro plugins, and they all have their own stylesheets. Resetting those allowed me to bring a certain level of harmony in all those instances.</p>
+<p>OK, something even more visual. This is the first time CSS-Tricks has had more than one color scheme! It certainly could have been done a long time ago, but I’d also argue that the design hasn’t really called for a light/dark toggle over the last 8 years or so. It’s a nice blend of both light and dark elements that marry the best of both worlds no matter your theme preference.</p>
+<p>But I had to take a stab, right? The site has predominantly been dark despite the content being against a white background, so I treated things as though a “dark” mode already existed. The result is a creamy light theme that is largely just a change in background and component styles. And I used some of what I learned from the recent “toggle” debate to handle system, dark, and light themes with a single toggle.</p>
+<p>What hasn’t changed is the main content container you see in things like articles. That was already white, even in a “dark” mode, and I’m not confident that simply toggling it between white and black is the best approach. Something on the radar for sure.</p>
+<p>Oh, and it’s all wired up to a view transition that slides the new theme over the previous one.</p>
+<p>I hope you think the site’s header and footer are cute. Yes, cute. That’s what I was going for when adding a colorful series of dots as the backdrop.</p>
+<p>Sorta like a subtle candy texture, right? Or a colorful group of stars? I dunno, but I’m calling it “Jawbreaker” for lack of a better term and because it reminds me of the jawbreaker candy I loved as a kid. Naming still sucks.</p>
+<p>It’s all part of the same SVG. I really, really (really) wanted to random()-ly position dots around, but that would have taken a lot of empty individual elements (e.g., <i>) in the markup. Not my favorite. So, I generate the <circle> elements in PHP:</p>
+<p>I really, really wanted to random()-ize all the things, but inlining random coordinates on each <circle> was the way to go. Same deal with the inlined styles that set a fill, and sizing for each circle in the texture, and variables that set a --delay and --dur on the subtle animation that twinkles them in and out.</p>
+<p>I’ll have to look at generating the SVG using <defs> or whatever later since that pattern repeats in the footer, too.</p>
+<p>That’s carried through to the 404 page as well:</p>
+<p>If your browser supports border-shape and random() (only Chrome, I think), then the homepage gives you a blobby-blob shape behind the grid of author avatars. Hover it and it gets, you know, even blobbier.</p>
+<p>It takes an existing pattern I’m calling .gradient-card:</p>
+<p>…and sets a gradient on the component’s :before pseudo:</p>
+<p>That sits underneath the :after pseudo that’s translucent, allowing the :before‘s gradient to show through a smidge:</p>
+<p>The differing border-radius values allow :before to bleed outside, giving the impression of a border around the entire deal. That’s the basic shape. The border-shape is where things get blobby:</p>
+<p>Those variables? They’re mapped to shape()s. I grabbed the first one from Temani Afif’s blob generator:</p>
+<p>It’s called “static” because that’s the default state. Hover or focus on the component and it swaps out those points out with a “hover” version of the shape:</p>
+<p>Those variables? They’re mapped to random() values:</p>
+<p>So, the hover state is different on each page load. And we animate between the two:</p>
+<p>I’m pretty stoked on this one. The Almanac has grown, evolved, and just plain gotten great the past few years. But the primary page for it… not so great. It was definitely overshadowed by work on the pages inside it and never revisited beyond clickable cards to get to each feature subset.</p>
+<p>Now the page is a real index of the CSS features that gets you where you need to go quickly. Someone somewhere sometime did some sort of CSS periodic table. I forget where I’d seen that but the general idea sat with me and I thought I could pull it off. There’s nothing “tricky” about it but I love what the layout adds to the overall site.</p>
+<p>This is another area that sorely needed love. Our guides have always been a vertical stack of items. The book effect was definitely cool, but I started believing that leaning on it as the main visual hook was holding things back from being more functional. With something like 27 guides, we’re talking about a lot of scrolling with no clear idea of what you’re going to see as you go.</p>
+<p>Again, nothing “tricky” but I like the overall usefulness of the new layout. There’s a featured guide, a widget of newly added and updated guides, and a categorized grid of everything below that.</p>
+<p>The pages that show all of an author’s published articles got a little spruce-up, too.</p>
+<p>It’s a little change, really. The right sidebar was moved to the left and the author image and bio moved in, allowing the articles to creep up to the top. I hope to do more here since the small layout tweak opens up more opportunities.</p>
+<p>Also need to do the larger Authors index, but another time.</p>
+<p>This one’s just for those of us working in the WordPress editor. I don’t need a complete visual editor to get things done, but it is a nice affordance to have some of the front-end styles sneak into the editing UI for a better idea of what you’re working with.</p>
+<p>Using Lighthouse to measure things like performance, accessibility, and best practices is woefully fraught with caveats, but there’s no reason to chuck it completely. I find them more fun than fact and I don’t mind the recommendations for improving things.</p>
+<p>So, after a few runs and tweaks, here’s how things shook out theme-to-theme.</p>
+<p>I’m happy here. There are some things I just don’t have the control to fix when it comes to performance, so seeing v20 come in consistent with v19 is just fine by me. I’m happier with the boosts to accessibility and best practices. SEO? Meh. Don’t really care unless it’s hurting more important things like accessibility.</p>
+<p>Again, very happy. There’s little I can do with time to first byte but everything else seems to clock in at least marginally better. The total page weight is a clear win and that’s probably what I care most about here.</p>
+<p>Oh gosh, there’s a lot more but they’re mostly minor things that don’t bubble up to the front end. Sort of the same way browser changelogs have some generic line of “bug squashing” or whatever. In this case, it’s things like better post queries and breadcrumbs and function management and naming and… you get it.</p>
+<p>There’s definitely so much more to do. And plenty of things I’m sure I missed or broke along the way. That’s just life and those will have to come in another iterative release less worthy of a version bump. You can let me know what I muffed up in the comments.</p>
+<p>I hope you at least like where this is going!</p>
+<p>Andy Clarke shows you how to create designs that people recognize and remember in his brand-new e-book, Standout Designs for the Web. Pre-order it today!</p>
+<p>My CPU usage spikes up and the fan kicks in when I open this link. Tried opening it and closing it a few times to make sure that's the culprit.</p>
+<p>Got another report on that and am making little updates to help as I go. :)</p>
+<p>I'd tinker a bit more, but even just the looking around I've done so far almost froze my laptop.</p>
+<p>Love the new design, particualrly the footer. Great work!</p>
+<p>You mentioned updating the WordPress theme but didn't say if you're running a block theme (full site editing) or not. The people (me) want to know!</p>
+<p>Very true! Been rolling a classic-hybrid sorta thing. We never went full tilt into block theming but we do use some blocks and have custom blocks/patterns here and there.</p>
+<p>Hi. Kudos to the new site refresh. What are the tradeoffs of using a framework like Astro or Sveltekit vs WordPress</p>
+<p>Features! WordPress has everything a site like this needs right out of the box with a nice multi-author editing experience.</p>
+<p>And legacy. There’s no way we could recreate everything this site has across 8,000+ articles. CSS-Tricks is a perfect use case for WordPress.</p>
+<p>I like the new design overall, but could you please make headings font less narrow? It’s pretty hard to read, especially in the all-caps post titles and when skimming through a page to find the relevant section.</p>
+<p>I ended up switching the headings’ font family to Noto Sans in my browser via Stylus</p>
+<p>I noticed a few avatar images are missing alt text but overall great work!!</p>
+<p>Great redesign! Even greater to see all the details around implementation after a long time.</p>
+<p>PS. Just an observation from first post of Chris (https://css-tricks.com/header-text-image-replacement/) that notice text saying “This comment thread is closed…” is invisible into background color.</p>
+<p>It’s nice to see CSS-Tricks get some fresh, colorful paint after several years of iron-gray! Nice “candy” texture too. But at the risk of being a Grinch, would it be more performant to use a static SVG and randomize its placement rather than its generation?</p>
+<p>A design take: the site currently makes extensive use of drop-shadows. I think the candy effect could be heightened if raised elements had the appearance of substance instead of levitation (a little like the scroll-to-top button).</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-build-a-unified-lead-tracking-pipeline-for-web-forms-and-phone-calls/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/css-tricks-version-20/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

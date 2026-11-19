@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our health check said &quot;db ok&quot; for 40 minutes. It was talking to a cache.</title>
+    <title>I Built a Complete Arena Shooter in Vanilla JavaScript — No Engine, No Libraries, No Audio Files</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9657.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,46 +15,33 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Our health check said &quot;db ok&quot; for 40 minutes. It was talking to a cache.</h1>
+        <h1>I Built a Complete Arena Shooter in Vanilla JavaScript — No Engine, No Libraries, No Audio Files</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F8m9zge6fd2rtg2sd1qbg.png" alt="Our health check said &quot;db ok&quot; for 40 minutes. It was talking to a cache." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fl2res9hmqhyzmxh2jxg6.png" alt="I Built a Complete Arena Shooter in Vanilla JavaScript — No Engine, No Libraries, No Audio Files" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F8m9zge6fd2rtg2sd1qbg.png" alt="Our health check said "db ok" for 40 minutes. It was talking to a cache." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fl2res9hmqhyzmxh2jxg6.png" alt="I Built a Complete Arena Shooter in Vanilla JavaScript — No Engine, No Libraries, No Audio Files" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>At 22:04 UTC on Wednesday our error inbox lit up: a request that does nothing but read from the database had returned 500. Then another. Then someone's studio page crashed into a bare white "Application error" screen.</p>
-<p>I opened our health endpoint. It said {"db":"ok"}, in 3 milliseconds.</p>
-<p>This post is about the 40 minutes in which our monitoring was confidently wrong, why, and the small change that makes it tell the truth.</p>
-<p>TL;DR
-Our /api/health ran select 1 through a connection pooler that caches query results, so it kept answering "ok" while real reads took 15–31 seconds. The probe now runs inside a transaction, which the pooler never caches. We still don't know why the database stalled.</p>
-<p>I build RefVid, a small tool where you upload a few photos of a product or a character once, then make short videos that keep it looking the same in every shot. It runs on Cloudflare Workers and talks to Postgres through Hyperdrive, Cloudflare's connection pooler.</p>
-<p>Between 22:31 and 22:33 I fired 8 parallel requests at an endpoint that reads the default model settings. 5 of them took between 15 and 31 seconds. In the same two minutes, /api/health answered "ok" every time, in 3 to 24 ms.</p>
-<p>My first guess was the deploy from earlier that evening. We had shipped several times that day, and the last one went out at 20:51.</p>
-<p>So I rolled the Worker back to the 20:55 version. Nothing changed. Reads still stalled.</p>
-<p>Then I checked our other app, which lives on the same database cluster. It was fine the whole time. And nobody on our side had touched the production database. So: not our code, not the cluster as a whole, not a migration. Something between this one app and its database.</p>
-<p>By 22:47 it had recovered on its own: 5 of 5 test video starts went through. I don't like that sentence, and it's the honest one.</p>
-<p>Here is the part I should have known. Hyperdrive caches the results of read queries that run outside a transaction. That's a feature, and most of our reads are happy with it. We even have a helper, readFresh, that wraps reads in a transaction for the places where a stale answer would be wrong.</p>
-<p>Our health probe didn't use it. It had looked like this since the day we added it:</p>
-<p>select 1 is the most cacheable query there is. Its answer never changes. So for 40 minutes the pooler kept handing our probe a remembered "1" without ever asking the database, and our monitoring reported a perfect, fast, healthy database.</p>
-<p>The fix is one line, plus the 3-second timeout that was already there:</p>
-<p>A transaction always goes to the database. If the database is stuck, the probe is stuck, the timeout fires, and health says degraded. There's a test now that builds a fake database whose plain read succeeds but whose transaction fails, and checks that health says degraded. It fails on the old probe.</p>
-<p>The crash report from the studio page had one more lie in it. It said the page was running build dev, which made it look like a local server, not production.</p>
-<p>It wasn't. No route in our app had its own error boundary, so the failed render fell all the way through to the global one, which draws its own <html> without the build stamp we put on every page. Our reporter read the missing stamp as "dev". It now says unknown.</p>
-<p>And the person on the other end now gets something better than "Application error": a page that keeps the studio sidebar around it, says "This page couldn't load" in their language (we ship 7), and has a "Try again" button that refreshes the data and re-renders. It's the same size in both states, so nothing jumps when it decides.</p>
-<p>Earlier that evening I had been looking at a different number: how often ChatGPT's fetcher gives up on our pages before they load. Over a week it was 43 of 788 loads, 5.5%. Every single one of those 43 was a cache miss.</p>
-<p>The reason: our edge HTML cache keys each page by the Worker version. Every deploy starts a new, empty cache in every data centre. We deployed 10 times between 13:55 and 19:17 that day. A data centre that ChatGPT reaches three times a day is almost always asked first after a deploy, the page has to be built from storage in another region, and the fetcher hangs up.</p>
-<p>The fix runs the other way from the health check: we now want an old answer. On a miss, if the same page was stored in the last 48 hours, the Worker serves that copy right away, marked STALE, and builds the new one in the background. The next visitor in that data centre gets the new build. After the next deploy, all 12 of our warm-up probes got STALE instead of waiting.</p>
-<p>It fooled us once too: our own post-deploy browser check loaded a STALE page, saw its prefetches refused by the newer build, and failed the deploy. The check now throws away any load that isn't the build it just shipped and tries again.</p>
-<p>Same evening, same lesson from both directions: a cached answer is fine for a visitor and wrong for a probe. Every check has to know which one it's getting.</p>
-<p>If you want to see the page that crashed that night working again, the studio is where it lives, and one of the pages ChatGPT sends people to is the free video generator.</p>
-<p>What does your health check actually touch? If you ran it right now with your database frozen, would it say "ok"?</p>
+                <p>Every sound in VOIDSTORM — the music, the laser shots, the boss roar — is synthesized live with the Web Audio API. There is not a single audio file in the repository. The whole game is vanilla JavaScript and Canvas 2D: no engine, no framework, no build step. You open index.html and it runs.</p>
+<p>▶ Play it in your browser: https://kamalmosadegh.github.io/voidstorm/game/
+Source: https://github.com/kamalmosadegh/voidstorm</p>
+<p>VOIDSTORM is a neon arena survival shooter. You pilot a lone ship against escalating waves: five enemy types with distinct behaviours, a multi-phase boss on wave 10, and an endless mode after victory. Between waves you draft upgrades — damage, fire rate, shields, drones — so every run builds differently.</p>
+<p>1. A fixed-timestep loop with a seeded RNG.
+The simulation advances in fixed steps and renders interpolate between them, so gameplay speed is identical on a 60 Hz laptop and a 144 Hz monitor. All randomness comes from a seeded generator, which means a run is reproducible — when a tester says "wave 7 is unfair", I can replay the exact run they played.</p>
+<p>2. Synthesized audio instead of files.
+A tiny WebAudio synth stack generates everything: oscillators and noise buffers for shots and explosions, a procedural bassline and arpeggio for the soundtrack. The trade-off is real (you design sounds with envelopes, not samples), but the payoff is a game folder measured in kilobytes and zero asset licensing questions.</p>
+<p>3. Object pooling everywhere.
+Bullets, particles and enemies are pooled and reused. On a busy wave the game holds hundreds of live entities; without pooling, garbage-collection pauses show up exactly when the action peaks. With pooling, the frame budget stays boring — which is what you want.</p>
+<p>The upgrade draft started as a pure numbers game ("+10% damage") and tested flat. It only became fun when upgrades changed behaviour — split shots, piercing rounds, an orbiting drone. Numbers scale a run; mechanics diversify it.</p>
+<p>VOIDSTORM is one of six projects I shipped in November 2026 — alongside an algorithmic Bitcoin trading bot, a token-valuation model ranking 204 protocols, and a second open-world browser game, Solmar Bay. Everything is on my portfolio: https://kamalmosadegh.github.io</p>
+<p>If you build games with zero dependencies, I would love to hear how you handle audio. Questions and feedback welcome — here, or by email via my portfolio.</p>
 <p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
 <p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
 <p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
 <p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/ref_vid/our-health-check-said-db-ok-for-40-minutes-it-was-talking-to-a-cache-4b5l" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/kamalmosadegh/i-built-a-complete-arena-shooter-in-vanilla-javascript-no-engine-no-libraries-no-audio-files-46m0" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

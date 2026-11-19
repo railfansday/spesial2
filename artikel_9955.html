@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Much Memory Does Your Agent Actually Need?</title>
+    <title>&#x27;Java4Shell&#x27; Flaw Exposes OpenJDK to RCE via Base64</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9955.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,61 +15,90 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Much Memory Does Your Agent Actually Need?</h1>
+        <h1>&#x27;Java4Shell&#x27; Flaw Exposes OpenJDK to RCE via Base64</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/java_64.png" alt="&#x27;Java4Shell&#x27; Flaw Exposes OpenJDK to RCE via Base64" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/j-n1Au9SJ2-RGkT9i98u4.jpeg" alt="How Much Memory Does Your Agent Actually Need?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/java_64.png" alt="'Java4Shell' Flaw Exposes OpenJDK to RCE via Base64" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous post, we compared ALTK-Evolve with ACE and showed that how you deliver an agent's self-distilled guidelines — a few retrieved per task vs. the whole set injected — drives both accuracy and cost. This post steps back to the question that comes before it: how much should you give it?</p>
-<p>Equipping an agent with agentic memory sounds simple: distill lessons from its past work, put them back in context, and more experience should mean better performance. It doesn't always work that way. When we scaled the evaluation to eight models — from a 30B dense model to frontier proprietary systems — one finding stood out:</p>
-<p>Agentic memory is not a feature you switch on. It's a dose you calibrate to the model.</p>
-<p>ALTK-Evolve lets an agent learn from its own past trajectories: distilling reusable guidelines and injecting them back at inference time, with no weight updates and no human annotation.</p>
-<p>The right dose differs by model tier: strong models with headroom want the full guideline set, weaker models do best with a compact core plus per-task retrieval, and saturated models show no measurable gain.</p>
-<p>Curated retrieval can be both the most accurate and the cheapest option: gpt-oss-120b gained +16.1pp task completion at only +5% tokens — and prompt caching keeps even the full guideline set affordable in production.</p>
-<p>Not every model benefits from the same amount of memory. Across eight models spanning the capability spectrum, we saw three recurring patterns:</p>
-<p>Strong models with headroom want the full guideline set — every guideline, including rare edge-case lessons. They have the capacity to absorb and apply all of it. DeepSeek-V3.2 (671B MoE) climbed +9.5 percentage points in task completion when given its full self-mined guideline set.</p>
-<p>Smaller or weaker models get drowned by a large guideline set. For these, a tight, high-confidence core plus a handful of task-relevant guidelines retrieved per task works best. gpt-oss-120b (117B MoE) gained +16.1pp with this selective approach — while the full guideline set gained less and cost ~50% more tokens.</p>
-<p>Already-saturated models show no measurable gain. We call this the saturated pattern — the label describes what we observed, not a proven cause. The model may already have been near its ceiling on these tasks, the guidelines may not have addressed its remaining failures, or it may not have applied the guidance effectively. GLM-5 (745B MoE) sat here in our runs.</p>
-<p>What puts a model into one pattern rather than another isn't simply parameter count. Benchmark headroom, context-window size, architecture, guideline quality, and task distribution all appear to shape where a model lands, and separating those factors is ongoing work. The practical takeaway holds either way: the right dose of memory depends on the model, and we can calibrate it.</p>
-<p>"Memory" here doesn't mean replaying a past transcript. It means a guideline set — strategies that worked, mistakes to avoid, and edge cases — distilled from the agent's own prior trajectories. The loop is straightforward:</p>
-<p>The agent attempts tasks and produces trajectories.</p>
-<p>ALTK-Evolve extracts behavioral guidelines from both its successful and unsuccessful runs.</p>
-<p>It consolidates those guidelines into a reusable set.</p>
-<p>At inference time, the agent receives either the full guideline set or a task-relevant selection of it.</p>
-<p>No model weights are updated. The learning loop changes the guidance available to the agent, not the underlying model — which is exactly why it's cheap to adopt and portable across the eight models we tested.</p>
-<p>We evaluated on AppWorld — 585 multi-step tasks (168 test_normal + 417 test_challenge) across 9 simulated apps (calendars, messaging, payments, and so on). Tasks are scored two ways: whether the agent fully completes each task (TGC — Task Goal Completion) and whether every variant of a scenario passes (SGC — Scenario Goal Completion, a stricter, all-or-nothing bar). Full definitions are in the appendix.</p>
-<p>Because the confusing part of any memory study is what's actually in the context window, we define the configurations up front.</p>
-<p>Both memory configurations draw from the same guideline set, mined once (via the loop above) from AppWorld's training split only. What changes between them is only how that one set is delivered — the full guideline set injects all of it every step, while curated retrieval delivers a selected subset — never how the guidelines were produced, and no test-split data ever goes into building it.</p>
-<p>The number of guidelines a model mines depends on its own capability, so we report configurations by strategy — "full guideline set" vs. "curated retrieval" — rather than by raw counts, which aren't comparable across models.</p>
-<p>Representative models from the eight-model sweep, measured by task completion (TGC) on test_normal:</p>
-<p>Figure 1. Representative models in the three observed patterns. Bars show TGC on AppWorld test_normal for baseline vs. the best-memory configuration; the x-axis begins at 40% to make differences visible. TGC alone understates the larger SGC gains — see the SGC columns in the table below.</p>
-<p>The figure plots TGC to keep it readable; the table adds the stricter SGC metric, where the gains are often larger:</p>
-<p>Reading the SGC column, the stricter metric usually moves more than TGC — DeepSeek's SGC jumps +16.1pp against a +9.5pp TGC gain — because good guidelines especially help an agent clear every variant of a scenario, not just the average case. And the effect doesn't disappear at the top of the range: GPT-5.5 and Opus, both near the ceiling on TGC, still gain +7.2 and +7.1pp SGC respectively. Memory keeps paying off as long as a model has a remaining failure mode to target.</p>
-<p>A practical concern: injecting a full guideline set inflates every ReAct step's input, because the guidelines are re-sent each turn. Here's what we observed:</p>
-<p>Table 1. Average token use per task, accumulated across agent steps, measured against the no-memory baseline.</p>
-<p>Curated retrieval keeps cost near baseline. For weaker models, where selection wins on accuracy, it also wins on cost — the best of both worlds (+16.1pp TGC at only +5% tokens for gpt-oss-120b). Better performance here does not require more inference cost.</p>
-<p>Memory doesn't blow up the reasoning loop. DeepSeek runs about the same number of ReAct steps with memory as without (≈18–19 on average), so the added cost is input-token inflation, not longer trajectories.</p>
-<p>The real efficiency lever in production is prompt caching: the static portion of the guideline set is identical across steps and can be cached, cutting effective cost substantially. Cache-aware prompt design — keeping the shared guideline-set prefix stable so it stays cacheable — is worth engineering for. We also hypothesize that context-window size plays a role: models with larger windows may absorb the full guideline set more effectively, while smaller-context models benefit more from retrieval that keeps injected content compact. We have not yet run controlled experiments isolating this factor.</p>
-<p>The lesson isn't to give an agent everything it has learned. It's to give it the amount of experience it can actually use.</p>
-<p>For weak models, that means a compact core plus a few task-specific lessons — which, conveniently, is also the cheapest option.</p>
-<p>For strong models with headroom, it means preserving the full guideline set, kept affordable in production via prompt caching.</p>
-<p>For saturated models, it means spending no extra context until their remaining failure modes are better understood.</p>
-<p>The gains are real across the board — automatic, leakage-free, and requiring no human annotation — but only when the dose fits the model.</p>
-<p>This is a starting point, not the finish line:</p>
-<p>A learned selector. Our current retrieval ranks guidelines by cosine similarity, which we've shown doesn't perfectly predict which guidelines help a given task. A selector trained on outcome signal is the natural next step.</p>
-<p>Memory for very weak models. Below a minimum capability baseline, self-distillation lacks signal. Teacher-distilled memory for very weak models is a separate problem we're exploring.</p>
-<p>Beyond AppWorld. These results are validated on AppWorld — a rigorous multi-step benchmark, but a single one. Broader agent benchmarks and real-world deployments are in progress.</p>
-<p>Isolating context window. As above, we want controlled experiments that separate context-window size from raw capability.</p>
-<p>Try the ALTK-Evolve library — which includes the extraction, consolidation, and retrieval pipeline used here — or read the full technical report for the complete method and ablations.</p>
-<p>AppWorld tasks are graded by two metrics, both reported as percentages (higher is better):</p>
-<p>TGC — Task Goal Completion. The share of individual tasks the agent completes fully and correctly. This is the headline "did it get the job done" number.</p>
-<p>SGC — Scenario Goal Completion. A stricter, all-or-nothing metric. Each scenario bundles several variants of the same task (the same request with different data, phrasing, or edge conditions). SGC counts a scenario as passing only if the agent succeeds on every variant. It measures reliability — an agent that solves a task most of the time but fails on one variant scores on TGC but not on SGC.</p>
-<p>Really interesting take on agentic memory. The idea that memory needs to be calibrated to the model rather than simply accumulated is especially useful for production systems. Selective retrieval also seems like a practical way to improve reliability without unnecessarily increasing context and inference costs. It makes a strong case for thoughtful custom AI agent development and enterprise AI agent solutions, where memory, performance, and cost all need to be designed together. https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>Oops! Memory-safe except when you have handwritten SIMD code to accelerate base64 decoding.Well, glad it's getting fixed anyhow.</p>
+<p>I was going to say the same thing, but you beat me to it.</p>
+<p>Certainly beclowns one of the biggest arguments for Java.</p>
+<p>And if you are running older x86_64 cpu's that lack some of the newer AVX512 instructions (ex avx512vbmi) your are supposedly safe.</p>
+<p>Certainly beclowns one of the biggest arguments for Java.The argument is not complete immunity from memory-safety issues, but a far reduced scope in which they are relevant and in which the developer needs to take care of them.There is no mainstream language that is 100% memory safe. All of them have at least some unsafe internals. The "memory safety guarantee" of the safe parts relies on the correctness of the unsafe internals they use.As example, from The Rustonomicon [rust-lang.org]:Much of the Rust standard library also uses Unsafe Rust internally. These implementations have generally been rigorously manually checked, so the Safe Rust interfaces built on top of these implementations can be assumed to be safe.That assumption holds only as long as those Unsafe Rust internal uses are actually bug-free, which is not a 100% guarantee as bugs can slip through even the most rigorous checks. After all, even the OpenJDK's AVX-512 Base64 decoder was very likely "rigorously manually checked"...What is true is that minimizing the unsafe parts reduces the attack surface and allows for more focused checks on those parts. This is still a very valid argument for Java compared to e.g. C/C++.</p>
+<p>Certainly beclowns one of the biggest arguments for Java.</p>
+<p>The argument is not complete immunity from memory-safety issues, but a far reduced scope in which they are relevant and in which the developer needs to take care of them.</p>
+<p>There is no mainstream language that is 100% memory safe. All of them have at least some unsafe internals. The "memory safety guarantee" of the safe parts relies on the correctness of the unsafe internals they use.</p>
+<p>As example, from The Rustonomicon [rust-lang.org]:</p>
+<p>Much of the Rust standard library also uses Unsafe Rust internally. These implementations have generally been rigorously manually checked, so the Safe Rust interfaces built on top of these implementations can be assumed to be safe.That assumption holds only as long as those Unsafe Rust internal uses are actually bug-free, which is not a 100% guarantee as bugs can slip through even the most rigorous checks. After all, even the OpenJDK's AVX-512 Base64 decoder was very likely "rigorously manually checked"...What is true is that minimizing the unsafe parts reduces the attack surface and allows for more focused checks on those parts. This is still a very valid argument for Java compared to e.g. C/C++.</p>
+<p>Much of the Rust standard library also uses Unsafe Rust internally. These implementations have generally been rigorously manually checked, so the Safe Rust interfaces built on top of these implementations can be assumed to be safe.</p>
+<p>That assumption holds only as long as those Unsafe Rust internal uses are actually bug-free, which is not a 100% guarantee as bugs can slip through even the most rigorous checks. After all, even the OpenJDK's AVX-512 Base64 decoder was very likely "rigorously manually checked"...</p>
+<p>What is true is that minimizing the unsafe parts reduces the attack surface and allows for more focused checks on those parts. This is still a very valid argument for Java compared to e.g. C/C++.</p>
+<p>From Oracle: [oracle.com] "The single biggest difference between Java and C or C++ is that Java's memory model eliminates the possibility of overwriting memory and corrupting data."</p>
+<p>This was the early argument for Java, and they didn't hedge it like "well actually it's a far reduced scope." But also in the early days, there weren't clever optimizations for niche cases like base64 decode.</p>
+<p>To give Java the benefit of the doubt and save face, one might say that it's an aspirational goal, not a bulletproof guarantee; or that t</p>
+<p>From Oracle: [oracle.com]
+"The single biggest difference between Java and C or C++ is that Java's memory model eliminates the possibility of overwriting memory and corrupting data."This was the early argument for Java, and they didn't hedge it like "well actually it's a far reduced scope."That statement is under the assumption that the language itself is implemented correctly. This is not different from the Rustonomicon, which makes the same assumption about Rust.This is from the first chapter of the Rustonomicon [rust-lang.org]:Safe Rust is the true Rust programming language. If all you do is write Safe Rust, you will never have to worry about type-safety or memory-safety. You will never endure a dangling pointer, a use-after-free, or any other kind of Undefined Behavior (a.k.a. UB).That is presented pretty clearly as "bulletproof guarantee", but it is actually only true under the assumption that Rust itself is implemented correctly.</p>
+<p>From Oracle: [oracle.com]
+"The single biggest difference between Java and C or C++ is that Java's memory model eliminates the possibility of overwriting memory and corrupting data."</p>
+<p>This was the early argument for Java, and they didn't hedge it like "well actually it's a far reduced scope."</p>
+<p>That statement is under the assumption that the language itself is implemented correctly. This is not different from the Rustonomicon, which makes the same assumption about Rust.</p>
+<p>This is from the first chapter of the Rustonomicon [rust-lang.org]:</p>
+<p>Safe Rust is the true Rust programming language. If all you do is write Safe Rust, you will never have to worry about type-safety or memory-safety. You will never endure a dangling pointer, a use-after-free, or any other kind of Undefined Behavior (a.k.a. UB).That is presented pretty clearly as "bulletproof guarantee", but it is actually only true under the assumption that Rust itself is implemented correctly.</p>
+<p>Safe Rust is the true Rust programming language. If all you do is write Safe Rust, you will never have to worry about type-safety or memory-safety. You will never endure a dangling pointer, a use-after-free, or any other kind of Undefined Behavior (a.k.a. UB).</p>
+<p>That is presented pretty clearly as "bulletproof guarantee", but it is actually only true under the assumption that Rust itself is implemented correctly.</p>
+<p>The argument is not complete immunity from memory-safety issues, but a far reduced scope in which they are relevant and in which the developer needs to take care of them.If they had written the base64 decoder in Java, it would not have this vulnerability.  But no, they decided to optimized it by not using Java, so they got a serious bug.
+
+Why was it so important to write the decoder in another language?  Isn't Java with JIT fast enough?</p>
+<p>The argument is not complete immunity from memory-safety issues, but a far reduced scope in which they are relevant and in which the developer needs to take care of them.</p>
+<p>If they had written the base64 decoder in Java, it would not have this vulnerability.  But no, they decided to optimized it by not using Java, so they got a serious bug.
+
+Why was it so important to write the decoder in another language?  Isn't Java with JIT fast enough?</p>
+<p>Why was it so important to write the decoder in another language?  Isn't Java with JIT fast enough?That's the kind of special case implementations you want as fast as possible. I doubt any mainstream language that takes performance seriously does it completely without unsafe internals either.</p>
+<p>Why was it so important to write the decoder in another language?  Isn't Java with JIT fast enough?</p>
+<p>That's the kind of special case implementations you want as fast as possible. I doubt any mainstream language that takes performance seriously does it completely without unsafe internals either.</p>
+<p>As an exercise, I reimplemented that base64 in pure Java, using the recent Vector API (and improving it a bit too to get fully on par, so it wouldn't work as is). It matches native speeds within a few %.The Vector API is still technically in incubation though, so base Java modules cannot depend on it.Furthermore, you are not really avoiding unsafe code completely, only moving the problem. The Vector API itself is implemented by HotSpot intrinsics in C++, which means its use is safe only as long as the underlying C++ implementation is bug-free.</p>
+<p>As an exercise, I reimplemented that base64 in pure Java, using the recent Vector API (and improving it a bit too to get fully on par, so it wouldn't work as is). It matches native speeds within a few %.</p>
+<p>The Vector API is still technically in incubation though, so base Java modules cannot depend on it.</p>
+<p>Furthermore, you are not really avoiding unsafe code completely, only moving the problem. The Vector API itself is implemented by HotSpot intrinsics in C++, which means its use is safe only as long as the underlying C++ implementation is bug-free.</p>
+<p>It does move the problem indeed, but to a central place, so that is now what needs to be verified instead of every specialized use case like base64.There is no question implementing it on top of something like the Vector API would be better than a low-level ad-hoc implementation.I'm not arguing against it being better, I'm arguing against the blanket "If they had written the base64 decoder in Java, it would not have this vulnerability" argument that was in the post that started this particular discussion.</p>
+<p>It does move the problem indeed, but to a central place, so that is now what needs to be verified instead of every specialized use case like base64.</p>
+<p>There is no question implementing it on top of something like the Vector API would be better than a low-level ad-hoc implementation.</p>
+<p>I'm not arguing against it being better, I'm arguing against the blanket "If they had written the base64 decoder in Java, it would not have this vulnerability" argument that was in the post that started this particular discussion.</p>
+<p>I mean, so are arrays, if you go down far enough.  Something has to eventually allocate the memory and free it when necessary somewhere and that code can always have bugs.  The point is that the JVM only has to get it right once, not every time.  That doesn't mean it will be bug free and because everything relies on the JVM, a bug in it has a similar blast radius as a bug in the C compiler or libc.</p>
+<p>Absolutely not. Java guarantees that you can't write memory unsafe code in it. However, yes there can be problems within the implementation of the Java itself on any libraries that it uses if they're written with memory unsafe languages.</p>
+<p>> Certainly beclowns one of the biggest arguments for Java</p>
+<p>No, it just makes clowns of the OpenJDK teams. There's no good reason to write Base64 implementations in assembler. The idea that native Java isn't fast enough to process Base64 in the kinds of  volumes Base64 is used in is completely absurd. What the fuck were they thinking? And if they are going to implement this why wasn't it subject to rigorous review and testing?</p>
+<p>I'm not impressed with the Java back-end these days. I found changing the garbage</p>
+<p>My wisdom is that the normal use case for base64 is once in a blue moon. You don't weaken the security of your code because you want to hand optimize some code that the average code base will use maybe once or twice for every web call. Nobody's writing a loop to go through 100,000 base64 strings.</p>
+<p>This is what comes of people who don't use profilers or don't understand how their code works enough to realize where the bottle necks are.</p>
+<p>This is what comes of people who don't use profilers or don't understand how their code works enough to realize where the bottle necks are.</p>
+<p>I don't think that's true of the authors, though.</p>
+<p>And optimizing it wasn't a bad idea. The pure java version was already optimizable, and using AVX is a good, supposedly easy way to speed it up. Decoding a token is only a fraction of a web request processing time, but it does matter for bigger payloads too (mime...)</p>
+<p>You spend a lot of time in Java processing JWTs and other JSON objects that have been base64 encoded to be able to pass through a query parameter.  Or you might be handling MIME-encoded file uploads.  Or processing PEM-encoded X.509 objects all day.  Honesty, there is base64 in about 60% of our request paths, and that only if you don't count OAuth, then it's more like 100%.</p>
+<p>And remember, the impetus for changes like this is often from big companies that are running millions of servers, where shaving off 0.05</p>
+<p>I'm not impressed with the Java back-end these days. I found changing the garbage collector from the default to the "old" one (serial - also known as -XX:+UseSerialGC) was enough to cut memory usage of an application I was using that was typically using a gigabyte of RAM by... 85%. What's the downside? You might possibly notice tiny pauses from time to time. How the hell do they blow up memory usage by 8X just optimizing a GC?The primary use case for Java these days is for backend servers, where "a tiny pause" can cause you to blow your p95 latency SLO, especially if volume is high and "from time to time" becomes every 5 seconds.  A few extra $/mo on RAM depreciation more than pays for itself.  This is especially true when more and more back end serves are responding to intents generated by AI voice agents rather than a browser.  You need much quicker responses for voice than you do for web.  And occasional wait for an extra 700</p>
+<p>I'm not impressed with the Java back-end these days. I found changing the garbage collector from the default to the "old" one (serial - also known as -XX:+UseSerialGC) was enough to cut memory usage of an application I was using that was typically using a gigabyte of RAM by... 85%. What's the downside? You might possibly notice tiny pauses from time to time. How the hell do they blow up memory usage by 8X just optimizing a GC?</p>
+<p>The primary use case for Java these days is for backend servers, where "a tiny pause" can cause you to blow your p95 latency SLO, especially if volume is high and "from time to time" becomes every 5 seconds.  A few extra $/mo on RAM depreciation more than pays for itself.  This is especially true when more and more back end serves are responding to intents generated by AI voice agents rather than a browser.  You need much quicker responses for voice than you do for web.  And occasional wait for an extra 700</p>
+<p>All I see is old hardware running Java 8.</p>
+<p>The future's so bright I gotta wear shades.</p>
+<p>Is that like a fancy new compiler for Rust or Go? Never heard of it. /s</p>
+<p>The short answer is that Java was a language that built complexity with a chain of inheritance from Object, and reduced complexity with interfaces.</p>
+<p>Java was used to build programs for an imaginary JavaOS, that was never really completed (sort of like Gnu/Hurd).</p>
+<p>Instead of building executable programs,
+you used Java to build Jar files.  A Jar file was like a compiled library,
+that was to be installed in the JavaOS.</p>
+<p>Yes but the real question is what is "/s" and what does it mean when someone puts "/s" at the end of the post?</p>
+<p>Speech4Shell will allow you to gain the root shell on a cloud server simply by talking with ChatGPT.</p>
+<p>QuickBASIC2Shell nearly decimated my entire company</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Bank CEOs, NSA Tell Congress That AI-Driven Patches Are Behind Outages</p>
+<p>Cambridge Dictionary Names 'Human' Its 2026 Word of the Year</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-hmm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://developers.slashdot.org/story/26/11/18/1931246/java4shell-flaw-exposes-openjdk-to-rce-via-base64?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

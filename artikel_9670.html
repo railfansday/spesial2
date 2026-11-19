@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I Built a Transaction Guard That Has to Prove Its Own Decisions</title>
+    <title>Wispr Flow Notetaker for iPhone</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9670.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>I Built a Transaction Guard That Has to Prove Its Own Decisions</h1>
+        <h1>Wispr Flow Notetaker for iPhone</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fbqfaa6xlowes5jwgz4st.png" alt="I Built a Transaction Guard That Has to Prove Its Own Decisions" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fbqfaa6xlowes5jwgz4st.png" alt="I Built a Transaction Guard That Has to Prove Its Own Decisions" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Written for the zkVerify Agent Games Season 01 Creator Track. #AgentGames</p>
-<p>On BNB Chain, new tokens and free mints show up every day. Every one of them asks you to sign something. Your wallet shows you a hex string and a button. You are supposed to decide, from that hex, whether the transaction is safe.</p>
-<p>Most people cannot. The failure modes are not exotic. They are the same three patterns, over and over:</p>
-<p>I have watched this from the other side. I run an opportunity hunter on BNB Chain: free mints, claims, airdrops. Every lead gets verified before anything is signed. Domain check, simulation, wallet preview, contract audit. The manual version of that process works, but it is slow and it does not scale. So I built an agent that does the screening and then proves it did the screening. That agent is Aegis, my entry for the Wildcard Track.</p>
-<p>Aegis is a public HTTPS endpoint. You send it a proposed transaction. It answers with a decision and a proof.</p>
-<p>(The signals are [ok, c1, c2, c3, c4, c5, c6, decision]. The guard fails fast: once check 2 fails, checks 3 to 6 are not run, so they read 0. The proof attests exactly the checks that ran and passed.)</p>
-<p>APPROVE is issued only if all six pass. Anything unknown, unparseable, or unreachable is a REJECT. The guard fails closed on purpose. A missed good transaction costs you an opportunity. A passed bad transaction costs you the wallet.</p>
-<p>The interesting part is not the checklist. It is the proof. Every Aegis response carries a Groth16 proof (BN128, Circom 2.x, generated with snarkjs) over a small custom circuit:</p>
-<p>The circuit is tiny (14 constraints). Its job is narrow: it binds the decision to the check results. You cannot generate a valid proof for an APPROVE when any check failed. The witness assertion fails first. I tested that directly: asking the prover for APPROVE with check 2 set to 0 throws, every time. A REJECT proof always works, because a rejection never claims anything passed.</p>
-<p>When a Kurier API key is configured, the proof is also submitted to zkVerify mainnet through Kurier and polled until Finalized. The verification key for the guard circuit is registered once; its hash is cached for later submissions. Without a key, proofs are still generated locally and returned, just not anchored on chain.</p>
-<p>Here is the part I want to be precise about, because it is the whole point of this competition: the proof binds the decision to the check results. It does not prove the checks are right about the world. If my known-selector list is wrong, or the blocklist is stale, or the RPC lies, the proof still verifies. The check list is the security boundary, not the circuit. Anyone can read it in src/decide.mjs. That is a feature, not a footnote. A guard whose rules are secret is just another thing to trust blindly.</p>
-<p>Aegis is my second agent in this tournament. The first is a Proof Gatekeeper: a payment guard that receives signed tasks, decides APPROVE or REJECT under seven trap varieties, and proves each decision with the platform's own Groth16 circuit. It is live, and it passed its practice task (a RECIPIENT_MISMATCH trap, correctly rejected, proof verified, 3.1 seconds).</p>
-<p>The Gatekeeper's field guide contains one sentence that rewired how I think about this work: "A proof can verify perfectly and still authorize the wrong action." Three of the seven traps carry proofs that genuinely verify. Wrong verification key, wrong recipient, expired condition. The math is right and the payment is still wrong. Verification is necessary. It is not sufficient. You have to check what was proven, not only whether verification succeeded.</p>
-<p>The tournament's own numbers make the same point from the other side. In Round 2 of Proof Gatekeeper, 272 tasks were issued, 129 agents answered, and zero proofs verified. Not one. The cryptography was not the hard part. The plumbing was: public endpoints, HMAC signatures on raw bodies, 60-second deadlines, key registration, finality polling. Aegis inherits all of that plumbing from the Gatekeeper build, and the lesson with it. I built the guard strict and the proof narrow on purpose, because the failure I am guarding against is not "the proof was invalid". It is "the proof was valid and the decision was still wrong".</p>
-<p>Node 22, standard library only, plus snarkjs. The decision logic is pure and dependency-free so it can be tested without a network: the test harness spins up a mock JSON-RPC server and runs 16 checks. Ten decision cases (plain transfer, bounded approve, unlimited approve, setApprovalForAll(true), unknown selector, call to an address with no code, transfer to the zero address, blocklisted target, reverted simulation, malformed request), three proof cases (an APPROVE proof verifies, an APPROVE with a failed check cannot be proven, a REJECT proof verifies), and three live-server smoke tests against the real HTTP endpoint.</p>
-<p>The repo is public: github.com/axzss/aegis-tx-guard. It deploys to Render's free tier with a render.yaml blueprint, health check on /health, and a keep-alive ping because free services sleep after 15 minutes idle. No secrets are committed; the only configuration is an RPC URL, an optional blocklist, and an optional Kurier key.</p>
-<p>The honest use case is narrow: anyone about to sign a transaction gets a pre-sign verdict with a proof attached, instead of trusting hex. Wallets and agent frameworks can call it before presenting a signature prompt. Mint and claim hunters can screen a contract call before the wallet preview. The guard does not hold funds, does not sign anything, and cannot move money. It only says yes or no, and proves the yes followed from the checks.</p>
-<p>What it cannot do matters too. It cannot judge a contract it has never seen. Unknown selectors are rejected, which means legitimate but unlisted calls need a list update. Simulation is only as good as the RPC answering it. A stale blocklist is a hole. I documented all of that in the repo because a security tool that hides its limits is worse than no tool at all.</p>
-<p>The Wildcard Track asks for one thing: an agent that helps someone do something real. A transaction guard does that in the most literal way possible. It stands between a person and the most expensive button on their screen, and it refuses to wave through anything it cannot explain. The zkVerify part is optional for the track and I used it anyway, because a guard that cannot prove its own decisions is asking for exactly the kind of blind trust it exists to remove.</p>
-<p>If you build agents that touch money, build them so their decisions can be checked. Not just verified. Checked.</p>
-<p>Aegis is my Wildcard Track entry for zkVerify Agent Games Season 01 (21 Oct to 21 Nov 2026, judging 22 to 30 Nov). The Proof Gatekeeper agent it builds on is live at https://zkverify-gatekeeper-agent.onrender.com. Both repos are public under github.com/axzss. #AgentGames</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            Free AI meeting notes, wherever work takes you
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/wisprflow?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1321899?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/axzss/i-built-a-transaction-guard-that-has-to-prove-its-own-decisionsagentgames-8pj" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/wisprflow" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
