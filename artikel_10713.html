@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How to Reduce Hallucinations in LLMs</title>
+    <title>Building a Human Review Pipeline for AI Search: A Practical Developer’s Guide</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10713.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,73 +15,111 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How to Reduce Hallucinations in LLMs</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>Building a Human Review Pipeline for AI Search: A Practical Developer’s Guide</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_reduce_llm_halucinations_gp_at_desk_checking_billing_items_89cb43bf21.png" alt="How to Reduce Hallucinations in LLMs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Human_Review_Trusted_AI_Search_7e8b7d5802.png" alt="Building a Human Review Pipeline for AI Search: A Practical Developer’s Guide" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_reduce_llm_halucinations_gp_at_desk_checking_billing_items_89cb43bf21.png" alt="How to Reduce Hallucinations in LLMs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Human_Review_Trusted_AI_Search_7e8b7d5802.png" alt="Building a Human Review Pipeline for AI Search: A Practical Developer’s Guide" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Ask one of the newest language models whether a backpack comes in green, and it'll usually admit it doesn't know. Ask it how to return that backpack, and it may send the customer to a returns page, an account screen, and a return label that the store has never had. That's still a hallucination: an answer that sounds right, comes with total confidence, and isn't true.</p>
-<p>Whatever you're building, the fix is the same: stop trusting the model with the parts it can get wrong, and check its work before anyone sees it.</p>
-<p>In this tutorial we'll build a small support bot for a made-up outdoor gear store, three times over. The first version is the prompt plenty of bots start with. Then we'll apply five fixes, run six tricky customer emails through every version, and finish with a bot where the model can't slip a made-up price, date, or product past the code.</p>
-<p>An LLM hallucination is output that's fluent and confident but not backed by the facts: a product that doesn't exist, a policy nobody wrote, a date that's a week out, or a citation to a paper that was never published. The word covers two different failures:</p>
-<p>Each one needs a different fix, so it helps to keep them apart.</p>
-<p>A language model writes by predicting likely text, one token at a time. It has no separate store of facts it checks against, and nothing in that process says "stop, you don't know this". Training adds to the problem. OpenAI's research on why language models hallucinate points out that when models are graded only on how many answers they get right, a guess scores better than "I don't know", so they learn to guess.</p>
-<p>Newer models are much better at the first one. They'll often say they don't know a price rather than invent one. But they still fill gaps with what's typical, and what's typical isn't always what's true for your business. You can't train that out of a model you call through an API. What you can change is what you ask it to do, what you give it, and what you check.</p>
-<p>A made-up answer costs more than one bad reply. Some of the costs are already on the record:</p>
-<p>In a support inbox, the cost is quieter but adds up: a refund you didn't owe, or a customer who goes looking for a live chat button that isn't there and doesn't come back.</p>
-<p>Northwind Outdoor sells four things: two packs, a rain cover, and a tent. It has two orders on file and three short policies. Here's all of it:</p>
-<p>Six emails come in, and each one is there to trip the bot in a different way:</p>
-<p>The traps: the 40L pack doesn't come in green, but the 28L does. The 40L is water-resistant, not waterproof. There's no 60L. Whether the return is allowed depends on a membership, a sale price, and a count of days since delivery. The tracking details are in one order record. And the store has no price match policy at all.</p>
-<p>Make a folder, add "type": "module" to its package.json, and install the Anthropic SDK and Zod:</p>
-<p>Every version calls the model through one small helper:</p>
-<p>We're using Claude Opus 5.5 at low effort. These are short, simple replies, so the model doesn't need to think for long. Swap in any model you like, because none of the fixes depend on it.</p>
-<p>Opus 5.5 didn't invent a single price, colour, or delivery date across the six emails. Every reply said it couldn't see the store's details. That's real progress compared with older models, but look at what it said instead. Here's the reply to the email about a pack the store doesn't sell:</p>
-<p>It treats the Ridgeline 60L as real and offers to help pick a fit. The other replies made up the store around the customer:</p>
-<p>Northwind has none of those. None of it is a wild guess: it's what a typical online store has. That's exactly why it's dangerous. A customer who goes looking for the live chat or the newsletter discount won't find it, and the bot never answered the question anyway.</p>
-<p>The model can't know Northwind's prices, so give them to it. This is the idea behind retrieval-augmented generation (RAG): find the records that matter and put them in the prompt. Our store is small enough to send all of it.</p>
-<p>Two things changed. The store data goes in the system prompt, wrapped in tags so the model can tell data from instructions. And the prompt tells it to answer only from that data. Here's the green pack email again:</p>
-<p>Right on all three counts, and it even pointed to the pack that does come in green. The return, which needs four facts from two places, came back right as well:</p>
-<p>Delivered October 6, a Trail Club member, so 60 days, so December 5. Bought on sale, so store credit for what was paid, not the list price. Version 2 got all six emails right.</p>
-<p>The last line of that prompt matters as much as the data: "If the answer isn't in the data, say you don't know and that a team member will reply by email." Without it, a model that can't find the answer has to choose between letting the customer down and guessing, and training has taught it to guess. With it, "I don't know" is a right answer, not a failure.</p>
-<p>The price match email is the test, since the store data says nothing about price matching:</p>
-<p>It said it didn't know, passed the question to a person, and answered the parts it could from the data.</p>
-<p>If version 2 got everything right, why build a version 3? Because "right on this run" isn't the same as "right every time":</p>
-<p>The next three fixes take the facts and the rules away from the model completely.</p>
-<p>Version 3 splits the work into three steps. First, the model reads the email, but instead of writing a reply, it fills in a form. Every field is a choice from a list, a yes or no, or text copied from the email:</p>
-<p>Zod describes the form, and z.toJSONSchema() turns it into a JSON schema for the API's structured outputs. The API holds the model to that schema, so product can only be one of our four product IDs, not_sold, or none. There's no way for it to answer ridgeline-60. Zod then checks the answer again, so the rest of the code gets a typed object. SitePoint's guide to LLM structured output with JSON Schema goes deeper on this pattern.</p>
-<p>The model is still reading natural language, which it's very good at. It just isn't trusted to know what the store sells anymore.</p>
-<p>A form also makes the model's mistakes easy to see. The first time I ran this, the form had no asks_something_else field, and the model filed the price match email under product. The reply didn't make anything up, but the email never reached a person. In version 2, a mistake like that would be hidden inside a paragraph. Here it was one wrong value in a JSON object, and the fix was one more field.</p>
-<p>If all you need from this step is decisions like these, a model built for typed answers can do it faster and for less. Our typed AI pipeline tutorial builds the same kind of email sorter with Jev and Clairic.</p>
-<p>Second step: plain code takes the form, looks up the product and the order, applies the rules, and does the maths. What comes out is a list of facts in plain sentences:</p>
-<p>Every number in there was worked out by code that does the same thing every time, and that you can unit test. The 34 days, the December 5 deadline, and the $151.20 in store credit come out the same on every run, whatever the model does.</p>
-<p>The last rule in decide() matters most. If an email asks something the rules don't cover, the facts say so and the email goes to a person. Code decides when to say "I don't know", not the model.</p>
-<p>Third step: the model writes the reply from the facts and nothing else. Writing is the one job here it does better than code.</p>
-<p>Even with the right facts, a model writing a reply can still add something: a helpful "ships in 1–2 business days", or a price it remembers from somewhere. So the last step checks the reply. Anything that looks like a number, an order number, or a product name has to appear in the email or the facts:</p>
-<p>It's simple on purpose. It doesn't understand the reply. It just refuses to let through a value that came from nowhere, and that covers the hallucinations that cost money: prices, dates, quantities, and products. Nothing in the reply can talk it out of a result.</p>
-<p>The writer runs the check on every draft:</p>
-<p>If a draft fails, the model gets one retry and is told exactly which values weren't in the facts. If the retry fails too, the customer gets the facts as a plain list. That's less charming, but it's true.</p>
-<p>A check like this will raise false alarms, and that's fine. On my first run, it read a line about the tent's 2.1 kg weight as a product called "Weighs 2" and sent the draft back for a retry. The weight was right, and it was the only thing flagged. A false alarm costs a few seconds. A missed one costs a customer. I tightened the patterns (the version above has the fix), but I'd still rather it flag too much than too little.</p>
-<p>It's the same thing that separates the better agentic AI coding tools from autocomplete: they run the tests and read the errors instead of trusting their first draft. Model output isn't finished until something other than the model has checked it.</p>
-<p>This script sends each email through all three versions, saves every reply, and runs the check from Fix 5 over all of them. Versions 1 and 2 are checked against everything the store knows:</p>
-<p>The check caught one thing in version 1: the "1–2 business days" it made up for processing an order. It missed the "up to 24 hours" for tracking in the same reply, but only because $24 is the rain cover's price, so 24 counted as a known number. And it couldn't catch the invented returns page or live chat at all, because they aren't numbers. That's why the check is the last fix, not the only one.</p>
-<p>Reading all 18 replies, here's how each version did:</p>
-<p>Version 3 was less helpful than version 2 in one place. It couldn't give the rain cover's price, because decide() only adds facts about the product the email names. Version 2 had the whole store to look at. In version 3, the fix is a rule you write once: when a product has an add-on, include the add-on's facts too.</p>
-<p>Here's version 3's reply to the price match email:</p>
-<p>No model is free of hallucinations, so you can't stop one from ever making something up. What you can do is build so a made-up detail can't reach a customer: let code own the facts, and check the model's output against them before it's used. Where it matters, send anything your rules don't cover to a person.</p>
-<p>It cuts them a lot, because the model no longer has to guess facts it was never given. In our test, putting the store's data in the prompt took the bot from no useful answers to six right ones. It doesn't stop the model misreading what it retrieved, mixing up two records, or filling a gap the retrieved text leaves. Pair it with a way out and a check on the output.</p>
-<p>Not really. Temperature controls how random the wording is. A low temperature makes the model give the same answer more often, including the same wrong answer.</p>
-<p>Collect inputs that have tripped your app (or are likely to), write down the right answer for each, and run every version of your prompt or pipeline over the same set. Automated checks like the one in this tutorial catch made-up values. Read the replies yourself for the rest, because the made-up returns page above would pass any number check.</p>
-<p>Hallucinations come from asking a model to do jobs it isn't built for: knowing facts it was never given, and running small programs in its head. The five fixes take those jobs away:</p>
-<p>The model still does what it's best at: reading messy text and writing a friendly reply. It just isn't trusted with the facts anymore. From here, try a seventh email that asks two things at once, add the add-on rule to decide(), or extend the check to catch colours and sizes as well as numbers.</p>
+<p>An AI search feature can return valid JSON, render correctly, and still give an unhelpful answer.</p>
+<p>Imagine a documentation assistant answering a question about an API's current authentication requirements. It retrieves an outdated page, summarizes it fluently, and displays a citation. Every technical component appears to work, but the user receives instructions that no longer apply.</p>
+<p>Automated checks are valuable, yet they cannot replace a clearly defined judgment about whether an answer solves the user's problem.</p>
+<p>This guide builds a human-review workflow for a hypothetical API documentation assistant. You will define a review rubric, validate submissions with Python, measure reviewer disagreement, and turn accepted judgments into regression cases. The Python examples use Pydantic 2 and scikit-learn; they do not require a model-provider API key.</p>
+<p>Start by identifying the failure you want to detect.</p>
+<p>A documentation assistant usually has several stages: receive a question, retrieve relevant documents, generate an answer, and present that answer with supporting material.</p>
+<p>Do not collapse these into a single “good answer” rating. A low score without a reason tells the team little about what to fix.</p>
+<p>SitePoint’s introduction to retrieval-augmented generation provides background on how retrieval and generation fit together.</p>
+<p>Preserve the exact question, answer revision, retrieved passages, document versions, and retrieval timestamp for each run. Store a snapshot manifest with stable passage IDs, source URLs, and content hashes. Reviewers should see the material supplied to that run, not today’s edited page. Keep the model and prompt configuration with the run so a later review can be traced to the behavior it evaluated.</p>
+<p>A useful rubric defines observable criteria and separates evidence support from task completion and source suitability. Give each review the same user task and expected API version. Otherwise, reviewers may judge different questions while appearing to disagree about one answer.</p>
+<p>For an answer about API authentication, use separate labels such as:</p>
+<p>Supported: every material factual claim is backed by the supplied evidence.</p>
+<p>Partially supported: some material claims lack support, while others are grounded.</p>
+<p>Unsupported: the answer's central instruction lacks support or contradicts the evidence.</p>
+<p>Cannot assess: the necessary evidence is missing, unreadable, or inaccessible.</p>
+<p>Define task completion independently as complete, incomplete, or cannot assess. For source suitability, use suitable, outdated, or cannot assess. An answer can faithfully summarize an obsolete page while failing the request for current instructions.</p>
+<p>Consider a fictional API migration: version 2 accepts X-API-Key, while version 3 requires Authorization: Bearer <token>. If the supplied evidence contains only the version 2 page, an answer repeating X-API-Key can be supported by its evidence but still use an outdated source. If the evidence explicitly requires Bearer and the answer invents X-API-Key, label the answer unsupported. These are different engineering failures.</p>
+<p>Also establish what reviewers should do when the source is outdated. They may correctly conclude that an answer reflects its evidence while separately flagging that evidence as unsuitable for the user's current task.</p>
+<p>Start with a calibration batch covering clear successes, unsupported claims, missing evidence, and version mismatches. Have two reviewers label the same items independently, then compare their reasons. Revise ambiguous definitions before increasing volume; the batch is for improving the rubric, not estimating production quality.</p>
+<p>Keep a rubric version on every review. Labels produced under different definitions should not be mixed without checking comparability.</p>
+<p>A spreadsheet can help during exploration, but an engineering pipeline needs a stable record format.</p>
+<p>Pydantic can validate a review record before it enters the dataset. Install Pydantic 2 and scikit-learn in your project environment, then use this model:</p>
+<p>from pydantic import BaseModel, ConfigDict, Field, ValidationError</p>
+<p>model_config = ConfigDict(extra="forbid", strict=True)</p>
+<p>answer_revision: str = Field(min_length=1)</p>
+<p>completion: Literal["complete", "incomplete", "cannot_assess"]</p>
+<p>source_fit: Literal["suitable", "outdated", "cannot_assess"]</p>
+<p>rationale: str = Field(min_length=20, max_length=2000)</p>
+<p>Strict mode limits type coercion, and extra="forbid" rejects unexpected fields. The model checks shape and allowed values; it cannot establish that a judgment is correct. A minimum rationale length does not guarantee a useful explanation. The snapshot ID references a manifest, which can also record that retrieval produced no usable passages.</p>
+<p>On the server, resolve the item, answer revision, snapshot, and passage IDs against the stored run. Reject IDs that do not belong together. Obtain the reviewer identity from the authenticated session rather than trusting a submitted reviewer_id. Store a server-generated submission time and preserve review revisions instead of silently overwriting earlier judgments.</p>
+<p>Run this after the model definition. It accepts one fictional review and rejects both an unknown label and an extra field:</p>
+<p>"rationale": "The answer invents X-API-Key; p1 requires Bearer.",</p>
+<p>raise AssertionError("Invalid review was accepted")</p>
+<p>The expected error types are literal_error and extra_forbidden. Add separate integration tests for mismatched evidence IDs, unauthorized submissions, and retries. Use a database uniqueness rule or an idempotency key so a repeated request does not create a second independent review.</p>
+<p>More reviews do not automatically produce better evidence. If a task is ambiguous, scaling it can simply reproduce the ambiguity.</p>
+<p>The workflow needs clear eligibility requirements, examples, escalation routes, and acceptance criteria. Reviewers assessing API behavior may need domain knowledge that general writing fluency does not provide.</p>
+<p>If you work with an external AI-data contributor service such as Acquirox, define the task contract before assigning work: required expertise, permitted source material, output fields, and escalation rules. Keep ownership of the rubric, evaluation set, and acceptance decisions within the product team. Contributor capacity alone does not establish expertise in the API being reviewed.</p>
+<p>Pilot the actual task in the review interface. Track drafts, submitted reviews, items needing adjudication, and final decisions as distinct workflow states. Reviewer judgments should remain immutable once submitted; corrections should create a new revision with a reason. Keep adjudication separate from the original labels.</p>
+<p>For data involving users or contributors, document permitted uses, access boundaries, and retention. Remove credentials and unnecessary personal information from review material. An internal support transcript should not become a broadly accessible annotation task by accident.</p>
+<p>Distinguish annotation from usability research. A skilled reviewer can judge whether an answer is supported, but that does not prove a first-time user can understand the interface.</p>
+<p>SitePoint’s guide to choosing usability tests and participants offers related guidance on matching participants and methods to the question being investigated.</p>
+<p>The review interface shapes the data it collects.</p>
+<p>Label Studio is an option for configurable labeling interfaces and data import/export. If you use it, map exported annotations into the Review schema through an adapter; do not assume its export structure matches your application contract. A custom interface may be appropriate when reviewers need API-version navigation or passage-level citations.</p>
+<p>The original question and relevant user context.</p>
+<p>The evidence snapshot supplied to the model.</p>
+<p>Separate controls for support and task completion.</p>
+<p>A rationale field and an explicit “cannot assess” option.</p>
+<p>Display stable passage IDs beside the evidence and let reviewers attach those IDs to their rationale. Show the source version and retrieval time near each passage. Render retrieved content as untrusted text or sanitized markup, and never treat instructions embedded in a source document as reviewer instructions. Avoid loading executable third-party content inside the review panel.</p>
+<p>Avoid showing a preferred model name or a previous reviewer's verdict before an independent judgment. For pairwise comparisons, randomize answer order and include appropriate tie or neither-acceptable outcomes.</p>
+<p>Design for keyboard use, visible focus, readable text, and explicit selection states. Keep evidence and the answer accessible without requiring excessive horizontal scrolling.</p>
+<p>Start all judgment controls unselected and validate them on submission. Use labeled radio groups, an accessible error summary, and visible saving/submission status. A failed save should preserve the draft. Disable duplicate submissions in the UI, but enforce duplicate handling on the server as well.</p>
+<p>Practical check: observe a reviewer completing several borderline examples. Record where they pause, misinterpret a label, or cannot find the necessary source material.</p>
+<p>When two reviewers disagree, investigate before reducing their decisions to a majority vote.</p>
+<p>Different assumptions about the user's expertise.</p>
+<p>A genuine error by one or both reviewers.</p>
+<p>Preserve independent labels and store the adjudicated result separately. This allows the team to study ambiguity instead of erasing it.</p>
+<p>For two reviewers applying categorical labels to the same items, scikit-learn provides Cohen's kappa:</p>
+<p>from sklearn.metrics import cohen_kappa_score</p>
+<p>("q1", "a1", "s1", "auth-v1"): "supported",</p>
+<p>("q2", "a1", "s2", "auth-v1"): "unsupported",</p>
+<p>("q3", "a1", "s3", "auth-v1"): "supported",</p>
+<p>("q4", "a1", "s4", "auth-v1"): "partially_supported"</p>
+<p>("q3", "a1", "s3", "auth-v1"): "partially_supported"</p>
+<p>raise ValueError("Review sets must contain identical items")</p>
+<p>raw_agreement = sum(x == y for x, y in zip(left, right)) / len(keys)</p>
+<p>print(f"Raw agreement: {raw_agreement:.2f}")</p>
+<p>print(f"Kappa: {cohen_kappa_score(left, right):.2f}")</p>
+<p>This toy example prints raw agreement of 0.75 and kappa of about 0.64. Four items are not enough to assess a review program. In production, check for duplicate reviews before building dictionaries, use one rubric version per comparison, report unmatched items, and align all records by item, answer revision, and evidence snapshot.</p>
+<p>Kappa measures agreement beyond chance under its assumptions, not correctness. Inspect raw agreement, label frequencies, and the disagreement table alongside it. A single-category batch can make kappa undefined; report that limitation rather than substituting a reassuring score. Treat cannot_assess explicitly and report its frequency instead of silently excluding difficult cases.</p>
+<p>If both reviewers apply the same flawed rubric consistently, agreement can be high while the evaluation remains unhelpful.</p>
+<p>Once difficult cases are adjudicated, turn them into regression cases with explicit acceptance criteria. For the fictional authentication task: use version 3 evidence, cite the passage requiring Bearer, and do not invent a header. If version 3 evidence is missing, an acceptable response should explain the gap rather than provide confident instructions.</p>
+<p>Expected behavior or acceptance criteria.</p>
+<p>DVC can track larger datasets alongside Git. In an existing Git repository with DVC initialized and data/reviewed-auth.jsonl present, a minimal versioning step is:</p>
+<p>git add data/reviewed-auth.jsonl.dvc data/.gitignore</p>
+<p>git commit -m "Version authentication review cases"</p>
+<p>This commits metadata, not the dataset bytes. Configure an access-controlled DVC remote and push the data before expecting another machine or CI runner to retrieve it. Keep credentials and sensitive review material out of public repositories.</p>
+<p>Keep development examples separate from held-out evaluation cases. If developers repeatedly tune prompts against the same questions, those questions become less useful as evidence of generalization.</p>
+<p>Split related examples together where appropriate. Near-duplicate questions from one support conversation should not be scattered across development and evaluation sets.</p>
+<p>Use two evaluation passes. First, hold the evidence snapshot fixed to compare answer-generation changes. Then test retrieval against the intended document versions to detect stale or irrelevant sources. Record per-item outcomes and report failures by category; an overall improvement can hide a regression in version-specific or multilingual questions.</p>
+<p>SitePoint’s article on testing nondeterministic AI behavior provides further context for repeatable evaluation workflows.</p>
+<p>A correct answer can still fail in the interface.</p>
+<p>Users may overlook a caveat, misunderstand whether an operation has been performed, or miss that the evidence applies to an older API version.</p>
+<p>Pair answer review with practical usability tasks:</p>
+<p>Find the authentication requirements for version 3 and identify the source that supports them.</p>
+<p>Observe whether users complete the task and whether their confidence matches the available evidence.</p>
+<p>SitePoint’s overview of user research methods helps distinguish task observation from preference surveys.</p>
+<p>Turn interface failures into browser tests: a citation opens the expected document version, its passage ID matches the displayed evidence, missing evidence offers a recovery action, and a failed review submission preserves the draft. Verify that reviewers cannot access unassigned restricted items by changing an ID in the URL. These checks complement human judgments; they do not replace them.</p>
+<p>Do not use a fluent response as a substitute for a clear interaction. The interface should distinguish retrieved information, generated interpretation, and actions the application has actually completed.</p>
+<p>Start with one authentication task, a versioned rubric, and a small calibration batch. Use Pydantic for ingestion checks, Label Studio or a custom interface for review, scikit-learn for agreement analysis, and Git/DVC for dataset provenance. Add each tool only when it solves a concrete workflow need.</p>
+<p>At release time, run deterministic checks for schema, evidence references, permissions, and interface behavior. Compare candidate answers against adjudicated acceptance criteria and send new ambiguous failures back for review. Record the dataset revision and configurations with the results so another developer can reproduce the comparison.</p>
+<p>The purpose of human review is to produce evidence the team can act on. A smaller collection of well-defined, traceable judgments is often more useful than a large pile of ratings whose meaning nobody can explain.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/how-to-reduce-hallucinations-in-llms/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/building-a-human-review-pipeline-for-ai-search-a-practical-developer-s-guide/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

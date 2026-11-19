@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</title>
+    <title>Scientists overcome a hidden obstacle to more powerful quantum computers</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10359.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,109 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>Scientists overcome a hidden obstacle to more powerful quantum computers</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/futuristic-quantum-computer-system-glowing.webp" alt="Scientists overcome a hidden obstacle to more powerful quantum computers" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/futuristic-quantum-computer-system-glowing.webp" alt="Scientists overcome a hidden obstacle to more powerful quantum computers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Have 30-200 Employees? Make $50k-$500k selling your data for AI Training.</p>
-<p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Picture this. A customer writes to your support chatbot: "Hi, I'm Asha, my card ending 4111 was charged twice, call me on 98400 12345." Your Java service wraps that message in a prompt, sends it to a model, and logs the whole thing so you can debug it later. Congratulations, you now have a customer's name, phone number and card details sitting in a plain text log file that half the engineering team can open.</p>
-<p>This happens more often than people admit. Logging AI calls is genuinely useful, but prompts and responses are some of the most personal text your application ever touches. Here's how to keep the usefulness and drop the risk.</p>
-<p>A regular web request is easy to log: URL, status code, time taken. AI calls are messier.</p>
-<p>The output changes from run to run. If a user says "your bot gave me a wrong answer yesterday", the only proof of what happened is what you sent and what came back at that moment. You can't just replay it and expect the same result.</p>
-<p>Prompts are also built, not typed. The final text is usually a template, a few retrieved document chunks, some chat history and the user's message stitched together. When something looks off, the bug could be in any of those pieces, and only the assembled prompt shows you which one.</p>
-<p>Then there's cost. You pay by the token, so without per-call records you can't say which feature is burning money. And quality drifts over time as models get upgraded and templates get edited. Old logs are your only baseline.</p>
-<p>So yes, you need these logs. The real question is what goes into them.</p>
-<p>Before writing any masking code, agree on what counts as sensitive. In most business apps that means:</p>
-<p>Names, emails, phone numbers and home addresses</p>
-<p>Card numbers, bank details and government ID numbers</p>
-<p>Health, legal or job-related details people mention in free text</p>
-<p>Internal material like contract wording, pricing rules or source code</p>
-<p>The first three groups follow patterns, so they're easy to catch. The last two don't, and that's where most teams get caught out. Keep that in mind, because it shapes the design below.</p>
-<p>The safest sensitive value is the one that never reaches the log. So split what you record into two buckets.</p>
-<p>The first is metadata: a request ID, a hashed user or tenant ID, model name, prompt template name and version, token counts, latency, retry count, error type and estimated cost. None of this is personal, and it answers most day-to-day questions.</p>
-<p>The second is content, meaning the actual prompt and response text. You only need this when you're investigating quality, and even then you rarely need all of it. A sensible default is to log metadata for every call and masked content for a small sample, maybe five percent, plus every failed call.</p>
-<p>Here's a mistake that's easy to make: letting the log appender clean things up afterwards. By then the raw text may already be in a buffer, an async queue or a crash dump. Mask first, then log.</p>
-<p>The cleanest way is one small component that every AI log call has to pass through:</p>
-<p>public interface PiiMasker {
-    String mask(String input);
-}</p>
-<p>Nothing else is allowed to write raw prompts. One chokepoint is much easier to review and test than masking sprinkled across fifty classes.</p>
-<p>For structured data like emails, cards and tokens, regular expressions do the job well:</p>
-<p>public class RegexPiiMasker implements PiiMasker {
-
-    private static final Map<Pattern, String> RULES = new LinkedHashMap<>();
-
-    static {
-        RULES.put(Pattern.compile("[A-Za-z0-9.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[EMAIL]");
-        RULES.put(Pattern.compile("\b(?:\d[ -]?){13,19}\b"), "[CARD]");
-        RULES.put(Pattern.compile("\b(?:\+?\d{1,3}[ -]?)?\d{10}\b"), "[PHONE]");
-        RULES.put(Pattern.compile("(?i)bearer\s+[A-Za-z0-9.~+/=-]+"), "Bearer [TOKEN]");
-    }
-
-    @Override
-    public String mask(String input) {
-        if (input == null || input.isBlank()) return input;
-        String result = input;
-        for (var rule : RULES.entrySet()) {
-            result = rule.getKey().matcher(result).replaceAll(rule.getValue());
-        }
-        return result;
-    }
-}</p>
-<p>A few small choices matter here. The patterns are compiled once, not on every call. The order is fixed, because a card number can otherwise get half eaten by the phone rule. And the replacement labels such as [EMAIL] keep the sentence readable, so whoever debugs it later can still follow what the user was asking.</p>
-<p>Regex won't catch a name like "Asha Raman" or an address buried mid-sentence. For those you have a few options, and they work best together.</p>
-<p>You can run a named-entity recognition model that tags people, places and organisations, then mask anything above a confidence threshold. You can do exact replacement of values you already know, such as the customer's name from the current session. Or, best of all, you can mask at the field level while building the prompt. If your code knows that customer.getEmail() is going into the template, swap in a placeholder right there instead of trying to spot it afterwards. Knowing beats guessing every time.</p>
-<p>Plain redaction can remove too much. If the same email shows up five times in a conversation, five identical [EMAIL] tags hide the fact that it was one person.</p>
-<p>The fix is consistent pseudonyms. Turn each real value into a short token using a keyed hash, so the same email always becomes something like EMAIL_7f3a. You can still follow the thread, but nobody can read the original from the log. Use an HMAC with a secret from your secrets manager. A plain unkeyed hash of a phone number can be brute-forced in minutes, because there just aren't that many phone numbers.</p>
-<p>One warning: if you also store a lookup table to reverse the tokens, that table is now sensitive data too. Most teams are better off with one-way tokens.</p>
-<p>Free-text log lines are hard to search and easy to leak through. Write one JSON record per AI call with clearly separate fields:</p>
-<p>log.info("ai_call",
-    kv("requestId", requestId),
-    kv("model", model),
-    kv("promptVersion", "support-reply-v4"),
-    kv("inputTokens", usage.inputTokens()),
-    kv("outputTokens", usage.outputTokens()),
-    kv("latencyMs", elapsed),
-    kv("promptMasked", masker.mask(prompt)),
-    kv("responseMasked", masker.mask(response)));</p>
-<p>Now dashboards for cost and latency never need to touch the text fields at all. You can also keep the two kinds of data for different lengths of time: metadata for a year, masked content for a couple of weeks. Put the request ID into your logging framework's MDC so every line belonging to one call, including retries and tool calls, carries the same ID.</p>
-<p>Streaming trips people up. Tokens arrive in tiny pieces, and a card number can be split across two chunks, which means masking each chunk on its own will miss it. Collect the full response in a buffer, mask it once the stream ends, and log that. If the stream dies halfway, run the partial buffer through the same masker.</p>
-<p>Tool calls are the other trap. When the model calls one of your Java methods, the arguments and return values are often the most sensitive thing in the whole exchange: order details, account balances, addresses. Treat them as part of the prompt and response. Log the tool name, duration and outcome by default, and log arguments only after masking.</p>
-<p>Masking lowers the risk but never removes it, so surround it with some ordinary discipline:</p>
-<p>Give content fields a short retention period. Old prompt archives are liabilities.</p>
-<p>Limit who can read AI logs. Debugging a model doesn't mean someone needs to read customer messages.</p>
-<p>Encrypt log storage and the pipeline that feeds it.</p>
-<p>Log the hashed user ID so you can find and delete one person's records when they ask.</p>
-<p>Allow verbose logging in development with fake data, and enforce strict settings in production through configuration, not through people remembering.</p>
-<p>A masker that quietly stops working is worse than having none, because everyone assumes the logs are clean. Write tests for it:</p>
-<p>@Test
-void masksEmailAndCardNumber() {
-    String raw = "Contact me at asha@example.com, card 4111 1111 1111 1111";
-    String safe = new RegexPiiMasker().mask(raw);
-
-    assertFalse(safe.contains("asha@example.com"));
-    assertFalse(safe.contains("4111"));
-    assertTrue(safe.contains("[EMAIL]"));
-    assertTrue(safe.contains("[CARD]"));
-}</p>
-<p>Build a small set of messy, realistic samples: numbers with odd spacing, mixed languages, addresses inside sentences, text pasted from spreadsheets. Run them in your CI pipeline, and add a new case every time a leak turns up. A scheduled job that scans stored logs for patterns that should never appear makes a good safety net too.</p>
-<p>A few I'd watch for. Logging raw text at debug level and assuming production never enables it; debug flags get switched on during incidents, so mask at every level. Masking only the user's message while forgetting retrieved documents, system prompts and tool results. Letting SDK exceptions carry the full request body into the logs. Leaving wire-level HTTP logging on in production, which bypasses your masker completely. And treating masking as finished once it ships, when every new prompt template can bring new kinds of data.</p>
-<p>Every AI call writes a structured metadata record with a request ID</p>
-<p>All prompt and response text goes through a single masker first</p>
-<p>Streams are masked after assembly, and tool arguments are masked too</p>
-<p>Content logging is sampled, short-lived and access-controlled</p>
-<p>Tests cover the masker, with a regression case for every past leak</p>
-<p>Client libraries aren't dumping raw payloads into the logs</p>
-<p>Good logs turn an AI feature from a black box into something you can actually debug, price and improve. The same logs can also expose the people who trusted you with their details. The way through is fairly plain: record metadata for every call, push all content through one well-tested masker, use pseudonyms when you need to follow a conversation, handle streams and tools carefully, and keep retention short. Set that up before launch, not after the first incident, and you get visibility without regret.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Silicon spin qubits could play a major role in the future of quantum computing because they can be produced using the same semiconductor manufacturing methods that make today's computer chips. However, researchers have faced a significant challenge. When multiple silicon qubits are controlled at the same time, their operations tend to become less accurate. Building practical, large quantum computers will require scientists to control many qubits simultaneously while keeping errors to a minimum.</p>
+<p>Researchers at the RIKEN Center for Emergent Matter Science and their collaborators have now made important progress toward solving this problem. In a study published in Nature Physics, the team demonstrated highly accurate control of several silicon spin qubits operating simultaneously. Their experiments used an array of five qubits connected to a shared microwave control line. By identifying a major cause of errors during simultaneous operation, the scientists developed a technique to reduce those errors and maintain precision.</p>
+<p>Leon Camenzind, a RIKEN research scientist and co-first author who supervised the experiments, explains the significance of the results: "This shows that high-fidelity control can be maintained even when several qubits are operated at the same time and represents an important step toward scaling up silicon-based quantum processors."</p>
+<p>Scientists Identify a Hidden Source of Quantum Computing Errors</p>
+<p>Unlike conventional computers, which store information as bits representing either 0 or 1, quantum computers use quantum bits, or qubits, that can exist in combinations of both states. Silicon spin qubits store this information using the spin of individual electrons confined within silicon. Performing reliable quantum calculations requires extremely precise control over these electron spins.</p>
+<p>Microwave signals provide that control, but operating multiple qubits simultaneously can create unwanted effects that interfere with their accuracy. The researchers traced much of this problem to a phenomenon called the AC Stark shift.</p>
+<p>This effect occurs when microwave control signals alter a qubit's effective energy levels, producing changes in the phase of its quantum state. Those phase shifts can disrupt the intended operation of individual qubits, particularly when several are being controlled at once.</p>
+<p>To counteract the problem, the team created a calibration method that compensates for these unwanted shifts. Rather than separately calibrating every possible combination of qubits, the technique relies on calibrations performed between pairs of qubits. This makes the approach more practical for systems containing larger numbers of quantum bits.</p>
+<p>"Rather than requiring an entirely separate calibration procedure for every possible combination of qubits, our method uses calibrations between pairs of qubits to compensate for the unwanted phase shifts," explains Yi-Hsien Wu, the first author who carried out the experiments as part of his PhD research.</p>
+<p>Quantum Qubits Achieve Accuracy Above 99.99%</p>
+<p>The researchers combined their calibration technique with an improved device design and carefully adjusted microwave control pulses. Their results showed that exceptionally high accuracy could be maintained even when multiple qubits were operating simultaneously.</p>
+<p>When the five qubits were tested individually, each achieved single-qubit gate fidelity well above 99.99%, with the highest approaching 99.999%. Fidelity describes how closely a quantum operation matches its intended result.</p>
+<p>The team then tested how well the system performed when several qubits were active together. With as many as three qubits operating simultaneously, fidelity remained above 99.99%. Even when all five qubits were controlled at once, accuracy stayed at approximately 99.9%, approaching the levels needed for practical fault-tolerant quantum computing.</p>
+<p>Although the calibration method greatly reduced errors, it did not eliminate them entirely. The researchers found that the remaining loss of accuracy was linked to drive-induced decoherence, an effect caused by the greater microwave power required to operate multiple qubits simultaneously.</p>
+<p>Unlike the unwanted phase shifts corrected by the new technique, decoherence involves the loss of the delicate quantum coherence needed for reliable operations.</p>
+<p>According to Camenzind, "This is a limitation, but further improvements to device design could help mitigate this source of error."</p>
+<p>A New Path Toward Larger Quantum Processors</p>
+<p>The findings show that controlling several silicon spin qubits at the same time does not necessarily require a major sacrifice in accuracy. By correcting a key source of errors, the researchers have demonstrated a promising approach for operating more qubits through shared microwave control lines.</p>
+<p>This is especially important for the development of large quantum processors. Giving every qubit its own independent control system would make increasingly complex devices difficult to manage. Shared control lines could offer a more practical way to expand these systems while maintaining the precision needed for quantum calculations.</p>
+<p>"By addressing a key source of control errors through pairwise calibration," says Camenzind. "Our study supports the use of shared control lines as a practical approach to scaling up quantum processors. Combined with silicon's compatibility with established semiconductor manufacturing, we believe that this advance could help pave the way toward larger quantum processors capable of performing increasingly complex computations."</p>
+<p>The broader objective is to develop quantum computers that can reliably perform calculations despite the errors and disturbances that affect quantum systems. Such machines, known as fault-tolerant quantum computers, will require precise, dependable control over large numbers of qubits.</p>
+<p>"Our long-term goal is to build a fault-tolerant quantum computer based on silicon spin qubits, and reliable parallel control is an essential step toward that goal," adds Seigo Tarucha, project manager of a silicon quantum computing project under JST's Moonshot Goal 6.</p>
+<p>Materials provided by RIKEN. Note: Content may be edited for style and length.</p>
+<p>Astronomers Discover a Chilling Preview of Our Solar Systemâs Future</p>
+<p>Scientists Discover Alarming Signs of Extinction Risk Deep Beneath the Ocean</p>
+<p>Scientists Discover a Disturbing Link Between Cannabis Use and Earlier Psychosis</p>
+<p>Scientists Discover a Bizarre Quantum State That Exists at Room Temperature</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/logging-ai-prompts-and-responses-in-java-without-leaking-sensitive-data/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/10/261024222024.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

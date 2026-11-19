@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Closer Look at Phonon TTS. Launching High-Quality On-Device Speech That Tops the Benchmarks.</title>
+    <title>Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9783.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>A Closer Look at Phonon TTS. Launching High-Quality On-Device Speech That Tops the Benchmarks.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/phonon-closer-look/thumbnail.png" alt="A Closer Look at Phonon TTS. Launching High-Quality On-Device Speech That Tops the Benchmarks." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/6ac67ea29579ea34f1f7e470/hEodPVvQZI24jETLbPooP.png" alt="Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/phonon-closer-look/thumbnail.png" alt="A Closer Look at Phonon TTS. Launching High-Quality On-Device Speech That Tops the Benchmarks." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6ac67ea29579ea34f1f7e470/hEodPVvQZI24jETLbPooP.png" alt="Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Two weeks ago, we opened up Phonon, our small text-to-speech model that runs on your own device. It needs no server and no network, and what you type stays with you.</p>
-<p>We've been very happy with the reception so far. So here's the story of the launch: why we built Phonon, what it can do, the demos that came with it, and how it did on Hugging Face's Open TTS Leaderboard.</p>
-<p>Most voice AI lives in the cloud: every sentence makes a round trip to a server. Phonon runs on your own device instead. Your text stays there and the voice works without a network. We’ve also opened the weights. Phonon 31m is Apache 2.0, so you can use it for free, even in a commercial product. The other models are CC BY-NC, so they’re free for non-commercial projects. If you’re building something commercial with those, pricing is based on your number of users, not how much speech you generate.</p>
-<p>Getting a good voice to run on a small device has always been hard. You could make the model small, but then it didn’t sound great. Or you could make it sound great, but then it wouldn’t fit. We addressed both.</p>
-<p>We announced Phonon in April and spent the next six months building on it with partners and early users. Their feedback helped us to shape this release. The models got smaller, and we added more languages and support for custom voices through voice cloning and voice design.</p>
-<p>Phonon is based on the Pocket TTS lineage and as such uses flow matching to generate the audio which is very different from the modeling techniques used in other TTS systems. This is what allowed us to bring this level of quality to such a small model but it created new challenges while training the models. The training was initially numerically unstable and required several tricks to produce quality results on all five languages.</p>
-<p>Phonon comes in two sizes, at about 65 MB and 75 MB. Together they speak English, French, German, Spanish and Portuguese. There are more than 100 built-in voices, and you can create your own in Gradium Studio. Phonon also handles the important things that most other TTS systems often stumble on, like phone numbers, dates and codes.</p>
-<p>It runs on phones, laptops, single-board computers and in a browser tab, so you can hear it right now. Phonon 31m speaks English and is Apache 2.0, so you can build on it freely, including for commercial products. Phonon 40m covers all five languages under a non-commercial license.</p>
-<p>The launch came with demos from friends and from our own team. On an Apple Watch with Wi-Fi off, Phonon talks you through a coffee brew step by step. On an iPhone with no signal, it counts your reps and keeps you going. A robot called Lamp, from Autonomous, wears a sorting hat and talks in character. In a browser, an offline dino runner becomes a radio show hosted by Rex. There's also a sci-fi game voiced on the player's own machine, and Proust read aloud page by page.</p>
-<p>The Hugging Face team built the Transformers integration, so developers could use Phonon in Transformers from day one.</p>
-<p>Developers have started building on it too. An ExecuTorch conversion runs Phonon on a visitor's GPU in the browser, Micdrop brings it to Node.js apps, and Spaces like smallest-s2s build on it.</p>
-<p>Phonon was downloaded more than 200,000 times in its first two weeks, and it’s still trending on Hugging Face.</p>
-<p>The Open TTS Leaderboard is a very new project from Hugging Face, and we love it. With more than 9,000 TTS models on the Hugging Face Hub, the leaderboard gives developers one place to compare open models and hear them side by side. Across 23 languages, models are evaluated on intelligibility (word error rate of the outputs), speed (inverse real-time factor and time-to-first audio), and naturalness (UTMOS for English and KOMOS for Korean). Fixed-voice and voice cloning are evaluated, with an additional speaker similarity metric for the latter. The leaderboard also has a Listen tab, where you can conveniently compare TTS outputs yourself and vote for the ones you like the most.</p>
-<p>On intelligibility, Phonon ranks first in German and Spanish, and in the top three in every language we evaluated, next to models up to 100 times its size.</p>
-<p>Speed is where we see Phonon truly shine, as the models top the CPU streaming benchmark on time-to-first audio.</p>
-<p>We built a new inference framework, ptts, specifically for Phonon. The goal of ptts is to get the best performance on a wide variety of devices and as such supports more than 10 backends: CPU (Intel, Arm, WebAssembly), GPU (CUDA, Vulkan, Metal, WebGPU), and NPU (Apple Core ML, Snapdragon®).</p>
-<p>Phonon is also available in 🤗 Transformers, from v5.21, as its reference PyTorch implementation. Where ptts runs a single stream on device, Transformers targets GPU throughput: batched generation, full-graph torch.compile, e.g., for synthesizing speech datasets at scale. Being native PyTorch, it is a base to build upon, whether to integrate Phonon into your own stack or to study the model itself.</p>
-<p>It belongs to the Pocket TTS lineage, so we first added Pocket TTS to Transformers. Phonon sits on top as a modular model: about 200 lines describing only what differs.</p>
-<p>Phonon generates audio latents autoregressively: each step outputs a latent that is fed back as the next input, and the training loss is computed on them. Latents are the model's inputs, outputs and targets, as text tokens are for a language model, so the codec mapping audio to latents plays the role of a tokenizer. Transformers ships it as such: an audio tokenizer, held by the processor next to the text tokenizer:</p>
-<p>A voice is not a recording but a tensor of speaker latents. Phonon never encodes audio directly with its audio tokenizer, which ships decoder-only, and voices come precomputed: gradium/phonon-voices.</p>
-<p>The prompt layout (voice positions, text, then a token opening the audio) ships with the checkpoint as a chat template, as for other multimodal models in Transformers. You write a standard conversation, with an empty audio item where the voice goes, and your code stays the same across checkpoints. The processor then expands the voice placeholder to one position per frame, normalizes and tokenizes the text, and batches the inputs:</p>
-<p>generate returns latents, which the processor decodes to audio:</p>
-<p>Phonon can speak with any voice. Clone one from a short recording with the speaker’s consent, or describe a new one in plain text in Gradium Studio. Then download the voice file, load it in Phonon, and it runs fully on the device.</p>
-<p>We also train custom Phonon models with design partners. If your memory budget is tight, we can make the model smaller. If you need Korean, Arabic or Japanese, we can train for that too. And if your product has its own vocabulary, we can fine-tune on it. Get in touch and tell us what you need.</p>
-<p>Thank you to the Hugging Face team, and to everyone who tried Phonon in its first two weeks.</p>
-<p>Phonon is our first open release. Try it out and tell us what you build.</p>
-<p>Small English STT + LLM + TTS cascade with latency charts</p>
-<p>TTS systems evaluated on objective metrics.</p>
-<p>Congrats on the launch — running this cleanly on an Apple Watch with Wi-Fi off is genuinely impressive. As a German speaker I'm happy to see it top the intelligibility ranking in German; the compounding is unforgiving to TTS, so that's not a small win.</p>
-<p>One line in "what's next" I keep coming back to: Korean, Arabic and Japanese get offered as custom-training requests. That framing quietly shows where the field's centre of gravity still sits — a handful of languages are first-class citizens, and everything else is a sales conversation. The Open TTS Leaderboard covering 23 languages is a great step, but the long tail of the world's languages is still waiting. Would love to see lower-resource languages get first-class leaderboard slots rather than a custom quote.</p>
-<p>Small English STT + LLM + TTS cascade with latency charts</p>
-<p>TTS systems evaluated on objective metrics.</p>
+                <p>Many ML practitioners have some intuition about how to make models run fast, but fewer know how to analyze why a model is slow. In Part 1 of this series, you will learn how to systematically analyze inference performance and identify where the time is spent.</p>
+<p>This post starts from scratch and assumes no prior profiling experience. The walkthrough uses AWS Trainium, a purpose-built AI chip for deep learning training and inference workloads, and TorchNeuron, its open source native PyTorch backend. TorchNeuron supports standard PyTorch workflows on Trainium, including eager execution, torch.compile, and standard PyTorch APIs, with minimal code changes. Additionally, TorchNeuron integrates with Neuron Kernel Interface (NKI) to enable custom operators and performance optimization for Trainium hardware. By the end, you should know:</p>
+<p>Before you profile a workload, it helps to understand how Neuron integrates with PyTorch.</p>
+<p>The Neuron backend uses PyTorch's PrivateUse1 extension point. This mechanism lets an accelerator integrate with the framework without adding a dedicated dispatch key such as cuda. The torch_neuronx package works with upstream PyTorch to register Neuron as a native backend for PyTorch code. For details about this extension mechanism, see Facilitating New Backend Integration by PrivateUse1.</p>
+<p>You use two objects to profile a Neuron workload:</p>
+<p>The modes parameter selects the data streams to capture, such as device instructions and runtime traces. The capture_enabled_for_nc parameter selects the NeuronCores to trace. Setting correlate_device_time=True propagates device time from the trace into the key_averages() table, where you can compare CPU and Neuron device time. For the complete parameter reference and available ProfileMode values, see the NeuronConfig Profile Modes documentation.</p>
+<p>Neuron Explorer is a browser-based viewer for the system trace, device timeline, and per-engine breakdown. You can access it through an SSH tunnel or the Visual Studio Code extension. In this post, you use Explorer to confirm what key_averages() reports numerically and inspect what happens between dispatches.</p>
+<p>After profiling, the output directory contains the system trace and, when you capture device data, matched .neff and .ntff files. The Neuron Executable File Format (NEFF) contains the compiled Neuron executable, while the matching NTFF contains its hardware instruction trace. The files share a numeric hash that identifies them as a pair. To open the profile in Neuron Explorer, upload the complete output directory for a system or combined profile. For a device-only profile, upload the matching .neff and .ntff files individually. See Step 5: Upload your profile for the UI and command-line instructions.</p>
+<p>For this first analysis, you profile RMSNorm, a small operation with a clear sequence of arithmetic and reduction operations.</p>
+<p>You profile three implementations of the same operation:</p>
+<p>The scripts use the same inputs, profiler configuration, and schedule so the results are directly comparable.</p>
+<p>All scripts to reproduce this work are available in the torch-neuronx examples directory.</p>
+<p>Start by writing RMSNorm with individual PyTorch operations. Each line maps to one or more ATen operations and can create intermediate tensors.</p>
+<p>Call the profiler with two arguments required for the Neuron backend:</p>
+<p>The schedule uses wait=2, warmup=1, and active=1 across four prof.step() calls. This records one warm iteration without including initial setup overhead.</p>
+<p>Call torch.neuron.synchronize() inside the profiler loop. Without this synchronization, the profiler can export before the device finishes and leave the Neuron time column empty.</p>
+<p>After profiling finishes, inspect the key_averages() table. Sort by self_privateuse1_time_total to place the operations with the highest device cost first. The table shown here is filtered to the RMSNorm operations that report Neuron device time. The full key_averages() output also includes CPU-side events such as allocations and host-to-device transfers.</p>
+<p>The key averages table shows that three aten::mul calls account for the largest share of Neuron device time.</p>
+<p>The table shows which ATen operations ran, how often they ran, and how much time they spent on the CPU and Neuron device. aten::mul has the highest total device time because the function performs three multiplications.</p>
+<p>Each row maps directly to the function. aten::mul runs for x * x, x * rms, and the final multiplication by weight. aten::mean reduces the last dimension. aten::add adds the epsilon value and triggers a host-to-device copy because the scalar starts on the CPU. aten::rsqrt computes the reciprocal square root.</p>
+<p>Neuron Explorer follows an aten::mul operation from framework dispatch through runtime scheduling to execution on the Neuron hardware lanes.</p>
+<p>In Explorer, time flows from left to right and the event lifecycle flows from top to bottom. Each ATen operation follows the same pattern: creation in the framework lane, scheduling in the runtime lane as nrta_execute_schedule, and device execution in the hardware lane as nc_exec_running.</p>
+<p>The system trace view organizes events into lanes. In the Default grouping mode, labels follow the pattern instance/PID/subsystem/identifier:</p>
+<p>In eager mode, each operation runs independently. Use the dependency chain viewer to follow aten::mul.Tensor from the framework layer through runtime scheduling to device execution.</p>
+<p>The dependency chain viewer highlights the lifecycle of one operation across the framework, runtime, and hardware lanes.</p>
+<p>Replace the individual operations with PyTorch's built-in rms_norm function. Neuron lowers the operation to one fused kernel:</p>
+<p>The fused RMSNorm appears as one device operation in the key averages table.</p>
+<p>The fused RMSNorm follows one framework-to-hardware path instead of dispatching each arithmetic operation separately.</p>
+<p>In the naive implementation, each operation crosses the dispatch boundary independently and follows its own framework-to-runtime-to-hardware path. In the fused implementation, one Python call covers the complete computation. The trace contains one dispatch and one hardware event, with no gaps between component operations.</p>
+<p>For the final example, compile the original naive RMSNorm function with torch.compile.</p>
+<p>With @torch.compile(backend="neuron"), TorchDynamo captures the Python bytecode as an FX graph and AOTAutograd lowers it to ATen operations. The Neuron backend receives the complete graph instead of dispatching each operation separately. It fuses the operations, optimizes memory access, and compiles the graph into a single NEFF artifact. The artifact runs as one hardware dispatch.</p>
+<p>The compiled function appears as one Torch-Compiled Region in the key averages table.</p>
+<p>The compiled graph follows one path through runtime scheduling and hardware execution.</p>
+<p>The table shows one device execution, as in Profile 2, but the code takes a different path. Instead of calling a purpose-built fused operation, the compiler discovers the fusion from the original Python function. In this run, the Neuron time is comparable to torch.rms_norm, at 375 μs compared with 403 μs.</p>
+<p>Both torch.rms_norm and torch.compile fuse RMSNorm into one kernel dispatch. In these runs, either approach takes about one-sixth of the naive implementation's device time. Fusion removes the gaps between hardware executions and avoids materializing intermediate values such as x_sq and mean_sq between separately dispatched operations.</p>
+<p>key_averages() shows which operations consume device time, while its full output also reveals CPU-side setup and transfers. Explorer provides the corresponding visual trace. You can follow one operation from framework dispatch through runtime scheduling to hardware execution and see the gaps that fusion removes.</p>
+<p>You can use the same workflow on larger models: find a hotspot in the table, verify it in the trace, and then determine whether a fused operation or torch.compile can reduce its cost.</p>
+<p>In Part 2, we will move into the device-level profile. You open the NEFF, inspect the TensorEngine, VectorEngine, and direct memory access (DMA) breakdown, and place the kernel on the roofline to determine whether it is compute-bound or memory-bound.</p>
+<p>Special thanks to Aritra Roy Gosthipaty for the inspiration to begin this series, and to my peers Pinak Panigrahi, Samir Araujo, Akhil Azhikodan, Esha Lakhotia and the rest for reviewing!</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/phonon-tts" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/amazon/profiling-torchneuron-part-1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

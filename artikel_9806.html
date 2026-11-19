@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms</title>
+    <title>The Magic of Partial Evaluation</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9806.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,255 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>The Magic of Partial Evaluation</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/anydecisionmodel/banner.png" alt="Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/anydecisionmodel/banner.png" alt="Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Language models can do a lot.
-They write, summarize, translate, and call tools.
-But they're only a small part of what machine learning can do.</p>
-<p>Say a customer calls your support line.
-First, you want to know what they said (speech recognition).
-Then, you want to decide where to send them (decision).
-You could hand both to a language model,
-but there are models built for each that are
-better, faster, and less expensive.</p>
-<p>In our AnyLanguageModel 1.0 recap,
-we looked at a year of local and hosted models in Swift.
-With AnyLanguageModel and swift-huggingface now on their 1.x releases,
-we're extending the same approach to speech and decisions:
-familiar Swift APIs with a choice of model.</p>
-<p>Both packages can download open models from the Hugging Face Hub
-and run them on device.</p>
-<p>Computers have been transcribing speech for decades,
-and in the past few years, they've gotten very good at it.
-Apple platforms already have an API for it.
-macOS 26 and iOS 26 introduced SpeechAnalyzer,
-Apple's new speech-to-text API.
-You add modules such as SpeechTranscriber and SpeechDetector to an analyzer,
-give it a file or a stream of audio buffers,
-and read results from async sequences as they arrive.
-AssetInventory installs the models,
-so your app decides when downloads happen.</p>
-<p>It's a well-designed API,
-but the only engine behind it is Apple's.
-AnySpeechRecognizer keeps the API and lets you choose the engine:</p>
-<p>The package mirrors SpeechAnalyzer, SpeechTranscriber, DictationTranscriber,
-SpeechDetector, and AssetInventory,
-with Apple's Speech framework as the default engine.
-If your code uses that shared API, changing the import is enough.
-To use Parakeet instead,
-change only how you create the transcriber:</p>
-<p>The steps for installing assets, running the analyzer,
-and reading results stay the same.
-The README
-has a complete example
-and lists the differences
-from Apple's framework.</p>
-<p>Parakeet v3 is NVIDIA's Parakeet TDT 0.6B v3.
-It's a polyglot:
-it recognizes 25 European languages and works out which one it's hearing,
-so you don't pass a locale.</p>
-<p>Parakeet Ultra is Moondream's post-trained take on v3.
-It was more accurate in most of our measurements.</p>
-<p>Parakeet Unified is NVIDIA's
-English-only Parakeet.</p>
-<p>All three Parakeets run on the package's own Core ML runtime,
-which supports file and live input, volatile results, word timing,
-and word confidence.</p>
-<p>Qwen3-ASR is Alibaba's speech model,
-in 0.6B
-and 1.7B sizes.
-It recognizes 30 languages and 22 Chinese dialects,
-including Mandarin, Cantonese, Japanese, and Korean, which Parakeet doesn't cover.
-It detects the language automatically, or you can set one:</p>
-<p>Qwen3-ASR gives one final result for each segment of up to 40 seconds,
-without volatile results, word timing, or confidence.
-It runs on the GPU and is slower than Parakeet,
-so it's better suited to transcribing files than live input.</p>
-<p>To add another engine, implement SpeechRecognitionModel for its configuration
-and SpeechRecognitionExecutor for one module's session.
-The README includes a small provider
-that reports placeholder text to help you get started.</p>
-<p>To run these models in apps,
-we converted them to Core ML and published them on the Hub:</p>
-<p>Each repository records its source checkpoint
-and a checksum for every file,
-and the package pins it to a fixed revision.
-The Parakeet repositories add an 8-second encoder for live input,
-which cuts live analysis time by about a third
-at the cost of a somewhat higher word error rate.
-The repository also has the conversion workflows,
-most of which follow FluidInference's mobius scripts,
-and checks each conversion against the original model.</p>
-<p>Downloads happen only when your app asks for them:
-about 600 MB for each Parakeet, plus about 590 MB for the live encoder,
-0.9 to 2.4 GB for Qwen3-ASR, and about 250 MB for Sortformer.
-Files go in the standard Hugging Face cache,
-so a Mac app outside the sandbox shares them with Python and other Hugging Face tools.</p>
-<p>When you transcribe a conversation,
-you often want to know who said what.
-That's speaker diarization,
-and Apple's Speech framework doesn't have a module for it,
-so AnySpeechRecognizer adds one.
-SpeakerDiarizer runs NVIDIA's
-Streaming Sortformer
-on Core ML alongside an Apple or Parakeet transcriber,
-on the same timeline:</p>
-<p>The diarizer tracks up to four speakers,
-even when they talk over each other.
-A SpeakerTimeline collects its results
-and attributes each timed word to a speaker,
-so you can print a transcript by speaker turn.
-Like image support in AnyLanguageModel,
-this goes beyond what Apple's API offers today.</p>
-<p>The diarizer uses Sortformer v2 by default.
-You can also choose v2.1,
-which NVIDIA trained with more meeting data
-and which was more accurate on meetings in our measurements, too.</p>
-<p>We measured the package with its hear command-line tool
-on an M4 Max Mac Studio with macOS 27.0.1.
-Here are the word error rates on LibriSpeech files of 3 to 8 minutes:</p>
-<p>Parakeet transcribes an hour of audio
-in about 20 to 40 seconds from a file,
-or about 1.5 to 2.5 minutes live,
-with about 100 MB of memory once Core ML has compiled the model.
-Qwen3-ASR is much slower and needs a few gigabytes of memory.
-Meetings are hard for everyone:
-on AMI recordings, where people talk over each other,
-every engine we tested had a word error rate above 23%.</p>
-<p>These numbers come from one machine and a few datasets,
-so measure with your own hardware and audio.
-hear evaluate works on your own files,
-and the repository's natural-speech-eval.py tool
-reproduces these measurements.
-So far, we've tested only on macOS 27, not on an iPhone.</p>
-<p>Next, we'd like to add more engines, including Core AI on macOS 27 and iOS 27.</p>
-<p>AnyDecisionModel is a different story.
-There's no Apple framework to map onto,
-and decision models aren't new, exactly.</p>
-<p>It's only a decision model if it comes from the Décision region of France;
-otherwise, it's sparkling zero-shot classification.</p>
-<p>What's new is the name, a lot of hype,
-and a crop of models trained to make decisions.
-We think that's where things are going,
-so we wanted a Swift API that's ready for them.</p>
-<p>Apps often ask language models to make decisions.
-Is this message urgent?
-Which team should handle this ticket?
-How frustrated is this customer?
-The usual approach is to prompt a language model
-and parse the text that it generates.
-That gives you one answer,
-but doesn't show the probabilities it assigned to the alternatives.</p>
-<p>Here's what a decision looks like in Swift:</p>
-<p>urgent is a Double.
-team is a Choice<Department> containing the selected case,
-a probability for each option, and a confidence value.
-anger is a Score containing the expected level,
-a probability for each level, and a confidence value.
-Because Department conforms to Choosable,
-team.value is a Department that you can use in an exhaustive switch.</p>
-<p>If you've used Foundation Models or AnyLanguageModel,
-the model-and-session pattern will look familiar.
-A DecisionSession holds a single state, which can be text or JSON,
-and every question is about that state.
-Questions are independent:
-an answer never becomes input to a later question.
-To ask several questions at once,
-pass them to decide(_:) as a batch.</p>
-<p>For each question, the MLX backend builds a prompt
-with a one-token label for each allowed answer,
-then reads the probability of each label from one forward pass.</p>
-<p>Emoji Magnet is a macOS app with a text field above a pile of 343 emoji.
-Type a phrase, such as "things you wear",
-and the emoji that match rise out of the pile.
-Refine it to "things you wear in winter",
-and the emoji that no longer match fall back.</p>
-<p>The app has no built-in keyword rules;
-the model decides everything at inference time.
-When you pause typing, it asks the model one yes-or-no question for each emoji,
-for example:</p>
-<p>The session's state holds the phrase.
-The demo above uses the hosted Jev backend,
-which answers all 343 questions in one request,
-so the emoji settle in about half a second for each phrase.
-Without a TYPESAFE_AI_API_KEY, the app runs Qwen3 4B on your Mac with the MLX backend.
-That backend uses prefix caching to evaluate the state once,
-then answers 16 questions per forward pass.
-On an M4 Max, a group of 16 takes about 0.45 seconds after the model loads.
-A full pass over all 343 emoji takes about 10 seconds,
-and each group's results appear as soon as they arrive.</p>
-<p>Emoji Magnet is in the AnyDecisionModel-Examples repository.</p>
-<p>Reading next-token probabilities works with general-purpose language models,
-but those models weren't trained to make decisions.
-Cloudflare's Clef models
-are an example of a newer approach:
-a model with a trained decision head
-that turns a state and a schema of typed questions into decisions,
-returning probabilities for all allowed options across the questions
-in one forward pass.
-Clef-Flash is the 9B variant.</p>
-<p>AnyDecisionModel runs Clef-Flash on a Mac with MLX:</p>
-<p>You use the same sessions and questions,
-but MLXHeadDecisionModel reads each decision from Clef's trained decision head
-instead of from next-token probabilities.
-The 4-bit model is a 6.2 GB download,
-and its model card recommends a Mac with at least 16 GB of memory.
-Clef can read images and video,
-but this backend accepts only text and JSON states.</p>
-<p>Raw probabilities from language models are often overconfident.
-The local backends accept a Calibration,
-which applies a temperature to every answer and a bias to yes-or-no answers.
-Use separate datasets to fit the calibration and evaluate the results.</p>
-<p>Language models can also favor an option because of its position in a list.
-On the MLX, Core AI, and llama.cpp next-token backends,
-turn on rotationDebiasing to ask a choice question
-once for each rotation of the options and average the probabilities.
-That costs one prompt evaluation per rotation.</p>
-<p>Each local choice and score also includes a confidence value
-based on the entropy of its probabilities.
-It measures how concentrated the probabilities are,
-not whether the answer is right,
-so check the error rate on your own data before you pick a threshold.
-The next-token backends' diagnostics report how much probability
-the model assigned to the allowed answers.
-A low value means it assigned most of the probability elsewhere.</p>
-<p>The next-token backends label answers "yes" and "no", A to Z, or 0 to 9,
-so a choice can have at most 26 options, and a score at most 10 levels.
-Decision heads have no such limit.</p>
-<p>Like AnyLanguageModel, the package uses Swift package traits.
-Without traits, it has no third-party dependencies.
-You get the core types and the Jev and Ollama backends,
-which also build on Linux.
-Enable the MLX, CoreAI, or Llama trait for the local backends.</p>
-<p>Both packages require Swift 6.2 or later and macOS 26 or iOS 26 or later.
-The Parakeet and Sortformer runtimes and the MLX backend require Apple silicon.
-AnyDecisionModel's MLX build tasks use Xcode's Swift 6.4 or later
-and the Metal toolchain; Core AI requires Xcode 27 and an OS 27 runtime.</p>
-<p>For now, AnyDecisionModel's CoreAI trait can't be combined with AnySpeechRecognizer,
-because coreai-kit 0.7.3 requires swift-huggingface below 1.0
-and AnySpeechRecognizer requires 1.x.</p>
-<p>Each README has more examples and details about requirements and backends.
-AnySpeechRecognizer also includes a command-line tool, hear,
-that transcribes local files, labels their speakers, and evaluates the results.
-Every hear command requires --backend apple, --backend parakeet, or --backend qwen;
-run hear prepare with the same backend and model options before analysis
-to install the needed assets.</p>
-<p>Try them in your apps and tell us what works and what doesn't.
-Issues and pull requests are welcome on both repositories.</p>
-<p>Thanks to NVIDIA for Parakeet, Sortformer, and NeMo, to Moondream for Parakeet Ultra,
-to FluidInference, whose FluidAudio and mobius projects
-documented the conventions that the Parakeet runtime and the Core ML conversions follow,
-to Cloudflare for Clef,
-and to everyone who contributed to AnyLanguageModel,
-whose patterns both packages borrow.</p>
+                <p>There are certain ideas in software that are simply beautiful. It doesn't matter if they have any practical use. It doesn't matter that you will never convince your coworkers to consider them. There is just something captivating about the way some computational systems work.</p>
+<p>For me, the most beautiful pieces of software are those that reveal something about the nature of programming languages. Programming languages are my obsession. I have never met a problem that couldn't be solved by introducing yet another programming language. Solving a problem at the programming language level is about solving the meta problem. Instead of trying to solve a particular problem, we take a step back and ask how we can solve a whole class of problems at once.</p>
+<p>So when I find something that makes me rethink the nature of programming languages, I start rethinking computation as a whole. One of these incredibly beautiful but tricky concepts goes by the name partial evaluation. If you are fascinated by interpreters and compilers, partial evaluation will teach you how they are related, and how you can get a compiler for free.</p>
+<p>Partial evaluation has been a fascination of mine for a while. But this whole thing came up when James Long announced he had revived Meta's partial evaluator for JavaScript called prepack. When I first heard about prepack, I had some high hopes and expectations for the project, but was sadly let down. This revival brought to light those same dreams. But sadly, just as with the original aim, prepack was not designed for beauty, but for practicality. So I figured it was time to renew my own efforts.</p>
+<p>Yes, in some ways this is a post repping my own library I'm releasing. But I'm not doing this because I want it to be used. I'm doing this because it lets you play with the idea I find so beautiful. That is what this post is about.</p>
+<p>As a person who reads code, you can think about how this code computes and what answer it will give. But you can do more than just give the answer. You can see the expanded form of this particular code for these particular calls. This code is spiritually the same as the following expression, once we expand it out.</p>
+<p>In this case, there is really nothing at all that this code needs to do at runtime. A sufficiently smart compiler will just run this code directly at compile time and give the answer. But this is a bit less clear if things come in at runtime.</p>
+<p>It might seem like we can't do anything here, but again, if you are used to thinking about how programs run, you can trace this out and realize this is just the same as:</p>
+<p>What we have done in both of these cases is called partial evaluation. In the first, it was a trivial case because everything was statically known. But in this latter case, we have reduced a program down into the essentials of its dynamic structure. There are no recursive function calls left. All of this has been expanded as far as it could till we get just the dynamic parts of the code remaining.</p>
+<p>This intuitive notion of partial evaluation is all you need to know to appreciate the beauty here. Partial evaluation just evaluates the part of the program we can evaluate at build time and leaves all the rest. When we do this with certain programs in certain combinations, we get some quite surprising, incredible behavior.</p>
+<p>Here we have a very simple interpreter for a language that just supports arithmetic. For the above expression, you should be able to think about how we could start "partially" evaluating it. (In this case, it can be a full evaluation.) If this kind of partial evaluation isn't quite clicking for you, I've put the steps below to hopefully help it make sense.</p>
+<p>This is a simple evaluation of the code.  But what happens if we throw a value we don't know into the expression?</p>
+<p>Here we can see that clear partial evaluation difference. We don't know how to evaluate Number(process.argv[2]). We have no idea what the answer to that will be. But as part of this process, we do know some partial information about it. For example, when we get to</p>
+<p>we know that Number(process.argv[2]) is indeed a number. So we can partially evaluate it further. Hopefully this is all making sense. But if you are like me, this all might seem a bit trivial and uninteresting. So let's look at a more complicated example.</p>
+<p>Here we have a brainfuck interpreter. And the example program we want to partially evaluate does not require any input at all (in brainfuck , is the way you get input). So when we go to partially evaluate this, we will just get an answer. In this case, this program is actually brainfuck's "hello world". But what about a program with input?</p>
+<p>When we do our partial evaluation, we get the following:</p>
+<p>What is this? A compiled brainfuck program! This is the first incredible fact: when you take an interpreter and partially evaluate it with a program, you get the compiled program out! Now this particular exact form is an artifact of how my partial evaluator works. You could imagine slightly different code. But the key is that what we've done is remove the interpreter completely.</p>
+<p>What we've discovered here is the first of three so-called Futamura Projections. Our partial evaluator, when applied to an interpreter and given a program, can give us a compiled version of that program. Or to put it in pseudocode.</p>
+<p>Depending on your exposure to interpreters and compilers, this might seem miraculous or mundane. Writing an interpreter and writing a compiler can seem like significantly different undertakings. In the age of AI, perhaps less so, but I think even then many things still hold. It is quite easy to instrument an interpreter, quite a bit harder to do so for a compiler. Changing an interpreter to support new features is quite easy, less so for a compiler. But more than that, there are all sorts of things that can be thought of as interpreters, that we'd almost never write a compiler for.</p>
+<p>Consider this simple schema setup. This is code that can easily be partially evaled into something where we have created specialized functions for our particular schema. While not the most crucial code, this can give us a 5x performance boost when our objects start getting more complicated. You may think that we should just hand-write those functions. Or hand-write a compiler for these schemas. But what about those schemas that exist only at runtime? Now we either need to compile those on the fly, or we have to keep both a compiler and interpreter. Having a way to partial eval lowers this burden quite a bit.</p>
+<p>But if the Futamura projections stopped here, they would be exciting, but not quite the craziness they are. To understand how this can go further, we are going to take this a step beyond your raw intuition of what it means to partially evaluate something and give a different frame. We can think of partial evaluation as a process of "specializing" a program.</p>
+<p>What exactly is specializing a program? Well, it is taking a program that is generic and making a version that instead works for a single program. Let's think about a simple pattern matcher program like an overly simplified regex.</p>
+<p>This program is generic. It lets you match on many different patterns. That can be great if we need that flexibility. But if you don't have a bunch of patterns, it might be worth it to just make specialized code. Now, exactly what kind of specialized code? It might be that you only have this literal pattern; then you want to specialize very particularly.</p>
+<p>Or  you just have <x>*<y>*<z>* as a pattern.</p>
+<p>For any bit of generic code, we can think of how to move our code to a more specialized form.</p>
+<p>Partial evaluation is a form of specialization that figures out what it should specialize on based on what input is static and what is dynamic. In many ways, a partial evaluator is a generic specializer. Given any program, we can make a specialized version of it for any input. What happens if we specialize an interpreter for a given input? We get back that interpreter for only exactly that one program. But what do we need then? Do we need all this generic dispatch? No, we know the full program. We don't need any operations we don't actually use. We can fully get rid of all the generic interpreter mechanism.</p>
+<p>But if the specializer can specialize any program, can it specialize itself?</p>
+<p>This leads us to the second Futamura projection. Put in our pseudo-code format, we get:</p>
+<p>Or, to put it in our specializer language, what if we make a special version of our generic specializer? What is it specialized for? A particular interpreter. Now we have a function that, given any program, will spit out newly specialized interpreters just for that program. Or, in Java speak, we have a specialized interpreter factory.</p>
+<p>Let's see a real example of one of these compilers to make this concrete. Here is the interpreter we are going to specialize.</p>
+<p>When we apply our second projection, we get out the following compiler:</p>
+<p>And if we compile one of these very simple programs, we can see the output:</p>
+<p>Now, of course, this is not a very interesting language. But hopefully you can see this general idea. Given an interpreter, we automatically derive a compiler! Pretty incredible.</p>
+<p>But we can't stop at the second projection. We have to push on and get to the final mind-bending projection. If you apply our specializer to itself as input, you get a compiler generator.</p>
+<p>So now we have a generic function that will spit out compilers for any interpreter we give it!</p>
+<p>I have implemented a reasonable, but still very limited partial evaluator for JavaScript in Rust. I have taken it further to try to make it work quite well for a number of different interpreters and interpreter-like programs in JavaScript. I've also tried to get limited versions of the second and third projections working. Go play with it, see what works, what doesn't, file issues, or better, use some of your tokens to help me make more cases work.</p>
+<p>But most of all, explore. This is such a rich space. Below are some papers, blogs, and projects about partial evaluation in some way, shape, or form. There has never been a better time to play with these kinds of crazy techniques for programming languages. Don't let what is practical stop you from exploring the cool, interesting aspects of programming.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/anydecisionmodel" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://jimmyhmiller.com/magic-of-partial-evaluation" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

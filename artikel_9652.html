@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mermaid Flow</title>
+    <title>Long-Running API Jobs: Compare 6 Workflow Tools</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9652.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,59 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Mermaid Flow</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>Long-Running API Jobs: Compare 6 Workflow Tools</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fvt6g1uz5f29ihwhto77d.png" alt="Long-Running API Jobs: Compare 6 Workflow Tools" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fvt6g1uz5f29ihwhto77d.png" alt="Long-Running API Jobs: Compare 6 Workflow Tools" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            The visual builder for agentic workflows
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/mermaid-chart?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1313286?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 19
+•
+Originally published at bizflowai.io</p>
+<p>By Lazar Milićević, senior engineer, BizFlowAI
+Scope: Comparison of documented features; this article does not present comparative test results.</p>
+<p>Your supplier API accepts a job now, returns a result later, and occasionally fails halfway through. You need to know whether your workflow will still be there tomorrow—and what happens if the supplier completed a request just before your worker lost its connection.</p>
+<p>The short answer: Choose Temporal when you need durable, code-defined control over a long-lived process; Inngest when saved step results fit an event-driven application; Trigger.dev when long-running tasks and approval waits are central; AWS Step Functions Standard when the work already lives in AWS; n8n when a visual workflow and persisted waits are sufficient; and Zapier for simpler delayed automations, not as your default coordinator for a complex external job. The deciding test is not whether a tool can wait. It is whether it can recover safely after an API call succeeds but the workflow fails before recording that success.</p>
+<p>This article does not present comparative tool-test results. The matrix below summarizes documented behavior, not completion rates, recovery scores, or results from identical live deployments. Use it to shortlist tools; use the test procedure later in this article to make your final choice.</p>
+<p>The sources for those distinctions are the Temporal retry documentation, Inngest durable-workflow documentation, Trigger.dev’s retry discussion, AWS error-handling documentation, n8n’s Wait-node documentation, and Zapier’s Delay documentation.</p>
+<p>Start by drawing your job as submit → wait → check status → review if needed → publish result. Mark every step that changes something outside the workflow: submitting a vendor job, creating an invoice, sending an email, or updating a customer record. Those marked steps determine whether a retry is safe.</p>
+<p>A retry means “run something again,” not “guarantee the external action happened exactly once.” If an API accepts a submission and your worker fails before saving the response, the workflow may reasonably retry—while the supplier may already be processing the first submission.</p>
+<p>Consider a small business that sends files to an external processing service. The service accepts POST /jobs, then completes work asynchronously. A failure immediately after the POST creates two possible histories:</p>
+<p>The workflow engine cannot resolve that ambiguity on its own. Prefer a supplier-provided idempotency key where available. Otherwise, use a stable job identifier and a supplier lookup endpoint, if one exists. If neither exists, route uncertain submissions to an operator rather than claiming automatic recovery is safe.</p>
+<p>The products differ in what they replay. Temporal retries failed Activities by default, but not an entire Workflow Execution by default. That makes the Activity boundary important: keep an external submission in an Activity, and decide which errors deserve another attempt. Inngest reuses saved results from completed steps when a later step fails, so a successfully recorded submission step need not run again merely because processing failed afterward. Trigger.dev warns that a task retry can restart its run function from the beginning; calls made earlier in that function need a deliberate duplicate-prevention strategy.</p>
+<p>In Step Functions, Retry rules apply to Task, Parallel, and Map states. A retrier without MaxAttempts uses the documented default of three retries. Do not leave that default unexamined for a charge, submission, or customer-facing message. For n8n and Zapier, build and test the actual workflow you intend to run rather than assuming a platform-level retry setting protects each external side effect in the same way.</p>
+<p>A useful design record for every external call is:</p>
+<p>That is a planning checklist, not configuration you can paste into any of the six tools. Its purpose is to force an answer before production: How will we tell “failed to submit” from “submitted but failed to record”?</p>
+<p>Workflow lifetime, an individual step’s runtime, the hosting service’s timeout, and an outbound HTTP request’s timeout are different controls. A tool may keep a job record for months while still requiring each API call to finish quickly and each wait to resume before a separate limit.</p>
+<p>The documented ceilings make that distinction concrete:</p>
+<p>Set an HTTP timeout for the supplier call, a separate deadline for the supplier job, and another deadline for any human review. When the supplier job exceeds its deadline, move it to an explicit exception state; do not keep polling without a decision.</p>
+<p>Inngest notes that its finish timeout does not interrupt a step already executing. That is a good reason to set a timeout on the external API request itself when you need a strict deadline. Check your host’s limits as well: a durable workflow does not remove the limits of the compute running each step.</p>
+<p>Persisted state should let a fresh process answer three questions: Which business job is this? What completed? What action is safe next? If you cannot answer those after a restart, the workflow is not recoverable merely because its timer survives.</p>
+<p>Temporal models a long-lived Workflow Execution and can receive Signals that change its state. Inngest’s saved completed-step results help a resumed run avoid repeating those steps. The n8n Wait node saves paused execution data in its database and reloads it when its resume condition is met. These are different mechanisms, but each can support a process that outlives the worker that started it.</p>
+<p>Persistence still needs a business record. Store or reliably reconstruct:</p>
+<p>Be careful with “completed” flags. Marking a step complete before the external call risks losing the work. Marking it complete after the call leaves a window in which the external action succeeded but the flag was never saved. An idempotency key, lookup, or reconciliation path closes the business gap; a database flag alone does not.</p>
+<p>There is an operational difference between a workflow being durable and the business process being recoverable. Test both. An operator should be able to find a stuck job, identify its last confirmed external effect, and choose whether to retry, reconcile, cancel, or escalate without reading an ambiguous stack trace.</p>
+<p>A useful approval step preserves the job’s context, resumes the correct run, and handles a missing or late decision. It also rechecks facts that may have changed while the job waited—for example, whether an invoice is still unpaid or a customer request has already been handled.</p>
+<p>The named tools offer different primitives. Temporal Signals can update a long-lived workflow’s state. Trigger.dev supports an approval wait using a token that resumes the run when completed or times out. Step Functions Standard supports callbacks through task tokens; the external process returns the token with SendTaskSuccess or SendTaskFailure. In n8n, a Wait node can resume on a webhook call or submitted form, with an optional wait-time limit.</p>
+<p>These mechanisms provide a way to resume. They do not decide your approval policy. Specify who may approve, what information they see, what happens on rejection, and what happens if nobody responds. Avoid putting a powerful callback token into a broadly accessible email or document; treat a token that can advance a job as a credential for that job.</p>
+<p>Zapier’s Delay can be useful in a simpler human-in-the-loop process, but check its change behavior before using it as the holding point for important work. Zapier says a delayed run will not continue after resuming if its Zap was changed during the delay. If the process must survive workflow edits, that condition belongs in your acceptance test.</p>
+<p>This article does not present results from identical test deployments or recorded outcomes from injected failures. A table of completion times or recovery rates would be invented. The following protocol gives you a way to produce results for your API job instead.</p>
+<p>Build the same business flow in each shortlisted tool: submit a job, record its identifier, wait for completion, request approval if a review condition is met, and record the final outcome. Use the same test service, inputs, approval decisions, and failure points. Record tool plan, configuration, deployment mode, host, and tool version alongside results; those details can change the outcome.</p>
+<p>Use a result sheet that separates observations from documentation:</p>
+<p>A pass is not simply “the workflow ended.” For a submission, inspect the supplier’s records for duplicates. For approval, inspect the decision and the action that followed. For a timeout, confirm the job reached a state someone can find and resolve. Check current plan limits and pricing in each provider’s official documentation before buying. This comparison does not present verified settings for a specific account or a calculation of charges.</p>
+<p>I’m a senior engineer who builds AI automations for solopreneurs and small teams. For a long-running API job, I recommend mapping the external effects of each call and its uncertain outcomes before drawing a diagram of connected apps. Submission, waiting, approval, and recovery each need a clear owner and an observable state.</p>
+<p>I would choose the tool only after testing the failure at the hardest boundary: the external API may have accepted a request even though our workflow did not record the response. If that case cannot be reconciled, adding retries makes the system busier, not safer.</p>
+<p>If you'd rather have this built for you, that's what we do: production AI automation for solo founders and small teams — agents, integrations, and document pipelines that actually ship.</p>
+<p>Request a free discovery call — 30 minutes, we map the highest-ROI automation in your workflow. No pitch deck, just engineering.</p>
+<p>More guides like this on the BizFlowAI blog.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/mermaid-chart" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/lamingsrb/long-running-api-jobs-compare-6-workflow-tools-fpl" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

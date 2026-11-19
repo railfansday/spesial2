@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How renaming breaks MVVM Toolkit bindings</title>
+    <title>Major Brazilian Signature Apps Enable RCE &amp;amp; Fraud</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9725.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,53 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How renaming breaks MVVM Toolkit bindings</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-18</p>
+        <h1>Major Brazilian Signature Apps Enable RCE &amp;amp; Fraud</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F5nr8pafplzze3j3538i6.png" alt="How renaming breaks MVVM Toolkit bindings" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltd3d76d438281428b/6afb51c99f6beb04c5e535c4/Brazil_CNH-RafaPress-Getty.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Major Brazilian Signature Apps Enable RCE &amp;amp; Fraud" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F5nr8pafplzze3j3538i6.png" alt="How renaming breaks MVVM Toolkit bindings" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/bltd3d76d438281428b/6afb51c99f6beb04c5e535c4/Brazil_CNH-RafaPress-Getty.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Major Brazilian Signature Apps Enable RCE &amp; Fraud" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 18
-•
-Originally published at delta1labs.com</p>
-<p>A CommunityToolkit.Mvvm view-model is mostly code you never wrote. You declare a field and an attribute; a source generator produces the public property, the PropertyChanged plumbing and the command object at compile time. That is the appeal — and it is also why obfuscating such an app trips people up. The names XAML binds to are not in your source. They are generated, they are public, and some of them are resolved by string at runtime while others only look like they are.</p>
-<p>When you rename an assembly, the honest question is never "will binding break" — it is "which of these generated names does the runtime look up by its string, and which did the generator already wire as a direct reference?" The first set must be kept. The second renames with no effect. Get that distinction right and you obfuscate an MVVM Toolkit app as hard as any other; get it wrong and you either leak the whole view-model surface or ship dead controls. The distinction is visible in the generated IL, so let us read it.</p>
-<p>Start with a small view-model written the MVVM Toolkit way.</p>
-<p>The generator emits a partial class completing this. Trimmed to the parts that matter, the generated property looks like this:</p>
-<p>(The real generator routes the change notifications through cached PropertyChangedEventArgs instances for allocation reasons, but the string content is exactly what you see.) Two kinds of name now live in this IL, and they behave completely differently under renaming.</p>
-<p>The getter and setter reach the backing field with ldfld/stfld against a field token:</p>
-<p>That token points at the FieldDef row, not at the text _firstName. Rename the field to a and Nebula rewrites the row; the ldfld still resolves. The field name is free.</p>
-<p>The notification, by contrast, carries a genuine string constant:</p>
-<p>The command is the same story with one extra wrinkle. SaveCommand is a public property, so {Binding SaveCommand} resolves it by string exactly like FirstName — keep it. But the CanSave predicate inside it is a delegate, passed as new RelayCommand(Save, CanSave). The generator resolved nameof(CanSave) at compile time and emitted a direct method reference; there is no "CanSave" string anywhere at runtime. CanSave renames for free, and so does Save. The only command-related name that faces the binding layer is SaveCommand itself.</p>
-<p>So the keep-list writes itself: the generated public properties and commands on every view-model, plus any property named inside a [NotifyPropertyChangedFor] (its nameof becomes a runtime ldstr). Everything else the generator produced — backing fields, CanExecute predicates, command target methods, the OnXxxChanged/OnXxxChanging partial hooks — is referenced by token or delegate and renames with no effect on binding.</p>
-<p>Because the generated members you must keep are exactly the public surface of your view-models, a single members-scoped keep rule expresses it precisely.</p>
-<p>The first rule keeps the public property and command names on every view-model — the generated FirstName, DisplayName and SaveCommand — and the members: "public" qualifier lets the private _firstName field, the CanSave predicate, the Save method and the partial hooks rename normally. The second rule renames everything else in the assembly: your services, your persistence layer, your domain logic. Crucially, a keep is name-only — the kept view-models still get their method bodies control-flow-obfuscated and their string literals encrypted. You give up renaming on a handful of binding-facing names, not protection on the code behind them.</p>
-<p>If you would rather not reason about which namespace holds view-models, preservePublicApi: true keeps the whole externally visible surface and achieves the same thing for any view-model that is public — at the cost of also keeping every other public type's names. For a shipped desktop app with no library consumers, the namespace-scoped rule above leaks less.</p>
-<p>The failure mode is the quiet one. A renamed bound property does not throw — WPF and WinUI log a BindingExpression path error to the debug trace and leave the control at its fallback value. A smoke test that merely launches the app and sees a window will pass while half the fields are blank. The only honest acceptance test is to run the protected build and exercise the bound screens, watching the debug output for a path error that names the member that got renamed.</p>
-<p>Two edges are worth stating. First, if a view-model is internal rather than public — some teams keep them internal and expose them only through an interface — then members: "public" does not cover it and preservePublicApi does not either; the generated properties are still public members of a non-public type, and you must keep that view-model explicitly. Second, [ObservableProperty] applied to a field whose name feeds a computed property via [NotifyPropertyChangedFor] creates a dependency you can miss: the computed DisplayName must be kept too, because its name travels as a runtime string in the setter and the UI binds to it. Keeping the whole view-model's public members, as above, covers both without you having to enumerate them.</p>
-<p>And the ground rule underneath all of it: this is about protecting your own application's IP. Keep the names the binding layer resolves by string, obfuscate the logic those bindings sit in front of.</p>
-<p>The MVVM Toolkit generator emits two kinds of name into your assembly, and renaming treats them oppositely. The names that face the binding layer — the generated public properties, the commands, and any property raised through [NotifyPropertyChangedFor] — live as runtime strings and must survive. The names wired as metadata tokens or direct delegates — backing fields, CanExecute predicates, command targets, partial hooks — rename for free. A members: "public" keep on your view-model namespace draws exactly that line, which is why obfuscating a CommunityToolkit.Mvvm app is a scoping problem, not a reason to avoid obfuscation. Nebula.NET keeps the binding contract and obfuscates everything behind it; open the result in Glass.NET to confirm your view-models' public names survived while the internals read as a, b, c.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Breaking cybersecurity news, news analysis, commentary, and other content from around the world, with an initial focus on the Middle East & Africa, the Asia Pacific, Europe, and Latin America.</p>
+<p>Government-sanctioned authentication middleware is used for exceptionally important legal documents, yet it's often rife with RCE bugs.</p>
+<p>Brazil's digital certificate system was recently found to be rife with vulnerabilities in browser extensions used by millions of government agencies and legal, medical, and tax professionals.</p>
+<p>That's the assessment of researchers at Bay Area Labs, who this week flagged five particularly popular digital extensions that allow Brazilian citizens and institutions to not only sign official documents, but sign them with the greatest possible degree of trust issued by their government. All five of them possessed vulnerabilities which could've allowed attacker-controlled websites to run arbitrary code on users' machines.</p>
+<p>One can only hope that the researchers, who disclosed the vulnerabilities this week, were the first to discover them. Remote code execution (RCE) in this context could have allowed fraudsters to sign legal documents in victims' names, and hackers to breach major government organizations (as well as professionals who manage large amounts of personal, financial, tax, and health information on behalf of their clients).</p>
+<p>Related:Java4Shell Flaw Threatens Global Enterprises, Java Application Ecosystem</p>
+<p>On Sept. 23, 2020, Brazil's National Congress enacted Federal Law No. 14,063. 14,063 laid the ground rules on how individuals and organizations could digitally sign documents when dealing with public institutions. Among other things, it delineated three tiers of trust that an electronic signature could carry: "simple," "advanced," and "qualified." "Qualified" meant that a digital signature would be equivalent to a notarized, handwritten one. It would be sufficient for high-stakes legal proceedings, like real estate transfers and electronic tax processes. And any digital signature backed with an ICP-Brasil certificate — ICP-Brasil is the country's official national public key infrastructure (PKI) framework — would be considered "qualified."</p>
+<p>Brazilian government institutions, tax professionals, and anyone in-between who wants to provide a qualified digital signature for a sensitive legal document online can use browser extensions like Lacuna Web PKI, Softplan Web Signer, Certisign WebSigner, Certisign CertiPlugin, and BRy Assinatura Digital. Each of these tools lets official government and vendor portals read ICP-Brasil certificates, to confirm that signers are who they say they are, and put pen to Web page.</p>
+<p>These tools will also engage with non-official websites. So if an attacker can lure a victim to their own site — or, in some cases, plant a malicious ad or iframe on a legitimate site — they can engage that victim's authentication middleware. Only one of the five extensions, CertiPlugin, had any kind of allowlist, yet it included any domain ending in ".one," meaning that an attacker would simply need to purchase a domain with that common and freely available suffix in order to perform an attack.</p>
+<p>Related:Google Project Zero Slashes Bug Disclosure Deadlines, Splitting Experts</p>
+<p>The core issue endemic to each of these five extensions, and others used by other national governments, is that they allow websites to dictate the dynamic link libraries (DLLs) they load. Loading cryptographic libraries is a normal part of the way these apps work. But if they don't properly check that a loaded file is trusted? In that case, an attacker that lures a victim to their site can trigger a malware download and then instruct the victim's signing software to load that malware as if it were a legitimate library.</p>
+<p>All five extensions' RCE vulnerabilities earned "critical" 9.6 scores in the Common Vulnerability Scoring System (CVSS). Each of them was patched as of mid-September, but lessons remain.</p>
+<p>Lacuna Web PKI, Softplan Web Signer, Certisign WebSigner, Certisign CertiPlugin, and BRy Assinatura Digital have more than 10 million installs between them.</p>
+<p>Among that user base are some of the most significant, high-value organizations and professionals in the country. On its website, Lacuna alone counts Brazil's Federal Senate, its National Council of Justice, its navy, and its stock exchange among its clients "who trust our work." These extensions are far from limited to major government agencies, of course. BRy advertises its work with the University of São Paulo, the São Paulo metro, and one of the country's few biggest banks, Caixa Econômica Federal.</p>
+<p>Related:'Sleeper Agent' Tactic Hides Payloads in Open-Weight AI Models</p>
+<p>Attackers could have used the vulnerable authentication middleware to infect employees at major state institutions and, in Arnott's words, "cause mayhem." As an easier alternative, they could target middle class professionals: lawyers, doctors, accountants and so on. An accountant might manage digital signing credentials for hundreds of different individuals and businesses on their single computer. An attacker with that accountant's access could then impersonate those people and companies in legally significant transactions — forging agreements, submitting false tax filings ... the sky's the limit.</p>
+<p>"It's really interesting how these signing tools always consistently have the same critical vulnerabilities," Arnott marvels, after having found characteristically similar vulnerabilities in extensions used by Belgium, Sweden, and Qatar's governments in recent months. "Since they are security tools, you'd expect them to be properly built. But they're so often making the same mistake, by allowing any site to pick which DLLs to load. I imagine it's to reduce friction so organizations can more easily load in the drivers for hardware security tokens and readers, because the driver DLLs aren't always known to the signing tool vendor or signed properly with Authenticode. It is insane to me how many independent vendors make this same mistake though."</p>
+<p>Nate Nelson is a journalist and award-winning scriptwriter. In addition to Dark Reading he writes for Darknet Diaries, the most popular show in cybersecurity across all media.</p>
+<p>He began his career as a freelancer, ghostwriting Forbes and CNBC op-eds for executives in tech and finance. Then he transitioned to journalism at Threatpost, where he covered cybersecurity news and trends. Throughout those years he co-created a cybersecurity podcast, Malicious Life, which in its day climbed into the Top 20 technology podcasts charts on Apple Podcasts and Spotify.</p>
+<p>He holds degrees from New York University and Bard College. As a born and bred New Yorker, he enjoys a superiority complex, but is polite enough to keep it to himself.</p>
+<p>2026 State of Cybersecurity Report: Bridging the Divide</p>
+<p>The Autonomous Endpoint Management Advantage</p>
+<p>The State of Cloud Security: The Latest Challenges</p>
+<p>How Organizations Are Managing Incident Response</p>
+<p>How Enterprises Are Developing Secure Applications</p>
+<p>China's Insider Advantage: What Talent Programs Mean for Your Research and IP</p>
+<p>Securing Active Directory: Defending Against Modern Attack</p>
+<p>When the Plumbing Breaks: Lessons from PHP2Shell and LiteLLM</p>
+<p>From Shadow AI to Rogue Agents: Securing the AI You Can't See</p>
+<p>LLM Security Architecture: Building Secure AI Systems from the Ground Up</p>
+<p>Chinese AI Project Scouts Spies in Taiwan Chip Industry</p>
+<p>Japan Pushes Emergency Funding for Cybersecurity as AI-Assisted Breaches Rise</p>
+<p>AIを活用したサイバー攻撃の増加を受け、日本がサイバーセキュリティへの緊急資金拠出を推進</p>
+<p>UK Wades Into Tech Sovereignty Amid AI Policy Changes</p>
+<p>Why Europe's Freezer Hacks Spread So Far, So Fast</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/zero_heartbeat_06a3625d7a/how-renaming-breaks-mvvm-toolkit-bindings-20a1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/vulnerabilities-threats/major-brazilian-signature-app-rce-fraud" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
