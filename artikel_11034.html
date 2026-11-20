@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The N Implementation Details of RLHF with PPO</title>
+    <title>Testing JSON-LD Like an API: 7 Checks Before Your Next Release</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11034.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,52 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The N Implementation Details of RLHF with PPO</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>Testing JSON-LD Like an API: 7 Checks Before Your Next Release</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/167_the_n_implementation_details_of_rlhf_with_ppo/thumbnail.png" alt="The N Implementation Details of RLHF with PPO" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/167_the_n_implementation_details_of_rlhf_with_ppo/thumbnail.png" alt="The N Implementation Details of RLHF with PPO" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>RLHF / ChatGPT has been a popular research topic these days. In our quest to research more on RLHF, this blog post attempts to do a reproduction of OpenAI’s 2019 original RLHF codebase at openai/lm-human-preferences. Despite its “tensorflow-1.x-ness,” OpenAI’s original codebase is very well-evaluated and benchmarked, making it a good place to study RLHF implementation engineering details.</p>
-<p>This work is just for educational / learning purposes. For advanced users requiring more features, such as running larger models with PEFT, huggingface/trl would be a great choice.</p>
-<p>Our main contribution is to reproduce OAI’s results in stylistic tasks, such as sentiment and descriptiveness. As shown in the figure below, our codebase (orange curves) can produce nearly identical learning curves as OAI’s codebase (blue curves).</p>
-<p>To make a direct comparison, we ran the original RLHF code at openai/lm-human-preferences, which will offer valuable metrics to help validate and diagnose our reproduction. We were able to set the original TensorFlow 1.x code up, but it requires a hyper-specific setup:</p>
-<p>We now take a technical deep dive into the implementation details that are relevant to reproducing OAI’s work. In this section, we talk about basic details, such as how rewards/values are generated and how responses are generated. Here are these details in no particular order:</p>
-<p>The reward model and policy’s value head take input as the concatenation of query and response</p>
-<p>Pad with a special padding token and truncate inputs.</p>
-<p>OAI sets a fixed input length for query query_length; it pads sequences that are too short with pad_token (lm_human_preferences/language/datasets.py#L66-L67) and truncates sequences that are too long (lm_human_preferences/language/datasets.py#L57). See here for a general introduction to the concept). When padding the inputs, OAI uses a token beyond the vocabulary (lm_human_preferences/language/encodings.py#L56).</p>
-<p>Note that having no padding token is a default setting for decoder models, since they train with “packing” during pretraining, which means that many sequences are concatenated and separated by the EOS token and chunks of this sequence that always have the max length are fed to the model during pretraining.</p>
-<p>When putting everything together, here is an example</p>
-<p>Adjust position indices correspondingly for padding tokens</p>
-<p>When calculating the logits, OAI’s code works by masking out padding tokens properly. This is achieved by finding out the token indices corresponding to the padding tokens (lm_human_preferences/language/model.py#L296-L297), followed by adjusting their position indices correspondingly (lm_human_preferences/language/model.py#L320).</p>
-<p>For example, if the query=[23073, 50259, 50259] and response=[11, 339, 561], where (50259 is OAI’s padding token), it then creates position indices as [[0 1 1 1 2 3]] and logits as follows. Note how the logits corresponding to the padding tokens remain the same as before! This is the effect we should be aiming for in our reproduction.</p>
-<p>Note on HF’s transformers — position_ids and padding_side. We can replicate the exact logits using Hugging Face’s transformer with 1) left padding and 2) pass in the appropriate position_ids:</p>
-<p>Note on HF’s transformers — position_ids during generate: during generate we should not pass in position_ids because the position_ids are already adjusted in transformers (see huggingface/transformers#/7552.</p>
-<p>Usually, we almost never pass position_ids in transformers. All the masking and shifting logic are already implemented e.g. in the generate function (need permanent code link).</p>
-<p>Response generation samples a fixed-length response without padding.</p>
-<p>During response generation, OAI uses top_k=0, top_p=1.0 and just do categorical samples across the vocabulary  (lm_human_preferences/language/sample.py#L43) and the code would keep sampling until a fixed-length response is generated (lm_human_preferences/policy.py#L103). Notably, even if it encounters EOS (end-of-sequence) tokens, it will keep sampling.</p>
-<p>Note on HF’s transformers — sampling could stop at eos_token: in transformers, the generation could stop at eos_token (src/transformers/generation/utils.py#L2248-L2256), which is not the same as OAI’s setting. To align the setting, we need to do set pretrained_model.generation_config.eos_token_id = None, pretrained_model.generation_config.pad_token_id = None. Note that transformers.GenerationConfig(eos_token_id=None, pad_token_id=None, ...) does not work because pretrained_model.generation_config would override and set a eos_token.</p>
-<p>Note that in a more recent codebase https://github.com/openai/summarize-from-feedback, OAI does stop sampling when encountering EOS token (summarize_from_feedback/utils/experiment_helpers.py#L19). However in this work we aim to do a 1:1 replication, so we align the setting that could keep sampling even eos_token is encountered</p>
-<p>Learning rate annealing for reward model and policy training.</p>
-<p>Use different seeds for different processes</p>
-<p>In this section, we discuss reward-model-specific implementation details. We talk about details such as reward normalization and layer initialization. Here are these details in no particular order:</p>
-<p>In this section, we will delve into details, such as layer initialization, data post-processing, and dropout settings. We will also explore techniques, such as of rejection sampling and reward "whitening", and adaptive KL. Here are these details in no particular order:</p>
-<p>Scale the logits by sampling temperature.</p>
-<p>Select query texts that start and end with a period</p>
-<p>Token truncation: We want to truncate at the first occurrence of truncate_token that appears at or after position truncate_after in the responses (lm_human_preferences/train_policy.py#L378)</p>
-<p>Run reward model on truncated response: After the response has been truncated by the token truncation process, the code then runs the reward model on the truncated response.</p>
-<p>Rejection sampling: if there is not a period between tokens 16 and 24, then replace the score of the response with a fixed low value (such as -1)(lm_human_preferences/train_policy.py#L384, lm_human_preferences/train_policy.py#L384-L402)</p>
-<p>To give some examples in descriptiveness:</p>
-<p>Samples extracted from our reproduction https://wandb.ai/openrlbenchmark/lm_human_preference_details/runs/djf8yymv/logs. Notice the 1st and 3rd example has too many tokens after the period, so its score was replaced by -1.</p>
-<p>Terminology of the training loop: batches and minibatches in PPO</p>
-<p>OAI uses the following training loop (lm_human_preferences/train_policy.py#L184-L192). Note: we additionally added the micro_batch_size to help deal with the case in gradient accumulation. At each epoch, it shuffles the batch indices.</p>
-<p>Per-minibatch reward and advantage whitening, with optional mean shifting</p>
-<p>In each minibatch, OAI then whitens the reward whiten(rewards, shift_mean=False) without shifting the mean (lm_human_preferences/train_policy.py#L325) and whitens the advantages whiten(advantages) with the shifted mean (lm_human_preferences/train_policy.py#L338).</p>
-<p>Optimization note: if the number of minibatches is one (which is the case in this reproduction) we only need to whiten rewards, calculate and whiten advantages once since their values won’t change.</p>
-<p>TensorFlow vs PyTorch note: Different behavior of tf.moments vs torch.var: The behavior of whitening is different in torch vs tf because the variance calculation is different:</p>
-<p>The KL divergence penalty coefficient β\betaβ is modified adaptively based on the KL divergence between the current policy and the previous policy. If the KL divergence is outside a predefined target range, the penalty coefficient is adjusted to bring it closer to the target range (lm_human_preferences/train_policy.py#L115-L124). It’s implemented as follows:</p>
-<p>For the sentiment and descriptiveness tasks examined in this work, we have init_kl_coef=0.15, hparams.target=6, hparams.horizon=10000.</p>
-<p>pytorch adam :θt=θt−1−α⋅m^t/(v^t+ε)=θt−1−α[mt/(1−β1t)]⏟=m^t/[vt/(1−β2t)⏟=v^t+ε]=θt−1−α[mt/(1−β1t)]1−β2tvt+ε1−β2t\begin{aligned}\text{pytorch adam :}\quad \theta_t & =\theta_{t-1}-\alpha \cdot \hat{m}_t /\left(\sqrt{\hat{v}_t}+\varepsilon\right) \\& =\theta_{t-1}- \alpha \underbrace{\left[m_t /\left(1-\beta_1^t\right)\right]}_{=\hat{m}_t} /\left[\sqrt{\underbrace{v_t /\left(1-\beta_2^t\right)}_{=\hat{v}_t} }+\varepsilon\right]\\& =\theta_{t-1}- \alpha\left[m_t /\left(1-\beta_1^t\right)\right]\frac{\sqrt{1-\beta_2^t}}{\sqrt{v_t}+\color{green}{\varepsilon \sqrt{1-\beta_2^t}}}\end{aligned}pytorch adam :θt​​=θt−1​−α⋅m^t​/(v^t​​+ε)=θt−1​−α=m^t​[mt​/(1−β1t​)]​​/​=v^t​vt​/(1−β2t​)​​​+ε​=θt−1​−α[mt​/(1−β1t​)]vt​​+ε1−β2t​​1−β2t​​​​</p>
-<p>tensorflow adam:θt=θt−1−αtmt/(vt+ε^)=θt−1−[α1−β2t/(1−β1t)]⏟=αtmt/(vt+ε^)=θt−1−α[mt/(1−β1t)]1−β2tvt+ε^\begin{aligned}\text{tensorflow adam:}\quad \theta_t & =\theta_{t-1}-\alpha_t m_t /\left(\sqrt{v_t}+\hat{\varepsilon}\right) \\& =\theta_{t-1}-\underbrace{\left[\alpha \sqrt{1-\beta_2^t} /\left(1-\beta_1^t\right)\right]}_{=\alpha_t} m_t /\left(\sqrt{v_t}+\hat{\varepsilon}\right) \\& =\theta_{t-1}- \alpha\left[m_t /\left(1-\beta_1^t\right)\right] \frac{\sqrt{1-\beta_2^t}}{\sqrt{v_t}+\color{green}{\hat{\varepsilon}}} \end{aligned}tensorflow adam:θt​​=θt−1​−αt​mt​/(vt​​+ε^)=θt−1​−=αt​[α1−β2t​​/(1−β1t​)]​​mt​/(vt​​+ε^)=θt−1​−α[mt​/(1−β1t​)]vt​​+ε^1−β2t​​​​</p>
-<p>The equations above highlight that the distinction between pytorch and tensorflow implementation is their normalization terms, ε1−β2t\color{green}{\varepsilon \sqrt{1-\beta_2^t}}ε1−β2t​​  and ε^\color{green}{\hat{\varepsilon}}ε^. The two versions are equivalent if we set  ε^=ε1−β2t\hat{\varepsilon}  =\varepsilon \sqrt{1-\beta_2^t}ε^=ε1−β2t​​ .  However, in the pytorch and tensorflow APIs, we can only set ε\varepsilonε (pytorch) and ε^\hat{\varepsilon}ε^ (tensorflow) via the eps argument, causing differences in their update equations. What if we set  ε\varepsilonε and ε^\hat{\varepsilon}ε^  to the same value, say, 1e-5? Then for tensorflow adam, the normalization term ε^=1e-5\hat{\varepsilon} = \text{1e-5}ε^=1e-5  is just a constant. But for pytorch adam, the normalization term ε1−β2t{\varepsilon \sqrt{1-\beta_2^t}}ε1−β2t​​ changes over time. Importantly, initially much smaller than 1e-5 when the timestep ttt is small, the term  ε1−β2t{\varepsilon \sqrt{1-\beta_2^t}}ε1−β2t​​  gradually approaches to 1e-5 as timesteps increase. The plot below compares these two normalization terms over timesteps:</p>
-<p>The above figure shows that, if we set the same eps in pytorch adam and tensorflow adam, then pytorch-adam uses a much smaller normalization term than tensorflow-adam in the early phase of training. In other words, pytorch adam goes for more aggressive gradient updates early in the training. Our experiments support this finding, as we will demonstrate below.</p>
-<p>How does this impact reproducibility and performance? To align settings, we record the original query, response, and rewards from https://github.com/openai/lm-human-preferences and save them in https://huggingface.co/datasets/vwxyzjn/lm-human-preferences-debug/tree/main. I also record the metrics of the first two epochs of training with TF1’s AdamOptimizer optimizer as the ground truth.  Below are some key metrics:</p>
-<p>PyTorch’s Adam produces a more aggressive update for some reason. Here are some evidence:</p>
-<p>Larger models get affected more. We conducted experiments comparing PyTorch’s Adam (codename pt_adam) and our custom TensorFlow-style (codename tf_adam) with gpt2 and gpt2-xl. We found that the performance are roughly similar under gpt2; however with gpt2-xl, we observed a more aggressive updates, meaning that larger models get affected by this issue more.</p>
-<p>Noticed this work does not try to reproduce the summarization work in CNN DM or TL;DR. This was because we found the training to be time-consuming and brittle.</p>
-<p>The particular training run we had showed poor GPU utilization (around 30%), so it takes almost 4 days to perform a training run, which is highly expensive (only AWS sells p3dn.24xlarge, and it costs $31.212 per hour)</p>
-<p>Additionally, training was brittle. While the reward goes up, we find it difficult to reproduce the “smart copier” behavior reported by Ziegler et al. (2019). Below are some sample outputs — clearly, the agent overfits somehow. See https://wandb.ai/openrlbenchmark/lm-human-preferences/runs/1ab47rqi/logs for more complete logs.</p>
-<p>In this work, we took a deep dive into OAI’s original RLHF codebase and compiled a list of its implementation details. We also created a minimal base which reproduces the same learning curves as OAI’s original RLHF codebase, when the dataset and hyperparameters are controlled. Furthermore, we identify surprising implementation details such as the adam optimizer’s setting which causes aggressive updates in early RLHF training.</p>
-<p>This work is supported by Hugging Face’s Big Science cluster 🤗. We also thank the helpful discussion with @lewtun and @natolambert.</p>
-<p>I am confused about the whitening function.</p>
-<p>Note it’s rsqrt: https://pytorch.org/docs/stable/generated/torch.rsqrt.html</p>
+                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>A content editor changes an article’s headline. The page updates immediately, but its JSON-LD still contains the previous title. A redesign introduces a new author component while an old plugin continues publishing a different author name in the page source.</p>
+<p>Neither failure necessarily produces a JavaScript error. Both leave machines and readers with conflicting descriptions of the same page.</p>
+<p>For developers, the useful approach is to treat JSON-LD as a maintained output of the application, with a data source, validation rules, and regression tests. This guide uses a blog template to show how. You will need basic JavaScript knowledge and a modern Node.js installation for the runnable tests.</p>
+<p>Requests for search improvements often arrive as broad outcomes: improve discoverability, clarify entities, or support answer engines. These need to become implementation requirements before development starts.</p>
+<p>For example, AEO directory includes structured data within descriptions of broader optimization services. For an engineering team, the actionable deliverable is a page representation whose types, properties, and values can be checked against the published content. I personally used this , and adding this because this can help other developer's and designer for optimization and get higher search result's.</p>
+<p>For a blog template, define these acceptance criteria:</p>
+<p>Keep implementation success separate from search outcomes. Google’s AI features guidance says there is no special Schema.org markup required for its AI search features. Correct markup also does not guarantee rich results or inclusion in an AI-generated answer.</p>
+<p>Avoid separate, manually maintained copies of the headline, author, and publication date. Both the visible template and metadata builder should consume the same published record.</p>
+<p>Save the following as article-schema.mjs. The builder assumes an upstream content-validation step has already checked required strings, timestamps, and approved HTTPS URLs.</p>
+<p>This is a deliberately small example, not a complete rich-result eligibility checklist. Add relevant images and other supported properties when the real page supplies them. Consult the Schema.org BlogPosting definition and Google’s Article documentation for their respective vocabularies and search guidance.</p>
+<p>Use a consistent canonical-URL policy before building the identifier: normalize the intended hostname, trailing-slash convention, and query parameters. Do not generate a fresh UUID for the same article on every request.</p>
+<p>SitePoint’s guide to implementing JSON-LD on modern websites covers embedding approaches across common stacks.</p>
+<p>Valid JSON is not automatically safe to insert into a raw HTML script element.</p>
+<p>A CMS value containing </script> can terminate the element at the HTML-parser level, even when the value belongs to a JSON string. Concatenating a headline directly into a script tag is particularly risky.</p>
+<p>Append this helper to article-schema.mjs:</p>
+<p>JSON serialization handles quotes and backslashes. Replacing literal less-than characters prevents an embedded closing-script sequence from appearing in the resulting text. The Next.js JSON-LD guide documents this approach for script embedding.</p>
+<p>Use the serialized result as the content of a script element with type="application/ld+json". Follow your framework’s documented embedding mechanism so the JSON is neither double-encoded nor inserted through an unrelated HTML context.</p>
+<p>This helper is specific to JSON-LD script content. It is not a general-purpose HTML sanitizer, URL validator, or substitute for validating CMS data.</p>
+<p>The tests should catch changes that would make metadata misleading or unsafe, not merely confirm that an object exists.</p>
+<p>Save this file as article-schema.test.mjs beside the builder:</p>
+<p>These are unit tests for the builder and serializer. They do not prove that a template embeds the script correctly or that the deployed page is eligible for a search feature. SitePoint’s explanation of unit, functional, and integration testing helps distinguish those responsibilities.</p>
+<p>A passing builder test cannot detect a page component reading a different CMS field.</p>
+<p>Add a browser-level check against a controlled article fixture. Inspect its visible heading, byline, dates, canonical link, and JSON-LD together. For this template, assert that the intended article entity appears once and matches those visible fields.</p>
+<p>Do not assert that the entire page contains exactly one JSON-LD script. A site may legitimately publish organization, breadcrumb, and article entities separately. Instead, identify the relevant entity by its @id and detect conflicting definitions.</p>
+<p>Include these failure cases in the test plan:</p>
+<p>Prefer generating metadata from the content loaded during server rendering or static generation when that fits the application. If it is injected client-side, inspect the rendered result and test navigation explicitly. Avoid making essential metadata depend on a user interaction.</p>
+<p>No single tool establishes syntax, semantic accuracy, search eligibility, and content consistency at once.</p>
+<p>Test both representative code samples and deployed URLs. A validator cannot confirm the truth of an author name simply because the property is syntactically valid.</p>
+<p>Google’s general structured-data guidelines also require markup to represent the page accurately. Treat validation warnings as findings to investigate; do not add invented reviews, dates, or attributes merely to improve a tool’s output.</p>
+<p>Ownership matters after the first release. Decide which application layer generates article markup, who maintains its mapping, and which publishing events invalidate cached output.</p>
+<p>When an editor changes a headline, the visible page and JSON-LD should be rebuilt or refreshed together. Updating one while serving the other from an older cache creates a mismatch even if both implementations are individually correct.</p>
+<p>Avoid setting dateModified to the current time on every deployment. A CSS update or infrastructure rebuild does not necessarily mean the article changed. Read the timestamp from the editorial record instead.</p>
+<p>Before shipping a template change, run the builder tests, inspect one rendered page per affected template, and check representative deployed URLs. Keep a small fixture set that includes optional fields, long text, translated content, and script-like strings.</p>
+<p>A reliable JSON-LD implementation has a traceable relationship with published content. When someone changes the page, its machine-readable description should change predictably—and the test suite should expose the cases where it does not.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/the_n_implementation_details_of_rlhf_with_ppo" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/testing-json-ld-like-an-api-7-checks-before-your-next-release/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

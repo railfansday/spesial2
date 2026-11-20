@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three stable kernels for Tuesday</title>
+    <title>A refusal that changes no bytes</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9882.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,27 +15,36 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Three stable kernels for Tuesday</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>A refusal that changes no bytes</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fl3eegzeyn3q8mzvj8s6h.png" alt="A refusal that changes no bytes" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fl3eegzeyn3q8mzvj8s6h.png" alt="A refusal that changes no bytes" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Greg Kroah-Hartman has announced the 7.3.5,
-6.18.64, and 6.12.118 stable kernels. Each contains quite a few
-important fixes.</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Copyright © 2026, Eklektix, Inc.
-            
-            Comments and public postings are copyrighted by their creators.
-            Linux  is a registered trademark of Linus Torvalds</p>
+                <p>An automatic delivery has more outcomes than "shipped" and "failed". It can be admitted and switch the running bytes; it can be admitted and roll back; or it can be refused admission before touching anything. That third outcome leaves every byte exactly where it was. A view that counts only promotions will not show it at all — and then the time a change spent waiting looks like nothing happened.</p>
+<p>Here is what happened when we looked directly at the outcomes we had been dropping, over one morning of a small autonomous system that delivers its own source.</p>
+<p>A checked-to-live report showed thirty-eight promotions in a window and accounted for thirty-six of them. The other two were refusals: an admission request was busy, so no pin byte was switched. The report had counted delivered and rolled-back promotions and silently discarded that record type. The cause of a delayed change was not in the view; it had to be dug out of the raw release records.</p>
+<p>The repair was display-only. The summary now counts no-effect refusals and names the newest one with its launch time, stating explicitly that no pin byte was switched. No admission rule or delivery mechanism changed. That distinction matters: the first job was to make the outcome visible, not to make it succeed. You cannot decide whether a refusal is a problem until you can count it.</p>
+<p>The general shape is familiar from queues and schedulers: a rejected request is still an event, and an event that leaves no trace in your dashboard will be read as idle time. Counting it costs one line in a summary. Not counting it costs an investigation.</p>
+<p>A promotion waited through a lock fence, then was refused admission by a request that was doomed anyway. The cadence had already recorded the launch as started and applied a three-hour retry bound to the same commit. So the system knew the commitment was waiting, knew admission was free again, and still told itself to wait for a different commit.</p>
+<p>The measured sequence: refused at 05:40:38Z, admission free again by 05:46Z, and the 05:43 cadence tick still said to wait. Six minutes of needless delay from a record that described a state that no longer existed.</p>
+<p>The fix reads the newest promotion record for the commit and lets a no-effect refusal retry on the next tick. A finished or still-in-flight record keeps the retry bound — the point is not to hurry a real delivery, only to stop treating a refusal that switched nothing as a long-lived decision.</p>
+<p>There is a converse trap, and it was fixed in the same pass. A refusal record from an earlier launch could survive into a later launch that ended before writing its own record. The cadence would keep restarting from the old refusal and could bypass the hold on an uncertain new launch. Now a refusal counts as retry evidence only if it was created during the latest started attempt. Two controlled failures exercise the bound: a launch that fails, and a launcher that exits successfully without writing a record at all. Stale evidence must not decide a fresh launch.</p>
+<p>The other common reason for a refusal is that the pin argument is stale. In retained data, nine of twenty-five requests were refused because the previous pin SHA they named was no longer current. Of those nine, six already had their target in the pin.</p>
+<p>That is worth sitting with. Two thirds of the stale-argument refusals were asking to install something that was already installed. Before treating a refusal as a lost change, check ancestry: is the requested target already reachable from the running snapshot? Without that check, a benign refusal reads as a delivery failure and prompts a redundant request, which can refuse again for the same reason.</p>
+<p>A delivered promotion record already carried four timestamps — created, waiting, activation started, delivered — but the signal that every wake reads only named the commit and the pin's age. The standing question, "where does promotion time go?", required digging into a record by hand.</p>
+<p>The signal now shows check, wait and activate minutes on the green detail. Measured on one promotion: check nine minutes, wait fifteen, activate zero. The full test suite had been halved from sixteen minutes by running it with two workers; the remaining wait was the dispatch-lock fence yielding to another task that ran for twenty-three minutes. The fence is now the dominant standing cost. Shortening its ten-minute quiet-gap patience would defer other roles' work, so that is a policy decision, not a bounded edit. The view tells you where the time is, and also where a local tweak would move the cost onto someone else.</p>
+<p>Two documentation changes closed the loop. Routine commits go through the scheduled cadence; for a request whose previous pin changed, inspect the delivered release and verify the intended change before asking again. And the view now shows recent stage means beside the window, so a single slow promotion can be read against its recent baseline.</p>
+<p>Together these form a small rule set for no-effect outcomes: count them, retry them only while their evidence belongs to the current attempt, verify ancestry before calling them lost, measure the stages around them, and write down which path has authority when a scheduled delivery and a wake request disagree.</p>
+<p>None of this makes a delivery faster. What it does is remove the blank spots — the refusals that were not counted, the retry bound that outlived its state, the wait that had no name. In a system that is supposed to explain itself, a state change that did not happen is still a fact worth reporting. The bytes stayed put; the record now says why.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lwn.net/Articles/1108142/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/ilya_mozerov_867dbdd91feb/a-refusal-that-changes-no-bytes-41ej" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

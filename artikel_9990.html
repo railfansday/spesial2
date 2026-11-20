@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</title>
+    <title>PostgreSQL 19 Released</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9990.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,194 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>PostgreSQL 19 Released</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL 19 Released" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL 19 Released" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous posts - Easy FunctionGemma finetuning with Tunix on Google TPUs and Autonomous LLM post-training with Tunix on TPUs - we showed how Google Tunix streamlines Supervised Fine-Tuning (SFT) and single-turn Group Relative Policy Optimization (GRPO) on Cloud TPUs. Real-world AI agents, however, rarely finish their job in a single turn. They have to reason over partial observations, invoke tools, observe environment feedback, and adapt their strategy across multiple steps. So in this post, we will walk through how to train a multi-turn, tool-using LLM agent using Tunix's agentic reinforcement learning pipeline on Cloud TPU v6e-8. You can find the complete code in this GitHub repository.</p>
-<p>We will revisit the Plane Strike board game from an earlier TensorFlow/JAX reinforcement learning blog, replacing the custom MLP policy with Gemma 4 E2B in thinking mode on a single Cloud TPU v6e-8 host. Plane Strike is played on a 6x6 grid (A1 to F6) where one 8-cell plane is hidden in one of 4 orientations. Each turn, the agent sees the result of its previous strike and the raw visible board (. untried, X hit, O miss), thinks through candidate placements, and calls the strike(cell="...") tool to strike one cell. The game ends when all 8 plane cells are hit, or after 23 strikes.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Although google/gemma-4-E2B-it has decent spatial reasoning and tool calling capabilities, out of the box, it wins only 9.4% of games on held-out boards (averaging 22.44 strikes). After 100 steps of agentic GRPO with Tunix, its win rate reaches 95% while cutting the average game length to ~16 strikes.</p>
-<p>We set up the multi-turn RL pipeline in four modular components:</p>
-<p>Let's look at the key steps for each piece.</p>
-<p>In env.py, we subclass Tunix's BaseTaskEnv to implement PlaneStrikeEnv. Each environment instance receives a task dictionary with a seed that fixes the hidden plane position so all 8 rollouts in a GRPO group play the exact same board:</p>
-<p>On each turn, _step_impl evaluates the struck cell index against the hidden board, updates the visible grid, computes the step reward (summed into the trajectory-level reward over the episode), and returns EnvStepResult(observation, reward, done, info).</p>
-<p>For standard multi-tool agents, tunix.rl.agentic also provides ready-to-use ToolEnvironment, ToolAgent and ToolManager abstractions out of the box so we don't have to write custom message/observation plumbing unless we need custom turn control.</p>
-<p>In Gemma 4, tool schemas are declared in the system prompt inside <|tool>declaration:...<tool|>, and a model turn that calls a tool ends with:</p>
-<p><|tool_response> is one of Gemma 4's native stop tokens: the model pauses there and waits for response:strike{value:<|"|>...<|"|>}<tool_response|>, then continues generating its next thought and tool call within the same assistant turn.</p>
-<p>In strike_tool.py, we define StrikeTool(BaseTool) and subclass Tunix's Gemma4ChatTemplateParser to append the tool declaration to the system prompt and render "tool" messages as in-turn responses:</p>
-<p>In agent.py, PlaneStrikeAgent(ConversationAgentBase) translates between environment observations and model messages.</p>
-<p>When the model finishes a turn, tool_strike ignores everything inside <|channel>thought...<channel|> and parses the final answer after <channel|>; only a final answer with a single valid strike call counts as a valid board coordinate (otherwise INVALID_ACTION is returned). If the model stopped at <|tool_response>, the next board observation is appended with role="tool" so the model continues its turn:</p>
-<p>In train_planestrike.py, we configure Tunix's asynchronous vllm rollout engine, RLEngine, and GRPOLearner:</p>
-<p>Multi-turn agentic RL is often bottlenecked by variable-length rollout generation, so we set rollout_vllm_server_mode to true to enable continuous asynchronous multi-turn rollouts via vllm-tpu and enable_prefix_caching to true to true to cache the growing multi-turn conversation history. Since we are using a v6e-8 single host, the actor model, the reference model, and the rollout workers share the 8 chips.</p>
-<p>We then pass our actor, tokenizer, ClusterConfig, GRPOConfig (loss_algo="gspo-token", advantage_estimator="rloo", exact_token_continuity=True to preserve exact token IDs across multi-turn rollouts without retokenization drift), agent, and environment into RLEngine and PlaneStrikeGRPOLearner:</p>
-<p>All of these enable us to launch the 100-step training job with:</p>
-<p>Over 100 steps (8 boards x 8 games per step), the agent learns both reliable tool calling and spatial deduction:</p>
-<p>With Tunix's tunix.rl.agentic abstractions, vllm-tpu, and GRPOLearner, multi-turn, tool-using agentic RL on Cloud TPUs is easy and efficient. Check out the planestrike-gemma4-rl GitHub repository and read the Tunix documentation to train your own agentic model with Tunix and Google TPUs.</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
-<p>Distributed LLM Training Across Metros: Streaming DiLoCo in MaxText</p>
-<p>Securing Your Agents: A Hands-On Guide to Agent Anomaly Detection</p>
+                <p>November 19, 2026 - The PostgreSQL Global Development Group
+today announced the release of PostgreSQL 19,
+the latest version of the world's most advanced open source database.</p>
+<p>Mission-critical usage of PostgreSQL continues to rapidly rise, and
+PostgreSQL 19 responds to this by simplifying both administration and
+development for these workloads at scale. This release introduces the
+REPACK (CONCURRENTLY)
+command so users can optimize tables for their current workload without
+disruption to ongoing operations. PostgreSQL 19 gives users better control over
+plan stability and query performance with the new pg_plan_advice
+extension. Developers will find many delightful features in this release, from
+support for "read-your-writes" consistency on standbys to "get or create"
+behavior that saves a network round trip.</p>
+<p>"For over 30 years, the global open source community has built PostgreSQL into a
+database that organizations trust with their most critical data," said
+Jonathan Katz, a member of the PostgreSQL core team. "PostgreSQL 19 continues
+that commitment to reliability, giving users new ways to manage their workloads
+without disruption and to build applications that span multiple systems."</p>
+<p>PostgreSQL, an innovative data management system known for its reliability,
+robustness, and extensibility, benefits from 30 years of open source
+development from a global developer community and has become the preferred open
+source relational database for organizations of all sizes.</p>
+<p>Tables that receive many updates and deletes can build up unused space, known as
+"bloat," which can also significantly impact query performance. The
+VACUUM FULL and CLUSTER commands were previously used to handle this, but
+had tradeoffs, including preventing access to the table until the cleanup
+finished. PostgreSQL 19 introduces the REPACK
+command, which reclaims this space and can reorder a table's data to match an
+index, and with REPACK (CONCURRENTLY), can do so without blocking reads or
+writes. REPACK replaces the VACUUM FULL and CLUSTER commands, both of
+which remain available for compatibility.</p>
+<p>The PostgreSQL query planner usually picks an efficient plan for each query, but
+the plan can change as your data changes, and sometimes the new plan is slower.
+PostgreSQL 19 adds the pg_plan_advice
+extension, which allows stabilization of plan choices and the ability to
+experiment with different plans using the "plan advice" mini-language. The companion
+pg_stash_advice
+extension stores advice and automatically applies it to queries based on their
+query identifier, so you can fix a slow plan without changing your application.</p>
+<p>PostgreSQL 19 also helps autovacuum
+keep up on busy systems. Autovacuum can now vacuum indexes using parallel
+workers, controlled by the new
+autovacuum_max_parallel_workers
+setting, and uses a new scoring system
+to decide which tables to process first. Queries that read a table can now
+automatically mark pages as all-visible in the visibility map during execution,
+reducing the work that future vacuums need to do. Additionally,
+vacuumdb --analyze-only
+now analyzes partitioned tables when no tables are specified.</p>
+<p>This release adds new views for monitoring workloads, including
+pg_stat_lock
+for per-lock-type statistics, pg_stat_recovery
+for recovery status, and pg_stat_autovacuum_scores
+to show how autovacuum prioritizes tables. The new IO option for
+EXPLAIN ANALYZE and the
+matching auto_explain
+setting report asynchronous I/O activity. PostgreSQL 19 also reports the amount
+of WAL written for full-page images in pg_stat_wal,
+EXPLAIN (ANALYZE, WAL), and in vacuum and analyze log events.</p>
+<p>Previously, PostgreSQL often required users to restart their server to enable
+logical replication,
+which could be disruptive in production workloads. PostgreSQL 19 simplifies
+logical replication initialization by automatically raising the effective WAL
+level to logical when you create the first logical replication slot. You can
+see the WAL level in use with the new effective_wal_level setting.</p>
+<p>PostgreSQL 19 also adds logical replication of
+sequence values,
+which you can publish using FOR ALL SEQUENCES with
+CREATE PUBLICATION.
+CREATE PUBLICATION also adds an EXCEPT clause to exclude tables when
+publishing FOR ALL TABLES, and CREATE SUBSCRIPTION
+can now get its connection settings from a foreign server, such as one defined
+with postgres_fdw,
+using the SERVER clause. Additionally, the new
+retain_dead_tuples
+subscription option lets PostgreSQL detect updates that conflict with a
+concurrent delete, and these conflicts are counted in
+pg_stat_subscription_stats.</p>
+<p>For applications that send reads to standbys, PostgreSQL 19 adds
+"read-your-writes" consistency with the new
+WAIT FOR LSN command. A
+session on a standby can use WAIT FOR LSN to wait until the standby has
+replayed the write-ahead log (WAL) up to a specific
+log sequence number (LSN)
+before running a query, so the application can read data it just wrote on the
+primary.</p>
+<p>PostgreSQL 19 also improves queries on foreign tables. With the new
+import_stats option,
+postgres_fdw can
+import table statistics from the remote server when you run ANALYZE, instead
+of sampling rows from the remote table, which helps the query planner choose
+better plans.</p>
+<p>PostgreSQL 19 adds INSERT ... ON CONFLICT DO SELECT,
+which lets the RETURNING clause return existing rows that conflict with an
+insert, simplifying the common "get or create" pattern.
+COPY can now output data
+as JSON, including as a single JSON array, and the
+SQL/JSON path language
+adds string methods such as lower(), upper(), replace(), split_part(),
+and btrim(). Additionally, the lead(), lag(), first_value(),
+last_value(), and nth_value() window functions
+can now skip NULL values using IGNORE NULLS. The random() function can now also generate random dates
+and timestamps within a range.</p>
+<p>This release also makes many workloads faster without changes to your
+application. PostgreSQL 19 improves the performance of foreign key checks, which
+in testing made bulk inserts nearly 2x faster, and adds more query planner
+optimizations, such as converting NOT IN clauses to more efficient anti-joins
+when NULL values are not present, and performing
+eager aggregation
+before joins to reduce the number of rows to process. PostgreSQL 19 also builds
+on the asynchronous I/O
+subsystem added in PostgreSQL 18. When io_method is set to worker (the
+default), PostgreSQL now automatically adjusts the number of I/O workers between
+the new io_min_workers
+and io_max_workers
+settings, which replace the io_workers setting. There are also scalability
+improvements when using LISTEN
+and NOTIFY to
+exchange notifications in multi-channel workloads.</p>
+<p>Finally, the new password_expiration_warning_threshold
+setting warns users when their password is about to expire.</p>
+<p>PostgreSQL 19 adds server-side support for
+Server Name Indication (SNI),
+letting a single PostgreSQL server present a different TLS certificate based on
+the hostname a client connects to. You can map hostnames to their certificates
+and keys in the new pg_hosts.conf
+file. PostgreSQL 19 also now issues a warning after a successful md5 password
+authentication, which you can turn off with the
+md5_password_warnings
+setting. md5 password authentication was deprecated in PostgreSQL 18 and will
+be removed in a future release. If you require password-based authentication,
+use SCRAM authentication.
+This release also removes support for RADIUS authentication.</p>
+<p>Just-in-time compilation (JIT) is
+now disabled by default, as the cost estimates PostgreSQL used to decide when to
+use it proved unreliable. If you run many large analytical queries, you may want
+to enable JIT. When PostgreSQL is built with LZ4 support, the default
+TOAST compression
+method is now lz4.</p>
+<p>Many other new features and improvements have been added to PostgreSQL 19 that
+may also be helpful for your use cases. Please see the
+release notes for a
+complete list of new and changed features.</p>
+<p>PostgreSQL is the world's most advanced open
+source database, with a global community of thousands of users, contributors,
+companies and organizations. Since its beginnings at the University of
+California, Berkeley over 40 years ago, PostgreSQL has continued with an
+unmatched pace of development. PostgreSQL's mature feature set not only matches
+top proprietary database systems, but exceeds them in advanced database
+features, extensibility, security, and stability.</p>
+<p>For explanations of the above features and others, please see the following
+resources:</p>
+<p>There are several ways you can download PostgreSQL 19, including:</p>
+<p>Other tools and extensions are available on the
+PostgreSQL Extension Network.</p>
+<p>PostgreSQL 19 comes with HTML documentation as well as man pages, and you can also browse the documentation online in both HTML and PDF formats.</p>
+<p>PostgreSQL uses the PostgreSQL License,
+a BSD-like "permissive" license. This
+OSI-certified license is
+widely appreciated as flexible and business-friendly, since it does not restrict
+the use of PostgreSQL with commercial and proprietary applications. Together
+with multi-company support and public ownership of the code, our license makes
+PostgreSQL very popular with vendors wanting to embed a database in their own
+products without fear of fees, vendor lock-in, or changes in licensing terms.</p>
+<p>Postgres, PostgreSQL, and the Elephant Logo (Slonik) are all registered
+trademarks of the PostgreSQL Community Association.
+If you wish to use these marks, you must comply with the trademark policy.</p>
+<p>PostgreSQL enjoys the support of numerous companies, who sponsor developers,
+provide hosting resources, and give us financial support. See our
+sponsors page for some of these
+project supporters.</p>
+<p>There is also a large community of
+companies offering PostgreSQL Support,
+from individual consultants to multinational companies.</p>
+<p>If you wish to make a financial contribution to the PostgreSQL Global
+Development Group or one of the recognized community non-profit organizations,
+please visit our donations page.</p>
+<p>Copyright © 1996-2026 The PostgreSQL Global Development Group</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/multi-turn-agentic-reinforcement-learning-with-tunix-and-gemma-4-on-google-tpus/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.postgresql.org/about/news/postgresql-19-released-3449/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

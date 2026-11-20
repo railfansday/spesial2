@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>When Should You Remove NAT from an On-Prem Kubernetes Network?</title>
+    <title>Tiny nanolaser could cut computer energy use in half</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10608.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,41 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>When Should You Remove NAT from an On-Prem Kubernetes Network?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>Tiny nanolaser could cut computer energy use in half</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_arkhitektura_kubernetes_e53ce9adda.png" alt="When Should You Remove NAT from an On-Prem Kubernetes Network?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/nanolaser.webp" alt="Tiny nanolaser could cut computer energy use in half" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_arkhitektura_kubernetes_e53ce9adda.png" alt="When Should You Remove NAT from an On-Prem Kubernetes Network?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/nanolaser.webp" alt="Tiny nanolaser could cut computer energy use in half" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>In an on-premises Kubernetes environment, removing NAT can make the network simpler to inspect, reduce translation overhead, and let the data center route directly to workloads. But direct routing is not automatically the right choice.</p>
-<p>The decision depends on what the organization controls and what it needs from the network. A team that owns the physical fabric, has enough address space, and is comfortable operating BGP may benefit from making pod networks directly routable. A smaller environment, a team without control of the underlay, or a cluster that benefits from network abstraction may be better served by NAT or an overlay.</p>
-<p>Kubernetes is also changing the ground under these decisions: kube-proxy is set to drop IPVS support starting with version 1.43, with nftables as the replacement. For on-prem teams already reviewing their service data path, it is a good moment to ask whether NAT still belongs in it.</p>
-<p>So the useful question is not how to eliminate NAT, but when the operational benefits of doing so justify the additional routing responsibility.</p>
-<p>NAT solves a real problem. It allows an internal network to use its own address space without requiring the surrounding infrastructure to know how to reach every endpoint inside it. This is especially useful when you don’t control the underlying network.</p>
-<p>However, an on-premises data center is different. When you control both the Kubernetes cluster and the surrounding physical network, you can make Kubernetes networks directly routable.</p>
-<p>In our case, removing NAT had practical and architectural benefits. It improved network performance, reduced CPU load on the nodes, and removed the risk of conntrack tables filling up on Kubernetes hosts. A directly routed L3 model also works well for traffic balancing when a node has two uplinks.</p>
-<p>This does not mean eliminating NAT from the data center entirely. NAT can remain at the boundary of the on-premises network, for example on hardware firewalls. Inside the data center, however, Kubernetes networks can be directly routable, allowing the physical network to reach workloads using the same routing mechanisms it already uses elsewhere.</p>
-<p>In our implementation, BGP connects the Kubernetes network to the data center fabric: BIRD runs on the nodes and advertises pod CIDRs and selected service addresses, while kube-router manages Kubernetes networking. We described this implementation in more detail in our earlier article on building a routable on-prem</p>
-<p>Kubernetes cluster with BGP and ECMP. The important point for this decision is not the particular stack, but the requirement it creates: the surrounding network must be able to accept and route Kubernetes prefixes safely. If the organization cannot or does not want to make the cluster part of its routing domain, keeping NAT or an overlay is usually the simpler choice.</p>
-<p>Removing NAT alone does not make a network resilient. If every node still depends on one switch, one NIC, or one uplink, direct routing simply exposes the same physical single point of failure more clearly.</p>
-<p>The resilience benefit appears when the physical topology supports multiple independent paths. In our setup, nodes connect to independent data center switches and ECMP can use equivalent routes across those paths. If one path disappears, traffic can continue over the other.</p>
-<p>That distinction matters when deciding whether direct routing is worth the effort. Organizations with redundant uplinks and switches can integrate Kubernetes into an already resilient routed fabric. If the underlay itself has no path redundancy, removing NAT should not be presented as a high-availability improvement: the physical failure domain still dominates the design.</p>
-<p>Our stack is one example of how direct routing can be implemented, not a default recommendation for clusters that remove NAT. We chose kube-router because it supports a minimal installation as a binary and systemd service and covers the networking functions we need for this L3 design. BIRD handles route advertisements to the surrounding network.</p>
-<p>Other environments may reasonably choose Calico for conventional L3 routing or Cilium when an eBPF-based dataplane and its additional capabilities are useful. The choice of CNI and routing daemon is secondary to the architectural decision: first decide whether exposing Kubernetes prefixes to the physical network makes operational sense, then choose the implementation that fits the team’s requirements.</p>
-<p>A directly routed Kubernetes network is not automatically better than an overlay or NAT-based architecture. Each model solves a different operational problem.</p>
-<p>NAT is a reasonable choice when the cluster needs to remain isolated from the surrounding address plan, when pod addresses cannot be routed through the data center, or when the infrastructure team does not control the upstream network. It also keeps Kubernetes-specific prefixes out of the physical routing domain, which can be valuable for smaller environments where direct visibility into every pod is not important.</p>
-<p>An overlay is useful when portability and abstraction matter more than exposing the physical packet path. It lets Kubernetes networking remain largely independent of the underlay and can simplify deployment across heterogeneous infrastructure. The tradeoff is another layer to inspect during troubleshooting and, depending on the implementation, encapsulation overhead.</p>
-<p>Direct routing makes the most sense when the organization owns the physical network, has address space available for pod CIDRs, and has operators comfortable with BGP and route filtering. It becomes more attractive when preserving source addresses, using standard network troubleshooting tools, predictable performance, or integrating the cluster with redundant data center paths are important. At a larger scale, those operational benefits can justify the extra coordination between Kubernetes and network teams.</p>
-<p>The broader lesson is not that every Kubernetes cluster needs BGP or that NAT should disappear everywhere. It is that Kubernetes has matured enough that we should stop automatically treating its network as a black box.</p>
-<p>As more production and AI workloads move onto Kubernetes, network architecture becomes part of application reliability. In an on-premises data center, BGP and ECMP give us the option to use the resilience already available in the physical network rather than building another isolated networking layer on top of it.</p>
-<p>Sometimes the best way to make Kubernetes networking more robust is not to add another abstraction, but to remove one. But only when the surrounding infrastructure and the team operating it are ready to take responsibility for the routing that abstraction previously hid.</p>
-<p>If most of those answers are yes, direct routing is worth serious consideration. If not, NAT or an overlay may be the more resilient operational choice—not because it is technically more advanced, but because it better matches the environment.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>The development of a nanolaser could mark an early step toward a future in which microchips communicate entirely with particles of light.</p>
+<p>Researchers at DTU have created a tiny nanolaser that could eventually help make computers, smartphones, and data centers faster while using much less energy. The breakthrough was published in the scientific journalScience Advances.</p>
+<p>In the future, thousands of these lasers could potentially be integrated onto a single microchip. Instead of moving information around a chip with electrical signals, devices could transmit data using photons, the particles that make up light.</p>
+<p>"The nanolaser opens up the possibility of creating a new generation of components that combine high performance with minimal size. This could be in information technology, for example, where ultra-small and energy-efficient lasers can reduce energy consumption in computers, or in the development of sensors for the healthcare sector, where the nanolaser's extreme light concentration can deliver high-resolution images and ultrasensitive biosensors," says DTU professor Jesper Mørk.</p>
+<p>Mørk co-authored the study with, among others, Drs. Meng Xiong and Yi Yu from DTU Electro.</p>
+<p>Much of the internet already relies on light to carry information through fiber optic cables. Inside computers, however, data still moves through electronic circuits using electricity. That approach produces heat and can limit how quickly information can be transferred.</p>
+<p>Nanolasers could bring optical communication directly onto microchips. By generating light signals efficiently inside the chip, they could allow information to move with very little energy loss, potentially making future devices faster, cooler, and more energy efficient.</p>
+<p>Mørk estimates that using nanolasers in computers could reduce energy consumption by as much as half.</p>
+<p>The compact DTU nanolaser is an important step toward that goal. Future chips designed around light-based communication would likely require thousands of extremely small, efficient lasers working together to transmit information across the chip.</p>
+<p>The new nanolaser was created in DTU's clean room facility, DTU Nanolab. According to Mørk, the device pushes beyond the conventional limit for how small a laser can be made.</p>
+<p>At its core is a structure known as a nanocavity, which traps and concentrates light within an exceptionally tiny space. Until now, achieving such intense confinement at this scale had been considered extremely difficult.</p>
+<p>When researchers shine a beam of light onto the device, both photons and electrons become concentrated in the same microscopic region. This interaction allows the laser to function at room temperature while requiring unusually little energy.</p>
+<p>The light-trapping structure used in the nanolaser was originally developed by Professor Ole Sigmund's group at DTU Construct.</p>
+<p>The next major challenge is making the nanolaser operate using electrical power. If researchers can achieve that, the technology could have broad applications across computing, communications, and healthcare.</p>
+<p>Computers and smartphones could potentially deliver greater performance while consuming less electricity. Data centers, which require enormous amounts of power, could also see substantial reductions in energy use, potentially leading to significant climate benefits.</p>
+<p>In healthcare technology, the nanolaser's ability to concentrate light into an extremely small area could support ultra-sensitive sensors and high-resolution imaging systems.</p>
+<p>Researchers estimate that the remaining technical challenges could be solved within the next 5-10 years.</p>
+<p>Materials provided by Technical University of Denmark. Note: Content may be edited for style and length.</p>
+<p>Scientists Uncover a Natural Molecule That Makes Muscles Stronger and More Resistant to Fatigue</p>
+<p>Scientists Find That Mice, Not Deer, Hold a Major Clue to Lyme Disease Risk</p>
+<p>What Is a Thought Made Of? Scientists Reveal Why Human Consciousness May Be Beyond the Reach of AI</p>
+<p>Scientists Discover Mysterious Toxic Chemicals Floating in the Air Above America</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/when-should-you-remove-nat-from-an-on-prem-kubernetes-network/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/09/260911003858.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

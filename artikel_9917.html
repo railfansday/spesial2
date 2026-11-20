@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows 11 collects data on which coding agents and dev tools you use</title>
+    <title>I Sent 12 AI Shoppers Through a Broken Checkout, but Only One Bought Anything</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9917.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,42 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Windows 11 collects data on which coding agents and dev tools you use</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>I Sent 12 AI Shoppers Through a Broken Checkout, but Only One Bought Anything</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://xusheng.dev/posts/windows-coding-agent-telemetry/agent-names.jpeg" alt="Windows 11 collects data on which coding agents and dev tools you use" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/5wpKgV75aONqkTJlafw2yQmK9yd2-xg83bfw.png" alt="I Sent 12 AI Shoppers Through a Broken Checkout, but Only One Bought Anything" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://xusheng.dev/posts/windows-coding-agent-telemetry/agent-names.jpeg" alt="Windows 11 collects data on which coding agents and dev tools you use" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/5wpKgV75aONqkTJlafw2yQmK9yd2-xg83bfw.png" alt="I Sent 12 AI Shoppers Through a Broken Checkout, but Only One Bought Anything" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I recently asked AI to help me look through the latest Windows binaries for undocumented features and functionality. Among the leads it turned up, one list immediately caught my attention: coding agents such as codex.exe, claude.exe, copilot.exe, and cursor.exe, alongside familiar developer tools such as python.exe, dotnet.exe, gcc.exe, and code.exe.</p>
-<p>Why would a Windows system DLL need a list of coding agents and developer tools?</p>
-<p>The names were in MissionControlAggregator.dll. I asked the agent to follow the references and dig into what the DLL actually does. That led from a handful of string comparisons to a running Windows component that records which coding agents and developer tools have been used, saves that information locally, and reports it to Windows Diagnostics. And unless you have opted out of the “optional” diagnostic data (which is enabled by default), the data is uploaded to Microsoft.</p>
-<p>I shared the initial finding on X. This post includes more details about the investigation behind it.</p>
-<p>Opening the DLL in Binary Ninja made the first lead easy to see. These were explicit executable names embedded in a Windows component:</p>
-<p>Following the references showed that the names were used in comparisons. There are four CLI-agent slots checking copilot.exe, claude.exe, codex.exe, and agy.exe, with extensionless equivalents on the WSL route. Five desktop-agent slots check github.exe, claude.exe, codex.exe, cursor.exe, and antigravity.exe.</p>
-<p>Here is one of the comparisons against codex.exe:</p>
-<p>The compiler-generated C++ names are unwieldy, so I will call these functions executable-name matchers. For reference, one related matcher is std::_Func_impl_no_alloc<<lambda_340dfe7e962ab225b6ac33bc664bd54f>, bool, std::basic_string_view<wchar_t, std::char_traits<wchar_t>> const&, Microsoft::Diagnostics::MissionControlAggregator::Utils::AppType>::_Do_call. The screenshot shows another lambda instantiation performing the same kind of name comparison.</p>
-<p>The feature guarding the new agent checks has a particularly direct name: CLICodingAgentUsage, feature ID 62580080.</p>
-<p>And the list extends beyond AI agents. The same component checks for node.exe, python.exe, dotnet.exe, gcc.exe, clang.exe, gdb.exe, javac.exe, devenv.exe, and code.exe, among others. Those checks feed broader developer-tool categories. Some of these checks also verify the publisher: the Node.js slot expects Node.js Foundation, Python expects Python Software Foundation, and the .NET and Visual Studio slots expect Microsoft Corporation. The compiler/debugger group containing GCC and Clang has no additional publisher check in this path.</p>
-<p>For Windows programs, it consumes KernelProcess.AppStateChangeSummary and Win32kTraceLogging.AppInteractivitySummary. These provide application identities that its handlers parse and pass to the matchers. For WSL, it consumes Microsoft.Windows.Lxss.Manager.Exec and ExecCritical, using the imageName field. A regular Windows codex.exe can therefore reach the CLI-agent checks through the app-state summary route; this is not limited to Linux programs running inside WSL.</p>
-<p>A successful match sets a slot in the aggregator’s state. Later, ReportCohorts<12,4,5> turns those slots into bitsets and emits a report named Segments.SubCohorts. The numbers correspond to twelve broader tool categories, four CLI agents, and five desktop agents.</p>
-<p>ETW (Event Tracing for Windows) is the mechanism carrying that report. In this case, it is a self-describing TraceLogging event. Rather than writing the executable names into every report, the component assigns each category a bit. A set Codex bit means the matching tool was observed during the reporting window.</p>
-<p>The source events also include runtime, time in focus, interaction counters, and resource usage. This component appears to discard those details and record only a bitmap of which agents were observed. The report’s timestamps describe the collection window, not how long each agent was used.</p>
-<p>Strings and code are a useful lead, but I wanted to see the component running. I checked my Parallels Windows 11 ARM64 VM, build 26200.9974. Its MissionControlAggregator.dll was version 10.0.26100.9818, and CLICodingAgentUsage was already enabled as a service experiment. I had not manually enabled the feature.</p>
-<p>DiagTrack, the Connected User Experiences and Telemetry service, was also already running with its startup type set to Automatic. It starts a separate AggregatorHost.exe process, and that process loads the DLL. The following administrative PowerShell commands show the service, its child process, and the loaded module:</p>
-<p>The process IDs connect the pieces: DiagTrack runs in process 10148, which is the parent of AggregatorHost.exe, process 1500; the module listing places MissionControlAggregator.dll inside that child.</p>
-<p>To test the finding in practice, I copied cmd.exe to a file named codex.exe and ran it in the interactive Windows session. The name alone was enough for the component to recognize it as Codex.</p>
-<p>I captured an AppStateChangeSummary for the running process from the KernelProcess provider ({2839ff94-8f12-4e1b-82e3-af7af77a450f}), with LaunchCount=1 and TerminateCount=0. The aggregator’s saved state contained the value 2 in CLI slot 2, the Codex slot. A separate run without an additional ETW trace also set that slot, confirming that detection worked through Windows’ existing diagnostic collection.</p>
-<p>The report normally follows a roughly daily boundary. To capture it immediately, I temporarily moved the saved reporting-window start 25 hours into the past and restarted DiagTrack with a trace listening for the aggregator. The resulting Segments.SubCohorts event contained:</p>
-<p>The value 4 is 1 << 2: the Codex CLI bit. The name had made it through the input summary, the matcher, the persisted state, and the emitted report.</p>
-<p>I also tested the developer-tool path separately, using a copy of cmd.exe named gcc.exe. It set developer-tool slot 3. With optional diagnostic data allowed, I found the resulting Segments.SubCohorts event in DiagTrack’s upload queue with SubCohorts: [8] (1 << 3). This is the compiler/debugger category shared by GCC, Clang, and related tools, rather than a separate bit for each executable.</p>
-<p>An ETW event by itself would not establish that anything leaves the machine. ETW is used for plenty of local diagnostics. The more revealing question was who was listening to this particular report.</p>
-<p>The first subscription, for KernelProcess, had MatchAnyKeyword=0x400000000002, which includes the summary’s 0x400000000000 keyword. The second, for Microsoft.Windows.MissionControlAggregator, had MatchAnyKeyword=0xe00000000000, which includes the report’s 0x800000000000 keyword. Both had level 255.</p>
-<p>The subscription showed where the report could go. To check whether Windows actually queued it for transmission, I inspected DiagTrack’s EventStore.db and decompressed the JSON batches in its AsimovEvents table. This revealed an important condition: the agent-usage report is treated as optional diagnostic data.</p>
-<p>When optional diagnostic data is allowed (enabled by default in the US setup I tested), Windows queues the coding-agent usage report for upload to Microsoft. I verified this by finding the agent event itself in DiagTrack’s upload queue:</p>
+                <p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>Three telescopes, $101.96 each, plus $26.97 shipping. The cart wanted $128.93.</p>
+<p>I was running release 2.1.3 of the OpenTelemetry Demo. Its frontend added each product's price once, regardless of quantity. The right total was $332.85. There's an upstream report of this in issue 1526. I kept 3.1.0 as a separate clean reference.</p>
+<p>A checkout script could still place the order. I wanted to see if a browser agent would check the cart total before paying.</p>
+<p>I built Walkout with a purchase goal and a short persona card for each shopper. Playwright returns a browser observation, the model chooses an action, and the runner carries it out. Then it sends back the next observation with the earlier steps.</p>
+<p>Muse Spark 1.3 runs that loop. It can click, select, type, press a key, scroll, or give up. The shop has to show an order confirmation before I count a purchase, even if the model says it's done.</p>
+<p>For the recording, I told the shoppers to buy three telescopes and check the quantity, price, shipping, and total. If the arithmetic didn’t agree, they were supposed to leave. The counts below show how the agents did on that task.</p>
+<p>The profiles needed different browser conditions or I would just have twelve copies of the same test. Rosa gets a budget phone profile with slower CPU and network settings. Margaret has enlarged text, Lucía an es-MX locale. Dev uses keys. Amara gets the accessibility tree.</p>
+<p>Dev sees a plain screenshot and can use keyboard actions. Giving him numbered targets he could click would let him get around a focus problem without ever seeing it. Amara's tree references give her a different view of the page again.</p>
+<p>I can repeat those configurations. They don't reproduce every phone or a person's full screen reader session, and the recordings let me see exactly which inputs each simulated shopper had.</p>
+<p>One shopper bought before the patch. Eleven left, and ten cited the quantity calculation. I saved each shopper’s explanation next to the browser steps that led to it.</p>
+<p>Lucía explained in Spanish that the total charged for one telescope plus shipping. In her replay I can see what the browser showed her before she gave up.</p>
+<p>An early smoke run got stuck scrolling between the total and the checkout form for twelve steps. The shopper had already read the cart. I wasn't returning its notes with the history, though, so that useful observation kept dropping out of the next decision. Passing the notes back fixed the loop.</p>
+<p>The native quantity dropdown caused another problem. Its open menu didn't appear in the headless screenshot. Repeated taps weren't going to make that screenshot any more informative. I added a select action so the shopper could choose the quantity.</p>
+<p>Those were my bugs. Having the saved steps helped me find them before blaming the storefront.</p>
+<p>The October 28 model ledger has 1,862 calls. They added up to $8.33742325, or $8.34. I tracked model calls, so the figure leaves out server costs and my time.</p>
+<p>The November 4 takes and work added $6.11. By the end of that recording I’d spent $14.45 on model calls across the project.</p>
+<p>Spark reads the saved reasons for leaving and picks source files. Muse Wonder 1.0 proposes replacements, and another Wonder call reviews them.</p>
+<p>The change was in CartItems.tsx. It multiplied by quantity in the whole-unit sum and in the nanos sum. The existing carry from nanos into units stayed in place.</p>
+<p>Another call to the same model approved the patch. Release 2.1.3’s frontend had no test command. Its image build runs type checking and lint, and Walkout won’t serve a patch if that build fails. A successful build still couldn’t tell me what three telescopes cost.</p>
+<p>The rebuilt frontend replaced the release image on the same port. I emptied the cart, added three telescopes and checked the total before ordering. Then I sent the same twelve profiles through it again.</p>
+<p>Nine bought this time. Rosa couldn't open the full cart on her phone profile. Dev couldn't reach the quantity or Add To Cart controls with the keyboard. Lucía checked the peso arithmetic and found a one-cent difference.</p>
+<p>I left Rosa, Dev and Lucía red on the board so I could find the purchase attempts that still needed work. The profiles stayed the same across the two rounds. Their model-chosen actions can vary from one run to the next.</p>
+<p>The current repo has browser checks for the original, clean and patched shops. They check the three-telescope total without a model API. The November 11 run has its own saved results and spend ledger. The screenshots and results above are from November 4.</p>
+<p>I Put a 42-Desk Design Studio Inside My Coding Agent</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://xusheng.dev/posts/windows-coding-agent-telemetry/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/i-sent-12-ai-shoppers-through-a-broken-checkout-but-only-one-bought-anything?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

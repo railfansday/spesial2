@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SetFitABSA: Few-Shot Aspect Based Sentiment Analysis using SetFit</title>
+    <title>AI, DevOps and the Cost of Hosting: From Idea to Production for $0</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_11017.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,34 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>SetFitABSA: Few-Shot Aspect Based Sentiment Analysis using SetFit</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>AI, DevOps and the Cost of Hosting: From Idea to Production for $0</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/setfit-absa/intel_hf_logo_2.png" alt="SetFitABSA: Few-Shot Aspect Based Sentiment Analysis using SetFit" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Efficient_ARM_Stack_vs_Overloaded_Laptop_4898365146.png" alt="AI, DevOps and the Cost of Hosting: From Idea to Production for $0" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/setfit-absa/intel_hf_logo_2.png" alt="SetFitABSA: Few-Shot Aspect Based Sentiment Analysis using SetFit" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Efficient_ARM_Stack_vs_Overloaded_Laptop_4898365146.png" alt="AI, DevOps and the Cost of Hosting: From Idea to Production for $0" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>SetFitABSA is an efficient technique to detect the sentiment towards specific aspects within the text.</p>
-<p>Aspect-Based Sentiment Analysis (ABSA) is the task of detecting the sentiment towards specific aspects within the text. For example, in the sentence, "This phone has a great screen, but its battery is too small", the aspect terms are "screen" and "battery" and the sentiment polarities towards them are Positive and Negative, respectively.</p>
-<p>ABSA is widely used by organizations for extracting valuable insights by analyzing customer feedback towards aspects of products or services in various domains. However, labeling training data for ABSA is a tedious task because of the fine-grained nature (token level) of manually identifying aspects within the training samples.</p>
-<p>Intel Labs and Hugging Face are excited to introduce SetFitABSA, a framework for few-shot training of domain-specific ABSA models;  SetFitABSA is competitive and even outperforms generative models such as Llama2 and T5 in few-shot scenarios.</p>
-<p>Compared to LLM based methods, SetFitABSA has two unique advantages:</p>
-<p>🗣 No prompts needed: few-shot in-context learning with LLMs requires handcrafted prompts which make the results brittle, sensitive to phrasing and dependent on user expertise. SetFitABSA dispenses with prompts altogether by generating rich embeddings directly from a small number of labeled text examples.</p>
-<p>🏎 Fast to train: SetFitABSA requires only a handful of labeled training samples; in addition, it uses a simple training data format, eliminating the need for specialized tagging tools. This makes the data labeling process fast and easy.</p>
-<p>In this blog post, we'll explain how SetFitABSA works and how to train your very own models using the SetFit library. Let's dive in!</p>
-<p>SetFitABSA's three-stage training process</p>
-<p>SetFitABSA is comprised of three steps. The first step extracts aspect candidates from the text, the second one yields the aspects by classifying the aspect candidates as aspects or non-aspects, and the final step associates a sentiment polarity to each extracted aspect. Steps two and three are based on SetFit models.</p>
-<p>In this work we assume that aspects, which are usually features of products and services, are mostly nouns or noun compounds (strings of consecutive nouns). We use spaCy to tokenize and extract nouns/noun compounds from the sentences in the (few-shot) training set. Since not all extracted nouns/noun compounds are aspects, we refer to them as aspect candidates.</p>
-<p>Now that we have aspect candidates, we need to train a model to be able to distinguish between nouns that are aspects and nouns that are non-aspects. For this purpose, we need training samples with aspect/no-aspect labels. This is done by considering aspects in the training set as True aspects, while other non-overlapping candidate aspects are considered non-aspects and therefore labeled as False:</p>
-<p>Now that we have all the aspect candidates labeled, how do we use it to train the candidate aspect classification model? In other words, how do we use SetFit, a sentence classification framework, to classify individual tokens? Well, this is the trick: each aspect candidate is concatenated with the entire training sentence to create a training instance using the following template:</p>
-<p>Applying the template to the example above will generate 3 training instances – two with True labels representing aspect training instances, and one with False label representing non-aspect training instance:</p>
-<p>After generating the training instances, we are ready to use the power of SetFit to train a few-shot domain-specific binary classifier to extract aspects from an input text review. This will be our first fine-tuned SetFit model.</p>
-<p>Once the system extracts the aspects from the text, it needs to associate a sentiment polarity (e.g., positive, negative or neutral) to each aspect. For this purpose, we use a 2nd SetFit model and train it in a similar fashion to the aspect extraction model as illustrated in the following example:</p>
-<p>Note that as opposed to the aspect extraction model, we don't include non-aspects in this training set because the goal is to classify the sentiment polarity towards real aspects.</p>
-<p>At inference time, the test sentence passes through the spaCy aspect candidate extraction phase, resulting in test instances using the template aspect_candidate:test_sentence. Next, non-aspects are filtered by the aspect/non-aspect classifier. Finally, the extracted aspects are fed to the sentiment polarity classifier that predicts the sentiment polarity per aspect.</p>
-<p>In practice, this means the model can receive normal text as input, and output aspects and their sentiments:</p>
-<p>SetFitABSA was benchmarked against the recent state-of-the-art work by AWS AI Labs and Salesforce AI Research that finetune T5 and GPT2 using prompts. To get a more complete picture, we also compare our model to the Llama-2-chat model using in-context learning.
-We use the popular Laptop14 and Restaurant14 ABSA datasets from the Semantic Evaluation Challenge 2014 (SemEval14).
-SetFitABSA is evaluated both on the intermediate task of aspect term extraction (SB1) and on the full ABSA task of aspect extraction along with their sentiment polarity predictions (SB1+SB2).</p>
-<p>Note that for the SB1 task, SetFitABSA is 110M parameters, for SB2 it is 110M parameters, and for SB1+SB2 SetFitABSA consists of 220M parameters.</p>
-<p>We see a clear advantage of SetFitABSA when the number of training instances is low, despite being 2x smaller than T5 and x3 smaller than GPT2-medium.  Even when compared to Llama 2, which is x64 larger, the performance is on par or better.</p>
-<p>Note that for fair comparison, we conducted comparisons with SetFitABSA against exactly the dataset splits used by the various baselines (GPT2, T5, etc.).</p>
-<p>We notice that increasing the number of in-context training samples for Llama2 did not result in improved performance. This phenomenon has been shown for ChatGPT before, and we think it should be further investigated.</p>
-<p>SetFitABSA is part of the SetFit framework. To train an ABSA model, start by installing setfit with the absa option enabled:</p>
-<p>Additionally, we must install the en_core_web_lg spaCy model:</p>
-<p>We continue by preparing the training set. The format of the training set is a Dataset with the columns text, span, label, ordinal:</p>
-<p>For example, the training text "Restaurant with wonderful food but worst service I ever seen" contains two aspects, so will add two lines to the training set table:</p>
-<p>Once we have the training dataset ready we can create an ABSA trainer and execute the training. SetFit models are fairly efficient to train, but as SetFitABSA involves two models trained sequentially, it is recommended to use a GPU for training to keep the training time low. For example, the following training script trains a full SetFitABSA model in about 10 minutes with the free Google Colab T4 GPU.</p>
-<p>That's it! We have trained a domain-specific ABSA model. We can save our trained model to disk or upload it to the Hugging Face hub. Bear in mind that the model contains two submodels, so each is given its own path:</p>
-<p>Now we can use our trained model for inference. We start by loading the model:</p>
-<p>Then, we use the predict API to run inference. The input is a list of strings, each representing a textual review:</p>
-<p>For more details on training options, saving and loading models, and inference see the SetFit docs.</p>
+                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>An AI coding agent rebuilt my photo-collage app as a distributed system and deployed it to a free server. The hard part turned out to be hardware: one free ARM CPU, 538 collages created during load testing, zero failed jobs, and $0 a month.</p>
+<p>Like most developers, I have never been short of product ideas. Hosting them has always been the problem. I have tried shared hosting with SmartWeb, Azure free credits, Google Compute Engine’s free VM instances, SmartWeb’s virtual private servers, and Heroku dynos. None of them left me satisfied. The worst experience was a $200 charge for an AI address API on Google Cloud—for an application that never earned me a single kobo.</p>
+<p>I am not a cheapskate, but I learned quickly that one of the easiest ways to kill a potentially good idea is to get the finances wrong. An application has to stay online until it reaches a critical mass of users, and hosting an untested, unverified product on expensive hardware can be wasteful.</p>
+<p>Agentic AI coding has changed how quickly I can move from idea to production. Over about five weeks of intermittent coding—amounting to roughly three days of full work with Claude—my photo-stitching app went from an Angular 8 project that would not even build to a distributed system running in production.</p>
+<p>Along the way, Claude upgraded the front end from Angular 8 to Angular 22 and fixed the build on Node 24. It set up RabbitMQ with Docker Compose so the message broker configures itself on startup, and added real-time notifications over SignalR with a progress spinner. It fixed a crash loop caused by an unreadable iPhone photo. It redesigned the system so any server can process any job, with switchable database and file storage, direct browser-to-storage uploads, and photos resized in the browser before upload. It added reliability work that a team might debate for a sprint: a dead-letter queue, confirmed publishing, idempotent workers, recovery of stuck jobs, and automatic clean-up. It fixed the stitching so photos keep their proportions and borders are even. It wrote 41 automated tests and scrubbed leaked passwords and personal photos from the Git history.</p>
+<p>Coding, QA, DevOps, and production support used to be separate phases, often handled by separate people. Here they happened in one conversation. When code becomes this cheap to produce, the bottleneck moves. For me, it moved to hardware.</p>
+<p>To check what the AI builds, you have to run it locally. A distributed app means running the whole system locally: a web app, a background worker, a message broker, a database, and storage emulators. Because Claude adds features quickly, and each one can add another container, it is easy to exhaust a laptop’s RAM and CPU.</p>
+<p>My setup made this lesson concrete. I work on a MacBook Air, with Visual Studio in a Windows virtual machine. Docker cannot run inside that VM on Apple Silicon, so Claude ran Docker on the Mac and drove it from Windows over SSH. Later, my mobile connection started dropping large packets and broke uploads from the VM, so Claude moved the load testing onto the server itself. The software problems took minutes. The hardware and network problems took longer.</p>
+<p>Then comes hosting. Heroku looked like the easy route, but it has had no free dynos since 2022. The cheapest option is an Eco dyno at about $5 a month, plus about $5 for Postgres. That is affordable, but running it for an idea that has no users yet did not seem prudent.</p>
+<p>Claude suggested Oracle Cloud’s Always Free tier: an ARM server with up to 4 CPUs and 24 GB of RAM, free with no end date. I created a small instance with 1 CPU and about 6 GB. Claude wrote a production Docker Compose file and a one-command setup script: Caddy as the gateway, the web app, the stitching worker, RabbitMQ, and PostgreSQL, with data that survives restarts. My repository is private, so rather than put a GitHub token on a public server, it copied the code over SSH and deployed it. The last blocker was mine to fix: opening ports 80 and 443 in Oracle’s network firewall. Then the site was live.</p>
+<p>I did not want to guess, so I asked Claude to load-test the live server. Simulated users ran the full flow: upload two photos, wait for the real-time notification, and download the stitched collage.</p>
+<p>The server handled 64 people creating collages at the same moment without a single failed job: 538 collages, zero errors. Its ceiling was about 62 collages a minute—one per second. Beyond that, users queue. With 4 people creating at once, 95% of collages arrived within about five seconds; at 64, each person waited about a minute. If each active user makes a collage every couple of minutes, one CPU comfortably serves around 85 people at once, and a few hundred if they use it less often.</p>
+<p>The test also showed what runs out first, and it is not the CPU. Each collage stores about 5 MB, mostly the PNG output, so at full speed the disk would fill in under two hours. Switching to JPEG and shortening retention fixes that, and when traffic grows, three more free CPUs are waiting. That is the value of measuring before paying: I know what to change, and when.</p>
+<p>Oracle isn’t being charitable. Servers need applications to run—ideally ones that go viral—and the free tier is a play for loyalty. Oracle wants successful projects to stay and grow into its paid services instead of moving off the platform once they reach critical mass. It can also reclaim free instances that sit idle.</p>
+<p>I think the bet is smart, and it points to a bigger trend. AI-generated code still needs energy to run and hardware to host it, even when far fewer people work on each project. As more people turn ideas into working software, demand for compute will keep growing, and I expect hosting and data centres to become a very profitable business.</p>
+<p>For now, the combination works: Claude orchestrates the coding, QA, and DevOps, and Oracle’s free server keeps an idea online long enough to find out whether it deserves to grow.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/setfit-absa" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/ai-devops-and-the-cost-of-hosting-from-idea-to-production-for-0/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

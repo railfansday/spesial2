@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelerating development for massive Git repositories</title>
+    <title>Welcome FLUX.3 Image Klein in Diffusers</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10031.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,74 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Accelerating development for massive Git repositories</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>Welcome FLUX.3 Image Klein in Diffusers</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/flux3/thumbnail.png" alt="Welcome FLUX.3 Image Klein in Diffusers" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/flux3/thumbnail.png" alt="Welcome FLUX.3 Image Klein in Diffusers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Android’s source code is big – the Android 17 open source release has 1,084 Git repositories, 1.62 million files, and takes 300 GB for a built workspace. Additionally, in a typical Android source tree with hardware vendor code and first-party applications, the size increases by 2-3x. Traditionally, it took over 30 minutes to fetch Android Open Source Project (AOSP) source code and well over an hour to build on even highly capable developer workstations. As software development evolved over the last 2 years, modern coding harnesses and LLMs have accelerated the development of many projects. These tools are used today for Android operating system development, but the long sync and build times make them less efficient. Both human developers and agents need quick setup, parallel workspaces, and fast build-and-test iteration times.</p>
-<p>We built Another Build File Service (ABFS) to address these bottlenecks. ABFS is a full suite of software across a Linux kernel filesystem module, user-space daemons, and server-side infrastructure. ABFS uses content-addressability across the entire stack to lazy-load and cache source code, developer workspaces, intermediate build files, and build results.</p>
-<p>Today, we are excited to announce that ABFS is open source on GitHub.The impact of ABFS to Android is:</p>
-<p>ABFS already powers parallel workflows for developers and agents in Android, but it is designed to scale to other massive Git-based projects.</p>
-<p>In the Android build system, developers define build rules in Blueprint files (Android.bp), Soong compiles them into Ninja files, and Ninja executes the final build graph (see the Android build overview). Similar to the Make build tool, Ninja is timestamp-based. If a build step’s input file is newer than the existing output file, Ninja rebuilds the output file.</p>
-<p>Analyzing the AOSP code for Android 17 shows the sheer disk footprint and file count involved in a single checkout and build.</p>
-<p>In a typical Android tree that includes hardware-specific repositories, board support packages, first-party applications, form-factor-specific code, etc., the code size is 2–3 times the size of AOSP (over 3,000 Git repositories), compounded across multiple active SKU and legacy maintenance branches.</p>
-<p>Building the Cuttlefish emulator target executes a build graph with 192,249 Ninja actions. While local incremental builds are fast once a tree is already built, every new workspace, branch switch, or ephemeral agent session starts cold.Even though typical developer changes touch only 1-10 different Git projects, someone building locally without any remote execution might waste up to 80 minutes on a 64-core machine repeating work their CI system already built. Even if a developer edits a core library like system/libbase, 97% of the build graph is identical to the CI build.</p>
-<p>Sharing cached build outputs across CI and local machines is also tricky in a codebase of Android's age and rate of change. Build rules occasionally introduce hidden dependencies (such as passing an undeclared schema file inside raw compiler flags), over-declared inputs, or undeclared outputs. In timestamp-based builds, hidden dependencies silently produce stale incremental artifacts, forcing developers to wipe output directories and run clean builds.</p>
-<p>ABFS makes building Android fast by replacing massive local source checkouts with a virtual, content-addressable filesystem (CASFS). ABFS streams files on demand only when a build actually touches them and utilizes shared build caching to help eliminate redundant downloads and compilation.</p>
-<p>On the server side, Git-pushers continuously ingest new Git objects from Gerrit or other Git hosts into a horizontally scalable gRPC ABFS Content-Addressable Storage (CAS) Server that indexes Git content, workspace snapshots, and build step results. On the developer host, a local Least Recently Used (LRU) Cacheman daemon, Mount Daemon, and Tap utility connect user-space build tools to the kernel filesystem so checkouts and builds stream only what they need. See the full ABFS architecture on GitHub.</p>
-<p>At the core of the client is a virtual filesystem called Content-Addressable Storage Filesystem (CASFS), a Linux kernel module that exposes Git SHA content hashes via extended attributes. When a file's hash is set, CASFS populates its metadata immediately and downloads file bytes via Cacheman only when needed:</p>
-<p>Initial checkouts download only lightweight directory metadata prepopulated with Git hashes. CASFS uses Git's object model natively, allowing standard git and repo operations to work transparently.</p>
-<p>CASFS can also tap build processes. Tapping records every file actually read, written, or deleted into lists called patches, which are stored alongside cached build outputs. Ninja-go replaces timestamp checks with two-phase content-addressable caching:</p>
-<p>Ninja-go accelerates Ninja-based builds like Android and Chrome; other build systems can integrate with ABFS's caching APIs using the same model (see the two-phase caching walkthrough on GitHub).</p>
-<p>Each mounted checkout attaches to a persistent workspace that eagerly syncs modified files, git state, and repo state through Cacheman to the ABFS CAS Server—keeping mounts synchronized across sessions or across multiple developer hosts.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>The benchmarks below show the mean time of 3 Android runs on a GCE n2d-standard-64 VM with 64 vCPUs and 256 GB of RAM. The ABFS remote server was running in the same cloud network as the client.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>Because ABFS does lazy loading and local cache deduplication, developers and their agents can now mount multiple concurrent Android workspaces on a single machine, benefit from a shared local build cache, and achieve massive scale in development time.</p>
-<p>An agent can check out a full Android tree in under 10 seconds and perform a full build in under 10 minutes. Agent swarms are empowered to iterate, review, and test in parallel, which can lead to higher quality solutions and speed.In the demo below, an agent makes a system/libbase fix on the latest AOSP release, then 4 parallel agents simultaneously backport, build, and test the fix across 4 more AOSP releases on a single VM.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>We released ABFS as open source because we want developers, Android partners, and any large-scale Git-based project to benefit from what we have learned and be able to scale.</p>
-<p>While Android’s Soong/Ninja pipeline was the first acceleration target, ABFS was built to be extensible to other build systems. Content-addressable build systems like Bazel map naturally onto CASFS and there is already a proof-of-concept integration with Bazel. Chromium, the Android Common Kernel, and other Google projects are exploring ABFS compatibility.</p>
-<p>Explore ABFS, CASFS, and Ninja-go on GitHub, and reach out to us at abfs@google.com.</p>
-<p>For help with the Google Cloud server-side, infrastructure-as-code, and CASFS for Cloud Workstations and Kubernetes, please reach out to abfs-gcp@google.com.</p>
-<p>We’d like to extend a special thanks to our significant contributors for their work on this project:</p>
-<p>Haamed Gheibi, Erik Sanders, Rob Seymour, Taylor Santiago, Andrew Hsieh, Eric Taseski, Kiyoung Kim, Hung-Wei Chen, Jose “Pepe” Galmes, Ronald Li, Yu-Che Wang, Roger Ellis, Sandeep Patil, Amith Dsouza and the entire Android Build team</p>
-<p>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
-<p>Distributed LLM Training Across Metros: Streaming DiLoCo in MaxText</p>
+                <p>Black Forest Labs FLUX.3 Image Klein is here, and it runs in Diffusers from day one. One model does text-to-image and multi-reference image-to-image, and it adds something new, the layout control. You write bounding boxes into the prompt to say where each part of the image should go, or which parts of a reference image to move.</p>
+<p>Both open checkpoints are in the FLUX.3 Image Klein collection:</p>
+<p>You can head on to the Hugging Face space and generate some images right now!</p>
+<p>Install the latest diffusers and transformers (for the Qwen3-VL text encoder):</p>
+<p>Load the distilled checkpoint and generate an image:</p>
+<p>FLUX.3 responds best to a full scene description with the subject, the setting, the light, the composition, and the style. The official prompting guide from Black Forest Labs has more tips. The distilled checkpoint generates a 1024 × 1024 image in 16 steps by default. Pass height, width, or num_inference_steps to change them.</p>
+<p>Pass a reference image (or more) with the image argument. Write the prompt as a caption of the image you want, with the change included.</p>
+<p>With several references, refer to them in the prompt as <ref_image_0>, <ref_image_1>, ... in the order they are passed to image:</p>
+<p>Add a JSON list of regions after the caption. Each region has an id, a bbox, and a desc, and the caption mentions it as <id>.</p>
+<p>Boxes are written as [y_min, x_min, y_max, x_max], y first, on a 0–1000 scale. Because the scale is normalized, the same box works at any image size.</p>
+<p>For edits, each region says where its content comes from (src_bbox in the reference) and where it goes (tgt_bbox in the output). A region with the same two boxes stays where it is.</p>
+<p>This example moves the knitted knight up and to the left, and pins the backdrop, the cliff, the needle, the dragon, and the fire:</p>
+<p>Everything above uses the distilled checkpoint. The base checkpoint runs 50 steps with classifier-free guidance, and it's the one to fine-tune (see LoRA finetuning).</p>
+<p>Black Forest Labs also ships the transformer as a single file, in bf16 and in two quantized formats: fp8r (rowwise FP8) and nvfp4. Load any of them with from_single_file, then load the other components by name so the bf16 transformer isn't downloaded too.</p>
+<p>For the unquantized single file, use https://huggingface.co/{model_id}/blob/main/model.safetensors and drop quantization_config.</p>
+<p>FLUX.3 works for both text-to-image and image-to-image, which makes it a great base for custom LoRAs. diffusers ships DreamBooth LoRA training scripts for both tasks (you can also train with Ostris' AI Toolkit).</p>
+<p>Here is a text-to-image example that learns a tarot-card style from the multimodalart/1920-raider-waite-tarot-public-domain dataset, triggered with trtcrd:</p>
+<p>To reduce memory usage, add a few optimization flags:</p>
+<p>--gradient_checkpointing recomputes activations in the backward pass (lower VRAM, slightly slower), --cache_latents pre-encodes the images and frees the VAE, and --use_8bit_adam keeps the optimizer states in 8-bit.</p>
+<p>A couple of knobs are worth experimenting with. The grid below trains the same tarot style with different LoRA ranks and optimizers; the adapters are on the Hub at diffusers-modular/flux3-tarot-lora. More training features and configurations are documented in the DreamBooth FLUX.3 README.</p>
+<p>For instruction-based editing, the image-to-image script (train_dreambooth_lora_flux3_klein_img2img.py) trains on (reference image, target image, instruction) triplets, where the reference is addressed in the prompt as <ref_image_0>.</p>
+<p>See the DreamBooth FLUX.3 README for all options and the full image-to-image example.</p>
+<p>In this section, we will talk about the memory consumption and the speed of generation of the models.</p>
+<p>End-to-end timings for the distilled checkpoint (16 steps), averaged over three runs after a warmup:</p>
+<p>Single NVIDIA H100 80GB, no offloading, default attention backend.</p>
+<p>A reference image roughly doubles the time. Reference tokens join the same sequence as the text and the image being generated, so a 1024 × 1024 reference adds 4,096 tokens to every transformer call</p>
+<p>Let's open the model up, one piece at a time. The model takes three kinds of tokens:</p>
+<p>FLUX.3 is a latent-space flow model for image generation. This means that the denoiser takes latents as inputs and produces latents as outputs. We use a VAE to decode the latents back to pixels. FLUX.3 uses the same VAE architecture as Flux.2.</p>
+<p>The FLUX.2 VAE compresses an image 8× in each direction into 32 channels, and then every 2 × 2 patch of that latent is packed into a single token with 128 channels.</p>
+<p>So one token covers a 16 × 16 pixel patch, and a 1024 × 1024 image becomes a 64 × 64 grid of 4,096 tokens. The noisy image starts as random noise of exactly that shape. A reference image goes through the same VAE encoder and packing, and keeps its own size.</p>
+<p>The text encoder is Qwen3-VL, a vision-language model. FLUX.3 doesn't just take its last layer. It reads the hidden states of eight of its 36 layers (layers 4, 8, …, 32) and stacks them, so each text token becomes a 8 × 2560 = 20,480-dimensional vector before a linear layer projects it to the transformer's width of 3072.</p>
+<p>This gives the transformer features from several depths of the language model, not just its final layer. The prompt is padded to a multiple of 80 tokens, and the transformer attends to the padding too, which is why the pipeline takes one prompt per call.</p>
+<p>The transformer processes the tokens in two stages:</p>
+<p>The two stages differ in who can attend to whom.</p>
+<p>In stage 1, each stream only attends to itself, so each kind of token gets refined on its own terms first. In stage 2, everything attends to everything, where the image learns from the text and from the references. For comparison, FLUX.2's double-stream blocks also give text and image separate weights, but let them attend to each other from the start. FLUX.3 keeps the streams fully apart first, then merges them.</p>
+<p>At the end, the text and reference tokens are simply dropped. Only the image tokens go through the output layers, which predict how to move them one step toward a clean image.</p>
+<p>Every block, in either stage, has the same shape. Attention and the MLP run in parallel on the same normalized input, and their sum is added back to the residual stream.</p>
+<p>Each block starts with a LayerNorm that has no learned scale or shift of its own. The scale, shift, and gate come from a timestep embedding instead (this is called modulation). Inside the attention, the queries and keys are RMS-normalized and get rotary position embeddings (RoPE), which we look at below.</p>
+<p>In a joint block, all tokens share the same weights, but text, image, and reference tokens each get their own scale, shift, and gate.</p>
+<p>In FLUX.1 and FLUX.2, one timestep embedding modulates every token. In FLUX.3, the modulation depends on the kind of token.</p>
+<p>The noisy image tokens are modulated by the current timestep t. The text and reference tokens are always modulated by timestep 0, which means "clean, nothing to denoise here". So even a reference that looks almost the same as the output is marked as given context, not as something to generate.</p>
+<p>The distilled checkpoint is a flow map. It is also told the timestep each step jumps to. That second timestep gets its own embedding, which is added to every token's modulation, so each of its 16 steps can make a larger jump.</p>
+<p>Attention on its own doesn't know where a token is (this phenomenon is called permutation equivariance). RoPE fixes that by rotating each query and key by an amount that depends on the token's position. FLUX.3 uses four position axes, (t, h, w, l) (timestep, height, width, length of sequence), and gives each one a quarter (32 dimensions) of every 128-dimensional attention head:</p>
+<p>Text tokens line up along l, like words in a sentence. The image and the references are 2D grids in (h, w), separated from each other along l. Because a reference uses the same (h, w) coordinates as the output, "the same spot in the reference" has a precise meaning to the model, which is what the src_bbox / tgt_bbox editing relies on.</p>
+<p>FLUX.3 is a flow-matching model. Generation starts from pure noise, and at each of the 50 steps the transformer predicts a velocity. This is the direction from noise toward a clean image. The scheduler takes one step along it.</p>
+<p>At every step you can also read off the model's current guess of the final image. Decoding that guess at a few steps shows how the image takes shape:</p>
+<p>The fox, its pose, and the light are already in place by step 10, while the noise level is still 0.97. The snow-laden branches and the texture of the fur only appear in the last few steps. FLUX.3's scheduler uses a large time shift (6.93), which keeps the noise level high for most of the run: 44 of the 50 steps happen above σ = 0.5. We built this figure by adding one small block to the pipeline, which brings us to Modular Diffusers.</p>
+<p>If you are new to flow matching, we have a beginner friendly tutorial and a video for you to understand how it works.</p>
+<p>FLUX.3 ships as a Modular Diffusers pipeline.</p>
+<p>You can list the workflows and print the exact blocks of each one, without loading any weights.</p>
+<p>get_workflow() resolves the auto branches and gives you the plain sequence of steps that will run. print(blocks.get_workflow("image_conditioned").doc) prints the components, inputs, defaults, and outputs of that workflow.</p>
+<p>Pop the text encoder out, encode the prompt once, free it, and generate from the cached embeddings.</p>
+<p>The denoising figure above came from one extra block that records the model's guess of the clean image at every step:</p>
+<p>Built something with FLUX.3? Share your LoRAs and pipelines on the Hub. We'd love to see them! 😎</p>
+<p>Visualize how noise transforms into images in your browser</p>
+<p>Open weights for image editing, generation and layouts</p>
+<p>Visualize how noise transforms into images in your browser</p>
+<p>Open weights for image editing, generation and layouts</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/accelerating-development-for-massive-git-repositories/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/flux-3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

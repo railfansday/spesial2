@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</title>
+    <title>Microsoft Fixes Nearly 1,100 Security Vulnerabilities</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9907.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,70 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>Microsoft Fixes Nearly 1,100 Security Vulnerabilities</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>3 months ago, we started a revival of Papers with Code (see also the announcement tweet). Its goal is to make open AI research accessible and digestible, so that people can easily find the artifacts related to a paper, find state-of-the-art (SOTA) across the various domains of AI, share interesting research and build on top of each other's work. In other words, its goal is to power the wave of research that leads to the next Transformer.</p>
-<p>Of course, making AI research accessible requires a powerful search engine, so that humans and agents can quickly find relevant and related work, either through the website or the pwc search CLI command, which agents can use via the Skill.</p>
-<p>It's important to note that searching for research is not quite the same as searching for regular text. A useful paper search engine should find an exact title or arXiv identifier, but it should also understand a query such as “small language models for code generation” even when those words do not appear together in a paper. It needs to recognize that “the original BERT paper” is a navigational request, tolerate an incomplete title or typos, and still respond quickly when a model service is cold or temporarily unavailable.</p>
-<p>For Papers with Code, we built this as a hybrid search system. This is also based on our prior experience at ML6, where we developed RAG-based systems for clients. It turned out that hybrid search typically outperforms keyword- and vector-based search systems, as it combines the best of both worlds (see also this blog for more info). Keyword search finds exact mentions, whereas vector search finds more fuzzy, semantically similar terms. Note that rerankers (also called cross-encoders) can further improve the results, although they also come with additional overhead and latency.</p>
-<p>Papers with Code relies on a PostgreSQL database, hence its full-text search capabilities provide a fast lexical baseline. For dense embeddings, pgvector is used to add semantic recall, and the reciprocal rank fusion (RRF) algorithm combines the two. Three Hugging Face services are used for the dense embeddings:</p>
-<p>Today, the system maintains embeddings for more than 110,000 current papers sourced from arXiv and Daily Papers. This post explains the architecture, the design decisions behind it, and the lessons we learned while taking it to production.</p>
-<p>We deliberately split search into an offline corpus build and an online search service:</p>
-<p>The expensive, throughput-oriented work runs as Jobs. Durable artifacts live in a Bucket. Only the small query-embedding step sits on the request path, behind a protected Inference Endpoint, to power the online search. If that endpoint is cold, busy, or unhealthy, search immediately falls back to full-text retrieval. This separation makes the system both powerful and fast.</p>
-<p>Embedding pipelines often fail in subtle ways: a model revision changes, query and document prompts are mixed up, vectors are truncated differently, or an updated abstract no longer matches its stored vector.</p>
-<p>We avoid this by treating the embedding format as a versioned API. Every paper is encoded as:</p>
-<p>Our production generation uses Qwen/Qwen3-Embedding-0.6B, pinned to an exact revision, with 256-dimensional L2-normalized vectors. We selected the model with help from the MTEB leaderboard, the go-to benchmark for comparing embedding models. Note that newer embedding models like Qwen3 allow for 2 new features:</p>
-<p>This contract follows an embedding from export, through GPU inference, into PostgreSQL, and finally into online retrieval.</p>
-<p>Full-corpus embedding is a classic batch workload. It needs a GPU for a relatively short period, benefits from high throughput, and should not consume resources between runs. Hugging Face Jobs fits that shape well: a Job is defined by a command, a hardware flavor, and optionally a Docker image, and can run uv scripts with their dependencies declared inline.</p>
-<p>Our corpus build starts by exporting the latest version of every paper from a repeatable-read PostgreSQL snapshot. The exporter streams rows rather than loading the catalog into memory, writes bounded JSONL shards, and creates a manifest containing row counts and SHA-256 checksums.</p>
-<p>We sync that immutable run directory to a private Storage Bucket and mount the Bucket directly (using hf-mount) into an l4x1 Job (an NVIDIA L4 GPU, which has 24GB of VRAM). From the worker's perspective it is simply a filesystem:</p>
-<p>Each completed shard has its own marker, so a restarted Job can skip verified work. This is useful for a large corpus: retrying should just resume work rather than overwriting existing embeddings.</p>
-<p>In our 5,000-paper pilot, the Qwen Job encoded about 75 papers per second at 1024 dimensions on an L4 GPU. The same pass could be deterministically materialized at 512 and 256 dimensions, so we could compare the storage and retrieval trade-offs without paying for more inference.</p>
-<p>Storage Buckets are mutable, S3-like object storage on the Hub, optimized for AI workloads. They can be accessed through hf://buckets/... paths and mounted read-write in Jobs without building a separate storage integration.</p>
-<p>For us, the Bucket is more than a place to put vectors. It is the boundary between three systems with different lifecycles:</p>
-<p>We organize artifacts under immutable run prefixes:</p>
-<p>Buckets themselves are intentionally mutable, so immutability is an application-level rule: a run ID is never overwritten, and every artifact is covered by a manifest and checksum.</p>
-<p>Only after the importer rechecks schemas, checksums, dimensions, normalization, unique paper IDs, and current content hashes do we load the vectors into PostgreSQL. We then build a separate HNSW index for the new generation and atomically mark it active only when every eligible current paper is covered (HNSW is the graph-based algorithm that enables fast vector search).</p>
-<p>Batch embeddings solve the document side of retrieval. A user query still needs to be embedded at request time using the same model contract.</p>
-<p>We deploy the pinned model as an authenticated Inference Endpoint backed by Text Embeddings Inference (TEI). The endpoint accepts the query text and returns a normalized 256-dimensional vector using the model's query prompt. Note that one could also leverage vLLM or SGLang here.</p>
-<p>The API then performs a cosine-distance search over the active pgvector generation:</p>
-<p>The HNSW index keeps this lookup fast. On our 5,000-paper pilot, the 256-dimensional Qwen index achieved 0.9955 Recall@20 against exact search, with 1.31 ms p50 and 2.21 ms p95 HNSW lookup latency. Its table and index used about 27% of the storage of the 1024-dimensional version while retaining essentially the same ANN recall in that test.</p>
-<p>The Endpoint is configured with a maximum of one replica and can scale to zero when idle. That is a useful cost lever, as this means you're not paying when there's no usage. However, this also means cold starts must be part of the application design rather than treated as an exceptional event, as it takes some time for the endpoint to spin up and serve traffic.</p>
-<p>Our query client therefore has deliberately strict behavior:</p>
-<p>If the endpoint is scaling up, times out, returns a malformed vector, or has no concurrency available, we skip the semantic branch immediately. Users still receive lexical results instead of waiting for an unreliable dependency.</p>
-<p>Inference Endpoints works really reliably, and includes a nice dashboard so you can quickly see key analytics.</p>
-<p>For every query, the lexical branch retrieves up to 50 candidates using weighted PostgreSQL full-text search. The semantic branch retrieves up to 50 candidates from pgvector.</p>
-<p>We combine their ranks using weighted reciprocal rank fusion (RRF):</p>
-<p>score(d)=∑r ∈ {lexical, semantic}wrk+rankr(d)
-\text{score}(d) = \sum_{r \,\in\, \{\text{lexical},\, \text{semantic}\}} \frac{w_r}{k + \text{rank}_r(d)}
-score(d)=r∈{lexical,semantic}∑​k+rankr​(d)wr​​</p>
-<p>RRF is simple and robust, because it combines ranks rather than scores from two systems with different scales. Basically, if a paper is ranked high both by the lexical branch and the semantic branch, it has a higher chance of being ranked high by the hybrid search. We currently use equal branch weights and (k=60) (k is the "rank constant", a hyperparameter of the RRF algorithm).</p>
-<p>Dense retrieval improves recall for conceptual queries. Full-text retrieval remains excellent for exact terminology, identifiers, and rare names. We also preserve deterministic identity behavior on top of the fused ranking:</p>
-<p>Note: hybrid search isn't always the best option, it is recommended to start with keyword search as a cheap and fast baseline, and only adding semantic and/or hybrid search when it turns out those give a reasonable boost in retrieval quality. One could further improve the search by adding a reranker after keyword/semantic/hybrid retrieval, using a model like Qwen3-Reranker.</p>
-<p>The large initial corpus is embedded with Jobs, but Papers with Code changes continuously. New papers arrive, abstracts are corrected, and new arXiv versions become current.</p>
-<p>Launching a GPU Job for a handful of changed rows would add unnecessary startup and orchestration overhead. Instead, an hourly incremental process selects missing or content-changed papers and sends a bounded delta to the same TEI Endpoint, this time with the document prompt.</p>
-<p>Each run processes at most 500 papers in batches of 16. Before an embedding is written, the source row is locked and its content hash is checked again. If a paper changed during inference, that vector is discarded and picked up by the next run.</p>
-<p>This gives us a useful division of labor:</p>
-<p>The hourly path keeps the active index close to the live catalog without turning an online endpoint into an unbounded batch processor.</p>
-<p>The same document embeddings also power related-paper recommendations on each paper page.</p>
-<p>Because the source paper already has a stored vector, related-paper retrieval requires no model call at request time. It is a single nearest-neighbor query over the active generation. If a vector is temporarily missing, the application can use a previous arXiv version or fill results from the existing task- and citation-based fallback. We fetch citation data through the Semantic Scholar API and also built s2-cli, a command-line interface for querying its citation graph. The latter is used by the agent at https://paperswithcode.co/chat.</p>
-<p>Corpus embedding and query embedding use the same model, but they are different infrastructure problems. Jobs optimize for throughput and bounded cost; Inference Endpoints optimize for availability and request latency.</p>
-<p>Buckets provide an explicit handoff between compute and production. Checksummed artifacts create a reviewable boundary before data enters the production index.</p>
-<p>The revision, dimension, prompt, normalization, and input formatter all affect retrieval. Store them together and validate them everywhere.</p>
-<p>Scale-to-zero is valuable when traffic is intermittent, but only if the product has a fast fallback. Hybrid search gave us that fallback naturally: lexical search is always useful on its own.</p>
-<p>Matryoshka embeddings let us evaluate quality, memory, index size, and latency as one trade-off. In our pilot, 256 dimensions preserved ANN recall while materially shrinking storage compared with 1024 dimensions.</p>
-<p>New generations are imported beside the current one, indexed independently, checked for complete and current coverage, and then activated atomically. Rollback is a configuration change, not an emergency recomputation.</p>
-<p>Feel free to try out the search at https://paperswithcode.co or the chat interface at https://paperswithcode.co/chat, and let us know any feedback!</p>
-<p>The lexical fallback for scale-to-zero and the separate index activation boundary are useful production details. One question for the hybrid setup: do you measure relevance and latency separately when dense search is cold versus warm, so fallback quality is visible rather than hidden in an overall average? We examined lexical-first retrieval and semantic reranking on a smaller workload here: https://huggingface.co/blog/ironbcc/bm25-seb-rag-retrieval (I'm an author). That benchmark doesn't establish behavior on a paper-scale corpus.</p>
+                <p>Microsoft did another four-digit patch drop today, releasing updates to fix almost 1,100 security vulnerabilities in its Windows operating systems and supported software. This month’s Patch Tuesday addresses 63 critical flaws — including a zero-day in Microsoft Outlook — and comes amid important security updates from other software makers, including Adobe, Apple, Google and Mozilla.</p>
+<p>Image: Shutterstock.com. Diorama by @zepp1969.</p>
+<p>November’s patch release from Redmond tackles 1,093 vulnerabilities, fixing 63 “critical” flaws that can be exploited to seize control over a Windows system with little or no help from users. Nearly half of those critical bugs are remote code execution vulnerabilities. Overall, 535 of the flaws addressed this month allow an attacker to elevate their privileges on a vulnerable device.</p>
+<p>This latest round of updates means Microsoft has shipped more than 5,100 security patches so far this year, a staggering number considering that a year ago Microsoft was averaging around 100 patches per month. Microsoft credits advances in artificial intelligence for helping to find (and fix) such a large volume of security bugs in recent months. Last month, Microsoft pushed more than 1,400 fixes.</p>
+<p>According to Redmond, just one of the flaws is already seeing active exploitation: CVE-2026-124194, a spoofing bug in Outlook. The advisory for CVE-2026-124194 says it affects Microsoft 365 Apps for Enterprise and editions of Microsoft Office.</p>
+<p>Several other major software makers pushed security updates this week to fix critical weaknesses in their products. Apple on Monday released out-of-cycle security updates to fix at least nine vulnerabilities in iOS/iPadOS, macOS, watchOS and visionOS. Among the weaknesses reportedly fixed in Apple’s release include an iMessage flaw that could let a remote attacker join a group chat and receive its messages; the updates also fix a separate iMessage flaw that could let someone added to a group access messages sent before they joined.</p>
+<p>Lee Neely, an instructor at the SANS Institute, noted that Apple backported the fix to iOS 18.</p>
+<p>“I take notice when Apple releases fixes to more than two versions,” Neely wrote in a SANS newsletter today. “You really need to get to version 27.2.1 of their OSes and push folks who are holding onto devices which cannot run the current version. The best plan often involves setting an upgrade date for old hardware. Run through all your Apple devices and make sure everything is up to date, don’t assume the fixes went out automatically.”</p>
+<p>Google this week released Chrome version 157.0.8103.50, which resolves nine security holes, including CVE-2026-125350, the sixth zero-day vulnerability this year for Chrome (this bug also is being patched in Chromium-based browsers like Edge). The latest Chrome version follows its November 3 release, which fixed 213 vulnerabilities. A new version of Mozilla Firefox out today (Firefox 160) resolves almost 100 CVEs, about half of them high severity.</p>
+<p>Adobe today released patches for at least 110 vulnerabilities across a range of products, with nearly half of the flaws rated high severity. Adobe said there is no evidence any of the security holes it addressed this month are being actively exploited.</p>
+<p>Chris Goettl, vice president of product management at Ivanti, said it’s easy for security teams at large enterprises to feel overwhelmed by the volume and criticality of patches from Microsoft lately. But he notes that while some 95,000 vulnerabilities have been assigned CVEs this year across all vendors, only 217 have so far this year been added to the Known Exploited Vulnerabilities (KEV) list maintained by the U.S. Cybersecurity and Infrastructure Security Agency (CISA).</p>
+<p>“Roughly four in ten of this year’s exploited vulnerabilities sit in operating systems, endpoint software, browsers, and server platforms, which a continuous patch strategy can close quickly,” Goettl said.”The rest calls for exposure management alongside patching, especially the 44% that sit in edge devices and IT management or remote access tools, the internet-facing systems that hold privileged access. Teams that can quickly identify those assets, confirm exposure and act on confirmed exploitation can focus on the small slice of vulnerabilities attackers are actively using, while the rest stays on the normal patch cadence.”</p>
+<p>Please don’t neglect to back up any important data if you haven’t recently; generally speaking, this is a task best accomplished before applying operating system updates. As ever, if you experience any issues installing this month’s bundle of love from Microsoft, please drop a comment about it in the space below.</p>
+<p>This entry was posted on Tuesday 10th of November 2026 04:55 PM</p>
+<p>Thank you as always.  Your concern and actions for others is very much appreciated by all, including those not aware of it.
+With respect, John Royal</p>
+<p>I wonder whether a goal of a bug-free Windows is mathematically possible, or whether there will always be residual “bugs” in the form of some marginal configurations and conditions that can never be made fully fault-safe.</p>
+<p>I’m sure it’s possible to have bug-free software, but I’ve never seen it in anything but very simple programs.  There are ALWAYS bugs.  (I worked in software QA/testing for 20 years…)</p>
+<p>There WERE always bugs because humans are fallible, easily distracted, of differing skill level, etc..  Machines will eliminate 99.9% of all bugs moving forward.</p>
+<p>How will we know? Will we have to ask the machines?</p>
+<p>well, if that wasn’t sarcastic, Jojo, it should be.  Think of an AI coder as a very fast intern-level coder who copies and pastes a lot.</p>
+<p>Now.  But a year from now, it could be better than any super experienced programmer in the world.  This is what so many making comments like yours misses.</p>
+<p>AI is like a 2 year old baby now.  Next year it may be like a 16 year old.  The year after, like a 40 year old with an IQ of 300.</p>
+<p>Suggested reading:
+The avalanche that hit math is coming for AI development
+Why I now expect superintelligence by 2030
+Dwarkesh Patel
+13 Nov 2026
+https://www.dwarkesh.com/p/rsi</p>
+<p>” it could be better than any super experienced programmer in the world. ”</p>
+<p>On broad-strokes sure, yet (and increasingly I’d imagine, given the theft) specialized knowledge isn’t necessarily going to be shared by the best (*corporately owned and operated, legally speaking) minds in the field, thus the AI LLMs would not necessarily be training on that specific knowledge base by default.  So you’ll get competent general output I’m sure, but the really fine-grained expertise or specific techniques therein?  And you still have to have someone checking the work who knows what it is, you can’t just trust there’s no additional AI slop hallucinated into hidden spiels.  As smart as AI is or even ‘can’ become, you still need someone smart enough to correct it.  Or, you know, doom.</p>
+<p>there were quite a lot of bug-free programs — yes  even shareware and freeware — back when coding was something done by people who got good at coding because they fit the stereotype of what geeks used to be, and because resources were so damn precious that the best programmers were painstakingly and lovingly working on programs all alone that they didn’t want to or could not share without a monetary or reputational cost, and talent was something recognized by smallish cabals most computer-careered people would shun or eschew or use and then give them like $300 for then earn millions, hundreds of millions  or billions of dollars off of thanks to vulture-like vc’s and banks who have confused their original business models with the get rich fast crowd. banks may have had their issues til the mid-19th century or so, but when they started to confuse themselves and their wants with what they had no business being involved in (separating church and state was not “just” about protestants/jews/etc. and the presidency!) or “investing in”.</p>
+<p>In short, the more resources you think you have to waste, the worse any field gets, until it is bloated and corrupt.</p>
+<p>My favourite two computer games were DOS games written in mostly assembly and (iirc) C. They ran on a computer with a meg of ram and on a 10 meg hard drive. Not a single bug in either. I can still even pull them out and play them in a vm. One was under 100kb as a dos exe, the other a whopping 383kb or so. not tetris clones. original. none of their programmers got really rich but they clearly knew what they were doing and their stuff was tight.</p>
+<p>I cannot imagine they would want an MS job or the other way around. But afaik both still ate damn good, low-level coders.</p>
+<p>Excellent reporting, as usual. Thank you BK.</p>
+<p>Well, if nothing else AI has created a mess of monthly updates on many platforms now. Some crazy times for sure.</p>
+<p>unfair. people want all their software and apps and drivers built in and baked in now.  the more you demand the more you gotta pay (in time, money, code, employee compensation for setting up the automated patching you also now all pay for software for.)</p>
+<p>I’m waiting for someone to write a story about how closing all these bugs has cut-off ways that the world’s 3-letter spy/security agencies took advantage of and how they are now more constrained at gaining intelligence.</p>
+<p>All these fixes should also make hacking a lot more difficult.</p>
+<p>Nearly eleven hundred vulnerabilities in one Patch Tuesday is a good moment to ask how any IT shop is supposed to prioritize. The teams that cope best treat patching as a budgeting problem – fixed maintenance windows, explicit risk acceptance for the long tail, and surge capacity reserved for the exploited entries – rather than trying to clear the whole list every month. Reading the details of what got fixed matters less than knowing which of your exposed services map to the CVEs that are already being scanned for in the wild.</p>
+<p>Question:  Are all of these “fixes” ONLY in Windows 11 and its associated products?
+Or, are they counting other Windows versions and their associated products?</p>
+<p>I uninstalled Adobe Reader from my computer the other day because it uses AI by default. It was telling me “this document is complex, do you want me to simplify it for you”? How would they know if they hadn’t already read it.</p>
+<p>So, following the principle of removing any app that I am not actually using, and don’t really need, I uninstalled it.</p>
+<p>Now I have an additional reason to be satisfied with that decision.</p>
+<p>I wonder if this has anything to do with the massive Microsoft outage happening right now.  It’s 12:40PM PST.</p>
+<p>‘403 Forbidden’ on most content here when using Proton VPN.</p>
+<p>What’s the likelihood that the O365 CVE patch is causing the global O365 outage?</p>
+<p>Microsoft is almost certainly using AI to fix bugs in their backoffice systems too. Sooner or later, something goes wrong. It turns out it is sooner than one might expect.</p>
+<p>It’s interesting that AI is helping Microsoft uncover vulnerabilities at such a massive scale. But finding bugs faster also creates a new challenge for IT teams that have to test and deploy all these patches. I wonder whether AI-powered vulnerability discovery will eventually outpace organizations’ ability to keep their systems updated.</p>
+<p>After patch of Win10 home system, i’m getting repetitive notifications of SrTasks.exe denied access. I don’t do backups, always roll the bones. Is there a way to stop these notices?</p>
+<p>AI has been writing most code for most products for a while now. Is there any way to tell what fraction of these vulnerabilities come from AI-generated code vs. human-written code? And what can we expect down the line as AI takes over more fully — ever larger numbers of bugs and fixes or the opposite or something in between?</p>
+<p>Your email address will not be published. Required fields are marked *</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/pwc-search" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://krebsonsecurity.com/2026/11/microsoft-fixes-nearly-1100-security-vulnerabilities/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers Model Integration Contracts</title>
+    <title>The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9773.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,142 +15,89 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers Model Integration Contracts</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2026-10/pie%20crumsb.jpg" alt="The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2026-10/pie%20crumsb.jpg" alt="The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
-(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
-During training, it could peek at the answer it was supposed to predict.
-Nothing crashed, and the bug stayed in main for almost two months.</p>
-<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
-it on every one of them. This post is about that model and the tests built
-around it.</p>
-<p>Transformers supports over 750
-model types, and its test suite is big: 88,000+ CPU tests on main, plus
-200,000+ GPU tests in a daily run. Model tests are only part of it: we also
-test pipelines, training, distributed execution, quantization and attention
-kernels.</p>
-<p>The integration tests load real checkpoints and exercise the model's API on
-real hardware. Running all of that on every PR would mean keeping a lot of GPUs
-busy all day long, which isn't practical. By the time a scheduled run finds a
-regression, it may already be in main.</p>
-<p>Our approach is to shrink the model instead. We build a fixture: a small
-model made from the real checkpoint's configuration, with fewer and narrower
-layers but every kind of layer it has, and its tokenizer and processor files
-unchanged. It is published once, then reused. We run "fast integration tests"
-against it on a cheap CPU runner. In our
-CPU study,
-the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
-is 1,227 MB.</p>
-<p>This also covers very large models: some don't fit on our standard GPU
-runners, but their fixtures run on CPU.</p>
-<p>Model integrators already build tiny test models (Transformers' tiny-random-*
-checkpoints). We wanted a common recipe, and
-checks that go beyond loading the model and running a forward pass. The UMT5
-bug would have passed a forward pass just fine.</p>
-<p>Fixtures won't replace full integration tests, but on PRs they give us a
-chance to catch bugs before they reach main.</p>
-<p>transformers-mic is a proposed
-standard for packaging these tests. A Model Integration Contract (MIC) has
-three parts:</p>
-<p>The contract holds if running the usage path on the fixture still produces the
-baselines.</p>
-<p>A contract covers an architecture and a usage path, not a single checkpoint:
-compatible checkpoints can share a fixture, while each keeps its own expected
-results. We publish them in huggingface-mic.</p>
-<p>For example, the SmolLM contract generates from prompts such as "The capital
-of France is" and compares its token IDs with a recorded answer. After loading
-the model and tokenizer, the generation code is, simplified to one prompt:</p>
-<p>It also compares training loss, checks that gradients are finite and verifies
-that an optimizer step changes the weights. See the full
-usage.md.</p>
-<p>A fleet dataset
-on the Hub pins each MIC to a frozen revision, along with the package versions
-used to record its baselines. Each CI run records the fleet revision it
-used, so we can reproduce it later.</p>
-<p>On a PR, we pick MICs based on the files the patch changes.</p>
-<p>We replayed frozen MICs over five months of Transformers commits. The small
-UMT5 fixture flagged the regression from its introduction on July 30, 2026
-until its fix on September 28.
-Label log-probabilities differed from the reviewed baseline by 1.22 and training
-loss by about 0.20.</p>
-<p>One detail mattered: the contract used SDPA, the default attention path.
-Running only the eager attention variant missed the bug. A fixture only
-helps if it goes through the same code as the real checkpoint.</p>
-<p>We then reverted the fix on a proof branch in Transformers' CI. The check
-failed with the same differences, and the selected T5 contract's runner step
-took 13.4 seconds on CPU, excluding setup.</p>
-<p>The replay results
-and the CI demo
-have the measurements and reproduction details.</p>
-<p>The first recipe was simple: make the dimensions smaller and keep fewer
-layers. That wasn't enough for mixed architectures. Keeping two layers is no
-use if both use sliding attention and the full-attention layers disappear.</p>
-<p>We also keep the original weights file format. Otherwise we would skip the
-conversion code that runs when a user loads the real checkpoint.
-The full recipe
-has more detail.</p>
-<p>The Llama 4 Scout shrink report
-shows what this looks like on a big model. 108.6 billion parameters become 44.7
-million. The vision stack goes from 34 layers to 2 and the language stack from
-48 to 4, keeping the checked layer kinds and MoE routing style.</p>
-<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
-model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
-the candidate baselines. The LLM drafts; it doesn't approve. Changed
-expectations require human review.</p>
-<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
-<p>It drafts the contract, builds the fixture and records its baselines on your
-machine, asking you to review each step, and stops before uploading anything.
-For a new model, the draft comes from an LLM through Inference Providers, billed
-to your own account (--bill-to ''). The
-CLI docs
-cover the individual steps.</p>
-<p>We used agents to build MICs across model families. When they hit an edge
-case, we fixed the recipe itself rather than the one fixture, with help from
-model experts. The published models and remaining gaps are in the
-coverage space.</p>
-<p>With random weights, our Whisper fixture barely responded to changes in
-the audio. It ran, but that made it a poor test of the audio path.</p>
-<p>So we trained it on a few tones paired with words such as "red" and "green".
-We weren't teaching it speech recognition, just making audio changes visible
-in its outputs. In our weight-initialization study,
-the random Whisper fixtures caught 18 of 24 injected faults. The overfit
-fixtures caught all 24.</p>
-<p>That gives us two ways to build the weights:</p>
-<p>The Whisper result doesn't settle which is better. Those were synthetic
-faults, and we haven't found a real regression caught only by the overfit
-version. Both versions missed an assisted-decoding bug that the real Whisper
-checkpoint exposed.</p>
-<p>So we keep random weights when they pass the checks, and overfit when we need
-better sensitivity or readable answers. Training takes seconds, but it is one
-more step that can fail to converge, and one more thing to maintain. The comparison
-has the results for both.</p>
-<p>As of November 1, 2026, the MIC job in Transformers CI
-reports failures without blocking PRs. Whether it should block depends on
-things we haven't measured yet:</p>
-<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
-show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
-<p>Coverage is still partial, across model families and the APIs people use.
-When a regression slips through, we can add the missing usage path and replay
-it on the broken and fixed versions. We'll keep existing tests until their
-coverage is accounted for.</p>
-<p>Finally, we'd like to link original Hub model pages to their MICs, so a
-developer or an agent using a checkpoint could start from an example tested on
-that checkpoint, its environment and its expected outputs.</p>
-<p>Want to help? Pick an uncovered model from the
-coverage space, try
-the tmic workflow,
-and contribute a usage path or review a generated contract.</p>
-<p>MIC contract coverage of Transformers model types</p>
-<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
-<p>MIC contract coverage of Transformers model types</p>
+                <p>'Tis the season — to start thinking about holiday baking. And while this time of year is full of joy and celebration, it can also be stressful. We’re all searching for ways to get ahead of the curve, and one of the easiest? Make-ahead pie crust, made using pie crumbs.</p>
+<p>I first learned of this technique from a 90-something friend with whom I love to talk baking. Over lunch one day, something she said about pie captured my attention.</p>
+<p>"Did you ever hear of pie crumbs?" she asked. I admitted I hadn't — aside from the obvious: the scraps of pie crust left on the plate after the slice is gone. "My mother used to mix flour and salt and lard together to make this crumbly mixture that she'd store in a crock in the cellar. She called them her pie crumbs. When she wanted to make a pie, she'd just scoop out a few handfuls, add water, and roll out her crust."</p>
+<p>Sounds like a good make-ahead solution for 100 years ago — but now that we have easy access to freezers, why not just make pie dough and freeze it in ready-to-roll disks? A couple of reasons, actually.</p>
+<p>1) Pie crumbs allow you to make any amount of crust, from mini apple pies to a crust for a deep-dish 10" pie. With frozen disks, you're looking at a standard single crust — not always exactly what you want.</p>
+<p>2) Pie crumbs save time. Remove however much of the crumbly mixture you need (more on this below) from the freezer, and within 15 minutes the fat is soft enough that you can add water and roll out your crust. Compare that to the hours it takes to thaw and roll a frozen disk of prepared crust — not to mention the elbow grease if your crust isn’t fully thawed.</p>
+<p>3) Pie crumbs can be more stable in the freezer than pie crust disks. Why? Because without the added water, no ice crystals form. Ice crystals can damage the flour/water matrix, leading to changes in its structure (which can then potentially lead to changes in your pie crust).</p>
+<p>Oh, and one other reason I like pie crumbs: If my friend's mother used them, they were probably a 19th-century kitchen time-saver. And I love the feeling of preserving and carrying forward our American baking traditions — even something as simple as a shortcut for pie crust.</p>
+<p>Choose a standard pie crust recipe: Our Classic Double Pie Crust recipe is good choice, but anything that involves cutting fat into flour (lard, shortening, butter, etc.) will work.</p>
+<p>Mix flour, salt, and shortening and/or butter: Follow your recipe up until all of the fat is incorporated into the flour. You should be left with a bowl of dry, crumbly dough that barely holds together when squeezed. If using butter, you should be able to see visible chunks scattered throughout the dough.</p>
+<p>Weigh the pie crumbs: If you’re making a large batch of pie crumbs, it’s helpful to weigh and label the total gram amount so that you can easily remove the amount of pie crumbs for a single pie crust as needed. Our Classic Double Pie Crust makes 488 grams of pie crumbs; that means 244 grams per single pie crust. Label these amounts on your freezer storage bag.</p>
+<p>Bag, label, and freeze the crumbs: Seal pie crumbs in an airtight, freezer-safe bag and place in the freezer, preferably in the back where it won't be subject to warm air wafting over it each time you open the freezer door.</p>
+<p>Scoop crumbs out of the bag into a bowl: Whether one crust, two crusts, or one and a half, do the math and measure the crumbs based on your recorded gram amounts.</p>
+<p>Let the crumbs thaw for 15 to 20 minutes or so: Wait until the butter chunks feel barely pliable in your fingers.</p>
+<p>Add water and mix: Add water based on your original recipe amount, or just enough water to make a chunky mass when mixed. Squeeze and knead the dough briefly; all you're doing here is bringing the chunks together into one solid piece of dough.</p>
+<p>Roll the dough, place in a pan, and bake accordingly: From here, your pie crust is the same as any fresh-made crust and can be filled and baked or prebaked for a no-bake filling. (Bonus: Because the crumbs were frozen and remain cold as you work with them, there's no need to chill your rolled-out crust before filling and/or baking.)</p>
+<p>Fairly indefinitely, though the longer they're frozen, the more chance they have both to absorb freezer odors, and for the fats to start to go off. I've also found that, after about two weeks in the freezer, I need to add a touch more water than usual to bring the dough together — due to the drying effects inherent in freezing.</p>
+<p>With pie season hard upon us, now's the time to try pie crumbs for make-ahead pie crust. Or maybe you have another old-fashioned pie trick up your sleeve? Share your favorite tips in the comments, below.</p>
+<p>For detailed ingredient amounts for the crust demonstrated above, see our recipe for Classic Double Pie Crust.</p>
+<p>And if you're looking for additional time-saving ways to use your freezer in the run-up to the holidays, check out our recipe for Homemade Brown and Serve Rolls and Apple Pie with Make-Ahead Filling.</p>
+<p>Cover photo and food styling by Liz Neily.</p>
+<p>Transform your favorite bread loaf into shareable rolls.</p>
+<p>Top tips from the Things Bakers Know podcast.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>Top tips from the Things Bakers Know podcast.</p>
+<p>Mini pies may be the secret to a stress-free celebration.</p>
+<p>Because we're all wondering what to do with our apple and pumpkin pies.</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/10/26/make-ahead-pie-crust" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

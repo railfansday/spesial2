@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MySQL to Redshift Without DMS: A Binlog CDC Tutorial Through AWS Glue</title>
+    <title>40+ Thanksgiving Side Dishes</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9671.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,20 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>MySQL to Redshift Without DMS: A Binlog CDC Tutorial Through AWS Glue</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-19</p>
+        <h1>40+ Thanksgiving Side Dishes</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fraw.githubusercontent.com%2Fdatazip-inc%2Folake-docs%2F2c7ed7e43f67c35760bbe8e7f27efd402f70abf6%2Fstatic%2Fimg%2Fdocs%2Fintegrations%2Fmysql-to-redshift%2Fcover.webp" alt="MySQL to Redshift Without DMS: A Binlog CDC Tutorial Through AWS Glue" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fraw.githubusercontent.com%2Fdatazip-inc%2Folake-docs%2F2c7ed7e43f67c35760bbe8e7f27efd402f70abf6%2Fstatic%2Fimg%2Fdocs%2Fintegrations%2Fmysql-to-redshift%2Fcover.webp" alt="MySQL to Redshift Without DMS: A Binlog CDC Tutorial Through AWS Glue" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A MySQL to Redshift pipeline tends to start as a nightly job: dump the tables, push the files to a bucket, run COPY. It works until someone asks why a refund issued at lunch still shows as revenue in the afternoon report. Full reloads cannot carry an update the moment it happens, and they cannot carry a delete at all unless you rebuild the table.</p>
-<p>Here are the ways people usually move MySQL rows into Amazon Redshift:</p>
-<p>This tutorial builds a different one. OLake Go, an open source (Apache 2.0) replication tool, reads the MySQL binary log and commits Apache Iceberg tables into the AWS Glue Data Catalog. Redshift reads them in place through an external schema, and Athena and DuckDB read the same files.</p>
-<p>I ran every step on 2026-10-30 with OLake Go v1.1.0, MySQL 8.4 in Docker and a Redshift Serverless workgroup at 8 Redshift Processing Units (RPU) in ap-southeast-1. The numbers below are from that run.</p>
-<p>You need MySQL 8.0 or later, an AWS account where you can create a bucket and Identity and Access Management (IAM) entities, a Redshift Serverless workgroup or RA3 cluster, Docker, and about 40 minutes.</p>
-<p>For a local test, this starts MySQL 8.4 with the binlog settings OLake Go needs:</p>
-<p>On a server you already run, the same keys go in my.cnf, and log_bin needs a restart. On RDS, Aurora, Cloud SQL or Azure they go in the parameter group or server settings instead.</p>
-<p>Load any rows you like into them. Mine held 8 customers and 40 orders, and step 7 updates two customers by name, so use names that exist in your data.</p>
-<p>Now the user OLake Go connects as, and fresh table statistics:</p>
-<p>⚠️ Do not skip ANALYZE TABLE. The snapshot plans its chunks from row estimates, and a table loaded a minute ago has none, so the first sync stops with stats not populated for table[shop.orders].</p>
-<p>Create an S3 bucket in the region your Redshift workgroup runs in. OLake Go needs an IAM user (or role) that can write the bucket and manage Glue tables. This is the inline policy from the run:</p>
-<p>Redshift reads with its own role. In the run, the role attached to the workgroup had AmazonS3ReadOnlyAccess and read access to Glue. You do not create a Glue database; OLake Go makes one per job.</p>
-<p>Open http://localhost:8000 and sign in with admin / password. Go to Sources, click Create Source and pick MySQL.</p>
-<p>Leave Enable CDC on and keep the default Initial Wait Time. My MySQL ran in another container, so the host was host.docker.internal, with database shop, user olake and SSL disabled.</p>
-<p>Set up source tests the connection and then checks binlog_access, log_bin, binlog_format and binlog_row_metadata. A failed check names the setting, its current value and the one it wants, before anything is saved.</p>
-<p>Go to Destinations, click Create Destination, pick Apache Iceberg and set the catalog type to AWS Glue. Fill in the S3 Path OLake Go writes under, the AWS Region of the bucket and catalog, and the access key pair of the writer user. Leave the keys empty if OLake Go runs on an instance with a role.</p>
-<p>Go to Jobs and click Create Job. I named mine mysql_to_redshift and picked the source and destination from the last two steps.</p>
-<p>Under Advanced Settings, the Target Query Engines list does not include Redshift yet. I set AWS Athena and DuckDB, then on the Streams page put each table on Full Refresh + CDC, ingestion Upsert, and the upsert type on Positional Deletes. That is the delete format Redshift reads, and both listed engines read it too.</p>
-<p>Click Create Job, then Sync Now. The first run copied 48 records (2.10 KB) in 15 seconds, container start included.</p>
-<p>The Glue database is named after the job and the source database, so mine became mysql_to_redshift_shop. To pick another name, edit the Iceberg DB field at the top of the Streams page before the first sync.</p>
-<p>Run this in query editor v2 after the first sync, in the same region as the Glue database:</p>
-<p>IAM_ROLE default uses the default role of the Serverless namespace or the cluster. Name a role ARN instead if you keep several.</p>
-<p>Click Sync Now again. The second run read 12 records (563 bytes) from the binlog and took 14 seconds end to end.</p>
-<p>For customers the sync wrote one data file with 4 rows (2 inserts and the new versions of 2 updated rows) and one positional delete file that retires the 2 old versions. The commit report in the sync log reads addedDataFiles=1, addedRecords=4, addedPositionalDeleteFiles=1, addedPositionalDeletes=2. orders had the same shape with 8 rows and 3 deletes.</p>
-<p>Re-run the Redshift query with no refresh. Ten customers come back, one per key, with Liam Carter on gold and Zara Ali in Abu Dhabi.</p>
-<p>OLake Go adds _olake_id, _op_type, _olake_timestamp and _cdc_timestamp to every table. _op_type is r for snapshot rows, c for inserts, u for updates and d for deletes.</p>
-<p>Athena lists mysql_to_redshift_shop in its database picker with no setup beyond a workgroup with a result location. The same customers query returned the same 10 rows and scanned 0.76 KB.</p>
-<p>DuckDB 1.5.5 reads the current metadata file that Glue points to:</p>
-<p>The orders roll-up matched MySQL to the cent in all three engines: 16 delivered for 8659.68, 18 placed for 10522.26 and 11 shipped for 6397.25.</p>
-<p>If your MySQL is on Aurora or RDS and Redshift is the only reader, zero-ETL is less work. The route in this post earns its keep when the server lives elsewhere, or a second engine needs the same rows without another copy.</p>
-<p>It records how the current version of each row arrived. A row from the first snapshot carries r, an insert carries c and an update carries u. Filter the helper columns out of dashboards, or use them to see when a row last changed.</p>
-<p>No. The external schema is read-only, and INSERT or DELETE against these tables fails. OLake Go is the only writer, and MySQL stays the place where rows change.</p>
-<p>The Glue database is the job name plus the source database, which gave mysql_to_redshift_shop here. The Redshift schema is whatever you name in CREATE EXTERNAL SCHEMA, lakehouse in this post. Change the Glue name through the Iceberg DB field before the first sync.</p>
-<p>Not Glue, which has no built-in compaction for tables written by external engines. OLake Fusion compacts tables in the catalogs OLake Go writes to, and Spark on Amazon Elastic MapReduce (EMR) can run rewrite_data_files through the same Glue catalog.</p>
-<p>If something in your setup does not match these steps, leave a comment and I will update the post.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><h2><a href="https://sallysbakingaddiction.com/thanksgiving-side-dishes/">40+ Thanksgiving Side Dishes</a></h2>
+<div style="text-align: center;"><img alt="candied sweet potatoes Thanksgiving side dish in round white baking dish." class="attachment-post-thumbnail size-post-thumbnail wp-image-139931 wp-post-image" height="1800" src="https://sallysbakingaddiction.com/wp-content/uploads/2024/11/thanksgiving-side-dish-sweet-potato.jpg" width="1200" /></div>
+<p>Keep it classic with flavorful cranberry sauce and creamy green bean casserole, or try something new like texture-filled cornbread stuffing and hearty vegetarian pumpkin chili. As you plan out this year's menu, you (and your dinner guests!) will be thankful to have this list for inspiration.</p>
+<p>The post <a href="https://sallysbakingaddiction.com/thanksgiving-side-dishes/">40+ Thanksgiving Side Dishes</a> appeared first on <a href="https://sallysbakingaddiction.com">Sally&#039;s Baking</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/shubham_olake/mysql-to-redshift-without-dms-a-binlog-cdc-tutorial-through-aws-glue-1eg2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://sallysbakingaddiction.com/thanksgiving-side-dishes/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
