@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The case of the flaky Dynamo export tests</title>
+    <title>Chinese web giant Tencent says new US GPU ban ‘sets everyone back in China’</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10183.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,48 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The case of the flaky Dynamo export tests</h1>
+        <h1>Chinese web giant Tencent says new US GPU ban ‘sets everyone back in China’</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://canada1.discourse-cdn.com/flex036/uploads/pytorch1/original/1X/5fdb06218ad11b3a65ec2b66c11c131cca6d05b9.png" alt="The case of the flaky Dynamo export tests" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/233376.jpg?imageId=233376&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Chinese web giant Tencent says new US GPU ban ‘sets everyone back in China’" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://canada1.discourse-cdn.com/flex036/uploads/pytorch1/original/1X/5fdb06218ad11b3a65ec2b66c11c131cca6d05b9.png" alt="The case of the flaky Dynamo export tests" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/233376.jpg?imageId=233376&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Chinese web giant Tencent says new US GPU ban ‘sets everyone back in China’" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>For months, Dynamo export tests have been intermittently failing with “AssertionError: whole graph export entails exactly one call”. Flaky tests that you can’t reproduce are pretty difficult to debug, since you can’t easily make a change and see if it fixes the problem or not. So when I noticed that my local pytest runs were reliably failing in a similar way (so reliably, that initially I thought that they were failing deterministically), I figured I should stop what I was doing and get to the bottom of the problem, because it seemed pretty unlikely anyone else would be able to figure it out otherwise.</p>
-<p>When trying to debug a tricky problem, it pays to reduce experiment iteration time. In my case, it took a few minutes to run the full test suite: I wanted to trigger the flaky test to trigger within the first few runs. I initially wanted to do this by running all the tests in a fixed order, and then delta debugging removing running tests until the flakiness went away. But it turns out pytest doesn’t really have any built-in way to do this; stock unittest does, but in fact the tests stop failing when you don’t run with unittest (for those guessing at home, this is an important clue!) However, pytest does support boolean operators in the -k argument flag, e.g., you can say -k foo and bar to select tests that only contain foo and bar in their name. So I used this to successively pare down tests to something that could be run in a few seconds: PYTHONUNBUFFERED=1 pytest test/dynamo/test_dynamic_shapes.py   -k 'Unspec and export and not dupes and not reorder' -v -x -s. Great.</p>
-<p>Next, I wanted to better understand what exactly was going on when things failed. A good start is to turn on DEBUG logging and look through the logs. Unfortunately, turning on logging also makes the bug go away. So it’s back to good old fashioned print debugging. After a bit of triangulating, I finally determine that in the buggy case, we’re arriving at this block of code:</p>
-<p>We successfully setup the Dynamo frame callback, we call fn and… the frame callback just doesn’t get called.</p>
-<p>OK, so this sounds like something has gone wrong with the callback setup. Can we log that? Yes we can! torch/csrc/dynamo/eval_frame.c has an undocumented TORCHDYNAMO_DEBUG preprocessor macro that, if defined, turns on a bunch of debug logging that looks like this:</p>
-<p>(There is in fact a very important clue in this log, though I didn’t figure it out until later.) I also added some more debug logs for when we modify the eval frame callback, to see if we were unsetting the custom frame callback and then forgetting to reset it. And indeed, this is precisely what was happening:</p>
-<p>Compare this with the success case right below, which re-enables the custom callback:</p>
-<p>Modifying the internal exception callback to reset the Dynamo callback indeed “fixed” the test failures. But there were some unresolved mysteries. Why was the callback internal erroring? Why did this fail nondeterministically? Was it possible that we intentionally were keeping the callback disabled in case of error?</p>
-<p>I decided I wanted to understand why the test was failing nondeterministically. What was different about this test versus another? Here was an example of a test that was succeeding:</p>
-<p>Each begin log line tells us whenever Dynamo’s custom frame handler is invoked. We see some context manager stuff, a call to enable_dynamic, and then a call to the actual function to be traced. Everything before the function is skipped, and the function itself creates a cache entry. This all makes sense, and we can line up each log entry with actual Python code that is executing after the eval frame is setup.</p>
-<p>We see some familiar faces: this trace still calls enable_dynamic. But then, there are a bunch of random frames that don’t seem to correspond at all to the Python code executing. Where did it come from? There are some clues: there are a lot of clues to __del__, which is responsible for object finalization. And this <genexpr>, where the heck did that come from?</p>
-<p>It’s the GC! I quickly check what happens if I disable GC with pytest-gc, and indeed, this also solves the problem. Non-determinism mystery solved: the failure happens nondeterministically because when GC triggers is nondeterministic; and you have to get unlucky enough to trigger a GC right after Dynamo’s frame handler is installed, but before we actually get to the actual frame in question. We can also confirm this by installing the frame handler after entering the context managers. This also explains why the error is easier to reproduce in pytest: pytest has some reference cycles in its implementations, and causes the GC to run a lot more frequently.</p>
-<p>So, we have multiple ways we could fix the problem. It also seems like maybe it’s a good idea not to run Dynamo during GC? cpython - How to detect if frame evaluation is occurring during GC in Python - Stack Overflow Though, I did some CPython reading and it seems to not be possible. But does this mean we’re done debugging?</p>
-<p>Why is it a problem for GC to run while the Dynamo frame handler is installed? Although it’s weird, it seems like the frame handler should still get called as normal. But instead, the callback is failing with an internal error. But how can it be failing with an internal error if we never actually call the callback?</p>
-<p>We can force CPython to print out what a raised exception is, and then restore the exception so that it keeps propagating as normal, using the following trick:</p>
-<p>(It’s important to use Py_XINCREF, since ptype/pvalue/ptraceback could be NULL).</p>
-<p>The printed backtrace shows that we’re failing on the very first line of the callback handler. I can’t even print: before the print runs, I just immediately fail out. Could it be… that there is already a Python error active when I enter the eval frame? A quick check of PyErr_Occurred() before the callback confirms this!</p>
-<p>Why is there a Python error active? I’m not really sure, but I’m reminded of a little bit of CPython trivia: when a generator is exhausted, it finishes by raising a GeneratorExit exception. So maybe we’re in the process of unwinding a generator when this happens?</p>
-<p>In the morning, all of the regular test suite is passing… but some tests running under the ‘dynamo’ configuration are failing. Sometimes, fixing bugs in Dynamo can cause previously passing tests to start failing because of latent bugs. I could have skipped those tests and moved on with my life.</p>
-<p>I resolve that I should at least convince myself that the new failures are not my fault. Fortunately, the failures are deterministic. Oddly, the test in question is xfail’ed, but now we are somehow skipping xfail handling and still erroring with the exception. I use pdb to step through the stack unwinding and confirm that, yes, somehow we’re just not hitting the finally handler. Fortunately, it turns out just throwing an exception and having a non-trivial handler is sufficient to repro the problem.</p>
-<p>I carefully inspect Dynamo’s rewritten bytecode and confirm that, yes, the bytecode is still properly setting up the context manager. It seems like there’s something wrong with my patch. I can think of a few possible alternate ways to write it that might work…</p>
-<p>Alban, who at this point I’ve roped into the sordid saga, wants to understand why there is an error active at frame entry. Alban reads through the source code for _PyEval_EvalFrameDefault and notices two things:</p>
-<p>This is consistent with everything we’ve seen so far: the naughty frames are invariably <genexpr> frames, and I do a quick test and confirm that, indeed, throwflag is true when we get here. It also seems clear that returning NULL is different from unwinding, since unwinding causes a bunch of extra finalization code to run. This leads us to our final patch:</p>
-<p>This is the end of our debugging story. No stone has been left unturned: we have successfully explained every observed behavior in the original problem. By continually asking why, we have avoided landing an incorrect fix which would have suppressed the initial problem, but opened us up to an even more subtle and more rarely triggered bug. The moral of the story?</p>
-<p>Final PR: Fix flaky Dynamo export tests by ezyang · Pull Request #96488 · pytorch/pytorch · GitHub</p>
-<p>In the spirit of asking why – why aren’t you (or our CI?) running a debug version of Python?</p>
-<p>I’m not running debug Python because it’s a pain to setup (I have to spin up an entirely new Python environment and build Python from source.) As for CI, we probably should have a version of CI that runs with debug Python.</p>
-<p>Challenge is total execution size of PyTorch testsute, which takes 3-5x longer to finish for debug build. But it could be done on demand/periodically. Or one can select a subset of tests to run.</p>
-<p>I don’t think that is true? Greg mentioned a debug version of CPython, not PyTorch. I am running a debug version of CPython locally and it is not noticeably slower from what I can see.</p>
-<p>Genius!
-Cannot help but ask one more why? Why does python use exception mechanism as flow control method? Although it is kind of out of the scope and might be a dead end, I still chose to ask because I see this anti patent somehow becomes a quite popular pattern in python world.  Painful again.</p>
-<p>Powered by Discourse, best viewed with JavaScript enabled</p>
+                <p>Don’t hoist the Mission Accomplished banner, because company president thinks it also will spur China’s chip biz into action</p>
+<p>The USA’s new ban on Chinese companies remotely accessing GPUs will have short-term impact, but ultimately see China accelerate its development of domestic alternatives, according to Martin Lau, the president of Chinese web giant Tencent.</p>
+<p>Speaking on the company’s Q3 earnings call, Lau said the new US regulation will have an “unfortunate” impact on Tencent’s business.</p>
+<p>“It does set everyone back. It sets everyone back in China,” Lau said. “So everyone is actually having less advanced compute to work with, no matter when you actually started leasing or building capacities outside of China.”</p>
+<p>He said the ban will impact Tencent’s ability to train models.</p>
+<p>“Our training efficiency with Hy4 is actually very high,” he said. “When we look at the next version, it would take probably longer time for us to come up with the next version in the short run.”</p>
+<p>“But over time, the domestic supply chain would actually come on board.”</p>
+<p>Lau also thinks the bans won’t hamper Tencent’s ability to run inferencing workloads, because made-in-China chips “should be able to cover it.”</p>
+<p>“And over the longer run, we believe all Chinese players would actually have to rely on domestic supply chains and domestic chips, which we see the industry is progressing very fast,” he added. “With the latest restriction, we expect it to actually speed up even further, because all the development effort would actually have to be focused on speeding up the domestic supply chain.”</p>
+<p>Tencent needs GPUs, and lots of them, because the 10 million users of its agentic assistant WorkBuddy are collectively consuming over 100 trillion tokens per day. Lau thinks WorkBuddy is on track to becoming a hit product, partly because many users are outside China.</p>
+<p>Lau said Tencent can serve WorkBuddy customers outside China because the service can operate with different models, and the company thinks it can find third parties to provide the necessary inferencing services without the new US bans creating a problem.</p>
+<p>But Lau said that GPU rentals and other cloud services, which are also growing strongly, may be impacted.</p>
+<p>“In terms of cloud, if it is non-GPU related, we can actually build capacities ourselves outside of China,” he said. “I think there is still a lot of such opportunities because our cloud service is actually very cost competitive. When it comes to GPU, then unfortunately, we cannot actually offer high-end GPU anymore. We may be able to work with some partners in different places.”</p>
+<p>Tencent doesn’t break out revenue for its cloud services, but said they rose by 35 percent year-on-year, well ahead of the company’s overall eight percent growth. Marketing services also grew strongly, by 19 percent, thanks in part to new AI-powered systems that improve ad targeting.</p>
+<p>The company’s WeChat and Weixin messaging platforms continued to grow, adding 35 million accounts to exiting the quarter with 1.44 billion monthly active users.</p>
+<p>One Tencent biz that went backwards was its international gaming unit, which saw revenue fall nine percent.</p>
+<p>Chief strategy officer James Mitchell said that slowdown wasn’t caused by the release of Grand Theft Auto VI. “I think that in fairness, the slowdown for us predated the run-up to GTA VI,” he said, before predicting that Tencent’s existing and future “evergreen games” should help to turn things around.</p>
+<p>“The game environment globally is one where the rate of innovation has slowed somewhat, and now with AI, there’s opportunities to re-accelerate innovation,” he said. ®</p>
+<p>'Agents kept adapting for nearly a full day without human direction,' Amazon CISO said</p>
+<p>PARTNER CONTENT: As carriers tighten underwriting, a backup job marked green is no longer enough. Here’s the evidence underwriters expect</p>
+<p>Devices found to misinterpret medication instructions and other scenarios impacting human safety</p>
+<p>Pre-digital tech can't be transformed and automated</p>
+<p>Trade body warns automotive, medical, and defense orders are being crowded out, with relief unlikely before mid-2028</p>
+<p>Security shop buys the hand that feeds it</p>
+<p>Selected customers can put Dragonfly AI200 through its paces on Cirrascale's cloud</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Nvidia unveils an HPC-optimized Rubin GPU to challenge AMD's 288 teraFLOPS MI430X</p>
+<p>Ride-hailing biz says stolen credentials allowed crooks to help themselves to driver's license data</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev-discuss.pytorch.org/t/debugging-story-the-case-of-the-flaky-dynamo-export-tests/1124" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/systems/2026/11/19/chinese-web-giant-tencent-says-new-us-gpu-ban-sets-everyone-back-in-china/5310927" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

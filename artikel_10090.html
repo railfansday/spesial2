@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
+    <title>LinkedIn Cuts Daily Spark Shuffle Fetch Failures from 750 to 20 with Apache Celeborn</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10090.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,67 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
+        <h1>LinkedIn Cuts Daily Spark Shuffle Fetch Failures from 750 to 20 with Apache Celeborn</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/linkedin-celeborn-remote-shuffle/en/card_header_image/generatedCard-1793488308248.jpg" alt="LinkedIn Cuts Daily Spark Shuffle Fetch Failures from 750 to 20 with Apache Celeborn" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/linkedin-celeborn-remote-shuffle/en/card_header_image/generatedCard-1793488308248.jpg" alt="LinkedIn Cuts Daily Spark Shuffle Fetch Failures from 750 to 20 with Apache Celeborn" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
-<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
-<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
-<p>This guide has two halves that run in different places:</p>
-<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
-<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
-<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
-<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
-<p>Then we start the base-model server with the following command:</p>
-<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
-<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
-<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
-<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
-<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
-<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
-<p>This trains ~6M parameters, about 1.66% of the model.</p>
-<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
-<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
-<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
-<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
-<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
-<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
-<p>Then we serve the merged model with the following command:</p>
-<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
-<p>Comparing the two runs on the identical serving stack:</p>
-<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
-<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
-<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Learning budget left this year? Use it for a QCon conference or a live InfoQ certification cohort, if your employer's policy allows. 
+
+                            Explore your options.</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites and Chief Security Architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>Jayesh Bhayani discusses Tesco’s decade-long enterprise transformation from fragmented legacy systems to a unified cloud-edge platform. He explains how aligning system, talent, and process modernizations allowed Tesco to scale mission-critical retail operations to millions of customers, while sharing practical lessons on build vs. buy, cloud cost management, and preparing for agentic commerce.</p>
+<p>Nicholas Matsakis shares why AI makes Rust the ideal choice for modern production systems, skipping steep adoption hurdles via compiler guardrails. He discusses Symposium - an open-source, agent-oriented toolchain from the Rust Foundation - and demonstrates how the Agent Client Protocol (ACP) standardizes agent-to-tool extensibility across diverse enterprise developer workflows.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>The panelists explore how engineering teams adapt delivery architectures, pipelines, security, and governance for AI-assisted development. They share practical strategies for verifying AI-generated code, solving testing and deployment bottlenecks, maintaining human oversight, and measuring AI’s true impact on software velocity, quality, reliability, and operational cost.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+LinkedIn Cuts Daily Spark Shuffle Fetch Failures from 750 to 20 with Apache Celeborn</p>
+<p>Nov 18, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>LinkedIn has deployed Apache Celeborn as a shared remote shuffle platform across the majority of its Apache Spark and Apache Flink workloads, separating intermediate data storage from compute infrastructure. The deployment reduces daily shuffle fetch failures from approximately 750 to 20, lowers compute costs by 10%, and improves application runtimes by 14%, compared with its previous Magnet implementation.</p>
+<p>Daily shuffle fetch failures decreased from approximately 750 to 20 (Source: LinkedIn Blog Post)</p>
+<p>LinkedIn's offline data platform executes more than 300,000 Spark jobs daily across thousands of production nodes, consuming approximately 200 petabyte-hours of compute. As the company moves toward a unified Flink architecture for real-time and historical processing, large-scale backfills introduce additional shuffle workloads. Shuffle moves intermediate data between processing stages, potentially stressing networks, disks, and application runtimes.</p>
+<p>LinkedIn previously addressed shuffle read inefficiencies with Magnet, its push-based shuffle implementation contributed to Apache Spark 3.2. Magnet aggregates shuffle blocks by reducer partition into larger files, reducing random disk reads. However, shuffle storage remained within the compute cluster, where External Shuffle Services shared CPU, memory, disk I/O, and network resources with compute workloads.</p>
+<p>With Apache Celeborn, map tasks push intermediate data to dedicated workers, which aggregate and store partitions independently of compute executors. Reducers fetch the data directly from these workers, allowing shuffle storage to scale independently of compute and reducing dependence on executor lifecycles. Unlike Magnet, which uses merger External Shuffle Services within the Spark compute cluster, Celeborn runs as a separate shuffle service with dedicated workers and a replicated control plane. This separation reduces resource contention between compute and shuffle workloads.</p>
+<p>Celeborn architecture at LinkedIn (Source: LinkedIn Blog Post)</p>
+<p>Aravind Patnam, a staff software engineer at LinkedIn, explained,</p>
+<p>Operating it reliably across thousands of nodes and hundreds of thousands of daily applications required substantial engineering beyond the upstream project.</p>
+<p>The deployment uses a five-node Raft-based control plane distributed across availability zones, with Apache Ratis providing metadata replication, leader election, and failover. LinkedIn also introduced network-aware replication and integrated Celeborn with its host health platform to deprioritize workers approaching maintenance and exclude degraded workers. These changes contributed to a 20-fold reduction in task failures during infrastructure disruptions compared with Magnet.</p>
+<p>LinkedIn further optimized the data plane by moving shuffle storage to NVMe SSDs, reducing overall shuffle duration by 40%. Using Zstandard compression instead of LZ4 reduced the required shuffle worker fleet by approximately 35%. The company also provisioned workers with 100 Gbps network interfaces and improved slot selection time sixfold through JVM and data-plane optimizations. Across the fleet, shuffle cost decreased by nearly 90% per task, while the proportion of executor runtime spent waiting on shuffle operations fell by approximately 10–15% from its peak.</p>
+<p>The converged Flink platform processes hundreds of millions of events per hour in historical backfills, completing multi-day workloads in single-digit hours. Thousands of pipelines now use unified Flink computations for nearline processing and historical corrections, replacing parallel Spark implementations. LinkedIn is exploring caching and faster upstream upgrades while continuing to contribute to Celeborn.</p>
+<p>Equal Experts helps organizations harness AI, modernize technology, and build better software through expert engineering, collaboration, and innovative delivery practices. Learn more.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/linkedin-celeborn-remote-shuffle/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

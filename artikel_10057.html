@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Getting the Source Right, Not Just the Fact: Source-Aware Verification for MCP Agents</title>
+    <title>Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10057.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,75 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Getting the Source Right, Not Just the Fact: Source-Aware Verification for MCP Agents</h1>
+        <h1>Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/668e37fd9c9aa124a3c867e8/phhhj_BLOJbvnTFhVaZ5y.png" alt="Getting the Source Right, Not Just the Fact: Source-Aware Verification for MCP Agents" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/healthy-code-AI-tokens/en/headerimage/header-1794837764807.jpg" alt="Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/668e37fd9c9aa124a3c867e8/phhhj_BLOJbvnTFhVaZ5y.png" alt="Getting the Source Right, Not Just the Fact: Source-Aware Verification for MCP Agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/healthy-code-AI-tokens/en/headerimage/header-1794837764807.jpg" alt="Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Tool-using LLM agents no longer read from a single retrieved passage. Through the Model Context Protocol (MCP), an agent can call a search tool, inspect a structured patient or account record, query a database, and pull metadata, then weave all of it into one answer. That m aakes the usual question of factuality more subtle than it looks. Most of the systems built to check LLM answers, from RAGAS faithfulness to fine-grained checkers like MiniCheck, AlignScore, and SummaC, ask whether a claim is supported by the available evidence once that evidence has been pooled together. In their usual form, they do not tell us which MCP tool output supports each claim, or whether that is the source the answer names.</p>
-<p>Our latest paper, ProvenanceGuard: Source-Aware Factuality Verification for MCP-Based LLM Agents (read it on Hugging Face, or on arXiv in the meantime), targets that gap. The failure mode we care about is one we call cross-source conflation: a claim that is true somewhere in the evidence, but attributed to the wrong source. A source-blind verifier may pass it, because the fact does exist in the pool. A source-aware verifier should not.</p>
-<p>Consider a customer support agent that answers, "According to the account record, this plan includes a 30-day refund window." The refund window may be perfectly real, but stated in a policy document, not in the account record the answer points to. Pool the two together and the claim looks supported. Keep them separate and the attribution is wrong, and in a data-sensitive setting a wrong attribution can be as damaging as a wrong fact. The same pattern shows up in a clinical agent, where a patient-specific medication detail taken from a patient-history tool becomes misleading the moment the answer presents it as a finding from the medical literature.</p>
-<p>A claim can be supported by one MCP source while the answer attributes it to another. Source-blind scoring sees support in the pooled evidence and passes it; ProvenanceGuard separately checks whether the supporting source matches the one the answer states or implies. Source: paper Figure 1.</p>
-<p>This is why faithfulness scores, useful as they are, are not enough for MCP agents. An answer carries provenance, sometimes explicitly ("according to the account record") and sometimes implicitly. ProvenanceGuard keeps that connection between claim and source available for inspection.</p>
-<p>ProvenanceGuard is a post-generation verification layer that sits on top of a black-box MCP agent. It runs after an agent produces an answer, and never collapses the evidence into one anonymous context. Instead it carries the source identity all the way through the pipeline. It reads the captured MCP trace, including the tool outputs and their source IDs, without retraining the agent. Then it does five things in sequence: it breaks the answer into specific claims, finds the source most relevant to each one, checks whether that source actually supports it, compares the source with the one the answer names or implies, and finally emits both a per-claim source verdict and a global, answer-level allow or block decision.</p>
-<p>The verification flow. Source identity is preserved through decomposition, routing, support scoring, attribution checking, and repair, rather than being pooled. Blocked answers can go through RARR-style repair and be re-verified. Source: paper Figure 2.</p>
-<p>A few of the design choices are worth calling out. For the experiments in our paper, we used local models so the captured traces could be processed in a controlled, offline setup: MiniLM helps find the relevant source, a DeBERTa NLI verifier model  checks whether that source supports the claim, and a local language model helps break answers into claims. The verifier also checks literal values closely: a number, date, or identifier absent from the source cannot pass merely because the sentence sounds plausible. A calibrated decision step combines these signals. If an answer is blocked, a RARR-style repair step can try a source-grounded revision or a safe fallback, which the verifier then checks again.</p>
-<p>Those named models are the setup we evaluated, not a requirement of ProvenanceGuard. The same claim, source, and decision steps can be adapted to hosted models where a team prefers cloud services; a new setup would need its own testing and calibration. Our reported results come from the local configuration. Its conservative decision policy suits data-sensitive review, where getting the source right matters more than producing the fastest possible answer.</p>
-<p>We tested ProvenanceGuard on answers from a medical agent that had used patient records, research articles, and other tools. This gave us 281 real traces to study. Medicine is a useful test because a fact from a patient's record and a fact from general research cannot be treated as the same source. The method can also be used in other fields when an agent keeps a record of its tool outputs and source IDs. For the main test, human experts checked 361 claims from 40 answers set aside from the data used to develop the system.</p>
-<p>The most direct result is this: experts said 139 claims should not pass, and ProvenanceGuard caught 138 of them. It let one through. It also held 67 claims that the experts considered supported, sending them for review or repair. This reflects the cautious setting we tested: it favors a second look at some supported claims over letting unsupported ones through. For claims with an identifiable source, it also picked the right source about 86% of the time in this test.</p>
-<p>We ran four other support checkers on the same claims. ProvenanceGuard scored highest on the paper's measure of how well a system catches claims that should be blocked while avoiding unnecessary blocks. The other checkers in this comparison did not tell us which tool output supported each claim. ProvenanceGuard records that connection, so a reviewer can see the source checked for each claim and the decision it produced.</p>
-<p>Binary support metrics on the same held-out claim packet. ProvenanceGuard matches or beats the source-blind baselines on blocking while also producing per-claim source verdicts. Source: paper abstract and Table III.</p>
-<p>In a separate, harder test with several similar sources, ProvenanceGuard scored 0.846 F1 for deciding which claims to block, but identified the exact source correctly in 50.3% of claims. Telling similar sources apart remains an important area for improvement.</p>
-<p>We also ran a controlled test focused on wrong attribution: we changed the named source in 50 cases while leaving the supporting evidence intact. ProvenanceGuard caught all 50 swaps. This shows it can detect a clear source error, while the harder test shows the challenge of choosing among many plausible sources.</p>
-<p>Blocking is only useful if there is something to do with a blocked answer. Wired to the RARR-style repair loop, the full-trace run resolved all 173 blocked answers, though 144 of them ended in fallback text rather than a substantive rewrite, which is the system choosing to avoid an unverifiable answer rather than manufacture one. On reconstructed multi-source test traces, a fresh repair run resolved all 59 initially blocked answers with only two terminal fallbacks. As an offline gate the overhead is modest, roughly half a second per answer on the reported local configuration, with the NLI and routing calls themselves in the tens of milliseconds.</p>
-<p>As agents move from single-passage RAG to multi-tool MCP setups, the question of which source a fact actually came from stops being a footnote and becomes part of what factuality means. ProvenanceGuard makes that source connection visible claim by claim. For Multiverse Computing, that means a way to check existing agents while keeping sensitive traces in a controlled environment when needed. The medical study is one use case; the same approach can be adapted wherever an agent's trace preserves its tools and sources.</p>
-<p>That adaptation is already visible in NVIDIA NVFlow, which merged an optional grounding-verification stage for its finance agent. It checks completed answers against the SEC excerpts the agent retrieved and saves separate decisions without changing the original rollout or training data. The NVFlow contribution uses ProvenanceGuard's source-aware verification approach; the repair loop discussed above belongs to the broader research system.</p>
-<p>ProvenanceGuard was also presented as a poster at the Agentic AI Summit 2026 at UC Berkeley.</p>
-<p>Want the full technical details, including the routing and NLI derivations, the calibration ablations, the multi-source stress slices, and the complete results tables? Read the full paper on Hugging Face, or get in touch with our team to talk about applying source-aware verification to your own agents.</p>
-<p>The failure mode that matters for MCP agents is quieter than "hallucination": a claim that is true somewhere in the pooled tool outputs, attributed to the wrong source.</p>
-<p>Source-blind faithfulness can still go green in that case — the fact exists in the soup. Source-aware verification is the contract upgrade: keep tool/source IDs through claim decomposition, support check, and attribution check, then allow/block with a per-claim source verdict a reviewer can actually inspect.</p>
-<p>Practical ask for teams wiring MCP: when your eval says "grounded," does it mean supported-by-any-tool-output, or supported-by-the-source-the-answer-named? Those are different release gates. In multi-tool setups the second one is the one that catches cross-source conflation before a human trusts the citation.</p>
-<p>Hi, thank you for your comment. You’ve captured the issue well. For ProvenanceGuard, when a claim is “grounded” it means it is supported by the source the answer names or implies. Finding the fact somewhere else in the tool outputs isn’t enough. In the refund-window example, the policy supports the fact, but the answer credits the account record, so we flag the mismatch and show the source verdict.</p>
-<p>I had a brief read on the paper, but I could not find any comparison with cheaper llm agent for source aware judge. Like this is my reading of the paper;</p>
-<p>Like, it seems (2 - 5) can be done via basic prompts in lifecycle, if you own the executing agent. If not, this can also be done via hooks in harness as plugin. Do you have any comparison on this. Basically, how much of random forest, and all of these eng/plumbing is buying, vs second llm call over traces+ans?</p>
-<p>Hi, fair question. A source-aware LLM judge could do these checks, and we don’t report a direct comparison with a cheaper one in the paper.</p>
-<p>However, part of our motivation is that introducing an LLM judge can itself give inconsistent verdicts or confuse sources (the same kinds of errors we’re trying to catch). A second LLM call can therefore introduce new errors of its own. ProvenanceGuard uses explicit source tracking and calibrated support checks to reduce reliance on another generative judgment. The comparison you suggest would indeed be a useful further study to quantify the benefit in accuracy, latency and cost.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Learning budget left this year? Use it for a QCon conference or a live InfoQ certification cohort, if your employer's policy allows. 
+
+                            Explore your options.</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites and Chief Security Architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>Jayesh Bhayani discusses Tesco’s decade-long enterprise transformation from fragmented legacy systems to a unified cloud-edge platform. He explains how aligning system, talent, and process modernizations allowed Tesco to scale mission-critical retail operations to millions of customers, while sharing practical lessons on build vs. buy, cloud cost management, and preparing for agentic commerce.</p>
+<p>Nicholas Matsakis shares why AI makes Rust the ideal choice for modern production systems, skipping steep adoption hurdles via compiler guardrails. He discusses Symposium - an open-source, agent-oriented toolchain from the Rust Foundation - and demonstrates how the Agent Client Protocol (ACP) standardizes agent-to-tool extensibility across diverse enterprise developer workflows.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>The panelists explore how engineering teams adapt delivery architectures, pipelines, security, and governance for AI-assisted development. They share practical strategies for verifying AI-generated code, solving testing and deployment bottlenecks, maintaining human oversight, and measuring AI’s true impact on software velocity, quality, reliability, and operational cost.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</p>
+<p>Nov 19, 2026
+								
+								
+								
+									
+									4
+									min read</p>
+<p>Agentic AI can speed up velocity, but the gains vanish within months as code complexity grows. In his presentation on AI-friendly code at GOTO Copenhagen, Adam Tornhill showed that healthy code makes AI perform better and costs fewer tokens. Safeguarding means keeping code health high through agentic refactoring, with an MCP supplying code health data, so AI can maintain the code it generates.</p>
+<p>Developing software with agents is significantly harder than writing code manually, Tornhill argued. But with agentic AI, they can complete tasks two to three times faster, he added. It also helps them unblock themselves and reduces coordination needs.</p>
+<p>Tornhill mentioned a study done on 1000+ open-source projects which showed that with AI, velocity went up during the first few weeks, but after two months the velocity gains were fully canceled out due to a massive increase in code complexity:</p>
+<p>AI operates in a self-harm mode, often writing code it cannot reliably maintain later.</p>
+<p>Code health measures how easy code is to understand, change, and maintain. Research done on human coding (before AI) shows that if you have healthy code, you can be up to 10x faster than someone who works on similar problems in unhealthy code, Tornhill said. The defect risk is reduced 15 times, and code reviews go twice as quickly, he added.</p>
+<p>Building a prototype was never the hard problem in software; 95% of the costs for any software project come after the first release. This is where code quality, maintainability, and architecture start to matter, Tornhill said.</p>
+<p>Recent research shows that large language models perform consistently better in healthy code. AI won’t generate perfect code; if we want to survive in the Agentic age, we need to focus on safeguarding, Tornhill said.</p>
+<p>The average codebase has a code health of 5.15, where AI-friendly code starts at 9.5. Technical depth is a bottleneck for enterprise adoption of agentic coding; what’s needed is an agentic refactoring, Tornhill argued. Claude can be used to fix code health issues, but only to a certain extent:</p>
+<p>As a best-case scenario, an agent can fix roughly 50% of the code health issues for lower-health code. Once the code health improves, the AI performance drops sharply, and Claude can only correctly refactor 20% of the code. AI tends to become conservative, doing small changes that don’t really move the needle on code quality.</p>
+<p>Adding an MCP with code health data can lead to a 90%-100% fix rate, Tornhill said. Agentic refactoring turned out to be a predictable and mechanical process at scale, where AI was capable of doing codebase-specific refactorings.</p>
+<p>Healthy code is also financially viable code, with healthy code, you can do things with 40% to 45% fewer tokens, Tornhill said.</p>
+<p>By refactoring code, modularizing it and making it healthy, we can also reduce organizational friction, Tornhill said. Code quality at the module level is a largely solved problem with the automation we now have. Scaling AI friendliness to the design and architectural level is the next big challenge, he concluded.</p>
+<p>InfoQ interviewed Adam Tornhill after his talk.</p>
+<p>Adam Tornhill: Code Health is a multifacetted concept, so we need to combine multiple metrics. We’ve found that it works best when combining measures from three levels of software design:</p>
+<p>InfoQ: How do you safeguard AI-generated code?</p>
+<p>Tornhill: Safeguarding needs to happen at multiple levels, and all safeguards need to be completely automated in an agentic context. Examples of concrete safeguards include linting, code coverage, mutation testing to ensure your tests actually test, and higher-level metrics like Code Health. In practice, these safeguards are exposed to agents as local MCP servers or command-line tools.</p>
+<p>InfoQ: How can we do refactoring at scale with agents?</p>
+<p>Tornhill: The main steps are to establish a baseline, build a safety-net for behavior, and provide a feedback loop to the agents refactoring the code. The whole process is highly iterative.</p>
+<p>Find the bugs your tests miss.
+Antithesis uses deterministic simulation to explore thousands of failure scenarios, uncovering hard-to-reproduce bugs before they reach production. See how it works.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/MultiverseComputingCAI/getting-the-source-right-not-just-the-fact-source" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/healthy-code-AI-tokens/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

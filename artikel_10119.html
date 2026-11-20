@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rebuilding my local voice assistant pipeline</title>
+    <title>Ransomware Attacks Increase Behind AI, but Payments Decline</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10119.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Rebuilding my local voice assistant pipeline</h1>
+        <h1>Ransomware Attacks Increase Behind AI, but Payments Decline</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://s3.platypush.tech/static/images/voice-assistant-pipeline.png" alt="Rebuilding my local voice assistant pipeline" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt80dac13b14975660/6af7368e89398e7e289817aa/global-cyber-map-alestudio996-shutterstock.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Ransomware Attacks Increase Behind AI, but Payments Decline" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://s3.platypush.tech/static/images/voice-assistant-pipeline.png" alt="Rebuilding my local voice assistant pipeline" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt80dac13b14975660/6af7368e89398e7e289817aa/global-cyber-map-alestudio996-shutterstock.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Ransomware Attacks Increase Behind AI, but Payments Decline" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I wrote an article a couple of months ago describing how I rebuilt my old voice assistant pipeline in Platypush.</p>
-<p>And I wrote earlier articles describing my journey through self-hosted voice assistants - in 2024 (with Picovoice), in 2020 (diving into the legacy assistant.google integration, the now defunct assistant.alexa integration, the now defunct Snowboy integration, the now defunct DeepSpeech integration and Picovoice) and the original article in 2019 describing the Google Assistant integration.</p>
-<p>For a couple of months I used the voice pipeline described in my latest article as my main driver, but after getting used to the robustness of commercial voice assistants I was unhappy with the high rates of false positives/negatives of my self-hosted pipeline, as well as its lack of robustness in detecting start/end of speech, especially in noisy environments and using cheap microphones.</p>
-<p>After a bit of experimentation, I decided to swap and fine tune a few parts, and after a couple of days of trying the results are satisfying enough for me to write a short article about it.</p>
-<p>Hotword detection- assistant.microwakeword (local)</p>
-<p>Speech-to-text- assistant.openai (cloud)- assistant.vosk (local)</p>
-<p>Generate response- openai (cloud or local)</p>
-<p>Text-to-speech- tts.openai (cloud)- tts.piper (local)</p>
-<p>Hotword detection- assistant.microwakeword (local)</p>
-<p>Speech-to-text- assistant.openai (cloud)- assistant.vosk (local)</p>
-<p>Generate response- openai (cloud or local)</p>
-<p>Text-to-speech- tts.openai (cloud)- tts.piper (local)</p>
-<p>Until recently I used assistant.openwakeword, which wraps openWakeWord.</p>
-<p>It works, but the project has been quiet for a while and all of its pre-trained models are v0.1 files from 2023, mostly trained on synthetic speech.</p>
-<p>In practice I was getting both false positives (the hotword triggering on background noise) and false negatives (the hotword not detected unless I was close to the microphone).</p>
-<p>I added a new plugin, assistant.microwakeword, on top of microWakeWord through the pymicro-wakeword Python bindings.</p>
-<p>microWakeWord is the engine used by ESPHome and Home Assistant Voice, its models are actively maintained, and the built-in models (okay_nabu, hey_jarvis, hey_mycroft, alexa) ship with the package — no download required.</p>
-<p>The current official models are provided under the ESPHome micro-wake-word-models repository.</p>
-<p>Custom models are supported too: drop a microWakeWord JSON manifest (with its .tflite model) in the plugin's models directory and reference it by name.</p>
-<p>The plugin exposes the same API as assistant.openwakeword (same models, detection_threshold, frame_duration, patience_frames, input_device, input_volume parameters, same list_models action, same HotwordDetectedEvent), so switching is a matter of just changing the configuration to point to the new plugin:</p>
-<p>assistant.openai records audio when a conversation starts and transcribes it through Whisper.</p>
-<p>The tricky part has always been end-of-speech detection: knowing when the user has finished talking. The previous implementation used a per-frame boolean from WebRTC VAD, and any single frame classified as speech would reset the silence timer. With even a bit of background noise, phrases would only end when the maximum conversation duration was hit.</p>
-<p>The audio preprocessing layer (AudioPreprocessor, shared by the STT integrations) has been reworked:</p>
-<p>Hysteresis + sliding window: a frame becomes speech above the VAD threshold and stays speech until its score drops by a margin, and the per-frame decisions are smoothed by majority vote over a 0.5s window. A single noise burst can no longer keep a conversation alive.</p>
-<p>Adaptive noise floor: the background noise level is tracked over time, and frames that aren't louder than noise_floor_factor (default 2.0, ~6 dB) times the floor are never considered as speech.</p>
-<p>On a synthetic benchmark (Piper-generated phrases mixed with babble and burst noise), the old settings kept conversations open for 6–10 seconds after the speech had ended; the new pipeline ends them 1.0–1.6 seconds after the last word, which is the configured conversation_end_timeout plus the smoothing lag.</p>
-<p>Since the changes on Platypush have been performed directly in the AudioPreprocessor also used by other native speech-to-text engines, other speech-to-text plugins also benefit from them - e.g. if you use assistant.vosk for full on-device detection.</p>
-<p>The transcribed phrase is processed by the openai plugin, which handles both the API key and the conversation context. By default the assistant renders the response through the configured tts_plugin; if the response ends with a question mark, the conversation continues with a follow-up.</p>
-<p>Custom hooks can intercept phrases before the default response kicks in — for example, to handle home automation commands locally without an LLM round-trip:</p>
-<p>And the hotword event is wired to the conversation start with a similar hook:</p>
-<p>Responses are rendered by tts.openai, with volume and voice configurable. In my tests however tts.piper also yielded good results, and it runs entirely locally. In my tests on a RaspberryPi 5 however it added ~3-4s of latency to process the response to audio compared to tts.openai.</p>
-<p>Since the TTS output goes to the speakers and the wake word detector listens on the microphone, the assistant plugins pause hotword detection while a conversation is active — otherwise the assistant would hear itself.</p>
-<p>The microphone on my RPi doesn't support 16 kHz natively, so audio is captured at 44.1 kHz and software-resampled — it works, but if detection feels sluggish software resampling is usually the first suspect.</p>
-<p>The VAD and threshold defaults were tuned on synthetic audio plus a couple of my audio recordings.</p>
-<p>Different rooms, microphones and acoustics may yield different results. You may want to adjust detection_threshold on the wake word plugin and noise_floor_factor on the STT plugins if you don't feel satisfied with your mileage.</p>
-<p>To interact via Webmentions,
-          send an activity that references this URL from a platform that supports Webmentions,
-          such as Lemmy,
-          WordPress with Webmention plugins,
-          or any IndieWeb-compatible site.</p>
-<p>https://blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline</p>
-<p>It's 2026. You deserve a good local-first or local-only voice assistant on your #RaspberryPi</p>
-<p>blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline</p>
+                <p>Large language models and other AI systems allow a growing number of ransomware groups to create convincing phishing emails and identify sensitive data quickly.</p>
+<p>Ransomware attacks are expanding amid cybercriminals' increasing use of AI tools, but at the same time, fewer organizations are paying ransoms, according to multiple reports released this month.</p>
+<p>Globally, organizations are seeing far more ransomware incidents, while the number of attacks targeting US companies has remained fairly steady. In the third quarter of 2026, for example, ransomware groups claimed 2,766 breaches, an increase of nearly 40% over the previous quarter, according to threat data released by cybersecurity services firm Halcyon.</p>
+<p>Threat groups adopting AI is likely a major reason for the increase in attacks. The ability of large language models (LLMs) to create convincing social-engineering messaging, find sensitive data quickly, and assist attackers has largely driven the surge in attacks in other nations, says Cynthia Kaiser, senior vice president of Halcyon's Ransomware Research Center and a former deputy assistant director at the FBI's Cyber Division.</p>
+<p>Related:Africa Retakes Top Spot as Most Attacked Region, Led by Nigeria Surge</p>
+<p>"We think AI is a big part of [the growth] because it has removed the language barrier for phishing," she says. "We're now seeing much more convincing phishing in Japanese, for example. Countries like Japan are treating this almost as a state of emergency."</p>
+<p>Overall, the jump in claimed ransomware cases — up 31% from the first quarter and 39% from the second, according to Halcyon's report — has not necessarily resulted in more ransoms paid out.</p>
+<p>Take the retail sector as an example: While 62% of attacks on companies succeeded in encrypting data — up from 48% in 2025 — less than a third (32%) of retailers actually paid to get the data back, nearly half of the 58% that paid in 2025, according to Sophos's "The State of Ransomware in Retail 2026" report.</p>
+<p>Instead, a solid majority of retail firms (71%) recovered their data from backup, and most recovered within a week, Sophos found. Other sectors, such as local government and school districts, have seen declines in paying ransomware as well, says Chester Wisniewski, global field chief information security officer (CISO) at Sophos.</p>
+<p>"None of them are paying the ransom," he says. "Whether there's extortion involved, whether data theft's involved, it kind of doesn't matter. They're largely not paying the ransom."</p>
+<p>The number of ransomware groups claiming success took off in 2026, growing from 75 in the first quarter to 111 in the third, according to Halcyon data. While ransom amounts have continued to decline, the growth in the number of groups continues to pose a threat to companies, Sophos's Wisniewski says.</p>
+<p>Related:AttackIQ Research Reveals How Iranian Cyber Groups Hand Off Network Access to Enable Destructive Attacks</p>
+<p>"There's been five or six new names I've seen in just the last few weeks, so it doesn't seem like ransomware's going away at all," he says. "But its efficacy has been declining as far as generating actual money for the crooks."</p>
+<p>The median ransom demand has dropped to $700,000 in 2026, from $2 million in 2024, according to Sophos data.</p>
+<p>That hasn't stopped new ransomware groups from continuing to appear. At the end of the quarter, about a third of all claimed ransomware successes came from groups that didn’t exist six months earlier, says Duy-Phuc Pham, a malware researcher at Trellix.</p>
+<p>"At the top, The Gentlemen grew from a few dozen victims a year ago to the most active group, ahead of Qilin," he says. "That kind of success makes them the obvious next target for law enforcement, which spent this year going after the shared services these groups depend on, from criminal VPNs to laundering services."</p>
+<p>With attackers increasingly using AI, ransomware gangs will continue to broaden their campaigns against more industries in more regions — part of the reason that Europe has witnessed an increase in attacks, while US victims' share of incidents has remained the same or decreased, says Pham. AI allows attackers to create more convincing social-engineering messaging in a variety of languages, removing a significant historical barrier to targeting smaller populations.</p>
+<p>Related:Chinese AI Project Scouts Spies in Taiwan Chip Industry</p>
+<p>Because of the greater scale that AI enables attackers to hit, ransomware threat actors are able to widen their coverage, he says.</p>
+<p>"When a tool can scan, exploit, and move through networks with little human effort, a small crew can do the work of a large one, hit far more victims, and do it faster," Pham says. "That fits what we see on the leak sites: more groups and more newcomers."</p>
+<p>The manufacturing sector continues to be the top target of ransomware gangs, because suppliers and partners often share the same platforms, so a single compromise can expose engineering data beyond the targeted company, says Halcyon's Kaiser.</p>
+<p>The sector will likely continue to be the top targeted group in 2027, especially as international organizations continue to account for a greater share in the coming year, she says.</p>
+<p>"I'd expect continued growth, especially outside the US," Kaiser says. "The big open question is whether more attacks means more money ... countries newly feeling the pain are paying much more attention, which should improve international cooperation."</p>
+<p>Rob is an award-winning, veteran technology journalist of more than 30 years, reporting on global cybersecurity issues, the latest offensive and defensive technologies, malware incidents, cyber conflict, and AI's impact on software and cybersecurity.</p>
+<p>A former research engineer, Rob has written for more than two dozen publications, including CNET News.com, Dark Reading, MIT's Technology Review, Popular Science, and Wired News. He has received five awards for journalism, including Best Deadline Journalism (Online) in 2003 for his coverage of the Blaster worm. Rob also analyzes data on various trends using Python and R for both his reporting and his clients. Recent reports include analyses of the shortage in cybersecurity workers, annual vulnerability trends, and annual threat reports.</p>
+<p>Rob holds degrees from Cornell University in Electrical Engineering and Computer Science (double major).</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/threat-intelligence/ransomware-attacks-increase-ai-payments-decline" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

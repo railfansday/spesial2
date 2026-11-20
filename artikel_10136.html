@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</title>
+    <title>China-Nexus Actors Breach 10 Organizations in AI-Driven Attacks</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10136.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</h1>
+        <h1>China-Nexus Actors Breach 10 Organizations in AI-Driven Attacks</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt98c5fdb26a9d6d01/669a8451220787d9a293b79f/China(1800)_Rokas_Tenys_Alamy.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="China-Nexus Actors Breach 10 Organizations in AI-Driven Attacks" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt98c5fdb26a9d6d01/669a8451220787d9a293b79f/China(1800)_Rokas_Tenys_Alamy.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="China-Nexus Actors Breach 10 Organizations in AI-Driven Attacks" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous posts - Easy FunctionGemma finetuning with Tunix on Google TPUs and Autonomous LLM post-training with Tunix on TPUs - we showed how Google Tunix streamlines Supervised Fine-Tuning (SFT) and single-turn Group Relative Policy Optimization (GRPO) on Cloud TPUs. Real-world AI agents, however, rarely finish their job in a single turn. They have to reason over partial observations, invoke tools, observe environment feedback, and adapt their strategy across multiple steps. So in this post, we will walk through how to train a multi-turn, tool-using LLM agent using Tunix's agentic reinforcement learning pipeline on Cloud TPU v6e-8. You can find the complete code in this GitHub repository.</p>
-<p>We will revisit the Plane Strike board game from an earlier TensorFlow/JAX reinforcement learning blog, replacing the custom MLP policy with Gemma 4 E2B in thinking mode on a single Cloud TPU v6e-8 host. Plane Strike is played on a 6x6 grid (A1 to F6) where one 8-cell plane is hidden in one of 4 orientations. Each turn, the agent sees the result of its previous strike and the raw visible board (. untried, X hit, O miss), thinks through candidate placements, and calls the strike(cell="...") tool to strike one cell. The game ends when all 8 plane cells are hit, or after 23 strikes.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Although google/gemma-4-E2B-it has decent spatial reasoning and tool calling capabilities, out of the box, it wins only 9.4% of games on held-out boards (averaging 22.44 strikes). After 100 steps of agentic GRPO with Tunix, its win rate reaches 95% while cutting the average game length to ~16 strikes.</p>
-<p>We set up the multi-turn RL pipeline in four modular components:</p>
-<p>Let's look at the key steps for each piece.</p>
-<p>In env.py, we subclass Tunix's BaseTaskEnv to implement PlaneStrikeEnv. Each environment instance receives a task dictionary with a seed that fixes the hidden plane position so all 8 rollouts in a GRPO group play the exact same board:</p>
-<p>On each turn, _step_impl evaluates the struck cell index against the hidden board, updates the visible grid, computes the step reward (summed into the trajectory-level reward over the episode), and returns EnvStepResult(observation, reward, done, info).</p>
-<p>For standard multi-tool agents, tunix.rl.agentic also provides ready-to-use ToolEnvironment, ToolAgent and ToolManager abstractions out of the box so we don't have to write custom message/observation plumbing unless we need custom turn control.</p>
-<p>In Gemma 4, tool schemas are declared in the system prompt inside <|tool>declaration:...<tool|>, and a model turn that calls a tool ends with:</p>
-<p><|tool_response> is one of Gemma 4's native stop tokens: the model pauses there and waits for response:strike{value:<|"|>...<|"|>}<tool_response|>, then continues generating its next thought and tool call within the same assistant turn.</p>
-<p>In strike_tool.py, we define StrikeTool(BaseTool) and subclass Tunix's Gemma4ChatTemplateParser to append the tool declaration to the system prompt and render "tool" messages as in-turn responses:</p>
-<p>In agent.py, PlaneStrikeAgent(ConversationAgentBase) translates between environment observations and model messages.</p>
-<p>When the model finishes a turn, tool_strike ignores everything inside <|channel>thought...<channel|> and parses the final answer after <channel|>; only a final answer with a single valid strike call counts as a valid board coordinate (otherwise INVALID_ACTION is returned). If the model stopped at <|tool_response>, the next board observation is appended with role="tool" so the model continues its turn:</p>
-<p>In train_planestrike.py, we configure Tunix's asynchronous vllm rollout engine, RLEngine, and GRPOLearner:</p>
-<p>Multi-turn agentic RL is often bottlenecked by variable-length rollout generation, so we set rollout_vllm_server_mode to true to enable continuous asynchronous multi-turn rollouts via vllm-tpu and enable_prefix_caching to true to true to cache the growing multi-turn conversation history. Since we are using a v6e-8 single host, the actor model, the reference model, and the rollout workers share the 8 chips.</p>
-<p>We then pass our actor, tokenizer, ClusterConfig, GRPOConfig (loss_algo="gspo-token", advantage_estimator="rloo", exact_token_continuity=True to preserve exact token IDs across multi-turn rollouts without retokenization drift), agent, and environment into RLEngine and PlaneStrikeGRPOLearner:</p>
-<p>All of these enable us to launch the 100-step training job with:</p>
-<p>Over 100 steps (8 boards x 8 games per step), the agent learns both reliable tool calling and spatial deduction:</p>
-<p>With Tunix's tunix.rl.agentic abstractions, vllm-tpu, and GRPOLearner, multi-turn, tool-using agentic RL on Cloud TPUs is easy and efficient. Check out the planestrike-gemma4-rl GitHub repository and read the Tunix documentation to train your own agentic model with Tunix and Google TPUs.</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
-<p>Distributed LLM Training Across Metros: Streaming DiLoCo in MaxText</p>
-<p>Securing Your Agents: A Hands-On Guide to Agent Anomaly Detection</p>
+                <p>Attackers used Cairn once again in autonomous attacks that targeted advanced manufacturing and defense sectors, as well as civil and human rights organizations.</p>
+<p>China-nexus threat actors unleashed another wave of attacks using autonomous AI tools to compromise microprocessor manufacturers, US defense contractors, and other organizations.</p>
+<p>The malicious activity, tracked as CL-STA-1238 by researchers at Palo Alto Networks' Unit 42, is the second documented attack in which China-linked actors used the open source AI penetration-testing framework called Cairn for automation, they revealed in a blog post. In this latest campaign, attackers conducted 25 operations between August and September against at least 19 organizations, achieving "unauthorized access or data retrieval at 10 of the targeted organizations," according to the post.</p>
+<p>In the successful attacks, the threat actors obtained dozens of valid credentials; achieved mass exposure of personal data, exceeding 1 million records at one organization; retrieved military and government identities; created persistent administrator accounts in a production system; and modified a live industry standards-ballot document.</p>
+<p>Related:Second Norwegian Energy Company Breached in 2 Days</p>
+<p>Of the total organizations targeted, seven were in the semiconductor and advanced-manufacturing supply chain, and three organizations were in US defense and defense policy. The attackers also targeted various human rights and civil society organizations.</p>
+<p>According to Unit 42 researchers, the victims included an industry standards body, which suffered a password-spraying attack; a semiconductor company, where attackers brute-forced a production credential on a partner-integration application; a US teacher's union, which suffered an unauthenticated account-creation bypass on a content management system; and a defense policy think tank, where attackers targeted an open back-end registration endpoint on its identity platform.</p>
+<p>The China-nexus actors also targeted content management systems through identity and configuration weaknesses at other organizations, including a semiconductor-lithography manufacturer, an industrial-automation manufacturer, and an education nonprofit.</p>
+<p>Cairn played a significant hand in the campaign, and the use of it "represents a shift in how attackers are applying AI to targeted offensive operations," according to the post.</p>
+<p>"The attackers supplied a target and a goal, then Cairn planned, executed, and recorded results on its own," Unit 42 researchers wrote.</p>
+<p>Cairn is AI model agnostic, and in this case, attackers weaponized it using Chinese large language models (LLMs) Zhipu GLM 5.2 and DeepSeek V4 Flash and Pro. However, initial exposure to the organizations' networks came through many of the traditional security gaps found across industries, the researchers noted.</p>
+<p>Related:Russia's Cold Relic APT Turns One Cloud Breach Into Another</p>
+<p>"It doesn't matter much to a victim whether a human or an AI agent is behind the keyboard," Tyler Oliver, CEO and founder of threat-hunting platform Huntbase, tells Dark Reading. "A human might hand the tool a mission and walk away, or direct it step by step. Either way, the password spraying looks like password spraying."</p>
+<p>Indeed, the vulnerabilities the attackers exploited were known, according to Unit 42, including "authentication bypasses; insecure direct object references; mass-assignment privilege escalation; weak and default credentials; exposed cloud APIs; and dated public CVEs."</p>
+<p>As in the previous Cairn-driven attacks, the findings once again provide a look under the hood at how threat actors can weaponize the tool against organizations, a blueprint that may be used in future attacks.</p>
+<p>Rather than manually directing every stage of an attack, operators supplied Cairn with a target and a high-level objective. The framework then developed its own plan, conducted reconnaissance, identified potential vulnerabilities, attempted exploitation, and recorded its findings.</p>
+<p>Related:Inside an AI Attack Against a US Retailer</p>
+<p>"An AI model drives each Cairn 'agent worker,'" according to the post. "Cairn coordinates its activities through a shared 'blackboard.' Agents read the blackboard and write their findings back as a fact-intent graph, while human operators can inject 'hints' at any time to help guide the operations if needed."</p>
+<p>"Cairn has a shared record of what it's already learned, so it can build on earlier findings without a person reviewing every result and deciding what happens next," Rickard Carlsson, CEO of AI security firm Detectify, tells Dark Reading. Meanwhile, this ability to work with limited supervision is already showing up across multiple tools, including another AI penetration-testing framework, Artex, which is also being weaponized by attackers, he says.</p>
+<p>Individual CL-STA-1238 operations lasted anywhere from 20 minutes to more than 50 hours, according to Unit 42. Moreover, attackers could achieve simultaneous operations against multiple organizations, which reduced the dependence on human operators to manage each intrusion.</p>
+<p>Though AI is changing the game in terms of speed, volume, and expanse of attacks, it does not change the "complexity" of attacks, which, as mentioned, often rely on known security gaps, according to Unit 42.</p>
+<p>That's a spot of good news for defenders, because "identity hygiene, attack-surface reduction, and software patching remain effective" against attacks that use Cairn or other AI tools, according to the post.</p>
+<p>However, there are other safeguards that organizations can put in place to defend against AI-driven attacks, too, says John Strand, owner of security consulting firm Black Hills Information Security.</p>
+<p>"There are two things I think every organization should be doing right now," he tells Dark Reading. "First, continuous attack surface management. Organizations need to identify all the different services and systems they have exposed to the internet and start restricting access wherever possible."</p>
+<p>The second key defense move is to start using cyber deception as much as possible by setting up "tripwires" that can detect attackers during reconnaissance and lateral movement "before they accomplish their objectives," Strand adds.</p>
+<p>Elizabeth Montalbano is freelance writer, editor, and journalist with 30 years of professional experience and a master's degree from Arizona State University. Her areas of expertise include enterprise technology, cybersecurity, business, and culture. During her long career, Elizabeth has lived and worked as a full-time journalist in Phoenix, San Francisco, and New York City. She specializes in news coverage and analysis, using her years of experience to look at the current state of cybersecurity with a critical gaze. She currently resides in a village on the southwest coast of Portugal, where in her free time she enjoys surfing, hiking with her dogs, growing plants, and playing and performing as a singer and musician.</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/multi-turn-agentic-reinforcement-learning-with-tunix-and-gemma-4-on-google-tpus/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyberattacks-data-breaches/china-nexus-actors-breach-10-organizations-ai-driven-attacks" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

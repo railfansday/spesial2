@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelerating development for massive Git repositories</title>
+    <title>Anthropic Tops $2 Trillion Market Cap After IPO Debut</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10164.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,149 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Accelerating development for massive Git repositories</h1>
+        <h1>Anthropic Tops $2 Trillion Market Cap After IPO Debut</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/business_64.png" alt="Anthropic Tops $2 Trillion Market Cap After IPO Debut" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/business_64.png" alt="Anthropic Tops $2 Trillion Market Cap After IPO Debut" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Android’s source code is big – the Android 17 open source release has 1,084 Git repositories, 1.62 million files, and takes 300 GB for a built workspace. Additionally, in a typical Android source tree with hardware vendor code and first-party applications, the size increases by 2-3x. Traditionally, it took over 30 minutes to fetch Android Open Source Project (AOSP) source code and well over an hour to build on even highly capable developer workstations. As software development evolved over the last 2 years, modern coding harnesses and LLMs have accelerated the development of many projects. These tools are used today for Android operating system development, but the long sync and build times make them less efficient. Both human developers and agents need quick setup, parallel workspaces, and fast build-and-test iteration times.</p>
-<p>We built Another Build File Service (ABFS) to address these bottlenecks. ABFS is a full suite of software across a Linux kernel filesystem module, user-space daemons, and server-side infrastructure. ABFS uses content-addressability across the entire stack to lazy-load and cache source code, developer workspaces, intermediate build files, and build results.</p>
-<p>Today, we are excited to announce that ABFS is open source on GitHub.The impact of ABFS to Android is:</p>
-<p>ABFS already powers parallel workflows for developers and agents in Android, but it is designed to scale to other massive Git-based projects.</p>
-<p>In the Android build system, developers define build rules in Blueprint files (Android.bp), Soong compiles them into Ninja files, and Ninja executes the final build graph (see the Android build overview). Similar to the Make build tool, Ninja is timestamp-based. If a build step’s input file is newer than the existing output file, Ninja rebuilds the output file.</p>
-<p>Analyzing the AOSP code for Android 17 shows the sheer disk footprint and file count involved in a single checkout and build.</p>
-<p>In a typical Android tree that includes hardware-specific repositories, board support packages, first-party applications, form-factor-specific code, etc., the code size is 2–3 times the size of AOSP (over 3,000 Git repositories), compounded across multiple active SKU and legacy maintenance branches.</p>
-<p>Building the Cuttlefish emulator target executes a build graph with 192,249 Ninja actions. While local incremental builds are fast once a tree is already built, every new workspace, branch switch, or ephemeral agent session starts cold.Even though typical developer changes touch only 1-10 different Git projects, someone building locally without any remote execution might waste up to 80 minutes on a 64-core machine repeating work their CI system already built. Even if a developer edits a core library like system/libbase, 97% of the build graph is identical to the CI build.</p>
-<p>Sharing cached build outputs across CI and local machines is also tricky in a codebase of Android's age and rate of change. Build rules occasionally introduce hidden dependencies (such as passing an undeclared schema file inside raw compiler flags), over-declared inputs, or undeclared outputs. In timestamp-based builds, hidden dependencies silently produce stale incremental artifacts, forcing developers to wipe output directories and run clean builds.</p>
-<p>ABFS makes building Android fast by replacing massive local source checkouts with a virtual, content-addressable filesystem (CASFS). ABFS streams files on demand only when a build actually touches them and utilizes shared build caching to help eliminate redundant downloads and compilation.</p>
-<p>On the server side, Git-pushers continuously ingest new Git objects from Gerrit or other Git hosts into a horizontally scalable gRPC ABFS Content-Addressable Storage (CAS) Server that indexes Git content, workspace snapshots, and build step results. On the developer host, a local Least Recently Used (LRU) Cacheman daemon, Mount Daemon, and Tap utility connect user-space build tools to the kernel filesystem so checkouts and builds stream only what they need. See the full ABFS architecture on GitHub.</p>
-<p>At the core of the client is a virtual filesystem called Content-Addressable Storage Filesystem (CASFS), a Linux kernel module that exposes Git SHA content hashes via extended attributes. When a file's hash is set, CASFS populates its metadata immediately and downloads file bytes via Cacheman only when needed:</p>
-<p>Initial checkouts download only lightweight directory metadata prepopulated with Git hashes. CASFS uses Git's object model natively, allowing standard git and repo operations to work transparently.</p>
-<p>CASFS can also tap build processes. Tapping records every file actually read, written, or deleted into lists called patches, which are stored alongside cached build outputs. Ninja-go replaces timestamp checks with two-phase content-addressable caching:</p>
-<p>Ninja-go accelerates Ninja-based builds like Android and Chrome; other build systems can integrate with ABFS's caching APIs using the same model (see the two-phase caching walkthrough on GitHub).</p>
-<p>Each mounted checkout attaches to a persistent workspace that eagerly syncs modified files, git state, and repo state through Cacheman to the ABFS CAS Server—keeping mounts synchronized across sessions or across multiple developer hosts.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>The benchmarks below show the mean time of 3 Android runs on a GCE n2d-standard-64 VM with 64 vCPUs and 256 GB of RAM. The ABFS remote server was running in the same cloud network as the client.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>Because ABFS does lazy loading and local cache deduplication, developers and their agents can now mount multiple concurrent Android workspaces on a single machine, benefit from a shared local build cache, and achieve massive scale in development time.</p>
-<p>An agent can check out a full Android tree in under 10 seconds and perform a full build in under 10 minutes. Agent swarms are empowered to iterate, review, and test in parallel, which can lead to higher quality solutions and speed.In the demo below, an agent makes a system/libbase fix on the latest AOSP release, then 4 parallel agents simultaneously backport, build, and test the fix across 4 more AOSP releases on a single VM.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>We released ABFS as open source because we want developers, Android partners, and any large-scale Git-based project to benefit from what we have learned and be able to scale.</p>
-<p>While Android’s Soong/Ninja pipeline was the first acceleration target, ABFS was built to be extensible to other build systems. Content-addressable build systems like Bazel map naturally onto CASFS and there is already a proof-of-concept integration with Bazel. Chromium, the Android Common Kernel, and other Google projects are exploring ABFS compatibility.</p>
-<p>Explore ABFS, CASFS, and Ninja-go on GitHub, and reach out to us at abfs@google.com.</p>
-<p>For help with the Google Cloud server-side, infrastructure-as-code, and CASFS for Cloud Workstations and Kubernetes, please reach out to abfs-gcp@google.com.</p>
-<p>We’d like to extend a special thanks to our significant contributors for their work on this project:</p>
-<p>Haamed Gheibi, Erik Sanders, Rob Seymour, Taylor Santiago, Andrew Hsieh, Eric Taseski, Kiyoung Kim, Hung-Wei Chen, Jose “Pepe” Galmes, Ronald Li, Yu-Che Wang, Roger Ellis, Sandeep Patil, Amith Dsouza and the entire Android Build team</p>
-<p>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
-<p>Distributed LLM Training Across Metros: Streaming DiLoCo in MaxText</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>from all the market meltdowns in my lifetime is that we don't learn</p>
+<p>What I have learned is that the market comes back, as long as you wait long enough.</p>
+<p>A common thought-experiment that is mentioned in introductory investment workshops is what would have happened if you bought the S&P 500 on the worst possible days (i.e., when it was historically high) over the last few decades, and held on. You'd still be way on top today.</p>
+<p>It doesn't for those that buy a failed stock.  And this is a single stock here.</p>
+<p>I've spoken to many people over the years who got burned by excitement over new offerings and regretted ever touching the stock market.</p>
+<p>Congratulations, you just made the argument for diversification. If you invest in stocks, you can't just buy one.</p>
+<p>Most people who can't be bothered to do any research or position-maintenance should just buy an index fund and let it ride. Instant diversification and low maintenance fees.</p>
+<p>Congratulations, you just made the argument for diversification. If you invest in stocks, you can't just buy one. Most people who can't be bothered to do any research or position-maintenance should just buy an index fund and let it ride. Instant diversification and low maintenance fees.Diversification : Buying lots of stocks that all track together so your choices make no difference.You could buy indexes by they move slowly, so they won't make you rich quick.You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.Leveraged indexes are my tool of choice. They move enough to make money and the market makers can't manipulate the indexes the same way they can manipulate stocks to optimize t</p>
+<p>Congratulations, you just made the argument for diversification. If you invest in stocks, you can't just buy one.</p>
+<p>Most people who can't be bothered to do any research or position-maintenance should just buy an index fund and let it ride. Instant diversification and low maintenance fees.</p>
+<p>Diversification : Buying lots of stocks that all track together so your choices make no difference.</p>
+<p>You could buy indexes by they move slowly, so they won't make you rich quick.</p>
+<p>You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.</p>
+<p>Leveraged indexes are my tool of choice. They move enough to make money and the market makers can't manipulate the indexes the same way they can manipulate stocks to optimize t</p>
+<p>Diversification : Buying lots of stocks that all track together so your choices make no difference.Nope. Diversification is about spreading your position across stocks that don't track together. Different industries, business sectors, market-cap-sizes, and styles (growth vs. value), for example.You could buy indexes by they move slowly, so they won't make you rich quick.Investing is about getting rich slow, not quick. You're building a nest-egg for the future. If you want to get rich quick, you'll need to take on much more risk. And that means you can get poor quick, if you're not careful.You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.The market-makers are not trying to "screw" you. They're trying to keep the stock liquid, ma</p>
+<p>Diversification : Buying lots of stocks that all track together so your choices make no difference.</p>
+<p>Nope. Diversification is about spreading your position across stocks that don't track together. Different industries, business sectors, market-cap-sizes, and styles (growth vs. value), for example.</p>
+<p>You could buy indexes by they move slowly, so they won't make you rich quick.Investing is about getting rich slow, not quick. You're building a nest-egg for the future. If you want to get rich quick, you'll need to take on much more risk. And that means you can get poor quick, if you're not careful.You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.The market-makers are not trying to "screw" you. They're trying to keep the stock liquid, ma</p>
+<p>You could buy indexes by they move slowly, so they won't make you rich quick.</p>
+<p>Investing is about getting rich slow, not quick. You're building a nest-egg for the future. If you want to get rich quick, you'll need to take on much more risk. And that means you can get poor quick, if you're not careful.</p>
+<p>You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.The market-makers are not trying to "screw" you. They're trying to keep the stock liquid, ma</p>
+<p>You could focus on individual stocks because they move more, but the market makers have better information than you and they will screw you as hard as they can.</p>
+<p>The market-makers are not trying to "screw" you. They're trying to keep the stock liquid, ma</p>
+<p>>Leveraged indexes (that contain derivatives to magnify the effect of fluctuation in an index) can be much riskier than individual stocks.Risk is a function of volatility and time. I manage risk with time (less of it) to balance the volatility risk. This combo works well with leveraged ETFs if you happen to also be good at random time series analysis. The book in my sig might suggest I am.</p>
+<p>>And BTW, it is illegal for market makers to manipulate the market. They're there to keep trades flowing, and they</p>
+<p>If you invest in stocks, you can't just buy one.True, but neither do you have to diversify into 50 different stocks, 80 option packages, 10 crypto-currencies and 13 foreign markets.My best three investments ever were 2 stocks I bought ages ago in companies I believed in, and never even looked at again for several years. And buying a flat instead of renting as soon as I could afford that. And that's it. Everything else I've bought and sold over the years was essentially play money and never anything substantial. Lost some, won some.My advise to someone wh</p>
+<p>If you invest in stocks, you can't just buy one.</p>
+<p>True, but neither do you have to diversify into 50 different stocks, 80 option packages, 10 crypto-currencies and 13 foreign markets.</p>
+<p>My best three investments ever were 2 stocks I bought ages ago in companies I believed in, and never even looked at again for several years. And buying a flat instead of renting as soon as I could afford that. And that's it. Everything else I've bought and sold over the years was essentially play money and never anything substantial. Lost some, won some.</p>
+<p>just buy an index fund and let it ride.What you are saying is that I should give my money to someone else who has their own profit motives, to invest in what they think is reasonable and that I should just accept the results?And you want me to the do that in the USA where the rule of law is irrelevant to the people who are investing my money?Look bro, Survival of the Fittest works "great" over long enough periods of time in Nature. It also works great in a Society where everyone else commits to NOT following Survival of the Fittest; however, it</p>
+<p>What you are saying is that I should give my money to someone else who has their own profit motives, to invest in what they think is reasonable and that I should just accept the results?</p>
+<p>And you want me to the do that in the USA where the rule of law is irrelevant to the people who are investing my money?</p>
+<p>Look bro, Survival of the Fittest works "great" over long enough periods of time in Nature. It also works great in a Society where everyone else commits to NOT following Survival of the Fittest; however, it</p>
+<p>Index-fund managers don't "invest in what they think is reasonable." They allocate money in the fund to stocks that reflect the index. No thinking required. That's why their management fees are so low.</p>
+<p>Also the rule of law is not "irrelevant" to people who are investing your money. People go to jail for failing in their fiduciary responsibilities to investors.</p>
+<p>Yes, there are fraudsters. Bernie Madoff comes to mind as a canonical one. But the rule of law came down on him. He's an example to people in the inves</p>
+<p>Yep. One reason I stay away. And since you can never have the same information as the big players, your personal change of making a profit is wayyyyy below market average. Of course they do not tell you that, somebody has to be milked for the big players to make their profits.</p>
+<p>So, you stayed away because you can't get near the market average.</p>
+<p>Then why not just buy the market average? That's available to you via index funds or ETFs.</p>
+<p>The only lesson learned was don't be the one holding the financial grenade when it goes off; Be among the first to play the game and pass it off to the bigger fool as soon as you can.</p>
+<p>If you can't do that, make sure you're "too big to fail" so the taxpayers will cover your losses.=Smidge=</p>
+<p>I think this is the lesson we missed: "Too big to fail" should not exist. If you're that big, you need to be split up.</p>
+<p>Just not everyone the same things. It's fairly much accepted fact that capitalism (the current version) always gives us boom and bust cycles and that financial crashs are inherent to the system.</p>
+<p>We don't do anythign about it, because every crisis is also an opportunity, and people get filthy rich while the world burns.</p>
+<p>The case is that stupidity is rewarded and intelligence is frowned upon. There's less opportunity for intelligent people that were born out of nepotism than for stupid people who can coast on their friend or relative getting them into wealth. However, this is unsustainable longterm.</p>
+<p>If you had invested $10,000 in Google at its IPO in 2004 and held on, it would be worth over $1.3 million today.</p>
+<p>If you had invested that $10,000 in Blackberry at its peak in 2008 and held on, you would have lost it all.</p>
+<p>You will have winners and losers. But as long as you pick good stocks that have a chance of winning big, your winners will make you forget your losers.</p>
+<p>Sorry, Blackberry is still in business, so you would not have lost it all. Your position would be worth about $570.</p>
+<p>You will have winners and losers. But as long as you pick good stocks that have a chance of winning big, your winners will make you forget your losers.You know... I have been assured all of my life that buying stocks is explicitly NOT gambling... and yet every description of it sounds EXACTLY like gambling. Hmmm. I wonder why that is?</p>
+<p>You will have winners and losers. But as long as you pick good stocks that have a chance of winning big, your winners will make you forget your losers.</p>
+<p>You know... I have been assured all of my life that buying stocks is explicitly NOT gambling... and yet every description of it sounds EXACTLY like gambling. Hmmm. I wonder why that is?</p>
+<p>You know... I have been assured all of my life that buying stocks is explicitly NOT gambling... and yet every description of it sounds EXACTLY like gambling. Hmmm. I wonder why that is?It's because you're misinterpreting the description.When you gamble, you place a wager on an outcome. If the outcome occurs, you win a certain multiple of your wager. If it doesn't, you lose all of your wager.When you buy stock, you own a piece of a company. The stock's value may go up or down, but it rarely goes to zero unless the company goes bankrupt. And unlike a gambling wager, you can choose when to exit the "game" by selling the stock. And when you exit, you don't "win" or "lose." You either take a p</p>
+<p>You know... I have been assured all of my life that buying stocks is explicitly NOT gambling... and yet every description of it sounds EXACTLY like gambling. Hmmm. I wonder why that is?</p>
+<p>It's because you're misinterpreting the description.</p>
+<p>When you gamble, you place a wager on an outcome. If the outcome occurs, you win a certain multiple of your wager. If it doesn't, you lose all of your wager.</p>
+<p>When you buy stock, you own a piece of a company. The stock's value may go up or down, but it rarely goes to zero unless the company goes bankrupt. And unlike a gambling wager, you can choose when to exit the "game" by selling the stock. And when you exit, you don't "win" or "lose." You either take a p</p>
+<p>Let's fast track it to the indexes and get it in our retirement funds asap! No reason we should get to keep that money, give it to the job creators.</p>
+<p>And the market dropped significantly again today. Shorts must be damn near impossible to come by on this BS.But it bounced in the middle. That's where I was.</p>
+<p>And the market dropped significantly again today. Shorts must be damn near impossible to come by on this BS.</p>
+<p>But it bounced in the middle. That's where I was.</p>
+<p>Many of these companies are not actually profitable, but hype drives the stock prices as well as the wealthy investors to hype the stock.   This is why the very concept of "Market Cap" is just some nonsense for the Wall Street crowd, stock price multiplied by the number of shares...but that often ignores the actual health of a company.   For those who put money into the company, they are afraid of their current investment becoming worthless, so they put more money into the company to keep it going.   In the</p>
+<p>There is an unprecedented amount of hype for AI and the FOMO is equally unprecedented. If it kept its promises so would be the profits, and most people don't know shit about shit and even less about AI</p>
+<p>Wait until the current investors learn that all those "juicy" inference contracts with several very large companies already have been terminated, significantly reducing the actual income from both Anthropic and OpenAI. Around 70 to 80% of the total inference income from both Anthropic and OpenAI comes from other AI-startup companies that only exist because investors keep pumping good money after bad into those companies.</p>
+<p>And because all of the operational income from Microsoft Azure, Amazon AWS, Google and O</p>
+<p>" if you expect cloud-AI to become cheaper any time soon (as in the next 10 to 15 years), keep dreaming"</p>
+<p>It gets cheaper on an ongoing regular basis. The frontier models are expensive at present but there is a trailing edge of lesser models that would have rivaled the frontier of just a few months ago, and they cost much less to use. I've been working with Claude Haiku 5.5 over the past few weeks, it is dirt cheap and does an excellent job. It blows the socks off of models I was using 'way back' in July.</p>
+<p>$33 Billion in revenue over nine months. Expenses not even mentioned, but are in the hundreds of billions. $2 Trillion market cap.</p>
+<p>The math isn't anywhere close to mathing.</p>
+<p>And I think Anthropic has the best outlook of the various large AI companies.</p>
+<p>You need to remember that the word artificial is in their DNA.</p>
+<p>$33 Billion in revenue over nine months. Expenses not even mentioned, but are in the hundreds of billions. $2 Trillion market cap.The math isn't anywhere close to mathing.And I think Anthropic has the best outlook of the various large AI companies.I'm sure the math is mathing just fine for their executives. They'll get massive bonuses right as the market collapses into a heap, and then the government will step in to cover the shortfalls because "AI is too importantie to ever let it fail" because they've woven this shit into the basic foundations of the entire economy, and we'll all be on the hook while the executives get another round of bonuses after the bailout on the taxpayer's dime. It must be awesome to be able to play with so much money that yo</p>
+<p>$33 Billion in revenue over nine months. Expenses not even mentioned, but are in the hundreds of billions. $2 Trillion market cap.</p>
+<p>The math isn't anywhere close to mathing.</p>
+<p>And I think Anthropic has the best outlook of the various large AI companies.</p>
+<p>I'm sure the math is mathing just fine for their executives. They'll get massive bonuses right as the market collapses into a heap, and then the government will step in to cover the shortfalls because "AI is too importantie to ever let it fail" because they've woven this shit into the basic foundations of the entire economy, and we'll all be on the hook while the executives get another round of bonuses after the bailout on the taxpayer's dime. It must be awesome to be able to play with so much money that yo</p>
+<p>You need to remember that a company's stock price reflects the market's opinion on expected future earnings.</p>
+<p>And the key word is "opinion." That can change.</p>
+<p>You forget that for those $200 you pay, they lose something like $600-$800. Yes, is is worth something. But that something is negative.</p>
+<p>The thing is, this technology is not even a bit mature and nobody really understands what it does to products and people. The insane financial situation is just a symptom of this having been scaled up war too early. In 20 or 30 years, we will see clearer, but at this time anybody depending on LLMs is running a massive risk. Now, we still can get put and go back to having people write code. But that will get harder every year as the other effect of LLMs will be less and less people that can actually do it co</p>
+<p>Understanding your code-base is critically important. If you do not and something breaks or gets attacked and the LLM cannot fix it, you are completely screwed otherwise. As in "may take weeks, months or be impossible to fix". From all I have seen, that understanding gets harder though if an LLM wrote the code because LLM code is longer, less adapted to the problem being solved and generally harder to understand. But stopping to review will contribute to you not having that understanding and will contribute</p>
+<p>I don't like Anthropic's stock, I'm not buying any, but this just incorrect and should be corrected. I'm kind of surprised it's +5 on /.</p>
+<p>The math mathing really isn't the problem at all. If Anthropic can grow as fast next year and the year after as they did over the previous year, the numbers check out just fine. This is a perfectly normal way to value all companies. It's just *wildly* more aggressive than normal. I don't know if any company has ever gone public with these numbers, but the numbers check out pretty much perfectly fine. It would just be normal for them to remain private at this stage, but virtually no company is so big at this stage, and so in need of cash.</p>
+<p>The case for Anthropic's valuation is really pretty simple. I don't agree with it, but we can at least represent it correctly. Their $33 billion revenue is well over 10x what it was a year ago. If you believe they can repeat that growth this year, and the year after that, the $2 trillion is actually pretty cheap. They would be at around $700 billion in revenue in two years if they can do that, and those commitments aren't even that high at that point.</p>
+<p>I'm not buying any, but it's not because the numbers don't work out, it's because I just really doubt they can possibly do that. AI prices will be a race to the bottom. If they *merely* triple their revenue next year, it should dive.</p>
+<p>But really, importantly, if you simply believe that they can repeat what they've already done, the math is fine. And that's basically how all stocks work.</p>
+<p>Critically though, their expenses *over that nine months* were not anywhere near in the hundreds of billions. This is wildly deceptive. I think you are confusing their expenses, with their long-term commitments. They have committed to ~$900 billion in future compute spending, that is true, and insane. It is part of why they *have* to see that crazy growth for this to work out, and why they need to go public when it normally wouldn't happen. But over that nine month period, it's less than $20 billion, somewhere around half the revenue. It arguably should have been higher, they were sort of getting some crazy discounts, but still, absolutely nowhere near it being the case that they spent hundreds of billions while making $33 billion.</p>
+<p>I did mix up the costs with future commitments a bit, so that's on me. I knew the $900 billion was a future commitment, and I didn't think that's what I was counting as expenses, but I must have mixed it in somewhere in my head.</p>
+<p>I still think it's in the range of 'wildly' for the exact thing you point out. The expectation that they can continue the same growth pattern being built into the stock price. Not a chance that they can, but essentially setting the price expecting they can. A realistic valuation woul</p>
+<p>Their operating revenue/expense figures are pretty close to each other so far this year, so, as a percentage of revenue, their operating losses are pretty small compared the huge losses for companies going public you may remember from the tech bubble.</p>
+<p>What's different in this bubble is the massive capital expenditures they have looming in the future. Just to keep pace, they will need to spend huge amounts of money.</p>
+<p>Yep. The whole thing is hype and general cluelessness. There is no way they will ever be really worth what they claim and it is highly unlikely they will ever be profitable. But people see the hype and want in. Same way any good Ponzi-scheme works.</p>
+<p>The IPO prospectus talks about expenses EXTENSIVELY.</p>
+<p>https://www.sec.gov/Archives/e... [sec.gov]</p>
+<p>All the LLM-psychosis folks would do well to buy now, right now, put it all in there, it can only go up!</p>
+<p>> LLM-psychosisI don't think you understood what the word means.</p>
+<p>WTF is ASI? Artificial SuperIntelligence.</p>
+<p>I shit you not, "HI" is where it's at. I've literally seen the "digital" plan for our company today which shows how they are splitting up various teams including a command centre (monitoring metrics), a business integration centre (IT projects solving business use cases), a service centre (providing IT hardware and network services) all centred around HI ("Human intelligence")</p>
+<p>They just invented a new word to let people know a department doesn't use AI.</p>
+<p>They didn't invent a new word. People have been studying human intelligence, and calling it that to contrast it with non-human animal intelligence for a long time.</p>
+<p>"Artificial intelligence" is pushing a century old too, and people started using "human intelligence" in contrast to it pretty much immediately.</p>
+<p>I used to shop at ASDA, but I moved away.</p>
+<p>The s stands for sentient. If you want to use trump-speak you would need to call it SSI.</p>
+<p>You could have sought to get in on the IPO, e.g. through your Robinhood account. This would have you up on the day but you'll be locked in for a month and you could well be down by then.</p>
+<p>You could try and buy shortly after opening, but that would have got you the highest price of the day and it spent the rest of the day lower. So you'd be down on the deal.</p>
+<p>You could wait for it to go down significantly and buy some and have a reasonable chance of making some money, but you have to wait.</p>
+<p>This is the essence of IPOs. They are not good deals for the impatient.</p>
+<p>You're not "locked in" for a month if you receive IPO shares. You can turn around and sell them on the first day. Lots of people did, in the case of Anthropic.</p>
+<p>However, selling shares you acquired in an IPO too soon can affect your ability to obtain IPO shares from your broker in the future. The definition of "too soon" varies by brokerage, but can be anywhere from less than 15 to less than 30 days.</p>
+<p>Yes. They're clear about what "too soon" means, but not at all transparent about what the punishement is.</p>
+<p>The "punishment" is that your brokerage may (note may) restrict your access to future IPOs for a period of time, and then fully restore your access. But nobody is going to stop you if you want to sell shares that you own. This makes sense: nobody wants "flippers" cratering the stock-price in the first few weeks. For one thing, having such clients makes it harder for the brokerage to obtain future IPOs from underwriters.</p>
+<p>It's different if you have a controlling position at the company (executive or director)</p>
+<p>Exactly what I meant by them not being transparent. "may" is a weasel word in this context.</p>
+<p>That's not a lack of transparency. It's an exercise of discretion. You should welcome it.</p>
+<p>Brokerages are perfectly clear about what could happen. They're not necessarily rigid about making it happen. They want to discourage flipping, for their own self-interest as well as the interest of the company with the IPO. It's their call on how to deal with it.</p>
+<p>The bottom line is that you are not "locked in" as you claimed.</p>
+<p>The inflation adjusted figure corresponding to 2 trillion USD in 2026 is approximately 2 million leather jackets if worn by Jensen Huang [cnbc.com] (backup [archive.today]).</p>
+<p>Anthropic opened at $115 today, closed at $93. Congrats to everyone who lost 20% of their money today... it's going to get a lot worse.</p>
+<p>These AI companies are useful $200 Billion SaaS companies, but they are not $2000 Billion or 5000 Billion companies.</p>
+<p>Indeed. That valuation is totally insane. It also in no way reflects their real-world value. Remember that still basically nobody larger sees any revenue gains from AI use. And no, if nobody could make it work up to now, it is very likely that is basically impossible at the current stage of technology. Maybe in 20 years. Or not.</p>
+<p>And then there are all the risks that will manifest later, like technical debt, comprehension dept, cognitive surrender, non-working career paths for juniors, etc. This is going to b</p>
+<p>Investors already getting screwed Who, exactly? I'm waiting for it to drop to what I consider reasonable.The people who got screwed were the ones who thought anything attached to AI will instantly go to the sky AND who know not enough about IPOs to understand that exactly that was already figured into the price.Mostly, these are not investors. These are naive people gambling.</p>
+<p>Who, exactly? I'm waiting for it to drop to what I consider reasonable.</p>
+<p>The people who got screwed were the ones who thought anything attached to AI will instantly go to the sky AND who know not enough about IPOs to understand that exactly that was already figured into the price.</p>
+<p>Mostly, these are not investors. These are naive people gambling.</p>
+<p>You make a great point about naive gamblers. The individual stock pickers are definitely gambling.</p>
+<p>However, the institutional pensioner, who has no control over what stocks his pension picks, are being forced to take these losses as fund managers buy up Anthropic's stock. They don't have a say, but they are still getting screwed.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Palo Alto Networks Signs $4.5 Billion Deal For Applied Compute</p>
+<p>Gamers Skip Work to Play GTA VI After 13-Year Wait</p>
+<p>Remember:  Silly is a state of Mind, Stupid is a way of Life.
+-- Dave Butler</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/accelerating-development-for-massive-git-repositories/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://slashdot.org/story/26/11/19/1753210/anthropic-tops-2-trillion-market-cap-after-ipo-debut?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
