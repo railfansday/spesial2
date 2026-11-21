@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jujutsu Primer</title>
+    <title>Profiling in PyTorch (Part 3): Attention is all you profile</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10052.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,146 +15,88 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Jujutsu Primer</h1>
+        <h1>Profiling in PyTorch (Part 3): Attention is all you profile</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://ethanlowman.com/img/penrose.png" alt="Jujutsu Primer" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://ethanlowman.com/img/penrose.png" alt="Jujutsu Primer" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/torch-attention-profile/thumbnail.png" alt="Profiling in PyTorch (Part 3): Attention is all you profile" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This guide is a brief(ish) introduction to the Jujutsu (jj) version control system (VCS) for someone familiar with Git.</p>
-<p>jj provides primitives for version control that are simple to learn, but elegantly compose into powerful workflows. Features like automatic rebase and native undo soften the sharp edges of Git. Eventually, you’ll organically discover new powerful workflows that would be too cumbersome to attempt with most other VCS tools.</p>
-<p>If you work in a Git repository, you can try it today. Jujutsu and Git can be used side-by-side in the same repository, so you can try out jj on a git repo on your own, without fully ejecting from git.</p>
-<p>Personally, I think jj considerably boosts my effectiveness, because it allows me to keep VCS bookkeeping out of my working memory. Automatic rebasing also makes stacked diff workflows quite easy, and reduces thrashing of my working memory. It’s also just a fun tool to use.</p>
-<p>Official installation instructions are here, but here are a few common methods:</p>
-<p>From here on, jj and git repo state will be synchronized automatically.</p>
-<p>To set your user details globally, run commands like these:</p>
-<p>You can edit jj’s TOML configuration for your user in an editor with:</p>
-<p>In addition to the --user scope, jj config also has --repo and --workspace scopes. View the merged config with:</p>
-<p>A commit, also called a revision, is essentially the same thing as a git commit. It represents a snapshot of repository state that descends from one or more parent repository snapshots. It is often visualized as a diff against a singular parent commit, or in the case of a merge commit, the diff against multiple parent commits once merged.</p>
-<p>When using a Git repo backend, the jj commit ID is the same as the git commit ID: a hash formatted as a hex string. In the output of jj log below, the hex hashes 2bea5e3d and 849165bc on the right are commit IDs.</p>
-<p>The IDs on the left hand side (royxmykx and kpqxywon) are change IDs, which are stable identifiers for logical changes as they physically evolve over time. We’ll discuss these more in the next section.</p>
-<p>Commit IDs and change IDs can be referenced in shorthand with an unambiguous (unique) prefix. jj helpfully highlights the shortest unique prefix of most IDs to make it easy to type them manually. For example,
-instead of copying and pasting kpqxywon, we can type in a prefix, down to the shortest unique prefix k.</p>
-<p>We can inspect the commit 2bea5e3d with jj show, using its short prefix 2.</p>
-<p>Many folks configure a custom diff formatter, like Delta. See configuration docs if you’re interested.</p>
-<p>Let’s take another look at our commit graph:</p>
-<p>On commit 849165bc, you’ll see the symbol @ on the graph node. This represents a snapshot of our working copy, or the code we have actually checked out in our local directory. We can inspect this special commit pointer in a variety of ways:</p>
-<p>jj show shows commit details and a diff, which is empty here.
-$ jj show
-Commit ID: 849165bca19639dbd6ccb53e8c1340e78c36d59a
-Change ID: kpqxywonksrltlrkyqukqqsxpltznztk
-Author   : Ethan Lowman <ethan@example.com> (2026-11-15 12:17:12)
-Committer: Ethan Lowman <ethan@example.com> (2026-11-15 12:17:12)
-
-    (no description set)</p>
-<p>jj status shows repo state with diff stats.
-$ jj status
-The working copy has no changes.
-Working copy  (@) : kpqxywon 849165bc (empty) (no description set)
-Parent commit (@-): royxmykx 2bea5e3d main | Adjust config</p>
-<p>jj diff works much like git diff. Its output is empty here, since there are no changes in the current working copy relative to the parent commit.</p>
-<p>This output isn’t very interesting, since @ has no changes. Let’s make an example change to see what happens. If we edit main.py and rerun jj show, we see this:</p>
-<p>You’ll notice several things have changed. The working copy has been automatically committed, and @ is no longer marked (empty). The new commit ID for @ is 66b59f20, since we’ve added changes, but the change ID for 66b59f20 is still kpqxywon. jj has no staging area like in git, so we don’t have to manually add files. When we run a jj command to inspect or modify repo state after editing files, jj automatically snapshots the working copy as a new physical commit for the relevant logical change.</p>
-<p>Let’s give this change a description (also called a commit message). We can either run jj desc, which opens an editor, or provide it directly with -m.</p>
-<p>Notice again that the commit ID has changed, since the hash covers the commit message, but the change ID has remained stable.</p>
-<p>Now, let’s say we’re ready to use this new feature, and we want to organize that change in a separate commit. We can create a new commit with jj new:</p>
-<p>We’ve created an empty change nlrtlrxv on top of kpqxywon. jj status reflects that we are editing this new revision which does not yet differ from its parent.</p>
-<p>jj commit is a shorthand for this common jj desc and jj new combo. Let’s make another change to use our new feature, and commit it.</p>
-<p>To inspect the commit we just created (n), we can no longer use the bare jj show, which defaults to showing @. We have to pass the revision we want to inspect:</p>
-<p>We can describe empty commits to record intent before starting work. Let’s create a new commit on top of k to remind ourselves that we need to document the feature.</p>
-<p>A separate jj desc would also work just fine instead of the -m flag on jj new. Here’s the current commit graph:</p>
-<p>Note how we’ve created branching commits without creating a named branch. This highlights a major difference between jj’s branchless model and git’s branch-centric model of organizing work streams. Instead of juggling your work-in-progress on branches, you work on a graph of commits. Once ready to share, you push branches to a Git forge from your commit graph (more on that later).</p>
-<p>A revset, an idea borrowed from Mercurial, is an expression that selects a set of revisions from the commit graph. Most jj commands accept revsets in their arguments. When we ran jj new k, the argument k was actually a trivial revset that resolved to the single change with ID kpqxywon. The jj log command has an -r <REVSET> flag that we can use to preview a revset. Some demonstrative examples follow.</p>
-<p>Commits authored by ethan@example.com that also have ID k or q:</p>
-<p>I’ll defer to the official documentation for exhaustive detail. The Revsets language specification is easily my most referenced jj documentation page, so I would recommend skimming it to see what’s possible.</p>
-<p>Let’s say in the course of documenting our feature in qwyusntz we realized we made a mistake in the implementation in parent change kpqxywon. We don’t need to manually commit or stash changes to switch tasks. We simply switch our working copy to kpqxywon with jj edit:</p>
-<p>Our working copy once again shows the changes from kpqxywon.</p>
-<p>jj hasn’t lost track of the changes above our working copy, including our most recent edits to q:</p>
-<p>Instead of switching commits with jj edit k, we could have run jj edit @-. The revset @- is evaluated before switching the working copy, so this moves to the parent commit. The built-in commands jj next [--edit] and jj prev [--edit] provide another way to move up and down a stack of commits.</p>
-<p>If we edit files in the working copy, the descendant commits will be automatically rebased upon the next jj invocation. For example, if we edit my_new_feature’s implementation in main.py and then run jj log, we’ll see that changes k, n, and q all get new commit IDs. jj also tells us that it performed a rebase.</p>
-<p>If the automatic rebase happened to cause merge conflicts, jj doesn’t require us to fix them immediately, like git rebase would. Instead, jj records that the commit is conflicted and lets you carry on with your current task. This is massively helpful to reduce mental context switching, as your stacked commits grow more complex.</p>
-<p>To view the conflicts, we can edit the conflicted commit…</p>
-<p>In a text editor, we can resolve these conflicts, and the next time we run any jj command, we’ll see that jj has marked the commit as unconflicted:</p>
-<p>Let’s say we made a mistake in that conflict resolution, and we want to undo it. In git, undoing an action, if it’s even possible, is often complicated. In jj, we can always run jj undo:</p>
-<p>More generally, jj maintains a history of all actions in jj op log. We can inspect this log and jj op restore to a point in that history, or jj op revert an individual operation. If the jj undo itself was a mistake, we can jj redo.</p>
-<p>The Hint in the output above is a bit of a spoiler for our next topic, the squash workflow.</p>
-<p>Editing commits that have descendants can sometimes feel sketchy. If you’re iterating on a large diff that has left your working memory, it would be nice to separate your new changes from the existing diff. For example, we might like to inspect the diff that resolves a rebase conflict in isolation.</p>
-<p>Let’s follow the instructions from the above output. We first create a new commit on top of the conflicted commit:</p>
-<p>Now we can resolve the conflicts in main.py in our editor, and rerun jj log:</p>
-<p>We can inspect the diff in @ if we like, and when we’re happy with the conflict resolution, we can squash it into the parent commit:</p>
-<p>The conflict is now resolved, and we can continue our work.</p>
-<p>One of the powerful qualities of jj is that it makes diffs malleable like clay. With automatic rebase and the confidence inspired by jj undo, we can move, combine, drop, and split diffs with ease.</p>
-<p>Let’s try a few operations on our current commit graph. Here’s the starting point.</p>
-<p>Let’s use jj rebase to coerce our branching commit graph into a linear history. Let’s say the documentation commit (q) should go between the implementation (k) and the usage (n). We could accomplish this by moving nlrtlrxv (and its empty descendant) on top of qwyusntz:</p>
-<p>Another way to accomplish the same effect would be to use jj rebase -r q --before n. Many jj commands have multiple ways to specify revsets. jj rebase --help documents these well.</p>
-<p>Since arguments to jj rebase flags are all revsets, we can write a revset that selects a sequence of commits or commit subgraph, and move it elsewhere in the graph.</p>
-<p>If we wanted to insert a commit below k, the most direct way is jj new --before k, but for demonstration purposes, we could alternatively create a new commit on top of r and rebase k:: on top:</p>
-<p>If you enjoy using TUIs, jj arrange provides a commit graph editor similar to git rebase -i for reordering commits.</p>
-<p>If we decided documentation should be in the same commit as implementation, we can squash:</p>
-<p>jj will open an editor and give us a chance to write a combined commit message.</p>
-<p>To drop a commit from the graph, we can use jj abandon. Let’s drop the preparation commit:</p>
-<p>To abandon parts of a commit (hunks or changes to whole files), we can use the jj diffedit TUI (see docs).</p>
-<p>The jj split TUI allows us to take a commit and split it into two consecutive commits by selecting which files or hunks should go in the first. Let’s use it to split up implementation and documentation again with jj split -r k:</p>
-<p>The jj-hunk project provides a means to automate commit splitting. If you are so inclined, agents are quite good at using this tool to split up commits into a sequence of smaller changes for easier review.</p>
-<p>jj does not have a native concept of a branch, but it does have a primitive called bookmarks that map to Git branches. When we need to manipulate Git branches, we do it by way of bookmarks.</p>
-<p>You can go pretty far using Git without realizing this, but a Git branch is just a pointer to a commit. jj explicitly models bookmarks this way. jj bookmarks are essentially a named label attached to a commit that we can move around as we modify our commit graph, and push to/pull from a remote.</p>
-<p>We’ll discuss a few basic workflows around Git branches below, but you can find a more complete guide in the jj docs on Working with GitHub.</p>
-<p>Assuming we initialized jj in a git repository that has remotes, we should have some output for jj git remote list.</p>
-<p>Since jj is branchless, the commits we’ve created locally don’t have a branch name. Luckily, jj doesn’t require us to pick one, and generates one for us. Generated branch names free you from thinking of a unique branch name so you can instead focus on writing a good commit message (usually the more durable descriptor of a change).</p>
-<p>To create a generated bookmark for change ID nlrtlrxv and push up a corresponding Git branch, we can run a command like the following:</p>
-<p>Now jj log shows our change with a correspondingly named bookmark push-nlrtlrxvuusk associated:</p>
-<p>We’re free to create a PR from this branch on GitHub now. You can customize the bookmark naming scheme with the git_push_bookmark template config documented here. It’s a common pattern to format branch names like <author name>/<change ID>.</p>
-<p>Since jj git push -c creates a branch name that corresponds to a change ID, it seems to encourage one evolving change per PR. I think it’s usually best to lean into these ergonomics, and have one change per PR.</p>
-<p>To update a branch, the general process is to either squash commits into a change that is already bookmarked, or create new commits and move the bookmark forward.</p>
-<p>If you choose to squash commits into an existing bookmark (recommended to keep one change per PR), the flow is as follows.</p>
-<p>First, create a new commit on top of our branch.
-$ jj new push-nlrtlrxvuusk
-Working copy  (@) now at: stzvpxow f14a0cf7 (empty) (no description set)
-Parent commit (@-)      : nlrtlrxv b1284f61 push-nlrtlrxvuusk | Use the feature
-Added 2 files, modified 0 files, removed 0 files</p>
-<p>Then make our edits.
-$ jj status
-Working copy changes:
-M README.md
-Working copy  (@) : stzvpxow 6bdd43dc (no description set)
-Parent commit (@-): nlrtlrxv b1284f61 push-nlrtlrxvuusk | Use the feature</p>
-<p>Squash them into the bookmark branch.
-$ jj squash --from @ --into push-nlrtlrxvuusk
-Working copy  (@) now at: xryuuprx 04d65a03 (empty) (no description set)
-Parent commit (@-)      : nlrtlrxv aeb869ae push-nlrtlrxvuusk* | Use the feature</p>
-<p>We now see push-nlrtlrxvuusk has an asterisk next to it, indicating it has changes that haven’t been pushed to the remote. So let’s push them.
-$ jj git push -b push-nlrtlrxvuusk
-Changes to push to origin:
-  bookmark: push-nlrtlrxvuusk [move sideways from b1284f61c417 to aeb869aef99b]</p>
-<p>The remote branch now reflects the new changes. The above output says that we moved the branch sideways from one commit to another commit, which reflects that we did a force-push. jj git push runs the equivalent of a git push --force-with-lease, so if you’re ever unclear about what a push operation would do, you can use the jj git push --dry-run flag. jj protects you against most dangerous force pushes refusing to rewrite a configurable revset of immutable commits. The default immutable revset is sensible, but you can make it more or less conservative by configuring your own immutable heads.</p>
-<p>In this flow, we add new commits on top of our bookmark and then move the bookmark to point to our new commit.</p>
-<p>Let’s first prepare the new commit.
-$ jj new push-nlrtlrxvuusk
-Working copy  (@) now at: pptrztmx 6e49ff1f (empty) (no description set)
-Parent commit (@-)      : nlrtlrxv aeb869ae push-nlrtlrxvuusk | Use the feature</p>
-<p>The bookmark does not automatically move to our new commit. This is the biggest difference between bookmarks and Git branches. For now push-nlrtlrxvuusk still points at the commit below:</p>
-<p>There are several ways to move the bookmark to the new commit. The easiest is probably jj bookmark advance, which moves the closest bookmark to the given commit:</p>
-<p>Now we’re ready to push the moved bookmark.</p>
-<p>Since jj is branchless, strictly speaking, we don’t “check out” a branch, but we can create a commit on top of a remote branch. First do the equivalent of a git fetch, importing remote bookmarks:</p>
-<p>And create a new empty commit on top of the remote branch:</p>
-<p>Our working copy now contains all the commits on the remote branch. However, if we were to drop back to git, we see that from git’s perspective, we’re in a detached head state, not on any branch.</p>
-<p>This is because jj is editing a commit above a bookmark, and does not have an equivalent to git’s “current branch” state.</p>
-<p>Syncing with the trunk (e.g. main) is just a specific example of this flow. We would jj git fetch to update our main to the upstream main, and then rebase our commits on top. For example, the following would rebase my-branch on top of a new main:</p>
-<p>jj commit graph manipulation is easiest when you have a live commit graph on screen. There are different ways you can accomplish this.</p>
-<p>jjui is a TUI for jj that allows you to edit the visual graph directly. I have not personally used this, but I know people who like it.</p>
-<p>I prefer to have an always-live jj log in the corner of my screen by way of viddy (a nicer version of watch that supports color):</p>
-<p>I recommend filtering down this log to a revset that represents your current work. Here’s a starting point:</p>
-<p>You might also consider trying my experimental project jj-stamp, which is a local code review GUI for the squash workflow. Even if you don’t use the squash review workflow, it makes a pretty good diff viewer with a live jj log on the side and a terminal for running jj operations.</p>
-<p>One of the biggest productivity gains from jj comes in its ability to support stacked PR workflows. This merits its own post, so I’ll keep it short.</p>
-<p>Large changes are easier to understand when they’re broken up into a series of logical steps. Breaking up a large change into smaller sequential atoms of review makes the whole change easier to understand. Stacked PRs attempt to leverage this fact to optimize merge throughput, while simultaneously removing pipeline stalls in the review process.</p>
-<p>Let’s say we’re building a new feature. We can decide we want to split up implementation into three stages:</p>
-<p>jj’s ability to work on stacked changes with automatic rebase is a natural fit for implementing these three stages. Each of the three stages maps to a single commit, each with an associated bookmark/branch/PR:</p>
-<p>After you implement the first change, you can put up a PR for review and immediately start working on the next change. Your work stream becomes a long queue where you pop off the bottom as PRs are ready to merge and push to the top, with no pipeline stalls.</p>
-<p>It’s pretty easy to manually set up small PR stacks with jj and GitHub, but once you get hooked on the technique (making stacks 5–10 PRs deep), you’ll want a tool. jj-pancake is my entry into the ring of stacked PR tools. More on that soon.</p>
+                <p>This is the third post of Profiling in PyTorch, a series where we slowly build the skill of reading profiler traces and use it to drive optimization:</p>
+<p>The series "Profiling in PyTorch" is meant to make you comfortable reading profiler traces and tables. In Part 1 we profiled basic math operations like addition and multiplication. We saw how the profiler table uncovers hotspots, and how the profiler trace shows the order in which an algorithm runs over time.</p>
+<p>In Part 2 we wrapped that addition and multiplication into a torch linear layer. We then stacked several linear layers on top of each other (a multilayer perceptron) and profiled that. Along the way we also profiled fused and hand-tuned kernels.</p>
+<p>From the perspective of the Transformer architecture, the next logical step for us to profile is yet another fundamental algorithm, attention. While being infamous for its quadratic-time complexity, many clever tricks exist to mitigate that issue and make it fast. Our goal here is not to cover every trick in detail. Instead, we want to see how each one looks different under the profiler.</p>
+<p>The scripts for this blog post live here: 04_a_naive_attention.py, 04_b_inplace_ops_attention.py, 04_c_sdpa_attention.py, and 04_d_kernels_attention.py. Like before, it helps to open them in a separate tab and walk through the code as you read. We use an NVIDIA A100-SXM4-80GB GPU to run the scripts. It is really easy to set up a GPU on the Hugging Face infrastructure and experiment with the scripts using Dev Mode with Spaces. One could also run the scripts with the Hugging Face Jobs pipeline.</p>
+<p>Attention works with Queries (q), Keys (k), and Values (v). The interaction between them can be written as a short sequence of steps:</p>
+<p>So attention is really a collection of primitive operations. Some of them we already know (the matmuls), and the rest are easy to spot. Let's write a naive attention module in PyTorch and profile it.</p>
+<p>Before opening the trace, let's do our usual exercise and guess what we should see. Tracing the forward of this module, we expect:</p>
+<p>Figure 1 shows the CPU lane of the profile (the GPU lane is folded so it does not overwhelm us). Inside attn_fwd (our annotated forward call) we can see exactly the operations we guessed. The matmul is an old friend by now, and the new operations are easy to spot:</p>
+<p>Now let's unfold the GPU lane and see which kernels were actually launched.</p>
+<p>Figure 2 shows the GPU lane next to the CPU lane. Let's zoom into a single attn_fwd block on the GPU lane to look at the kernels one by one.</p>
+<p>Figure 3 lets us read off the individual kernels for one profiler step:</p>
+<p>Five of these are expected. The memory copy is the odd one out, so where does this come from? The clue is that PyTorch has in-place operations. When you operate on a tensor the ordinary (out-of-place) way, PyTorch often makes a copy, applies the requested operation to it, and returns the copy. Following the sequence of operations, the culprit here is our masked_fill.</p>
+<p>What if we replaced this with an in-place operation?</p>
+<p>All we change is masked_fill to masked_fill_ (note the trailing underscore, PyTorch's convention for in-place operations), and we run the same script.</p>
+<p>Let's look at the trace and see if something changed.</p>
+<p>The in-place version (Figure 5) wraps far fewer CPU ops inside the masking step than the out-of-place version (Figure 4). This is an encouraging signal. Let's unfold the GPU lane to confirm what happened there.</p>
+<p>On the GPU lane the Memcpy kernel is gone for good (Figures 6 and 7). With a one line change we shaved a whole kernel off each forward pass. This may not look like much on its own, but remember this is a single attention operation. In the context of a transformer based large model (LLMs, Diffusion models, etc.), it repeats once per layer, and there are many layers, so the saving adds up quickly (and if it earns you a raise, sharing at least 10% with us feels only fair).</p>
+<p>Out-of-place is PyTorch's default for a reason. To compute gradients, autograd has to remember the tensor values it saw on the forward pass, because many backward formulas reuse them. An in-place operation overwrites those values in memory, so the backward pass would read the wrong numbers. Due to the fact that we run forward under torch.no_grad, in-place is safe for us, with no backward pass and nothing to corrupt. It is also noteworthy that in-place operations do not only save time (like we see in our case) but also memory (due to no extra copy) which is great for large tensors like logits!</p>
+<p>We just built attention from primitives, and even shaved off a Memcpy. The good news is that the PyTorch team has done all of this for us, and packaged the whole pipeline into a single function:</p>
+<p>This one line replaces our hand written module, and is_causal=True even saves us from building the mask by hand. It is worth pausing to appreciate how much this one call hides. And it hides more than just code lines. Scaled Dot Product Attention (SDPA) does not have a single implementation. Under the hood it dispatches to one of the several backends and picks the fastest one that supports our inputs (dtype, head dimension, mask, hardware, etc.).</p>
+<p>The official SDPA tutorial walks us through this selection, and the backends themselves are listed in the torch.nn.attention.SDPBackend enum:</p>
+<p>Normally SDPA chooses for us, but we can pin a specific backend with the torch.nn.attention.sdpa_kernel context manager. This is what we do in our scripts. This lets us profile each backend on its own and read how differently they show up in the trace. Let's go one at a time.</p>
+<p>Before we open anything, let's guess. We have replaced hand written attention (matmul, mul, mask, softmax, matmul) with a single one liner, so we should expect the trace to get simpler and faster. Fewer kernels, less CPU dispatch, maybe even a fused kernel. Let's check the profiler table first.</p>
+<p>This is our first surprise, the one liner is 3.7x slower.</p>
+<p>Opening the trace (Figure 9) shows why the alarm bells ring, the math backend launches 20 GPU kernels per forward instead of the 5 launched with our naive attention implementation (Figure 8). This is the opposite of what we guessed. Let's figure out why this happens.</p>
+<p>In Part 2 we learned to read a kernel name like a fingerprint. Let's use that habit here:</p>
+<p>The A100s we used to capture these traces ship with Tensor Cores, specialised hardware for accelerated matmuls that is known to be far faster than the ordinary CUDA cores. To see why that matters here, it helps to know what lives inside a GPU. A Streaming Multiprocessor (SM) is the compute unit of a GPU, and each SM has two kinds of arithmetic units, the CUDA cores and the Tensor Cores. CUDA cores are general purpose and process a handful of elements at a time, while Tensor Cores multiply and accumulate a whole small matrix tile in a single instruction. So the question is simple, "Is each backend actually using the fast path?"</p>
+<p>The kernel names answer it. The s16816 in the naive kernel (Figure 10) is the signature of a bfloat16 Tensor Core matmul (the 16x8x16 Tensor Core instruction), so the naive version is on the fast path. sgemm (Figure 11) is the classic single precision (FP32) matmul that runs on the ordinary CUDA cores. In other words, the math backend never touches the Tensor Cores at all: to trade speed for numerical accuracy it upcasts tensors to FP32 (doubling the data moved, even when the inputs are in bf16) and falls back to the slower CUDA cores.</p>
+<p>In the naive version we built the causal mask once and reused it. Here we passed is_causal=True and the math backend materialized one for us, on every single call. You can watch it happen on the CPU lane:</p>
+<p>On the GPU this shows up as a triu_tril_kernel, several where kernels, and an add_. The convenience flag that let us stop thinking about the mask did not remove the work, it just moved it one layer down, where the mask is rebuilt from scratch every forward.</p>
+<p>Our hand written version called plain aten::softmax. The math backend calls aten::_safe_softmax, and the difference is again visible as extra kernels (Figure 13):</p>
+<p>A row that is fully masked (every entry -inf) would make an ordinary softmax compute exp(-inf)/sum(exp(-inf)) = 0/0 = NaN. _safe_softmax guards against exactly that. Our naive kernel never bothered, and would have quietly produced NaNs in that corner case.</p>
+<p>Put together, the math backend is the reference implementation. It is a straightforward, dtype-safe, NaN-safe decomposition of attention into primitive ATen ops. It is essentially the naive attention we wrote by hand, but more careful. That carefulness is exactly what makes it extremely slow.</p>
+<p>Its job is not to be fast, but to always work. This makes it the perfect baseline. Every backend we profile next (flash, efficient, cudnn) is trying to collapse the 20 GPU kernels into essentially one fused kernel that stays in bf16 and never materializes the intermediate matrices at all.</p>
+<p>Where the math backend launched 20 kernels across one profiler step, the efficient backend launches only one fmha_cutlassF_bf16_aligned_64x64_rf_sm80 (as seen in Figure 14).</p>
+<p>This is the memory efficient attention kernel that grew out of Meta's xformers library and was upstreamed into PyTorch. When people say "the xformers backend," this fmha_cutlassF kernel is what they mean.</p>
+<p>The void pytorch_flash kernel (Figure 15) is FlashAttention-2 (Tri Dao's implementation), vendored into PyTorch.</p>
+<p>Before we read the trace any further, it is worth answering the question you should be asking by now: why is there a whole backend named "flash", and why does it matter so much?</p>
+<p>Let's go back to the math backend for a moment. Its real problem was not the count of 20 kernels, it was what those kernels handed to each other.</p>
+<p>Step 1 builds the full score matrix attn = q . k.T, which is [seq, seq] per head. For a sequence length of 4096 that is 4096 x 4096 ≈ 16 million numbers for a single head. That matrix is written out to the HBM (the GPU's main memory), if there is even enough space to do so. Then, it is read back to be scaled, written again for the mask, read again for the softmax, and so on. Attention's cost is dominated by this back and forth traffic to HBM, not by the matmuls themselves.</p>
+<p>FlashAttention attacks exactly this. Instead of computing the whole s matrix and only then reducing it, it walks over k and v in tiles, keeps a running softmax as it goes (the "online softmax" trick), and accumulates the output one tile at a time. The full [seq, seq] score matrix is never written to HBM, it only ever lives on-chip. This is the single idea that lets the entire attention pipeline collapse into one fused kernel that stays in bf16 on the Tensor cores.</p>
+<p>Here is where flash surprises people who read profiler footprints. It is the fastest backend, yet the profiler reports it with very low occupancy (shown in Figure 16). To see why that is fine, we need three quick definitions.</p>
+<p>A GPU kernel is essentially a series of instructions executed by many small execution units. These individual execution units (threads) take care of loading variables, adding them together, storing them back, etc. For each kernel, we launch many, many threads, and to keep track of them, we group them by blocks.</p>
+<p>Blocks are scheduled onto Streaming Multiprocessors (SMs), the main compute units of a GPU. A block lives entirely on one SM, and an SM can host multiple blocks at once if it has enough resources. Those resources include registers, shared memory, maximum resident threads, and maximum resident warps. So when we say a kernel has low occupancy, we mean each SM has fewer resident warps than it could theoretically support.</p>
+<p>If you want to know more about threads, blocks, grids, etc. here is a great resource.</p>
+<p>If you click the flash kernel in the trace, its footprint tells the story (Figure 17).</p>
+<p>Flash uses a lot of per-thread registers and a large amount of shared memory per block. For example, if a block has 128 threads and each thread uses 255 registers, that block needs 128 × 255 = 32,640 registers. On an Ampere SM with 65,536 registers, only two such blocks fit at once. Each 128-thread block has 128 / 32 = 4 warps, so two blocks give only 8 resident warps. Against a maximum of 64 resident warps, that is roughly 13% occupancy. Flash has low occupancy not because it is poorly optimized, but because each block is deliberately very "heavy" in on-chip resource usage.</p>
+<p>And that is the whole point. High occupancy helps hide latency by keeping many warps ready to run, but it does not make the work itself efficient. Flash spends those registers and that shared memory on purpose, to keep attention tiles on-chip, reuse data aggressively, and avoid ever materializing the full attention matrix in global memory.</p>
+<p>By now the pattern is familiar. Like flash and efficient, cuDNN gives us one fused, flash-style kernel per forward (Figure 18). So the natural question is: if flash already fuses attention, why does PyTorch ship yet another flash backend? The answer is who writes the kernel and how it is built, and that difference is what makes the trace look different.</p>
+<p>Flash and efficient are fixed, pre-compiled kernels vendored into PyTorch. You get the same binary every time. cuDNN is NVIDIA's own deep learning library, and its attention kernel is generated and tuned for the specific problem at hand. It is closer in spirit to torch.compile's codegen than to a fixed cuBLAS binary. You can read that straight off the (very long) kernel name:</p>
+<p>That one fact, generated per problem, explains everything else that looks unusual in the trace.</p>
+<p>No transposes: The CPU lane goes from _cudnn_attention_forward straight to a couple of aten::empty allocations and then the kernel, with zero aten::transpose (Figures 19, 20 and 21). Flash and efficient each insert four (metadata) transposes to reshape the tensors while cuDNN consumes the native [B, H, S, D] layout directly because its generator emits a kernel for that layout.</p>
+<p>It launches through cuLaunchKernelEx, not cudaLaunchKernel: Every other kernel in this whole series went through the runtime API cudaLaunchKernel. cuDNN uses the driver-level extended launch, which carries launch attributes (Figure 22).</p>
+<p>The profiler reports 0% achieved occupancy: Do not take that at face value, it is a measurement gap, not a stalled GPU. CUPTI (the profiling backend) cannot attribute occupancy to a driver-API (cuLaunchKernelEx) launch the way it does for cudaLaunchKernel, so the field reads 0. The footprint fills in the truth (Figure 23): 240 registers × 256 threads = 61,440 registers per block against the SM's 65,536, so only one block fits per SM (8 warps ≈ 12.5%), right in line with flash.</p>
+<p>The "no transposes" story tempts us to expect cuDNN to be the leanest backend on the CPU. It is the opposite.</p>
+<p>Even with zero transpose ops, cuDNN spends about 214 µs per forward on the CPU, more than flash (138) or efficient (117). Almost all of it sits in aten::scaled_dot_product_attention self time (26% of the whole run) and _cudnn_attention_forward. That is cuDNN's runtime engine selecting and preparing the plan (the "knob" search) on every call.</p>
+<p>Fewer visible ATen ops did not mean less CPU work, it moved the work into the library, where the profiler can only show it as one fat, opaque bar. When a trace suddenly gets cleaner, the work has not always disappeared, sometimes it has just moved somewhere the profiler cannot break down.</p>
+<p>On the GPU, cuDNN (186.3 µs) lands between efficient and flash. On this very flash-friendly shape, hand-written FlashAttention-2 edges it out. cuDNN often wins on other shapes (larger head dimensions, different sequence lengths) precisely because its generator retunes per problem, but that retuning is also what you just paid for on the CPU.</p>
+<p>Before we wrap up, here is a single table to review every attention variant we profiled and the one lesson each trace taught us.</p>
+<p>If you take away only one thing from the whole series, let it be the habit we repeated before every single trace which is to guess first, then look.</p>
+<p>State out loud what you expect the trace to contain, open it, and treat any mismatch as the most interesting thing on the screen. Every real insight in these three posts, the hidden Memcpy, the addmm epilogue, the 20 kernel math backend, flash's "wrong-looking" occupancy, cuDNN's fat CPU bar, came from a guess that did not match the trace.</p>
+<p>Profiling is not a separate, intimidating skill reserved for GPU experts. It is just the discipline of looking closely and asking "wait, why is that happening?" until the answer clicks. You now have the vocabulary and the reflexes to do that on your own models. Open a trace, form a guess, and go find the mismatch.</p>
+<p>Thanks for reading the Profiling in PyTorch series. Now go profile something. 🤗</p>
+<p>Thanks to Noe Flandre for their reviews on the early draft of the post!</p>
+<p>The blog post was polished using an LLM. This in no way means that we have let an agent run in the background and let it generate the blog. Some of us in the team are non-english speakers and think LLMs (which are mostly trained in the English Language) can rectify silly grammar mistakes or rephrase sentences that sound less intimidating and cleaner. Hope this helps with the idea of "why should I read, if this was LLM generated". 🤗</p>
+<p>Thanks for the series, really delightful!</p>
+<p>hello Aritra (@ariG23498  ), thanks a lot for this series!one doubt which i had: how were you able to know for sure that Memcpy (memory copy) operation in GPU was indeed because of out of place masked_fill?</p>
+<p>one way i'm able to think it is because that occured exactly before the masked_fill kernel op? but how did you actually validated that is something i'm not able to understand.</p>
+<p>edit:i figured it out while i was tinkering - but keeping this comment here incase someone else has the same doubt. the arrow mapping in perfetto maps exactly that which op in cpu invoked the kernel at gpu.</p>
+<p>Finally completed it. Thank you for the series</p>
+<p>How did you like the series? Anything that we could have done better?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://ethanlowman.com/posts/jj-primer/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/torch-attention-profile" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

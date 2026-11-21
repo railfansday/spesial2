@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preventing API Contract Drift in TypeScript Applications</title>
+    <title>From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10566.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,122 +15,66 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Preventing API Contract Drift in TypeScript Applications</h1>
+        <h1>From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_06250594d1.png" alt="From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_06250594d1.png" alt="From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>A frontend application can compile successfully and still fail when it communicates with the backend.</p>
-<p>Imagine a backend developer changes an API response from:</p>
-<p>The backend works correctly. The frontend also builds without errors. However, a component expecting user.name now receives undefined.</p>
-<p>This is an example of API contract drift: the frontend and backend no longer agree on the structure or behavior of an API.</p>
-<p>The problem becomes more difficult when several developers or teams work on different parts of an application. A change made by one team may affect another team's assumptions without producing an obvious error during development.</p>
-<p>TypeScript helps catch many programming mistakes, but its types do not automatically validate data received over HTTP. A type declaration can describe what the application expects without proving that the server actually returns it.</p>
-<p>In this tutorial, we'll look at a practical way to make API contracts more reliable.</p>
-<p>Consider a typical frontend API function:</p>
-<p>The function promises to return a User, so TypeScript allows the application to access properties such as name and email.</p>
-<p>The return value of response.json() is not automatically checked against the User interface. The interface only provides compile-time information; it does not validate the actual JSON received from the server.</p>
-<p>the frontend may still treat the response as a User even though the data has a different structure.</p>
-<p>This is particularly important when working with:</p>
-<p>Independently deployed frontend and backend applications.</p>
-<p>APIs maintained by different engineering teams.</p>
-<p>The solution is to validate data at the boundary where it enters the application.</p>
-<p>Zod is a TypeScript-first schema validation library. It allows developers to describe expected data structures and validate actual values against those definitions.</p>
-<p>Now create a schema for the user response:</p>
-<p>First, UserSchema describes the structure that the application expects at runtime.</p>
-<p>Second, z.infer generates the corresponding TypeScript type from the schema.</p>
-<p>This means developers do not need to maintain a separate interface and validation definition for the same data structure.</p>
-<p>The response is initially treated as unknown, which prevents the application from assuming that untrusted data already has the expected structure.</p>
-<p>UserSchema.parse() validates the actual response.</p>
-<p>If the backend returns an unexpected property type or misses a required field, Zod throws a validation error instead of allowing invalid data to move silently through the application.</p>
-<p>You can also use safeParse() when you prefer to handle validation errors without exceptions:</p>
-<p>This approach is useful when API responses are external or when a frontend must provide more controlled error handling.</p>
-<p>One common mistake is placing API validation logic directly inside React components.</p>
-<p>For a small application, this may seem convenient. As the project grows, however, it becomes difficult to reuse validation rules and identify where data transformations happen.</p>
-<p>A better approach is to separate API schemas, service functions, and UI components.</p>
-<p>The responsibilities are straightforward:</p>
-<p>schemas/user.ts defines the expected user data.</p>
-<p>api/client.ts handles common HTTP configuration.</p>
-<p>api/users.ts contains user-related API requests.</p>
-<p>hooks/useUser.ts manages data fetching for React.</p>
-<p>components/UserProfile.tsx displays the validated data.</p>
-<p>This structure makes it easier to change an API implementation without rewriting the UI.</p>
-<p>It also makes testing more manageable because validation logic can be tested independently of React rendering.</p>
-<p>For more ideas on organizing application code, see SitePoint's guide to modern JavaScript modules.</p>
-<p>Runtime validation protects an application when data arrives. However, teams also need a shared description of what an API is supposed to accept and return.</p>
-<p>OpenAPI provides a standard format for describing HTTP APIs, including:</p>
-<p>For example, an endpoint can be described using an OpenAPI document:</p>
-<p>This document describes what the endpoint should return.</p>
-<p>Both frontend and backend developers can refer to the same contract instead of relying on separate assumptions or outdated documentation.</p>
-<p>Swagger Editor helps developers write and validate OpenAPI documents. It also provides a convenient way to inspect API definitions.</p>
-<p>Swagger UI turns an OpenAPI document into interactive API documentation, allowing developers to explore endpoints and test requests.</p>
-<p>Redoc provides another way to generate readable API documentation from an OpenAPI specification.</p>
-<p>These tools are particularly useful when APIs are maintained by multiple developers or consumed by several applications.</p>
-<p>Maintaining API types manually across frontend and backend repositories creates opportunities for inconsistencies.</p>
-<p>For example, a backend developer might add a new optional property while the frontend continues using an older interface.</p>
-<p>One way to reduce this duplication is to generate TypeScript definitions and API clients from an OpenAPI specification.</p>
-<p>Orval is a useful tool for this workflow.</p>
-<p>It can generate TypeScript clients and types from an OpenAPI document, helping frontend developers work with consistent endpoint definitions.</p>
-<p>A typical configuration might look like this:</p>
-<p>The exact configuration depends on the Orval version and the structure of the OpenAPI document.</p>
-<p>Once configured, the client can be regenerated when the API specification changes.</p>
-<p>This reduces the amount of repetitive code developers need to maintain manually.</p>
-<p>However, generated types should not be confused with runtime validation. They improve consistency during development, but an application may still need to validate responses received from external systems or services that cannot be fully trusted.</p>
-<p>Frontend developers often need to build or test features before the corresponding backend endpoint is ready.</p>
-<p>Waiting for a complete backend implementation can slow down development, particularly when multiple teams work independently.</p>
-<p>Mock Service Worker (MSW) helps solve this problem by intercepting network requests and returning controlled responses.</p>
-<p>You can define a mock handler for the user endpoint:</p>
-<p>The frontend can now make normal HTTP requests while MSW supplies predictable responses during development or testing.</p>
-<p>You can also simulate an invalid response:</p>
-<p>This makes it possible to check whether the application's validation and error-handling logic behave as expected.</p>
-<p>MSW is particularly valuable because it allows frontend tests to run without requiring a live backend environment.</p>
-<p>Runtime validation and generated clients improve reliability, but they do not automatically guarantee that independently developed services remain compatible.</p>
-<p>For systems with multiple services, contract testing can provide another layer of protection.</p>
-<p>Pact is a contract-testing tool that allows consumers and providers to verify their expectations about API interactions.</p>
-<p>Consider a frontend application that expects the user endpoint to return:</p>
-<p>The consumer defines the expected interaction.</p>
-<p>The backend provider can then run verification against that contract to check whether its actual response satisfies the consumer's expectations.</p>
-<p>This helps identify breaking changes before they reach production.</p>
-<p>These tools solve different problems. A project does not necessarily need all of them, but larger applications can benefit from combining the approaches that match their architecture.</p>
-<p>A contract is only useful if developers consistently check it when making changes.</p>
-<p>A practical approach is to run validation and tests automatically whenever someone opens a pull request.</p>
-<p>For example, a GitHub Actions workflow might look like this:</p>
-<p>The api:validate script should be configured to validate the project's OpenAPI document or run the relevant contract checks.</p>
-<p>The test command should execute the application's automated tests.</p>
-<p>For a production project, you may also want to include:</p>
-<p>The objective is to detect incompatible changes before they are merged.</p>
-<p>A failed pipeline gives developers an opportunity to investigate the change while the context is still fresh.</p>
-<p>API contracts become harder to maintain when several teams contribute to the same system.</p>
-<p>For example, a company might have separate teams responsible for:</p>
-<p>If nobody owns an API contract, small changes can create unexpected problems for other teams.</p>
-<p>Assigning clear ownership helps establish who reviews changes, maintains documentation, and coordinates breaking updates.</p>
-<p>This becomes particularly important when an organization expands its engineering capacity across locations or adds several specialized teams. Companies planning that kind of growth may also need to consider enterprise IT recruitment as part of their wider engineering workforce strategy.</p>
-<p>Regardless of how a team is assembled, its development process should establish clear responsibilities for API design, versioning, testing, and release coordination.</p>
-<p>A few practical conventions can make a significant difference:</p>
-<p>Assign an owner to every important API or service.</p>
-<p>Document breaking changes before implementation.</p>
-<p>Require contract-related tests in pull requests.</p>
-<p>Keep generated clients synchronized with the API specification.</p>
-<p>Communicate deprecations before removing existing fields.</p>
-<p>Monitor production errors after deploying API changes.</p>
-<p>These practices help prevent a growing engineering organization from becoming a collection of disconnected services.</p>
-<p>API contract drift is not simply a TypeScript problem. It is a coordination problem that becomes visible when applications and services develop different expectations about the same data.</p>
-<p>TypeScript provides useful compile-time checks, but it cannot guarantee that an HTTP response matches a declared interface.</p>
-<p>A more reliable approach combines several techniques:</p>
-<p>Use OpenAPI to document API expectations.</p>
-<p>Generate TypeScript clients with tools such as Orval.</p>
-<p>Use MSW to test frontend behavior without a live backend.</p>
-<p>Use Pact when consumer-provider contract verification is appropriate.</p>
-<p>Run validation and tests automatically in CI/CD.</p>
-<p>You do not need to introduce every tool at once. Start by validating external API responses, document important endpoints, and gradually automate contract checks as the application grows.</p>
-<p>The result is a codebase where developers can make changes with greater confidence and where frontend and backend teams have a shared understanding of how their systems communicate.</p>
+<p>When an LLM app gives a wrong answer, nothing in your logs shows it. The request returns 200, the JSON is valid, and no exception fires. Usually the user is the only one who notices. A thumbs-down button records that moment, on the exact trace that went wrong, while the user still remembers why.</p>
+<p>That button is easy to add. The hard part is what comes after: turning the thumbs-down into a reviewed test case, a judge score, and a better prompt.</p>
+<p>We ran that loop in TypeScript in four tools: LangSmith, Langfuse, Phoenix and AcruxCore. All four handled the first four steps, which are user feedback, reviewer comments, a dataset and an LLM judge. Only AcruxCore rewrote the prompt from TypeScript. On 15 support tickets that no tool had seen, the rewritten prompt routed 13 correctly, against 7 for the original.</p>
+<p>Our test app is a support-ticket router. It reads a ticket and returns JSON with a category (account, billing, bug or feature_request) and a priority (P0, P1 or P2). The first version of the prompt describes only the output format:</p>
+<p>The support team has a policy that this prompt never states. Sign-in problems are always account. A customer who can't use the product at all is P0. Any billing error is P1, even when the customer says there is no rush. Feature requests are P2, however angry the customer sounds.</p>
+<p>Without that policy, the model guesses priority from the customer's tone. Here are three real replies from the first version:</p>
+<p>Every reply is valid JSON, so no schema check catches the mistake. A person has to read the reply and say it is wrong. The loop in this article takes that judgement and turns it into a better prompt.</p>
+<p>All four tools cover evaluation. We compared the self-hosted ones on tracing in Self-Hosted LangSmith Alternatives: 4 Tools Tested on One TypeScript Agent, and on prompt registries in Prompt Management in TypeScript. For a broader comparison of self-hosted options, see this LangSmith alternatives roundup. This article covers the feedback loop only.</p>
+<p>We wrote 30 tickets. Fifteen are the "production traffic" that each tool's app processed. The other 15 are a holdout set. No tool saw them, and we used them only for the final before-and-after check.</p>
+<p>Each tool ran the same sequence from one TypeScript script:</p>
+<p>The reviewer comments follow one template, so the wording is identical in every tool:</p>
+<p>The comments name one rule each. The full policy appears nowhere in the data any tool received.</p>
+<p>The app model isn't fully deterministic at temperature 0. Each tool's run got between 6 and 8 of the 15 traffic tickets right, so the tools received 7 to 9 thumbs-down each. The holdout check below repeats every measurement three times.</p>
+<p>All four tools accept feedback on a trace from TypeScript. They differ in how a second person, the reviewer, adds the correct answer.</p>
+<p>LangSmith stores both as feedback on a run. The thumbs-down runs go into an annotation queue, where a reviewer adds feedback with a comment:</p>
+<p>Langfuse stores both as scores. An annotation queue needs a score config first:</p>
+<p>Phoenix stores both as span annotations. The reviewer's comment goes in explanation:</p>
+<p>Phoenix stores spans asynchronously. Our first run annotated a span before Phoenix had stored it, and the API returned a 404. The script now waits until all 15 spans are visible.</p>
+<p>AcruxCore stores both as feedback rows on the trace. The source field separates the end user from the reviewer:</p>
+<p>This is the first step where the code differs a lot. Each tool can make a dataset, but only one builds it from feedback in one call.</p>
+<p>In LangSmith, a run query finds the thumbs-down runs. Then createExamples copies them into a dataset. You decide where the reviewer's comment goes. We put it in the reference output:</p>
+<p>LangSmith can also do this without code. An automation rule in the UI can add runs that match a filter to a dataset.</p>
+<p>In Langfuse, the scores API finds the thumbs-down traces. Two details cost us a run each. A boolean score is filtered with value: "false", not 0. And the trace ID is returned only when you ask for the subject field group:</p>
+<p>In Phoenix, getSpans can't filter by annotation. So the script lists the app's spans, reads their annotations, and keeps the ones with a thumbs-down. Then createDataset takes the examples. We kept the source span ID in the metadata.</p>
+<p>In AcruxCore, buildFromFeedback takes the reviewer's feedback IDs. Each comment becomes that example's grading criteria, and the input comes from the variables captured on the trace:</p>
+<p>Each tool scored the first version of the prompt on its own dataset. The judge read the reviewer's comment and the router's reply, and returned 1 for a match and 0 for a mismatch.</p>
+<p>LangSmith, Langfuse and Phoenix each have an experiment runner that takes your evaluator function, and we gave all three the same judge prompt. AcruxCore grades with its built-in judge inside the optimize run. All four used the same judge model.</p>
+<p>The first version fails almost every reviewed case. That is expected, because these are the cases users marked wrong. A score of 1 means the app model got that case right on the second call, or the judge accepted a wrong reply. We didn't check which.</p>
+<p>The judge can also run without your code. Besides the in-code evaluator we used, Langfuse has a managed LLM-as-a-judge that runs on production traces and on experiments, with your own judge prompt. LangSmith has online evaluators, which you set up in its UI, for the same job.</p>
+<p>An optimizer reads the failing cases and the reviewer comments, writes new versions of the prompt, and scores each one with the judge. This is the step that turns feedback into a better prompt, and it's where the four tools differ most.</p>
+<p>LangSmith's API reference lists an optimize prompt job (POST /api/v1/repos/optimize-job). It takes a prompt name, a dataset name, evaluator IDs and an algorithm, promptim or demo. No method in the TypeScript SDK wraps it, so we called it with fetch. We gave it a code evaluator that checks the reply against the reviewer's correct answer.</p>
+<p>The job was accepted and reported successful about ten seconds later. It ran no experiment on the dataset. With auto_commit set to true, it added no new commit to the prompt. We found no guide for this endpoint, so we may have configured it wrongly, but the job record and its logs gave no error to act on.</p>
+<p>LangSmith's documented route to prompt optimization is promptim, which its README calls an experimental library. It is a Python package with a CLI, and it can add a human review step through LangSmith annotation queues.</p>
+<p>Langfuse has no optimizer. Its blog shows a workflow with Claude Code agent skills that reads Langfuse data and edits the prompt. That workflow runs in a coding agent, not in your app's code.</p>
+<p>Phoenix's Optimize Prompts Automatically tutorial uses Arize's prompt-learning package, which you clone from GitHub and install with pip. The Phoenix TypeScript client has no optimizer export, and the tutorial runs outside Phoenix. Arize's commercial platform, Arize AX, has prompt optimization built in.</p>
+<p>For Python teams, there are more options: Opik's Agent Optimizer and DSPy both rewrite prompts from a dataset and a metric. This article covers TypeScript.</p>
+<p>Its optimize run takes the dataset and drafts three rewrites of the production prompt. It runs each rewrite and the current production version on every example, and the judge grades all of them:</p>
+<p>The three rewrites tied, so we took candidate A. Its rationale: "Added explicit priority rules for each category and clarified that access-blocking issues are P0, billing errors are P1, and feature requests are P2, overriding tone/urgency." The Improve a prompt from feedback guide covers the dashboard version of this step.</p>
+<p>A rewrite that passes the cases it was built from can still fail on new tickets. So we ran both prompts on the 15 holdout tickets, three times each, outside every tool. The script calls the model directly and checks the category and the priority against the expected answer. No judge is involved.</p>
+<p>Both come from one line in the rewrite: "P1 for bugs without workaround." That rule isn't in the team's policy, and no reviewer wrote it. The optimizer made it up to explain the examples it had. There was also no outage in the traffic set's thumbs-down cases, because the first version routed that one correctly. So no comment ever said that a full outage is P0.</p>
+<p>The optimizer learns only from what users marked wrong. Anything they never marked stays a guess, and the rationale won't tell you which rules are guesses. Read the rewritten prompt before you promote it.</p>
+<p>In LangSmith, Langfuse and Phoenix, shipping a new version is a tag or label move. We showed those calls in the prompt-management article. Here there was no rewrite to ship, so the step didn't apply.</p>
+<p>In AcruxCore, promotion commits the candidate as a new prompt version and moves the production alias to it. Nothing else moves:</p>
+<p>The app renders production on every call, so the next ticket used version 2 without a deploy.</p>
+<p>Use LangSmith if your team already works in it and writes Python. Feedback, queues, datasets and experiments all work from TypeScript, and promptim covers optimization from Python.</p>
+<p>Use Langfuse if you want a managed judge that runs on live traces with your own prompt. Plan to write the dataset glue code and the rewrite step yourself.</p>
+<p>Use Phoenix if you already trace with OpenTelemetry and annotate spans. Plan to move to Python, or to Arize AX, for optimization.</p>
+<p>Use AcruxCore if you want all six steps from TypeScript in one tool, including the rewrite. Keep a human on the promote button.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/preventing-api-contract-drift-in-typescript-applications/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/from-user-feedback-to-a-better-prompt-4-tools-tested-in-typescript/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

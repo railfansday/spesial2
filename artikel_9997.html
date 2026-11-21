@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Removing binder.c</title>
+    <title>Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9997.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,152 +15,70 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Removing binder.c</h1>
+        <h1>Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/St00mBynNYpgz93MpL17G.png" alt="Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6a1dc0f2b4238bb17ff94794/St00mBynNYpgz93MpL17G.png" alt="Record, train, and deploy from one place with Strands Agents, LeRobot, and Hugging Face Storage Buckets" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The final talk at Kangrejos 2026 was about the removal of the C implementation
-of Android's
-
-Binder driver, the primary interprocess communication mechanism
-used on Android devices. Carlos Llamas announced that he had deleted the C
-code to general applause, and then shared some insights about what went into
-replacing the C implementation. Alice Ryhl, who has worked on the Rust
-implementation for some years, added her own thoughts about what the most
-difficult and interesting parts of the transition were.</p>
-<p>Binder was added to the kernel in 2008, Llamas said, as an interprocess
-communication mechanism for Android devices. Its design originated in
-
-BeOS, but
-it has grown significantly since then. It provides a rich set of operations for
-allowing processes to communicate with the minimum amount of overhead. It also,
-therefore, presents a large attack surface for Android. Many complicated chained
-attacks against Android have involved Binder at one step or another, Llamas
-explained. Google's internal "red team" (the team dedicated to proactive
-security research) deemed Binder to be the most vulnerability-dense component in
-the entire operating system, with more CVEs per line than anywhere else.</p>
-<p>That made it an obvious candidate for porting to Rust, Llamas said. Binder was the first user
-of Rust in the kernel, he added, although Ryhl did not
-
-publicly post the first version
-of what became the Rust implementation until 2023, well after the Rust experiment started
-in 2021. All told, the effort took more than
-five years. Binder is used for every single screen touch, permission check,
-and cross-application message on Android, which runs on more than three billion
-devices. In total, it works out to hundreds of billions of Binder transactions
-per second, globally, he added. That scale meant that even the smallest discrepancy between the
-interface provided by the C version and the one provided by the Rust version
-would cause problems and regressions for some use case.</p>
-<p>One particularly tricky aspect has been performance, Ryhl said. Throughput
-doesn't matter that much; what matters is the tail latencies. Most
-screen frames on Android have a Binder transaction in the critical path of the
-frame, she explained. So, a difference of two microseconds on average is not a
-real problem, but if Binder is ever twenty milliseconds slower, even once
-in a while, people will notice and care.</p>
-<p>The actual algorithms that the C and Rust implementations use are identical, she
-continued, so there are no large differences in throughput. But, because Rust
-handles locking differently, there were problems with the tail latency
-from lock contention that she had to debug. For example, one user-reported
-traceback showed Binder attempting to take a mutex that was held by another
-process. That process was preempted, and did not resume executing for twenty
-milliseconds, well past the sixteen millisecond budget to render a single frame.</p>
-<p>It was a classic case of priority inversion. To solve the problem in Binder, Ryhl moved
-as many operations out from under the lock as possible, and was able
-to replace it with a spinlock, which made the problem go away. The equivalent
-lock in the C implementation was already a spinlock: "I deviated from C
-Binder, and pow. It has eighteen years of accumulated quirks."</p>
-<p>Eventually, however, the Rust implementation was good enough for most use cases.
-And the C implementation was still producing new vulnerabilities every time
-someone tried to introduce a new feature. Eventually, Llamas and Ryhl decided to
-only add new features to the Rust implementation, in order to motivate people to
-switch and to avoid headaches from the C implementation. That policy has
-resulted in the Rust version becoming faster than the C version,
-because Ryhl was able to introduce an algorithmic improvement that reduced the
-number of needed system calls, a change that had been considered too complex for
-the C implementation. Now that the C implementation has been deleted, there are
-more of those coming, she promised.</p>
-<p>Another area that proved difficult was dealing with tracepoints. Users aren't
-supposed to rely on the presence or behavior of most kernel-internal
-tracepoints, but they do. This meant that Ryhl had to copy
-the existing tracepoints in Binder as a de facto part of the driver's API. That
-even extended into some of the data structures involved in the driver. In one
-case, she said, there was a reference-counted structure that had a slightly
-different reference count in the Rust implementation, because the Rust code was
-holding an additional pointer to the structure. That turned out to be a
-problem for one particular piece of client code, since it relied on checking the
-reference count via a tracepoint in order to determine when the C implementation
-had reached a particular state.</p>
-<p>There was also a lot of toolchain support needed, Ryhl continued. The Rust
-implementation had to work with kernel address-space layout randomization
-(KASLR), control-flow integrity (CFI), and profile-guided optimization.
-Production Android kernels are built with all of those enabled, and since they impact code
-generation, the Rust code needed to account for them.</p>
-<p>Llamas then went into more detail about the deployment plan that will be used
-to convert users to the Rust implementation. A major problem with just rolling
-the Rust implementation out is the existence of
-
-vendor hooks: custom
-tracepoints used to inject vendor-specific behavior into the kernel. The Rust
-implementation of Binder was not able to reproduce those in every case, and
-therefore many vendors are stuck on the C implementation until they update their
-code. That's going to be a slow process.</p>
-<p>Old stable
-versions of the kernel will continue to have the C Binder, and receive security
-fixes, which gives the various Android vendors a little bit of leeway until
-they're forced to update. After the conference, the patch removing the C
-implementation
-
-was merged as part of the 7.4 merge window, so that is the
-version past which the Rust implementation is required. 7.3 is the designated
-long-term-support release for 2026.</p>
-<p>One person asked whether this would pose a problem for people compiling
-the kernel with GCC. Miguel Ojeda responded that many distributions are using a
-workaround for the current lack of Rust support in GCC: they are building
-the C side of the kernel with GCC, and the Rust side with LLVM. He said that he
-had advised against compiling the kernel in that way, because it is "a
-complete hack", though people who use it are unlikely to complain about
-being forced onto Clang. Greg Kroah-Hartman added that it will take months or
-years to learn about anyone who has problems with the Rust version of the
-driver, given how slowly Android vendors update their kernels. Furthermore, the
-removal is a single patch that can be cleanly reverted, if someone needs
-to continue using the C version.</p>
-<p>Llamas thought that it was worth considering what the removal process should
-look like for other code that gets ported to Rust. He asked what people thought
-should happen to the C version of converted drivers on long-term-support
-branches. Ojeda said that the process would be exactly the same as the existing
-policy for replaced C code. The only difference
-between Rust and C in long-term-support releases is that the Rust maintainers
-backport fixes for soundness problems, he said.
-Kroah-Hartman told Llamas not to worry about code that has been replaced:
-"Just delete it. I take patches for subsystems that have been deleted. It's
-fine."</p>
-<p>With that declaration, the session, the conference, and the presence of the C
-Binder driver in the kernel were all over. Binder is the first nontrivial component
-in the
-kernel to be ported to Rust, and its journey has revealed several pitfalls that
-don't apply to new drivers written in Rust from scratch. Still, the most
-difficult problems were not Rust-specific; they were the compatibility problems
-that any rewrite would face. Whether any other kernel components will find the hassle
-of a rewrite worth it, and how long they will take to accomplish it, remains to
-be seen.</p>
-<p>[ Thanks to the Linux Foundation, LWN's travel sponsor, for supporting my travel
-to Kangrejos. ]</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Copyright © 2026, Eklektix, Inc.
-            This article may be redistributed under the terms of the
-              Creative
-              Commons CC BY-SA 4.0 license
-            Comments and public postings are copyrighted by their creators.
-            Linux  is a registered trademark of Linus Torvalds</p>
+                <p>A walkthrough of the streaming data loop in Strands Robots, one loop that records robot demonstrations, trains on them by reading straight from the Hub, and deploys the policy back to hardware, with the dataset in the same on-disk LeRobot format the whole way through.</p>
+<p>Updated for Strands Robots 0.6 and LeRobot 0.7.</p>
+<p>You have an agent that can already drive a robot while your code records a demonstration and pushes it to the Hugging Face Hub. Now you want to run that loop continuously: collect episodes through the day, train a policy on the growing dataset, deploy it, and pull the next batch back to improve it. Run that loop once and every piece works. Run it every day and you start paying for the same byte transfers over and over. The recordings you upload keep growing, each training run copies the whole dataset to the GPUs before it starts, and every new checkpoint ships out while the next batch of recordings comes back.</p>
+<p>The first post in this series introduced Strands Robots, an open source SDK from AWS (Apache 2.0) that exposes robot abstractions, simulation, and the LeRobot stack as AgentTools you compose into a single Strands agent.  That post followed the agent loop in one direction, from a Hub dataset to a physical robot. This one follows the data the other way, from the first recorded frame back to the deployed policy, over Hugging Face Storage Buckets - a mutable, non-versioned, Xet-backed object-storage repository type announced in March 2026. A bucket sits beside your dataset repositories in the same hf:// namespace and uses the hf CLI you already have, so it becomes the working layer that holds your data between the day you record it and the day you train on it.</p>
+<p>Someone has to decide which episodes to keep, when the scene has drifted far enough to re-record, whether today's batch is enough to train on, and which checkpoint replaces the one on the arm. Each of those decisions comes up dozens of times over a collection campaign, and each one needs a look at what came back before the next command goes out. That is the work an agent is for: it drives the robot and reads the results, while the recording itself stays one line of your code. This post walks you through the data loop: record a demonstration into a Storage Bucket, store it so that each sync uploads only the bytes that changed, train by streaming the dataset straight from the Hub instead of downloading it, and deploy the checkpoint back to hardware with one keyword argument change. The runnable companion to this post lives at notebooks/12_streaming_data_loop.ipynb.</p>
+<p>Where the first post recorded a dataset and pushed it to the Hub, the loop you build here records a LeRobotDataset with one run(record=...) call, syncs it into a Storage Bucket, and streams that same dataset back frame by frame, decoding camera video on the fly, with no local copy. You read it back with LeRobot's own streaming reader, so the dataset Robot() recorded is exactly the one LeRobot trains on. Your trained checkpoint then deploys to that same Robot() with one keyword argument change, and the demonstrations it records on hardware return to the same bucket.</p>
+<p>Figure 1. The four stages share one backend. Robot("so101") records a LeRobotDataset with run(record=...); hf sync syncs it into a Storage Bucket; lerobot-train reads it back over the Hub through LeRobot's StreamingLeRobotDataset with no full download; and the trained checkpoint deploys to the same Robot with a port=. The on-disk format stays exactly as LeRobot wrote it.</p>
+<p>When the agent runs an episode, it invokes one tool, and the rollout then proceeds at the robot's control frequency until the episode ends, with the policy producing every action. Stripped down to the code, the whole loop is a handful of lines:</p>
+<p>What follows is what's actually happening inside that loop, step by step.</p>
+<p>That's it. Every stage in this post runs on a laptop with these three, plus the bucket and training items under Advanced. What runs is the loop, not a working policy: the default path uses a placeholder wave function, which records a valid dataset but not a useful one.</p>
+<p>You record new episodes through the day, each a continuous run of camera frames and joint state-action telemetry. LeRobot writes that as a small set of large files that grow as you record. Push them into a versioned dataset repository and every append becomes a commit, and every revision is retained. Collection wants the reverse: somewhere to write bytes and overwrite them in place. That is a Storage Bucket, which lives inside your Hugging Face workspace and uses the permissions you already have. There are no identity and access management (IAM) roles to configure, no cross-origin resource sharing (CORS) rules, and no upload service to maintain.</p>
+<p>Strands Robots records a LeRobotDataset in the same format LeRobot writes on hardware: pass record= to run(), and each run adds one episode. Record the episodes, then sync the finished dataset into a bucket. The wave function is a placeholder that produces joint targets without a trained model, so you can run the whole loop before you have a checkpoint to run:</p>
+<p>The sync writes to hf://buckets/{bucket}/{run_id}, where run_id is the folder name that follows the bucket, cube_pick here. The streaming read in Step 3 names the run too: the first two segments of the id are the bucket, and everything after them is the path inside it.</p>
+<p>Each sync uploads only the files that changed. Write to the bucket through the day, and publish a versioned copy to a dataset repository when you want one: record="hf://my_user/cube_picking", push=True does that at the end of a run. The placeholder episodes are not useful training data. Pass a trained Policy("<hf_repo>") to run() instead.</p>
+<p>To record on a physical SO-101, LeRobot's record CLI handles the leader-follower bring-up:</p>
+<p>The dataset lands on disk in the same format as the simulation recording, so the same sync takes it to a bucket: hf sync ~/.cache/huggingface/lerobot/my_user/cube_picking hf://buckets/my-org/robot-fave/run-021. Collection runs append into one place, and your published repositories only get the versions you choose to publish.</p>
+<p>Now that a dataset is in the bucket, the question is what the next sync costs you. Point two fixed cameras at an arm clearing the same table for eight hours and most of what you record is pixels you already have: the same lighting, the same chassis, the same background, across thousands of episodes. On a versioned repository it gets worse, because changing one frame in a multi-gigabyte video shard re-uploads the whole file.</p>
+<p>Buckets are backed by Xet, which deduplicates your uploads at the byte level using content-defined chunking. Chunk boundaries follow the content, so inserting a few bytes changes only the chunk it lands in instead of shifting every boundary after it. In Hugging Face's own measurements (HF Storage), content-defined chunking reduces data transferred per upload by about four times across the Hub, and on Enterprise plans billing is on the deduplicated footprint. Their bucket benchmarks show what that looks like on a single file. Starting from a 500 MB upload, changing 1% of the bytes and re-uploading moved 5.5 MB, changing 5% moved 27.5 MB, and changing 10% moved 55 MB. Without chunk-level deduplication, overwriting an object means sending all of its bytes again, whether or not they changed.</p>
+<p>How much that saves you depends on the file layout, and the Strands Robots recorder uses LeRobot's. Episodes go into Parquet shards (data/chunk-000/file-000.parquet) and per-camera MP4 shards (videos/observation.images.front/chunk-000/file-000.mp4), rolling to a new file when the current one fills, at LeRobot's defaults of 100 MB for data Parquet and 200 MB for video MP4. Each run(record=...) starts its own shards, and a lerobot-record session grows its open shard until it fills. Either way, a sync after a day of recording uploads the new trailing shards plus, at most, the one partially-filled shard that grew, rather than the whole dataset. Sync the same bucket again tomorrow and Xet handles the deduplication.</p>
+<p>Figure 2. A sync uploads only what changed. The first sync of a fresh dataset uploads every chunk; after recording more episodes, Xet's content-defined chunking means the next sync uploads only the new chunks and skips the ones already stored.</p>
+<p>To train, you point GPUs at your dataset. Download it first and those GPUs sit idle until hundreds of gigabytes finish copying. Streaming straight from the Hub works here because of the shard layout from Step 2: a batch becomes a few byte-range reads over large shards rather than thousands of small fetches. LeRobot's StreamingLeRobotDataset turns that into a drop-in torch iterable, and it opens a bucket with repo_type="bucket":</p>
+<p>Figure 3. Stream, don't download. The download path copies the whole dataset to local disk first, so the GPU waits; StreamingLeRobotDataset reads batches straight from the bucket with only metadata on local disk, so the GPU trains from the first batch.</p>
+<p>Nothing lands on local disk except the small meta/ folder of schema, statistics, and episode index, plus a seek index for the video shards: a full streaming read of the 86 MB lerobot/svla_so101_pickplace dataset left under 1 MB on disk. Camera frames are decoded from the remote MP4 shards as you iterate; state and action come from the Parquet shards. That loop reads one frame at a time, which suits inspecting an episode. To train, pass the reader to a DataLoader and iterate batches instead. The streaming dataset shuffles internally through a bounded reservoir buffer, so video decoding parallelizes across worker processes:</p>
+<p>On macOS, run that from a script with an if __name__ == "__main__": guard, because DataLoader workers start by re-importing the script.</p>
+<p>If you would rather not write the loop at all, LeRobot's own trainer reads through the same engine, so the dataset you collected trains without a line of new code. It takes a bucket through the same keyword argument the in-process reader uses:</p>
+<p>Buckets are streaming-only, so --dataset.repo_type=bucket requires --dataset.streaming=true and the config rejects the combination otherwise. --policy.push_to_hub=false keeps the checkpoint local; name a --policy.repo_id to publish it instead. Reach for StreamingLeRobotDataset directly when you want the loop in your own process: validating an episode, replaying it in simulation, or feeding a custom evaluation loop.</p>
+<p>The checkpoint lerobot-train writes loads straight back through the same entry point used to run any other policy, so the record-train-deploy loop closes in a few lines:</p>
+<p>A 20-step CPU run of ACT over the two-episode dataset above, streamed from a private bucket, wrote a checkpoint that Policy() loaded and ran on the simulated arm. Twenty steps over placeholder episodes check that the loop connects; it does not train a policy that grasps. Training time scales with dataset size, batch size, and step count, and a useful ACT policy needs real demonstrations and a GPU.</p>
+<p>Hugging Face's pre-warming caches bucket data at edge locations near the cloud and region where your jobs run, so your cluster reads locally and the dataloader stays ahead of the GPU. In Hugging Face's own bucket benchmarks, a warm content delivery network (CDN) read hit about 1,086 MB/s on a 10 GB payload against 780 MB/s cold, and roughly 1,124 MB/s warm at 100 GB, measured on an m5dn.24xlarge in us-east-1. The full comparison against plain object storage, upload as well as download, is on that dashboard. Choosing where that data lives is a Storage Regions setting on Team and Enterprise plans, as of this writing US and EU, with Asia-Pacific and Gulf Cooperation Council (GCC) regions announced as coming; outside those plans repositories are stored in the US.</p>
+<p>In this step you take the checkpoint you just trained, run it on a physical robot, and record the next round of demonstrations with it. This is the same agent code from the first post. The keyword argument that changes is port=, which selects the physical arm; id= names its LeRobot calibration, cameras= names the image keys the policy was trained on, and operator= approves its moves.</p>
+<p>Nothing moves on the real arm until operator= approves it. The demonstrations it records with record= are in the same LeRobot format you started with, ready to sync back to the bucket for the next training run.</p>
+<p>If your data already lives on Amazon Simple Storage Service (Amazon S3), nothing in this post changes: a LeRobotDataset is a directory of Parquet and MP4 shards, and every step reads it wherever it sits. A bucket adds the Hub-native path, the sync and the streaming read, with no storage to provision first.</p>
+<p>Run the loop again tomorrow and you record into the same bucket, sync only what changed, and stream it to the GPUs without waiting for a download. The data never leaves the LeRobot format.</p>
+<p>The full Strands Robots sample is on GitHub at strands-labs/robots in notebooks/12_streaming_data_loop.ipynb. It walks you through the full loop cell by cell: record, sync to a bucket, stream back, train, and load the checkpoint. Every cell runs in simulation on the placeholder policy, so no GPU and no Docker are needed, and without a bucket set it needs no Hugging Face credentials either.</p>
+<p>Run the cells top to bottom. To sync to a bucket, set HF_BUCKET=my-org/robot-fave before starting Jupyter (after hf auth login); each run syncs under its own folder, nb12-<id>, and the notebook streams back from it. Without HF_BUCKET it trains from the local folder instead. To train on a GPU, raise --steps and drop --policy.device=cpu in the training cell.</p>
+<p>The snippets here are a "hello world" of the Strands Robots data loop. Five things change once you run it against real data.</p>
+<p>Prompt injection. Supplying untrusted data to an agent can lead to prompt injection, where untrustworthy context is treated as LLM instructions. These agents actuate robots, so this is an important risk to track. Feed the agent only data from trusted sources. If not all input can be trusted, restrict the tools available to the agent so it cannot take safety-critical actions. In Strands Robots an agent cannot record, push, or calibrate, and on a real robot operator= answers every move and every policy run's plan before anything moves.</p>
+<p>Training data is a trust boundary. Anything that can write into the collection bucket can also write episodes that a policy later trains on, and that policy drives a physical arm. Keep the credential that writes collection data separate from the one a training job reads with, sync each run under its own run_id so an episode can be traced to the run that produced it and removed on its own, and treat the versioned dataset repository as the reviewed artifact, because the bucket keeps no revisions to audit against.</p>
+<p>Bucket credentials and scope. hf sync and StreamingLeRobotDataset use the token from hf auth login. Use a token scoped to the specific namespace you are writing to, prefer --private buckets for collection data, and keep the bucket distinct from the versioned dataset repository you publish and share.</p>
+<p>Overwrite in place keeps no revisions. A bucket overwrites in place and retains no revisions, which is what makes it a working layer and also means a repeated run_id replaces the run already stored there. Sync each collection run to its own path, as in hf sync ./recordings hf://buckets/my-org/robot-fave/run-021. For anything you need to be able to return to, push to a versioned dataset repository, where every revision is retained.</p>
+<p>Only use trusted Hugging Face orgs. Loading a checkpoint runs code its publisher chose. A Policy your own code builds loads directly; a Hub checkpoint the agent asks for by name loads only if the operator lists it in STRANDS_POLICY_REPOS (for example STRANDS_POLICY_REPOS=lerobot/smolvla_base,my_user/*). Only load checkpoints from organizations you trust. Model weights can contain arbitrary code (pickle-based checkpoints). Prefer safetensors-format checkpoints where available.</p>
+<p>The loop leaves a bucket, datasets under /tmp, and a checkpoint on disk. Bucket contents count toward your stored volume, so remove what you no longer need:</p>
+<p>Stop any training process still on a GPU instance, and stop the instance. If you ran the notebook, its last cell prints the command that removes its run. Anything you published to a dataset repository is versioned and is untouched.</p>
+<p>The Strands Robots documentation covers the robot catalog, simulation, policies, recording, and the mesh in depth. The recording guide documents run(record=...) and reading a dataset back with LeRobot.</p>
+<p>If you collect from more than one robot, give each one its own run_id and they write into the same bucket in parallel. The multi-robot mesh fans one agent out across those robots, so the same loop becomes a fleet collecting through the day into shared storage. A streaming reader reads one run at a time, so point each training run at the run_id it should learn from.</p>
+<p>If you want a larger policy than ACT, lerobot-train fine-tunes LeRobot's vision-language-action (VLA) policies, such as SmolVLA and pi0, on the dataset you just streamed, and the checkpoint loads as a Policy the same way. For heavier simulation to generate that data, the Newton (newton) and Isaac Sim (isaac) backends sit behind the same Robot(), so the agent code does not change as you scale up.</p>
+<p>Bucket streaming reached LeRobot through contributions from both the Strands Robots and LeRobot teams, upstream in LeRobot itself, so the datasets your agent collects are readable by every tool in that ecosystem. That runs both ways: the reader in Step 3 opens any of the LeRobot datasets already published on the Hub, so you can replay and evaluate against existing demonstrations before you record any of your own.</p>
+<p>Contributions are welcome under Apache 2.0. If you build something with this loop, open an issue with what worked and what didn't.</p>
+<p>Results of a internal benchmark on HF Storage Buckets</p>
+<p>Explore the robot data lifecycle with an interactive visual guide</p>
+<p>What makes this architecture particularly compelling is that the agent isn’t just executing a task—it’s sitting inside a continuous data, learning, and deployment loop. Connecting data collection, streaming, training, evaluation, and deployment through one agent workflow opens up some fascinating possibilities for adaptive systems. At the same time, the trust boundaries around data, credentials, and agent actions become critical. This is where custom AI agent development and enterprise AI agent solutions need to be designed as complete systems rather than isolated agent features. I came across Mobisoft Infotech while exploring this space: https://mobisoftinfotech.com/services/ai-agent-development-company</p>
+<p>¡Qué buena onda! Esta integración de Strands Robots con los Storage Buckets de Hugging Face está perrísima para automatizar todo el flujo de trabajo en robótica sin perder tiempo ni dinero. La verdad, la deduplicación de datos a nivel de bytes con Xet y el poder entrenar modelos mediante streaming directo desde la nube nos aligera un buen el trabajo con las GPU. ¡Es una chulada total para acelerar la recolección de demostraciones y el despliegue en hardware real sin complicarse la vida!  https://starzbet.mx/</p>
+<p>Results of a internal benchmark on HF Storage Buckets</p>
+<p>Explore the robot data lifecycle with an interactive visual guide</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lwn.net/Articles/1102982/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/amazon/strands-lerobot-streaming-data-loop" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

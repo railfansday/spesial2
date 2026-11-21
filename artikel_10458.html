@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</title>
+    <title>Physicists discover “astonishing” property of light that defies expectations</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10458.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,107 +15,70 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</h1>
+        <h1>Physicists discover “astonishing” property of light that defies expectations</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/multidimensional-quantum-light-data-communications.webp" alt="Physicists discover “astonishing” property of light that defies expectations" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/multidimensional-quantum-light-data-communications.webp" alt="Physicists discover “astonishing” property of light that defies expectations" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Picture this. A customer writes to your support chatbot: "Hi, I'm Asha, my card ending 4111 was charged twice, call me on 98400 12345." Your Java service wraps that message in a prompt, sends it to a model, and logs the whole thing so you can debug it later. Congratulations, you now have a customer's name, phone number and card details sitting in a plain text log file that half the engineering team can open.</p>
-<p>This happens more often than people admit. Logging AI calls is genuinely useful, but prompts and responses are some of the most personal text your application ever touches. Here's how to keep the usefulness and drop the risk.</p>
-<p>A regular web request is easy to log: URL, status code, time taken. AI calls are messier.</p>
-<p>The output changes from run to run. If a user says "your bot gave me a wrong answer yesterday", the only proof of what happened is what you sent and what came back at that moment. You can't just replay it and expect the same result.</p>
-<p>Prompts are also built, not typed. The final text is usually a template, a few retrieved document chunks, some chat history and the user's message stitched together. When something looks off, the bug could be in any of those pieces, and only the assembled prompt shows you which one.</p>
-<p>Then there's cost. You pay by the token, so without per-call records you can't say which feature is burning money. And quality drifts over time as models get upgraded and templates get edited. Old logs are your only baseline.</p>
-<p>So yes, you need these logs. The real question is what goes into them.</p>
-<p>Before writing any masking code, agree on what counts as sensitive. In most business apps that means:</p>
-<p>Names, emails, phone numbers and home addresses</p>
-<p>Card numbers, bank details and government ID numbers</p>
-<p>Health, legal or job-related details people mention in free text</p>
-<p>Internal material like contract wording, pricing rules or source code</p>
-<p>The first three groups follow patterns, so they're easy to catch. The last two don't, and that's where most teams get caught out. Keep that in mind, because it shapes the design below.</p>
-<p>The safest sensitive value is the one that never reaches the log. So split what you record into two buckets.</p>
-<p>The first is metadata: a request ID, a hashed user or tenant ID, model name, prompt template name and version, token counts, latency, retry count, error type and estimated cost. None of this is personal, and it answers most day-to-day questions.</p>
-<p>The second is content, meaning the actual prompt and response text. You only need this when you're investigating quality, and even then you rarely need all of it. A sensible default is to log metadata for every call and masked content for a small sample, maybe five percent, plus every failed call.</p>
-<p>Here's a mistake that's easy to make: letting the log appender clean things up afterwards. By then the raw text may already be in a buffer, an async queue or a crash dump. Mask first, then log.</p>
-<p>The cleanest way is one small component that every AI log call has to pass through:</p>
-<p>public interface PiiMasker {
-    String mask(String input);
-}</p>
-<p>Nothing else is allowed to write raw prompts. One chokepoint is much easier to review and test than masking sprinkled across fifty classes.</p>
-<p>For structured data like emails, cards and tokens, regular expressions do the job well:</p>
-<p>public class RegexPiiMasker implements PiiMasker {
-
-    private static final Map<Pattern, String> RULES = new LinkedHashMap<>();
-
-    static {
-        RULES.put(Pattern.compile("[A-Za-z0-9.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[EMAIL]");
-        RULES.put(Pattern.compile("\b(?:\d[ -]?){13,19}\b"), "[CARD]");
-        RULES.put(Pattern.compile("\b(?:\+?\d{1,3}[ -]?)?\d{10}\b"), "[PHONE]");
-        RULES.put(Pattern.compile("(?i)bearer\s+[A-Za-z0-9.~+/=-]+"), "Bearer [TOKEN]");
-    }
-
-    @Override
-    public String mask(String input) {
-        if (input == null || input.isBlank()) return input;
-        String result = input;
-        for (var rule : RULES.entrySet()) {
-            result = rule.getKey().matcher(result).replaceAll(rule.getValue());
-        }
-        return result;
-    }
-}</p>
-<p>A few small choices matter here. The patterns are compiled once, not on every call. The order is fixed, because a card number can otherwise get half eaten by the phone rule. And the replacement labels such as [EMAIL] keep the sentence readable, so whoever debugs it later can still follow what the user was asking.</p>
-<p>Regex won't catch a name like "Asha Raman" or an address buried mid-sentence. For those you have a few options, and they work best together.</p>
-<p>You can run a named-entity recognition model that tags people, places and organisations, then mask anything above a confidence threshold. You can do exact replacement of values you already know, such as the customer's name from the current session. Or, best of all, you can mask at the field level while building the prompt. If your code knows that customer.getEmail() is going into the template, swap in a placeholder right there instead of trying to spot it afterwards. Knowing beats guessing every time.</p>
-<p>Plain redaction can remove too much. If the same email shows up five times in a conversation, five identical [EMAIL] tags hide the fact that it was one person.</p>
-<p>The fix is consistent pseudonyms. Turn each real value into a short token using a keyed hash, so the same email always becomes something like EMAIL_7f3a. You can still follow the thread, but nobody can read the original from the log. Use an HMAC with a secret from your secrets manager. A plain unkeyed hash of a phone number can be brute-forced in minutes, because there just aren't that many phone numbers.</p>
-<p>One warning: if you also store a lookup table to reverse the tokens, that table is now sensitive data too. Most teams are better off with one-way tokens.</p>
-<p>Free-text log lines are hard to search and easy to leak through. Write one JSON record per AI call with clearly separate fields:</p>
-<p>log.info("ai_call",
-    kv("requestId", requestId),
-    kv("model", model),
-    kv("promptVersion", "support-reply-v4"),
-    kv("inputTokens", usage.inputTokens()),
-    kv("outputTokens", usage.outputTokens()),
-    kv("latencyMs", elapsed),
-    kv("promptMasked", masker.mask(prompt)),
-    kv("responseMasked", masker.mask(response)));</p>
-<p>Now dashboards for cost and latency never need to touch the text fields at all. You can also keep the two kinds of data for different lengths of time: metadata for a year, masked content for a couple of weeks. Put the request ID into your logging framework's MDC so every line belonging to one call, including retries and tool calls, carries the same ID.</p>
-<p>Streaming trips people up. Tokens arrive in tiny pieces, and a card number can be split across two chunks, which means masking each chunk on its own will miss it. Collect the full response in a buffer, mask it once the stream ends, and log that. If the stream dies halfway, run the partial buffer through the same masker.</p>
-<p>Tool calls are the other trap. When the model calls one of your Java methods, the arguments and return values are often the most sensitive thing in the whole exchange: order details, account balances, addresses. Treat them as part of the prompt and response. Log the tool name, duration and outcome by default, and log arguments only after masking.</p>
-<p>Masking lowers the risk but never removes it, so surround it with some ordinary discipline:</p>
-<p>Give content fields a short retention period. Old prompt archives are liabilities.</p>
-<p>Limit who can read AI logs. Debugging a model doesn't mean someone needs to read customer messages.</p>
-<p>Encrypt log storage and the pipeline that feeds it.</p>
-<p>Log the hashed user ID so you can find and delete one person's records when they ask.</p>
-<p>Allow verbose logging in development with fake data, and enforce strict settings in production through configuration, not through people remembering.</p>
-<p>A masker that quietly stops working is worse than having none, because everyone assumes the logs are clean. Write tests for it:</p>
-<p>@Test
-void masksEmailAndCardNumber() {
-    String raw = "Contact me at asha@example.com, card 4111 1111 1111 1111";
-    String safe = new RegexPiiMasker().mask(raw);
-
-    assertFalse(safe.contains("asha@example.com"));
-    assertFalse(safe.contains("4111"));
-    assertTrue(safe.contains("[EMAIL]"));
-    assertTrue(safe.contains("[CARD]"));
-}</p>
-<p>Build a small set of messy, realistic samples: numbers with odd spacing, mixed languages, addresses inside sentences, text pasted from spreadsheets. Run them in your CI pipeline, and add a new case every time a leak turns up. A scheduled job that scans stored logs for patterns that should never appear makes a good safety net too.</p>
-<p>A few I'd watch for. Logging raw text at debug level and assuming production never enables it; debug flags get switched on during incidents, so mask at every level. Masking only the user's message while forgetting retrieved documents, system prompts and tool results. Letting SDK exceptions carry the full request body into the logs. Leaving wire-level HTTP logging on in production, which bypasses your masker completely. And treating masking as finished once it ships, when every new prompt template can bring new kinds of data.</p>
-<p>Every AI call writes a structured metadata record with a request ID</p>
-<p>All prompt and response text goes through a single masker first</p>
-<p>Streams are masked after assembly, and tool arguments are masked too</p>
-<p>Content logging is sampled, short-lived and access-controlled</p>
-<p>Tests cover the masker, with a regression case for every past leak</p>
-<p>Client libraries aren't dumping raw payloads into the logs</p>
-<p>Good logs turn an AI feature from a black box into something you can actually debug, price and improve. The same logs can also expose the people who trusted you with their details. The way through is fairly plain: record metadata for every call, push all content through one well-tested masker, use pseudonyms when you need to follow a conversation, handle streams and tools carefully, and keep retention short. Set that up before launch, not after the first incident, and you get visibility without regret.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Scientists have discovered a surprising ability of light that allows it to develop spinning patterns as it moves through empty space, without relying on special lenses, mirrors, or materials. The finding reveals that light possesses a hidden geometric structure that can influence its behavior in ways researchers previously thought were difficult to achieve.</p>
+<p>The discovery comes from an international team led by researchers at the University of East Anglia (UEA) in the United Kingdom, working with scientists in South Africa. Their experiments demonstrate that carefully prepared light can be controlled through its own internal geometry, offering a new approach to manipulating how light spins and twists.</p>
+<p>The findings challenge long-standing assumptions about how different properties of light interact. They could eventually lead to more sensitive medical tests, faster and more secure communications, and advanced quantum technologies that use light to transmit and protect information.</p>
+<p>Why the Direction of Light's Spin Matters</p>
+<p>One of the most intriguing aspects of the discovery involves chirality, a scientific term describing the difference between left-handed and right-handed structures.</p>
+<p>Human hands provide a familiar example. Although they are mirror images of each other, a left hand cannot be perfectly superimposed on a right hand. Many molecules have a similar property, including compounds used in medicines. Two versions of the same molecule can have nearly identical chemical structures yet produce very different effects in the body.</p>
+<p>Scientists can distinguish these molecular forms by studying how they interact with light that has a particular rotational behavior. Traditionally, producing and controlling such light has often involved specialized materials, carefully designed surfaces, or powerful lenses that focus beams extremely tightly.</p>
+<p>The research demonstrates that appropriately prepared light can develop this behavior naturally as it travels, without requiring those additional optical components.</p>
+<p>"Our work shows that light can naturally develop this handed behavior all on its own," said Dr. Kayn Forbes from UEA's School of Chemistry, Pharmacy and Pharmacology.</p>
+<p>"You just have to prepare it in the right way.</p>
+<p>"Most people think of light as traveling in straight lines. But scientists can also create structured light -- light whose brightness, shape, and direction are carefully arranged.</p>
+<p>"One extreme example is light that twists as it travels, forming a corkscrew shape known as an optical vortex. Each twist can carry information, making this kind of light valuable for high-speed internet, secure communications, and advanced sensors.</p>
+<p>"Light can also spin as it travels, depending on how it is polarized. This spin can be left-handed or right-handed -- another form of chirality."</p>
+<p>Scientists Discover How Light Develops a Hidden Spin</p>
+<p>Light can exhibit different kinds of rotational behavior. An optical vortex, for example, has a wave pattern that twists around its direction of travel, much like a corkscrew. Light also has a property known as polarization, which describes how its electric field oscillates. Certain polarization patterns produce a form of rotation called spin.</p>
+<p>Physicists have long studied the relationship between these two properties. However, the interactions responsible for the newly observed effect were generally considered extremely weak and difficult to detect without specialized experimental conditions.</p>
+<p>The researchers found that the situation changes when a beam of light is prepared in a particular balanced configuration.</p>
+<p>Under those conditions, the beam can initially have no spin, yet distinct regions with spinning behavior emerge as it travels through free space. The effect does not require the light to pass through engineered materials or additional optical devices.</p>
+<p>"It starts off with no spin at all," explained MSc student Light Mkhumbuza, who carried out key experiments. "But as the beam travels forward, spinning regions appear and separate out -- almost as if the spin was hiding and then revealed itself."</p>
+<p>Rather than creating spin through an external optical component, the researchers demonstrated how the beam's existing internal structure can determine where spinning regions develop during propagation.</p>
+<p>To explain this unexpected behavior, the researchers turned to topology, a mathematical field concerned with properties that remain unchanged when objects are continuously stretched, bent, or reshaped.</p>
+<p>Dr. Isaac Nape, from the University of the Witwatersrand in Johannesburg, South Africa, offered a simple way to understand the concept.</p>
+<p>"To explain it, imagine a mug and a doughnut," he said. "You can morph one into the other without tearing it, because they both have one hole. That hole is a topological feature."</p>
+<p>The researchers found that structured light possesses its own topological characteristics, encoded in the arrangement of its polarization.</p>
+<p>This underlying pattern acts like a mathematical fingerprint. Even as the light beam changes shape while traveling, its topological structure remains, influencing how different regions of the beam evolve.</p>
+<p>As a result, the arrangement of the light itself can determine where its left-handed and right-handed spinning patterns become visible.</p>
+<p>The discovery gives scientists a way to guide this behavior by designing the beam's initial structure, rather than depending on specialized materials to produce the desired effect.</p>
+<p>"This gives us a completely new tuning knob for light. By adjusting its topology, we can decide how and where chirality appears," said Dr. Nape.</p>
+<p>Potential Breakthroughs in Medicine and Communications</p>
+<p>The ability to control light through its geometry could eventually make several important optical technologies simpler, more affordable, and more versatile.</p>
+<p>One particularly promising application involves medical diagnostics and pharmaceutical research. Because many biologically important molecules have left-handed and right-handed forms, carefully structured light could help scientists identify these differences with greater sensitivity. Such tools could be valuable for evaluating drug safety and detecting biological markers associated with disease.</p>
+<p>The same principles could support smaller optical sensors capable of identifying chemicals or biological substances without requiring large, sophisticated laboratory instruments.</p>
+<p>Communications technology could also benefit. By encoding information into different twisting and spinning patterns, researchers may be able to increase the amount of data carried by individual light beams. This could contribute to faster optical communications, improved information security, and future quantum networks.</p>
+<p>Other potential uses include manipulating microscopic particles, cells, and molecules with light, as well as developing more resilient quantum systems. Topological properties may help protect delicate quantum information against certain forms of noise and interference.</p>
+<p>"The implications are wide-ranging," said Dr. Forbes. "This work could lead to simpler and more sensitive medical tests, especially in drug development.</p>
+<p>"It could also be used to pack more information into laser beams -- boosting data capacity for communications, including future quantum networks.</p>
+<p>"And because the effect doesn't rely on fragile materials or precision-engineered surfaces, it could be easier and cheaper to use in real-world technologies.</p>
+<p>"This research could lay the foundations for a new generation of light-based technologies, by showing that light's behavior can be controlled using its own internal geometry," he added.</p>
+<p>These applications remain possibilities for future development, but the underlying discovery provides researchers with another way to design and control the behavior of light.</p>
+<p>A Hidden Property of Light Finally Revealed</p>
+<p>For decades, scientists have relied on increasingly sophisticated optical equipment to produce and manipulate unusual forms of light. The findings suggest that some of these behaviors can instead arise from carefully designed structures already encoded within a light beam.</p>
+<p>By showing how topology governs the emergence of spinning regions during propagation, the team has revealed a previously underappreciated connection between light's geometry and its physical behavior.</p>
+<p>The discovery also illustrates how much remains to be learned about something as familiar and extensively studied as light.</p>
+<p>"For something so familiar, light is proving to be far richer, stranger and more powerful than anyone imagined," said Dr. Forbes.</p>
+<p>"And astonishingly, this new behavior has been there all along -- just waiting to be seen."</p>
+<p>The research, 'Topological Control of Chirality and Spin with Structured Light', was published in the journal Light: Science & Applications.</p>
+<p>Materials provided by University of East Anglia. Note: Content may be edited for style and length.</p>
+<p>New Once-Daily Pill Slashes Bad Cholesterol by Nearly 65% in Clinical Trial</p>
+<p>A Major Review Reveals Three Antidepressants That May Outperform Prozac</p>
+<p>Does the Sun Have a Secret Companion? A Controversial Theory Could Explain Earthâs Mass Extinctions</p>
+<p>Heart Stents May Not Prevent Heart Attacks or Early Death, Landmark Study Finds</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/logging-ai-prompts-and-responses-in-java-without-leaking-sensitive-data/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/10/261011211615.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

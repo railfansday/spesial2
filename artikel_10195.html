@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accelerating development for massive Git repositories</title>
+    <title>The Frankenstein Table</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10195.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Accelerating development for massive Git repositories</h1>
+        <h1>The Frankenstein Table</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/10/zombie-table.jpg" alt="The Frankenstein Table" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/ABFS-Header-Meta.2e16d0ba.fill-1200x600.png" alt="Accelerating development for massive Git repositories" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/10/zombie-table.jpg" alt="The Frankenstein Table" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Android’s source code is big – the Android 17 open source release has 1,084 Git repositories, 1.62 million files, and takes 300 GB for a built workspace. Additionally, in a typical Android source tree with hardware vendor code and first-party applications, the size increases by 2-3x. Traditionally, it took over 30 minutes to fetch Android Open Source Project (AOSP) source code and well over an hour to build on even highly capable developer workstations. As software development evolved over the last 2 years, modern coding harnesses and LLMs have accelerated the development of many projects. These tools are used today for Android operating system development, but the long sync and build times make them less efficient. Both human developers and agents need quick setup, parallel workspaces, and fast build-and-test iteration times.</p>
-<p>We built Another Build File Service (ABFS) to address these bottlenecks. ABFS is a full suite of software across a Linux kernel filesystem module, user-space daemons, and server-side infrastructure. ABFS uses content-addressability across the entire stack to lazy-load and cache source code, developer workspaces, intermediate build files, and build results.</p>
-<p>Today, we are excited to announce that ABFS is open source on GitHub.The impact of ABFS to Android is:</p>
-<p>ABFS already powers parallel workflows for developers and agents in Android, but it is designed to scale to other massive Git-based projects.</p>
-<p>In the Android build system, developers define build rules in Blueprint files (Android.bp), Soong compiles them into Ninja files, and Ninja executes the final build graph (see the Android build overview). Similar to the Make build tool, Ninja is timestamp-based. If a build step’s input file is newer than the existing output file, Ninja rebuilds the output file.</p>
-<p>Analyzing the AOSP code for Android 17 shows the sheer disk footprint and file count involved in a single checkout and build.</p>
-<p>In a typical Android tree that includes hardware-specific repositories, board support packages, first-party applications, form-factor-specific code, etc., the code size is 2–3 times the size of AOSP (over 3,000 Git repositories), compounded across multiple active SKU and legacy maintenance branches.</p>
-<p>Building the Cuttlefish emulator target executes a build graph with 192,249 Ninja actions. While local incremental builds are fast once a tree is already built, every new workspace, branch switch, or ephemeral agent session starts cold.Even though typical developer changes touch only 1-10 different Git projects, someone building locally without any remote execution might waste up to 80 minutes on a 64-core machine repeating work their CI system already built. Even if a developer edits a core library like system/libbase, 97% of the build graph is identical to the CI build.</p>
-<p>Sharing cached build outputs across CI and local machines is also tricky in a codebase of Android's age and rate of change. Build rules occasionally introduce hidden dependencies (such as passing an undeclared schema file inside raw compiler flags), over-declared inputs, or undeclared outputs. In timestamp-based builds, hidden dependencies silently produce stale incremental artifacts, forcing developers to wipe output directories and run clean builds.</p>
-<p>ABFS makes building Android fast by replacing massive local source checkouts with a virtual, content-addressable filesystem (CASFS). ABFS streams files on demand only when a build actually touches them and utilizes shared build caching to help eliminate redundant downloads and compilation.</p>
-<p>On the server side, Git-pushers continuously ingest new Git objects from Gerrit or other Git hosts into a horizontally scalable gRPC ABFS Content-Addressable Storage (CAS) Server that indexes Git content, workspace snapshots, and build step results. On the developer host, a local Least Recently Used (LRU) Cacheman daemon, Mount Daemon, and Tap utility connect user-space build tools to the kernel filesystem so checkouts and builds stream only what they need. See the full ABFS architecture on GitHub.</p>
-<p>At the core of the client is a virtual filesystem called Content-Addressable Storage Filesystem (CASFS), a Linux kernel module that exposes Git SHA content hashes via extended attributes. When a file's hash is set, CASFS populates its metadata immediately and downloads file bytes via Cacheman only when needed:</p>
-<p>Initial checkouts download only lightweight directory metadata prepopulated with Git hashes. CASFS uses Git's object model natively, allowing standard git and repo operations to work transparently.</p>
-<p>CASFS can also tap build processes. Tapping records every file actually read, written, or deleted into lists called patches, which are stored alongside cached build outputs. Ninja-go replaces timestamp checks with two-phase content-addressable caching:</p>
-<p>Ninja-go accelerates Ninja-based builds like Android and Chrome; other build systems can integrate with ABFS's caching APIs using the same model (see the two-phase caching walkthrough on GitHub).</p>
-<p>Each mounted checkout attaches to a persistent workspace that eagerly syncs modified files, git state, and repo state through Cacheman to the ABFS CAS Server—keeping mounts synchronized across sessions or across multiple developer hosts.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>The benchmarks below show the mean time of 3 Android runs on a GCE n2d-standard-64 VM with 64 vCPUs and 256 GB of RAM. The ABFS remote server was running in the same cloud network as the client.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>Because ABFS does lazy loading and local cache deduplication, developers and their agents can now mount multiple concurrent Android workspaces on a single machine, benefit from a shared local build cache, and achieve massive scale in development time.</p>
-<p>An agent can check out a full Android tree in under 10 seconds and perform a full build in under 10 minutes. Agent swarms are empowered to iterate, review, and test in parallel, which can lead to higher quality solutions and speed.In the demo below, an agent makes a system/libbase fix on the latest AOSP release, then 4 parallel agents simultaneously backport, build, and test the fix across 4 more AOSP releases on a single VM.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Link to Youtube Video
-          (visible only when JS is disabled)</p>
-<p>We released ABFS as open source because we want developers, Android partners, and any large-scale Git-based project to benefit from what we have learned and be able to scale.</p>
-<p>While Android’s Soong/Ninja pipeline was the first acceleration target, ABFS was built to be extensible to other build systems. Content-addressable build systems like Bazel map naturally onto CASFS and there is already a proof-of-concept integration with Bazel. Chromium, the Android Common Kernel, and other Google projects are exploring ABFS compatibility.</p>
-<p>Explore ABFS, CASFS, and Ninja-go on GitHub, and reach out to us at abfs@google.com.</p>
-<p>For help with the Google Cloud server-side, infrastructure-as-code, and CASFS for Cloud Workstations and Kubernetes, please reach out to abfs-gcp@google.com.</p>
-<p>We’d like to extend a special thanks to our significant contributors for their work on this project:</p>
-<p>Haamed Gheibi, Erik Sanders, Rob Seymour, Taylor Santiago, Andrew Hsieh, Eric Taseski, Kiyoung Kim, Hung-Wei Chen, Jose “Pepe” Galmes, Ronald Li, Yu-Che Wang, Roger Ellis, Sandeep Patil, Amith Dsouza and the entire Android Build team</p>
-<p>Agent Anomaly Detection: Safeguarding agents across other clouds</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
-<p>Gemini 4 Hydrogen: a faster model for general purpose robotics</p>
-<p>Check what your AI agents do before they do it, with Semantic governance policies</p>
+                <p>It was naivety, but when I first came across Flexbox, and then CSS Grid, I had this feeling all those positioning properties (align-self, justify-content…) would be available to use on block and inline elements; things like tables, lists, fixed elements, everything. The workings might be different under the hood, depending on the reference boxes, but the syntax and expected outcomes would be same: push to one edge, keep at the center, spread around evenly, etc.</p>
+<p>Although that didn’t happen, what if I made something of that sort?</p>
+<p>For example, I could take out the soul of an HTML table and stitch it back together with CSS Grid. In other words, it reads like a table, but acts like a grid, allowing me to use grid properties. Believe it or not, some form of this was used in the past to make tables responsive.</p>
+<p>Before I kill off a table in this article though: there are a lot of advantages to straight-up tables. They provide a clean semantic layout that browsers perfectly understand and translate for assistive technology when needed. There’s even a <caption> element.</p>
+<p>On the CSS side of things, there are indeed circumstances where CSS Grid is necessary for its intrinsic responsiveness, source order independence, and positioning. That’s why it’s an indispensable tool for layouts. Use that and let HTML tables to do the work of actually displaying tabular data!</p>
+<p>But there’s the presentational benefit of table we should consider. Technically, <table> is not a presentational element like a <div>. It’s semantic: the browser and I share a common meaning for it. But whether the browser understands it as such or not, if I read <th> I believe it’s a heading followed by data. Let’s say that’s pseudo-semantic to me, if presentation is not the right term.</p>
+<p>That pseudo-semanticism is still useful. It’s the difference between me having to read this:</p>
+<p>Despite there being semantic elements for titles, like <h1> and <strong>, they don’t bring in the connection that <th> and <td> have, and it’s better to reserve <dt> and <dd> for textual structuring like glossaries rather than layouts.</p>
+<p>So, is it okay if I use <th> this way? I mean, the table itself merely used as pseudo-semantic markup skin:</p>
+<p>Then, this CSS and its outcome (for the first markup):</p>
+<p>To me, the latter markup example — a pseudo-semantic table — is easier to scan than a handful of generic divs. I get the pseudo-semantics of table, and the ease of using CSS Grid for the layout. As for browsers, none of them have shunned this sort of Frankenstein creation, at least yet. The VoiceOver and keyboard navigation works as if it’s a real table.</p>
+<p>But it’s understandable why it looks more than a little gross and against the grain of what we should be able to. We’re encouraged to maintain a separation of concerns between content and presentation and this does exactly that without affecting the tables semantics, such as its role. But maybe it should? There are plenty of other HTML elements that CSS is capable of busting.</p>
+<p>Andy Clarke shows you how to create designs that people recognize and remember in his brand-new e-book, Standout Designs for the Web. Pre-order it today!</p>
+<p>Interesting concept. I like the idea of building out a data/stats card (say, one you’d see in the header of a CRUD edit/view page) with this method.</p>
+<p>yes this is indeed scary and i would not use it for these reasons:</p>
+<p>– headings are more appropriate in this layout (slap a list or group on it if you want to be more verbose)
+– changing the display alone already stripped the soul (semantic) of the table
+– pseudo-semantic is only a developer convenience, not for the end users (VoiceOver is only one of many screen readers, not enough to confirm it works like a real table)</p>
+<p>I would suggest a “ in your example. Also the bank does not have a label, correct would be `IssuerName of the bank`. So most of the time there are other ways before using a table with all its markup.</p>
+<p>Ha! HTML elements got stripped. So I meant a definition list (dl) and the “Issuer” would be the “th” and “Name of the bank” would be the “td”.</p>
+<p>You don’t need to resort to misusing HTML tables for this layout. Your original HTML version could be much improved by simply using sections, headings and paragraphs. In addition, you can also hand over the all-caps and line-breaks styling to CSS while you’re at it. No divs, spans, nor incorrect use of the strong element.</p>
+<p>The pseudo-semantic angle is what really sold me here. I run an informational niche site that’s full of reference tables (status codes, payment schedules), and scanning raw markup with / pairs is so much easier to read than a pile of nested divs. That said, Mike Mai’s point about VoiceOver gives me pause — I’ll probably keep this trick for decorative layouts and leave the actual data tables semantically intact.</p>
+<p>This is a fun experiment, and I especially liked the distinction you drew between a real table and a pseudo-semantic one. Once display: grid is applied, the browser no longer treats the th and td relationship the way it does in a normal table, so the visual connection stays for sighted readers while the structural meaning is lost. That trade-off is what makes Mike Mai’s point land for me: it is convenient for the author, but assistive technology does not get the same benefit. I would keep this pattern for a purely presentational card only where the same information is also available in a straightforward, accessible form, rather than using it for actual data.</p>
+<p>This is a fun experiment, and I especially liked the distinction you drew between a real table and a pseudo-semantic one. Once display: grid is applied, the browser no longer treats the th and td relationship the way it does in a normal table, so the visual connection stays for sighted readers while the structural meaning is lost. That trade-off is what makes Mike Mai’s point land for me: it is convenient for the author, but assistive technology does not get the same benefit. I would keep this pattern for a purely presentational card only where the same information is also available in a straightforward, accessible form, rather than using it for actual data.</p>
+<p>I’m curious as to why you avoided using a DL here. MDN says “Common uses for this element are to implement a glossary or to display metadata (a list of key-value pairs).” These days you can also wrap the dt/dd in div elements to more easily style these pairs.</p>
+<p>As for browsers, none of them have shunned this sort of Frankenstein creation, at least yet.</p>
+<p>They have for years. It was such a common barrier I made a function in 2018 to try to restore some table semantics. While it took years for browsers to catch up, even in 2022 tables with display properties were a mess and, unsurprisingly, there are still regressions and new bugs. Using display: contents is equally risky, and this is partly because it wasn’t well specified (meaning the spec did a poor job and browser vendors didn’t recognize all the gaps).</p>
+<p>In addition, this is not a well-formed table. A linter or other automated code checker should call this table out for missing a cell in row two:</p>
+<p>The experience for a screen reader use navigating down the right column might be that they never hear that cell (and I assume that brand is important if it’s included). The user may also get incorrect row and column cell counts.</p>
+<p>I encourage readers to test with more than VoiceOver, and additionally to test with daily screen reader users. Further, given the years of display regressions (looking at Safari in particular), to re-test this construct for every new browser release.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/accelerating-development-for-massive-git-repositories/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/the-frankenstein-table/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

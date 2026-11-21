@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers Model Integration Contracts</title>
+    <title>Anthropic Mathematician Claims to Prove Riemann Hypothesis</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9915.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,142 +15,99 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers Model Integration Contracts</h1>
+        <h1>Anthropic Mathematician Claims to Prove Riemann Hypothesis</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/ai_64.png" alt="Anthropic Mathematician Claims to Prove Riemann Hypothesis" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/ai_64.png" alt="Anthropic Mathematician Claims to Prove Riemann Hypothesis" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
-(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
-During training, it could peek at the answer it was supposed to predict.
-Nothing crashed, and the bug stayed in main for almost two months.</p>
-<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
-it on every one of them. This post is about that model and the tests built
-around it.</p>
-<p>Transformers supports over 750
-model types, and its test suite is big: 88,000+ CPU tests on main, plus
-200,000+ GPU tests in a daily run. Model tests are only part of it: we also
-test pipelines, training, distributed execution, quantization and attention
-kernels.</p>
-<p>The integration tests load real checkpoints and exercise the model's API on
-real hardware. Running all of that on every PR would mean keeping a lot of GPUs
-busy all day long, which isn't practical. By the time a scheduled run finds a
-regression, it may already be in main.</p>
-<p>Our approach is to shrink the model instead. We build a fixture: a small
-model made from the real checkpoint's configuration, with fewer and narrower
-layers but every kind of layer it has, and its tokenizer and processor files
-unchanged. It is published once, then reused. We run "fast integration tests"
-against it on a cheap CPU runner. In our
-CPU study,
-the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
-is 1,227 MB.</p>
-<p>This also covers very large models: some don't fit on our standard GPU
-runners, but their fixtures run on CPU.</p>
-<p>Model integrators already build tiny test models (Transformers' tiny-random-*
-checkpoints). We wanted a common recipe, and
-checks that go beyond loading the model and running a forward pass. The UMT5
-bug would have passed a forward pass just fine.</p>
-<p>Fixtures won't replace full integration tests, but on PRs they give us a
-chance to catch bugs before they reach main.</p>
-<p>transformers-mic is a proposed
-standard for packaging these tests. A Model Integration Contract (MIC) has
-three parts:</p>
-<p>The contract holds if running the usage path on the fixture still produces the
-baselines.</p>
-<p>A contract covers an architecture and a usage path, not a single checkpoint:
-compatible checkpoints can share a fixture, while each keeps its own expected
-results. We publish them in huggingface-mic.</p>
-<p>For example, the SmolLM contract generates from prompts such as "The capital
-of France is" and compares its token IDs with a recorded answer. After loading
-the model and tokenizer, the generation code is, simplified to one prompt:</p>
-<p>It also compares training loss, checks that gradients are finite and verifies
-that an optimizer step changes the weights. See the full
-usage.md.</p>
-<p>A fleet dataset
-on the Hub pins each MIC to a frozen revision, along with the package versions
-used to record its baselines. Each CI run records the fleet revision it
-used, so we can reproduce it later.</p>
-<p>On a PR, we pick MICs based on the files the patch changes.</p>
-<p>We replayed frozen MICs over five months of Transformers commits. The small
-UMT5 fixture flagged the regression from its introduction on July 30, 2026
-until its fix on September 28.
-Label log-probabilities differed from the reviewed baseline by 1.22 and training
-loss by about 0.20.</p>
-<p>One detail mattered: the contract used SDPA, the default attention path.
-Running only the eager attention variant missed the bug. A fixture only
-helps if it goes through the same code as the real checkpoint.</p>
-<p>We then reverted the fix on a proof branch in Transformers' CI. The check
-failed with the same differences, and the selected T5 contract's runner step
-took 13.4 seconds on CPU, excluding setup.</p>
-<p>The replay results
-and the CI demo
-have the measurements and reproduction details.</p>
-<p>The first recipe was simple: make the dimensions smaller and keep fewer
-layers. That wasn't enough for mixed architectures. Keeping two layers is no
-use if both use sliding attention and the full-attention layers disappear.</p>
-<p>We also keep the original weights file format. Otherwise we would skip the
-conversion code that runs when a user loads the real checkpoint.
-The full recipe
-has more detail.</p>
-<p>The Llama 4 Scout shrink report
-shows what this looks like on a big model. 108.6 billion parameters become 44.7
-million. The vision stack goes from 34 layers to 2 and the language stack from
-48 to 4, keeping the checked layer kinds and MoE routing style.</p>
-<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
-model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
-the candidate baselines. The LLM drafts; it doesn't approve. Changed
-expectations require human review.</p>
-<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
-<p>It drafts the contract, builds the fixture and records its baselines on your
-machine, asking you to review each step, and stops before uploading anything.
-For a new model, the draft comes from an LLM through Inference Providers, billed
-to your own account (--bill-to ''). The
-CLI docs
-cover the individual steps.</p>
-<p>We used agents to build MICs across model families. When they hit an edge
-case, we fixed the recipe itself rather than the one fixture, with help from
-model experts. The published models and remaining gaps are in the
-coverage space.</p>
-<p>With random weights, our Whisper fixture barely responded to changes in
-the audio. It ran, but that made it a poor test of the audio path.</p>
-<p>So we trained it on a few tones paired with words such as "red" and "green".
-We weren't teaching it speech recognition, just making audio changes visible
-in its outputs. In our weight-initialization study,
-the random Whisper fixtures caught 18 of 24 injected faults. The overfit
-fixtures caught all 24.</p>
-<p>That gives us two ways to build the weights:</p>
-<p>The Whisper result doesn't settle which is better. Those were synthetic
-faults, and we haven't found a real regression caught only by the overfit
-version. Both versions missed an assisted-decoding bug that the real Whisper
-checkpoint exposed.</p>
-<p>So we keep random weights when they pass the checks, and overfit when we need
-better sensitivity or readable answers. Training takes seconds, but it is one
-more step that can fail to converge, and one more thing to maintain. The comparison
-has the results for both.</p>
-<p>As of November 1, 2026, the MIC job in Transformers CI
-reports failures without blocking PRs. Whether it should block depends on
-things we haven't measured yet:</p>
-<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
-show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
-<p>Coverage is still partial, across model families and the APIs people use.
-When a regression slips through, we can add the missing usage path and replay
-it on the broken and fixed versions. We'll keep existing tests until their
-coverage is accounted for.</p>
-<p>Finally, we'd like to link original Hub model pages to their MICs, so a
-developer or an agent using a checkpoint could start from an example tested on
-that checkpoint, its environment and its expected outputs.</p>
-<p>Want to help? Pick an uncovered model from the
-coverage space, try
-the tmic workflow,
-and contribute a usage path or review a generated contract.</p>
-<p>MIC contract coverage of Transformers model types</p>
-<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
-<p>MIC contract coverage of Transformers model types</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>If true, this would take some of the sting out of *the same guy* getting scooped by OpenAI on the Navier-Stokes blowup proof.</p>
+<p>I meant for Alpoge personally, any recognition he may have lost by having Navier-Stokes snatched out from below him (and he wasn't even quite done proving it blows up, just a lot of the way there) is now going to come his way for proving the Riemann Hypothesis instead.</p>
+<p>The RH is the more prestigious result. Much of modern mathematics is based on the assumption that the RH is true, but until now, we didn't have a proof.</p>
+<p>Alpoge is pretty much guaranteed a Fields Medal.</p>
+<p>RH is massive within mathematics, but calling NS "niche"... sorry, but in the real world, NS matters much more.  Pretty much every major engineering firm on Earth has computers running NS simulations.  Anything that advances NS brings us closer to (or outright directly achieves) things with direct real-world impacts (in this case, the former - proving blow-up doesn't directly have real-world impacts, but advancing the diversity of mathematical approaches that can be applied to study of NS offers future potential for solving more meaningful NS problems - turbulence closure, the vanishing-viscosity limit and boundary layer separation, mapping the edge states around the laminar/turbulent flow regime, long-duration flow regime predictability, the chaotic-adjoint problem, fluid structure interaction and multiphase flows, rigorous guarantees for hybrid AI / reduced order solvers, etc).</p>
+<p>I think there has long been an assumption that Navier-Stokes *had* to blow up under some conditions, even though it hadn't been proven, simply because it is a classical approach and not a quantum approach. So at some size scale, it's inevitably going to break.</p>
+<p>simply because it is a classical approach and not a quantum approach.</p>
+<p>That's giving it way too much credit. Navier-Stokes is a highly simplified approximation, starting with assuming the fluid is incompressible. When you assume some properties are infinite it's not at all surprising that some infinites pop up somewhere else too.</p>
+<p>in the real world, NS matters much more.Sure, but solving the NS Clay Institute problem is irrelevant to that.CFD will continue to use the same numerical algorithms. Nothing will change.</p>
+<p>Sure, but solving the NS Clay Institute problem is irrelevant to that.</p>
+<p>CFD will continue to use the same numerical algorithms. Nothing will change.</p>
+<p>NS models a fluid as if it is continuous. But we know that it is made of molecules.</p>
+<p>It would be brain-dead to think it didn't have a limit. And if you're working with effects close to that limit, you were already not using it.</p>
+<p>So "proving" the limit is/was not actually useful to science or engineering. Having a proof for the existence of a limit doesn't help you model anything near the limit. It doesn't improve your analysis of boundary layer separation.</p>
+<p>The problem solved wasn't about how to model past the li</p>
+<p>but advancing the diversity of mathematical approaches that can be applied to study of NS offers future potential for solving more meaningful NS problems</p>
+<p>Nobody is saying that this specific problem is going to lead to direct applications (just like solving RH). But approaches to solving problems have the potential to build off of each other to help solve related problems, and it turns out that "related NS problems" are really important..</p>
+<p>This result is pretty much of negative worth. The proof was not sought for to find out whether the RH is true (that has been assumed and used all along), it was for the proof itself, what methods and insights it uses so these could be applied to other things. Instead we have a mountain of slop and a huge disservice to the advancement of Mathematics.</p>
+<p>Yes, I get that most people will not understand. Regular people are fine with getting a hammer. But a tool-maker will want to understand how the hammer shape was</p>
+<p>"A brute force Lean search" - automated proof solvers have a pretty poor record. There are some proofs from that, but broadly, it hasn't yielded much fruit; the space of formal mathematical steps is astronomically large. "A brute force lean search" is usually not a very effective means to solve difficult unsolved proofs that have evaded mathematicians for much of a century.  To solve these problems, you need a combination of two things: a lot of time (your "brute force" is not irrelevant), but also broad cross-domain knowledge and excellent high-level reasoning.  Brute force alone isn't enough.</p>
+<p>The proofs that AI has been creating, overwhelmingly, haven't been hideous monstrosities stitched together from preexisting work on given problems by brute-forcing the gaps in Lean; it's generally deeply novel, innovative approaches to the problems.</p>
+<p>Imagine a company that looks at every single person in the world talking to its LLM realtime about the RH and training through those private conversations</p>
+<p>If true, I have to change my captcha [gstatic.com].</p>
+<p>Besides this inconvenience, one of the consequences would be that - thanks to a theorem by Polya - we could predict the existence of zeros in the Fourier transform of a time series, this would have some practical consequences.</p>
+<p>There are no practical consequences because it was already understood to be true in examined cases. It's not a discovery of anything; it's a mathematical "proof" of the general case. Anything practical had already been tested and found to be true over those ranges, which rules out practical considerations.</p>
+<p>The purpose of the Polya conjecture was merely to go the other way and derive the Riemann Hypothesis, but I think it was already disproved.</p>
+<p>Mathematical proofs haven't been discoveries for over a hundred ye</p>
+<p>That "same guy getting scooped by OpenAI on Navier-Stokes" thing was so much nonsense. OpenAI had no real competitors. They had already solved the forced options C & D for Navier-Stokes, and before them, the unforced Euler problem as a simpler problem before trying Navier-Stokes. Buckmaster was still trying to reach unforced Euler after the forced one. He couldn't have provided a solution because he didn't have it. Buckmaster himself claimed that he was "essentially ... a few days away from" unforced Eu</p>
+<p>I didn't claim OpenAI *stole* Buckmaster and Alpoge's work. I just meant that they probably were going to get there if OpenAI hadn't decided it was a solvable problem, and targeted it, and OpenAI quite possibly *did* get that impression from the progress that was being made right where they could watch it. They didn't have to steal the work, but I do think they flagged it as a solvable problem because one of their users was getting close.</p>
+<p>It's being claimed that a human proved it first, but was waiting for further checks before publishing. Due to this, they have released 1000 pages of proof.</p>
+<p>https://math216.wordpress.com/... [wordpress.com]</p>
+<p>or maybe: "At the beginning of the beginning"</p>
+<p>In this case: "When you first look at it"</p>
+<p>"Oh no, we have to build a particle accelerator to test our scientific theories", the IT version.</p>
+<p>You still can read the proof and follow it line by line.The only thin the lean proofer did was doing automatic checks faster than a human could do.</p>
+<p>Yes, _but_, the notion of a "proof" is to prove it to humans, as we are the ones inspecting.</p>
+<p>A proof is a distillation of a truth that already existed, not a creation of a new truth.</p>
+<p>The truth exists before we comprehend it. If only an AI can comprehend it, the truth still exists, and it still hasn't been proven to those interested.</p>
+<p>"Truth" is a ideological concept. It has no place in science.</p>
+<p>Science has a concept of theory, which means "currently best proven hypothesis". This is why science can never reach what you call truth: "the final theory that cannot possibly be improved". It can merely get closer to it with each iteration.</p>
+<p>Fine. Call it a fact, not a truth. Same/same.</p>
+<p>"Truth" is a ideological concept. It has no place in science.</p>
+<p>But this is mathematics and truth is a well defined mathematical concept.</p>
+<p>Which does not apply to this case. Literally, topic:</p>
+<p>"Anthropic Mathematician Claims to Prove Riemann Hypothesis"</p>
+<p>This is a scientific concept I describe above. It has nothing to do with concept of mathematical truth, which in turn has nothing to do with colloquial "truth", just like colloquial "theory" has nothing to do with scientific theory.</p>
+<p>I mean, isn't that the history of the four color theorem proof?</p>
+<p>Will any humans bother? Mathematically speaking, this proof is next to worthless.</p>
+<p>You might want to wait until the proof has been confirmed yet before doing a victory lap your glorious robot overlords ;-)</p>
+<p>According to the article it'll take no time at all because it's written in Lean which supposedly makes it quick to check, but... no confirmation yet.</p>
+<p>Does it reduce the space that you need to brute force through when factoring RSA keys (to two primes)? So instead of going through pretty much all odd numbers between 1 and 3x10^616 (for RSA-2048) the search space is actually much smaller because you can skip a whole lot of it?</p>
+<p>Not that brute-force will ever make practical sense with numbers of that magnitude, but there are better techniques than skipping even numbers if you're trying to factor a public key to recover a private key. Even if brute forcing you'd stop around 1.7*10^308.RH being proven true means an already-known-and-assumed tighter bound on the estimated distribution of primes still holds.RH true doesn't give hints on what numbers to skip,RH false would mean the prime number theorem's estimate of primes below a certa</p>
+<p>Why all the negativity towards finding a new understanding of mathematics?Would everyone be so concerned if AI found a room temperature superconductor or a general cure for cancer or a practical working fusion engine?These are things we want.</p>
+<p>But AI is evil, so you have to be against anything AI comes up with. We can't allow professionals to have new tools to help them in their craft. We must go back to living in caves and doing everything the hard way because progress is bad, learning is bad, and making lives better is bad.</p>
+<p>that would be blasting open the gates of hell</p>
+<p>remember what happened the last time humans discovered an abundant source of energy?</p>
+<p>Infant mortality dropped from 30-50% to three or four tenths of a percent?</p>
+<p>It's a question of did AI actually do anything here?  The story is striking in that ever single solution so far has been copied from human work.</p>
+<p>Basically, the scraping bots are finding the answers by stealing them and not even giving credit.</p>
+<p>I even had this happen to me on a software project.  The AI told the other person it was a clean-room effort.  But it clearly took the low level code from my sources.  And when later told to use my sources it replied it had already used them.</p>
+<p>The negativity comes is not about some new understanding of mathematics, that this wouldn't be a case of even if found, but the fact the AI industry keeps making these claims but rarely are they actually confirmed to be true. This supposedly, according to TFA, will be trivial to prove true, but somehow we're hearing about it before this "trivial" check, which makes me and probably most of Slashdot at least suspicious.</p>
+<p>Because there is no "new understanding" in this. Mathematics primarily develops tools and getting proofs to work is a primary way to do it. No tool was developed here and that means 99% of the benefits are missing. And that is not good at all and a huge disservice to Mathematics.</p>
+<p>As to your latter question: can I ask, what would be the corresponding cost in terms of energy and land use to find such things?</p>
+<p>You cannot actually really proof 2+2 = 4. Or rather it is just a very syntactic expansion of the definition of "2" and "4".</p>
+<p>Since somebody will doubtlessly ask: Basics is "0" and "+ 1" operation. Hence "2" = 0 + 1 + 1, 4 = 0 + 1 + 1 + 1 + 1. And hence "2" + "2"  = (0 + 1 + 1) + (0 + 1 + 1). This is the same as 0 + 1 + 1 + 0 + 1 + 1 and that is the same as 0 + 0 + 1 + 1 + 1 + 1, by commutativity. As (0 + 0) is 0, that is 0 + 1 + 1 + 1 + 1 and that is the expanded form of "4".  QED.</p>
+<p>Proofs of this complexity come with bugs, even if verified in Lean, because of coding errors and formalization errors and possibly even bugs in Lean. Some of these can be fixed, but a single one in the wrong place can kill the whole thing. In the normal process, the intuition and insight of the mathematician makes proof-killing bugs a lot less likely, but Claude has no intuition, hence this proof is not supported by actual insight and proof-breaking bugs are far more likely. In a sense, all Claude does is put together puzzle pieces, and it does not go for "perfect match", hence subtle errors are more than likely. Sure, the mountain of pieces that Claude can deal with is much larger than any human could handle, but humans can model the problem and develop approaches and strategies (that then transfer to other areas and provide benefits far beyond the single proof), which is something completely out of reach for an LLM.</p>
+<p>Also "will not take long", verification for a proof of this nature is measured in years, possibly longer. Add that most mathematicians will be disgusted and have no interest in looking at a poof that is convoluted and adds nothing beyond itself, and hence only minimally advances the field (quite unlike a proof done by a human), and it may take even longer.</p>
+<p>Also "will not take long", verification for a proof of this nature is measured in years, possibly longer. Add that most mathematicians will be disgusted and have no interest in looking at a poof that is convoluted and adds nothing beyond itself, and hence only minimally advances the field (quite unlike a proof done by a human), and it may take even longer.I'll file that with the rest of your predictions.
+ 
+Joint statement by the Lean and Mathlib communities, endorsed by the Lean FRO and the Mathlib Initiative. [github.io]
+ 
+You are like the old man yelling at Claudes.</p>
+<p>Also "will not take long", verification for a proof of this nature is measured in years, possibly longer. Add that most mathematicians will be disgusted and have no interest in looking at a poof that is convoluted and adds nothing beyond itself, and hence only minimally advances the field (quite unlike a proof done by a human), and it may take even longer.</p>
+<p>I'll file that with the rest of your predictions.
+ 
+Joint statement by the Lean and Mathlib communities, endorsed by the Lean FRO and the Mathlib Initiative. [github.io]
+ 
+You are like the old man yelling at Claudes.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Mercury-Bound X-Ray Telescope Delivers First Images After Eight Years In Space</p>
+<p>FCC Backs AT&amp;T's Plan To Remove Copper Landlines In California</p>
+<p>Aren't you glad you're not getting all the government you pay for now?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://science.slashdot.org/story/26/11/21/028221/anthropic-mathematician-claims-to-prove-riemann-hypothesis?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

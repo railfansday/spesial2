@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Four Evaluation Bugs Distorted a Cross-Encoder Model Comparison</title>
+    <title>AI boom threatens circuit board crunch to rival pandemic-era chip shortage</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9910.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Four Evaluation Bugs Distorted a Cross-Encoder Model Comparison</h1>
+        <h1>AI boom threatens circuit board crunch to rival pandemic-era chip shortage</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/Q2hVgZeRZPdwV7UkvDTUm20BD9b2-pya3d02.gif" alt="How Four Evaluation Bugs Distorted a Cross-Encoder Model Comparison" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/247172.jpg?imageId=247172&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="AI boom threatens circuit board crunch to rival pandemic-era chip shortage" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/Q2hVgZeRZPdwV7UkvDTUm20BD9b2-pya3d02.gif" alt="How Four Evaluation Bugs Distorted a Cross-Encoder Model Comparison" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/247172.jpg?imageId=247172&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="AI boom threatens circuit board crunch to rival pandemic-era chip shortage" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>CTO & CPO | Enterprise AI & Big Data at National Scale</p>
-<p>CTO & CPO | Enterprise AI & Big Data at National Scale</p>
-<p>CTO & CPO | Enterprise AI & Big Data at National Scale</p>
-<p>My first comparison of two releases showed a clean accuracy gain and two large regressions. None of the three was real. Fixing that took four bugs. Once the numbers were right, half of my wording benchmark turned out not to be held out, and a conclusion I nearly published came from comparing effects measured at different candidate-set sizes.</p>
-<p>I maintain Ru-Jev, an open typed-decision model for Russian-language text. It takes a context and a set of candidate options and returns a probability for each option. It does not generate text. Technically, it is a pointwise cross-encoder on mmBERT-base, 307M parameters: each (context, option) pair gets its own encoder pass, and a softmax over the options gives the distribution. It runs on CPU, so it can sit inside a closed network. Weights and code are MIT.</p>
-<p>Version 1.3 had one goal. The caller names the options, in the caller's own words, and version 1.1 had learned the exact label wordings in its training data. So 1.3 presents each label in several surface forms during training, including English intent keys transliterated into Cyrillic and a clipped form of that transliteration, and draws one form per example.</p>
-<p>The first table had two regressions I could not explain. Sentence acceptability fell from 0.909 to 0.647. A reasoning set fell from 0.939 to 0.596. A release that only changed label wording had no mechanism for that.</p>
-<p>The data builder carved each task's validation slice like this:</p>
-<p>random.shuffle with no generator draws from the module-level stream, which every other random call in the file also consumes, including the new choice of label wording. Adding label styles to one task changed how many draws happened before the next task was carved, and every later task got a different split.</p>
-<p>That is leakage, and it can be measured: 90.3% of 1.3's acceptability validation rows and 89.4% of its reasoning rows had been in 1.1's training data. The 0.909 was 1.1 scored on rows it had trained on. On held-out rows it scores 0.650.</p>
-<p>The fix seeds each carve from the task name:</p>
-<p>The check is what confirms the diagnosis. I rebuilt the previous release's data from its commit and confirmed that the six tasks whose option sets never changed matched at 100%. Those tasks had no reason to move, so if they had moved, my diagnosis would have been wrong.</p>
-<p>With the split repaired I matched the two validation sets by input text and found nine comparable tasks. In this release a row with the same text can carry an option wording 1.1 never saw, so scoring 1.1 on it measures robustness to renaming, not accuracy. Matching on text and option wording together leaves six tasks.</p>
-<p>A toxicity gain from 0.722 to 0.954 that I had presented as a capability gain was this bug. Version 1.1 scores 0.961 on toxicity with the labels it trained on.</p>
-<p>The summary row of my comparison table, 0.7948 against 0.7920 on 5,078 decisions, came from one random half of the comparable rows. The per-task table beside it counted all 10,157. A calibration advantage, 0.0172 against 0.0160, came from the same single split. Both numbers reached the published model card.</p>
-<p>On all 10,157 rows the two releases answer exactly 8,120 correctly, disagreeing on 1,680 rows split 840 and 840. Over 25 random splits the calibration difference changes sign. Both claims were withdrawn. What survives is narrower: 1.3 takes a lower fitted temperature in all 25 splits, so its raw scores are less overconfident, but after each model gets its own temperature the residual calibration error is the same.</p>
-<p>To measure seed variance I retrained both recipes on a rented GPU and checked the data on the remote machine against my local copy by SHA-256, row count and per-task counts. Everything matched. The local copy predated the commit that added the transliteration styles, so the "augmented" seed runs were trained without the augmentation. Their jargon accuracy fell in the baseline's range, and I first read that as an unstable recipe.</p>
-<p>Row counts could not catch it, because the new styles change option strings, not the number of rows. What caught it was counting distinct option strings per task: 120 in the stale copy, 198 after rebuilding. Those runs are excluded from everything.</p>
-<p>Once the numbers were right, I ran a wider wording test: ten label vocabularies on the same 1,000 routing questions, each scored with five candidates per question and eight of them also with all eighteen. Because the model scores every option independently, the five-candidate answer can be computed exactly from the eighteen-candidate run. I checked every probe label against all training option strings, used exact McNemar tests, a bootstrap that resamples labels rather than just questions, and a Holm correction over 23 comparisons.</p>
-<p>Two things came out of it. First, two of my six original benchmark vocabularies, the English key and the ordinary Russian word, turned out to be training styles for both releases, and a third, the Russian phrase, was a training style for the new release only. Half of my original benchmark was not a held-out test.</p>
-<p>Second, the effect size depended on the number of candidates, differently for different vocabularies. I had first measured jargon with five candidates and slang with eighteen, which made the slang gain look far smaller than the jargon gain. With both vocabularies in both settings:</p>
-<p>English-derived jargon, strict (no exact or prefix match to training)</p>
-<p>Department names (no exact match; 2 of 18 labels share a prefix with a training option)</p>
-<p>On every held-out vocabulary made of words, the new release is better in both settings, though not every gain survives the Holm correction. On abbreviations and opaque codes there is no usable gain. The two releases differ in more than the augmentation (I also fixed the split and trained four epochs instead of three), so this compares two trained models rather than a clean ablation. Two replicates of the v1.1 recipe scored 0.658 and 0.622 on jargon with five candidates, against 0.633 for the release, so small differences in the table should not be read as reproducible; the jargon gains are large relative to that spread. The contrast I almost published between jargon and slang came from comparing a five-candidate effect with an eighteen-candidate one.</p>
-<p>Accuracy and confidence also diverged. Where accuracy rose, the risk–coverage curve mostly improved, but with eighteen candidates the number of wrong answers given above 0.8 confidence went up on jargon (all labels, 79 to 109 per 1,000) and on slang, because the new release is more confident overall. On department names it went down.</p>
-<p>Author’s note: The name references Jev, a commercial decision model by TypeSafe AI. Ru-Jev is an independent project, not affiliated with TypeSafe AI and not trained on Jev outputs.</p>
-<p>Grading a Machine That Read 51,008 Pages With No Answer Key</p>
-<p>CTO & CPO | Enterprise AI & Big Data at National Scale</p>
+                <p>Trade body warns automotive, medical, and defense orders are being crowded out, with relief unlikely before mid-2028</p>
+<p>The electronics industry faces a printed circuit board (PCB) shortage that could rival the pandemic-era chip crunch – with AI once again accused of hogging supplies.</p>
+<p>The Global Electronics Association says demand is arriving "at a scale the supply chain was not built for," straining everything from glass fabric and resin to finished boards.</p>
+<p>Its report, "The PCB Squeeze: A Wake-Up Call for Global Electronics," says AI servers need increasingly complex boards. While a typical PC board has about 12 layers of tracks, AI server boards can have 40 to 60 layers or more, and each additional layer requires more resin, copper foil, and laminate.</p>
+<p>The supply of materials is set to be constrained through at least the first half of 2027, the report says, with meaningful relief unlikely before mid-2028.</p>
+<p>Programs to deliver PCBs for automotive, industrial, medical and even the defense industries are being crowded out as AI soaks up scarce capacity, it claims.</p>
+<p>The association's North American figures show orders growing much faster than deliveries. PCB bookings rose 56.1 percent in the first nine months of 2026 compared with the same period last year, while PCB shipments increased 13.3 percent.</p>
+<p>Fabrication capacity is expanding, aimed at meeting the increased demand from the AI infrastructure sector, especially in Asia, where more than 90 percent of the world's boards are made. The report says that $10 billion has gone toward new PCB plants in Southeast Asia, and at least as much has been invested in China over the past three years, but the raw materials are themselves constrained.</p>
+<p>It warns of lengthening lead times for those raw materials. Standard FR-4 laminate now takes six to eight weeks to ship, up from two to three weeks a year ago, while advanced low-loss laminates now take 14 to 18 weeks for delivery, for example.</p>
+<p>Tightening supplies usually lead to price increases, and the report says that suppliers raised laminate costs by 30 percent in September, and that the price tag of some types of E-glass cloth for circuit boards has risen by 300 percent.</p>
+<p>The report also puts copper prices up 37 percent over the past year. Concerns have been raised about copper supplies before, as The Register has reported multiple times.</p>
+<p>The association compares the risk with the 2021 chip shortage, when disrupted supplies left manufacturers unable to secure even relatively mundane components.</p>
+<p>New capacity is coming, but it is late and comes in dribs and drabs, according to the report, while AI demand just keeps on absorbing it as soon as it arrives.</p>
+<p>The association's advice is for buyers to plan early, and to share realistic forecasts with suppliers rather than double-booking. Board makers should qualify alternative suppliers of materials such as laminate and copper foil before shortages bite, but it warns against stockpiling beyond real need, which adds to forward-buying pressure.</p>
+<p>But it would like governments to step in, of course, by tracking board and material lead times with industry and offering tax incentives for investment in advanced PCB and substrate manufacturing equipment.</p>
+<p>The wish list also includes state investment in research and development plus qualification of new alternative materials. It would like to see loan guarantees and grants to protect critical programs and small fabricators, structured so as to sustain new capacity if forward buying unravels and demand corrects in 2027.</p>
+<p>"Yes, we are seeing constraint in upstream materials and have been reporting it for the past couple of quarters," said Cori Masters, senior research analyst director for Supply Chain Operations at Gartner.</p>
+<p>"In addition, AI datacenter infrastructure build out is moving capacity support to high-layer count PCBs which increase throughput time and decreases availability of line utilization for more traditional PCB products," she told The Register. ®</p>
+<p>If a service falls in the forest and nobody hears it...</p>
+<p>Just don't expect complex, coherent, or always correct answers</p>
+<p>PARTNER CONTENT: As carriers tighten underwriting, a backup job marked green is no longer enough. Here’s the evidence underwriters expect</p>
+<p>It isn't only systems on Earth suffering technical problems</p>
+<p>Pre-digital tech can't be transformed and automated</p>
+<p>Bot-based buying is here or not, depending on where you stand in the Amazon empire</p>
+<p>Security shop buys the hand that feeds it</p>
+<p>Selected customers can put Dragonfly AI200 through its paces on Cirrascale's cloud</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Nvidia unveils an HPC-optimized Rubin GPU to challenge AMD's 288 teraFLOPS MI430X</p>
+<p>Ride-hailing biz says stolen credentials allowed crooks to help themselves to driver's license data</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/how-four-evaluation-bugs-distorted-a-cross-encoder-model-comparison?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/systems/2026/11/20/ai-boom-threatens-circuit-board-crunch-to-rival-pandemic-era-chip-shortage/5311335" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

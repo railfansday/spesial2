@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scaling Git horizontally: how we moved beyond Multi-Raft</title>
+    <title>MongoDB snaps up Firebolt to bring transactions and analytics under one roof</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10057.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Scaling Git horizontally: how we moved beyond Multi-Raft</h1>
+        <h1>MongoDB snaps up Firebolt to bring transactions and analytics under one roof</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft/opengraph-image-fx5gi7/card?d0c3feb5081f2f2e" alt="Scaling Git horizontally: how we moved beyond Multi-Raft" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/230446.jpg?imageId=230446&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="MongoDB snaps up Firebolt to bring transactions and analytics under one roof" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft/opengraph-image-fx5gi7/card?d0c3feb5081f2f2e" alt="Scaling Git horizontally: how we moved beyond Multi-Raft" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/230446.jpg?imageId=230446&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="MongoDB snaps up Firebolt to bring transactions and analytics under one roof" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>tl;dr: We replaced our Multi-Raft system with a simpler design that pairs Raft's replication with failover from Vertical Paxos, which allows us to keep complexity low while achieving much better horizontal scalability of up to 300,000 repositories in a single Enroute cluster.</p>
-<p>With Enroute, our goal is to make Git scale for the most demanding agentic workloads, which means scaling in multiple directions. The first one we tackled was vertical: We covered in our launch post, Everyone is doing Git on S3 wrong, how a single repository got past 7,600 pushes per second. However, that's not the full story.</p>
-<p>Coding agents like Cursor are going more vertical on code hosting and app builders like Lovable or Replit are seeing some of the most demanding Git workloads out there. This shows how important horizontal scalability is for code hosting infrastructure: It needs to support millions of repositories or more.</p>
-<p>This is what we have been focused on for the past few weeks, and our newest release (0.4.0) lands some of the first results of this work.</p>
-<p>Before we dive deeper, let's do a quick recap on Enroute's architecture. Enroute separates compute from storage, like many modern databases. A cluster has three parts:</p>
-<p>When thinking about how many repositories we can fit on a single Enroute cluster, there are really two numbers to consider:</p>
-<p>While we had implemented some early optimizations already, two measurements showed where we still fell short:</p>
-<p>Every repository's log was its own state machine on a separate Raft log. Raft keeps a leader alive with heartbeats and when it fails, replaces it with an election, so every log had its own timers, votes, pre-votes and leader. With hundreds of thousands of repositories, that machinery became the workload.</p>
-<p>It turns out that mature Multi-Raft-based systems have a well-known toolbox for this, which we began to make use of as best as possible. We allowed idle logs to go to sleep, moved liveness from each log to the node, and we woke a failed node's logs only as they were needed, to prevent kicking off thousands of leader elections at the same time when a single node fails.</p>
-<p>These fixes worked. Together, they took the setup that had previously collapsed at 2,048 writers to about 14,000 pushes per second at 100,000 repositories with no failures.</p>
-<p>However, taking a step back, it felt like we were just piling more complexity on top of the core Multi-Raft setup, which is already quite complex to start with. What's worse, this complexity was not only in code, but also directly translated into failure modes and edge cases.</p>
-<p>In short, it became obvious that continuing on this path would lead to a system that would be much harder to understand and operate, which motivated us to start looking for alternatives.</p>
-<p>Looking at our setup at this point, most of the complexity came from the fact that we ran membership, and by extension leadership elections, on a per-repository basis. So we began looking at ways we could take leader election out of the per-repository log.</p>
-<p>There are a number of systems that put an external configuration master in charge of their replicas today. Among all of those, we liked Vertical Paxos (Lamport, Malkhi and Zhou, 2009) the best. The key insight behind it is that if something outside the log decides who's responsible for deciding its entries, the log itself needs no timers at all.</p>
-<p>To apply this to Enroute, we introduced a singular "root log" that is responsible for tracking node membership per repository, while keeping the actual repository state inside each repository's log (which we'll call "shard log") and which is decided by a "sequencer" that's appointed via the root log.</p>
-<p>On top of this, we then kept the parts from Raft that already worked well, and adopted specific pieces from Vertical Paxos.</p>
-<p>What we keep from Raft is everything about how a log is written:</p>
-<p>What we adopt from Vertical Paxos is everything about how leadership changes:</p>
-<p>In our Multi-Raft setup, every ledger node was a member of every repository's Raft group, so each log lived on all of them. That also meant adding a ledger node added a copy of every log, without any way to spread the load across more nodes.</p>
-<p>With this new design, thanks to the root log leader being in charge of appointing sequencers, it is straightforward to extend this responsibility to placement: The root log can now decide which ledger nodes to appoint as responsible for a certain shard log, which means we can distribute the responsibility for tracking repository metadata across a larger pool of ledger nodes.</p>
-<p>Based on this idea, the root log leader we implemented is already capable of:</p>
-<p>Our plan is to extend this placement logic further in upcoming releases to improve how Enroute balances load across ledger nodes and make this process more continuous rather than purely failover-driven.</p>
-<p>Consensus protocols can be treacherous, and so a new consensus protocol naturally deserves suspicion. This is where the simpler design pays off: without an election in every log, the protocol is small enough to put under a model checker, which Raft with our fixes layered on top was not. We tested our new design in two ways.</p>
-<p>Model checking the code the engine runs. The core protocol is written ("sans-IO" as the cool kids say) as a state machine without I/O: messages, proposals and clock ticks become inputs, and the pending messages and disk I/O tasks are output. This made it possible for us to use Stateright to exhaustively check the actual implementation rather than just a model, which simulates every possible interleaving of sequencers, appointments, reads, crashes and lost unsynced writes (within small bounds).</p>
-<p>Jepsen against real processes. Here, our previous investment in setting up a Jepsen suite paid off. It drives Git clients while it partitions, kills and pauses nodes, with every ledger on LazyFS to simulate disk failures, while Elle checks ref reads for strict serializability. While working on our new consensus engine, it found two smaller non-safety-critical bugs not in the engine itself, but in how it integrated with the rest of the system (which is why the Stateright model checks didn't pick it up earlier). Luckily, both were easy to fix.</p>
-<p>To find out how well these improvements worked, we tested our old implementation (0.3.0) against the new shard log based one (0.4.0), and grew each cluster in steps up to 100,000 repositories, and 0.4.0 on to 300,000.</p>
-<p>The real win however doesn't even show in these numbers: Enroute's consensus layer now has far fewer moving parts, which makes it much easier to understand, operate and extend in the future as we continue our scaling journey.</p>
-<p>With the newly won headroom on the ledger tier, here are the directions we're thinking of taking it next:</p>
+                <p>Many have tried to marry analytics with transactions. The document DB posterchild takes another crack at it</p>
+<p>MongoDB has acquired analytical database specialist Firebolt in another attempt to bring transactional and analytical workloads onto one platform.</p>
+<p>The document database vendor carved out its patch of the database market with flexible, JSON-like documents rather than rigid, predefined table structures. Developers put it to work in web, mobile, ecommerce, and content management applications.</p>
+<p>It has since branched out to offer a data platform it says is ready for the age of AI and AI agents working across transactional environments, promising scale, speed and reliability.</p>
+<p>Firebolt was founded in Israel in 2019. It built a cloud-native data warehouse based on the notion of automatically and transparently merging and compacting files as they are ingested. Speaking to The Register in 2020, then CTO Eldad Farkash claimed this slashes the amount of data users need to load into the system, accelerating query performance and improving concurrency.</p>
+<p>Firebolt raised $100 million in Series C funding in 2022 at a reported valuation of $1.4 billion. MongoDB has not disclosed the acquisition price.</p>
+<p>But what will it get, and what does that mean for MongoDB users?</p>
+<p>In a blog post, the company said: "By integrating Firebolt into MongoDB's Intelligent Data Platform, we're bringing a high-performance analytics engine to where your operational data already lives. Firebolt's engine will run right alongside your database, and we'll keep it in sync automatically, so there's no pipeline to build or manage. You'll get one platform for operational and real-time analytical workloads, so teams can ship faster, with fewer systems to operate and secure."</p>
+<p>The integration isn't available yet. MongoDB says customers will gain access in the coming months, while existing Firebolt customers will retain their current service and support.</p>
+<p>MongoDB's pitch is that AI agents will need fresh operational data and fast analytical answers, without customers having to stitch separate platforms together.</p>
+<p>MongoDB is hardly the first vendor to chase that combination. Bringing online transaction processing (OLTP) and online analytical processing (OLAP) together promises less infrastructure to manage and fewer data pipelines to maintain. Delivering both without compromises is the harder part.</p>
+<p>Earlier this year, Databricks claimed to have cracked the problem, promising "one data, zero compromises, zero copies." It works with Reyden – a new compute engine – and Lakebase, its serverless PostgreSQL on open object storage. Rivals pointed out there were briefly two copies of the data in the system at some level.</p>
+<p>SingleStore also tackles the problem with an in-memory row store and an on-disk column store with tiered storage, "meaning transactions hit memory first, and then they roll off to disk storage," allowing analytics and transactions on a single system.</p>
+<p>Oracle and SAP have also spent years adding analytical capabilities to transactional platforms to reduce the delay between recording data and analyzing it.</p>
+<p>MongoDB promises real-time analytics without a customer-managed pipeline. Whether that also means avoiding separate copies of the data is less clear. Automatic synchronization doesn't explain how the information is stored or moved underneath. The Register has asked MongoDB to clarify the architecture.</p>
+<p>MongoDB has been here before. In 2022, it unveiled columnstore indexing designed to help developers build analytical queries into their applications. The idea was to accelerate those queries without changing the document structure or moving data to another system.</p>
+<p>Firebolt gives MongoDB another tool for a familiar job: making analytics feel at home beside its operational database. Whether the plumbing lives up to the pitch remains to be seen. ®</p>
+<p>If a service falls in the forest and nobody hears it...</p>
+<p>Just don't expect complex, coherent, or always correct answers</p>
+<p>PARTNER CONTENT: As carriers tighten underwriting, a backup job marked green is no longer enough. Here’s the evidence underwriters expect</p>
+<p>It isn't only systems on Earth suffering technical problems</p>
+<p>Pre-digital tech can't be transformed and automated</p>
+<p>Bot-based buying is here or not, depending on where you stand in the Amazon empire</p>
+<p>Security shop buys the hand that feeds it</p>
+<p>Selected customers can put Dragonfly AI200 through its paces on Cirrascale's cloud</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Nvidia unveils an HPC-optimized Rubin GPU to challenge AMD's 288 teraFLOPS MI430X</p>
+<p>Ride-hailing biz says stolen credentials allowed crooks to help themselves to driver's license data</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/databases/2026/11/18/mongodb-snaps-up-firebolt-to-bring-transactions-and-analytics-under-one-roof/5310809" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
