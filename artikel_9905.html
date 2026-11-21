@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Sweep on Google Cloud: A Daily Waste Report on AlloyDB Express, With a Database Bill You Can Predict</title>
+    <title>Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9905.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,64 +15,67 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Zombie Sweep on Google Cloud: A Daily Waste Report on AlloyDB Express, With a Database Bill You Can Predict</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fraw.githubusercontent.com%2Fxbill9%2Fzombie-sweep-gcp%2Fmain%2Fdocs%2Fdevto-cover.696c5b30.jpg" alt="Zombie Sweep on Google Cloud: A Daily Waste Report on AlloyDB Express, With a Database Bill You Can Predict" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/uber-go-translation-cache/en/card_header_image/generatedCard-1793504736709.jpg" alt="Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fraw.githubusercontent.com%2Fxbill9%2Fzombie-sweep-gcp%2Fmain%2Fdocs%2Fdevto-cover.696c5b30.jpg" alt="Zombie Sweep on Google Cloud: A Daily Waste Report on AlloyDB Express, With a Database Bill You Can Predict" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/uber-go-translation-cache/en/card_header_image/generatedCard-1793504736709.jpg" alt="Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This article provides a step by step guide to building a daily sweep for unused Google Cloud resources with Cloud Scheduler, Workflows, Cloud Run and AlloyDB Express. Each sweep runs zombiescan's checks beside Google's Recommender, stores every finding in PostgreSQL, and an ADK agent with MCP Toolbox writes a daily briefing in which every number comes from SQL.</p>
-<p>Repository: https://github.com/xbill9/zombie-sweep-gcp</p>
-<p>A tool that hunts for surprise cloud bills should not create one. AlloyDB Express is the database that makes that easy to promise: within its free tier the database costs $0.00 a month for this workload, and even with every limit maxed out, its bill has a ceiling you can compute before you create it.</p>
-<p>AlloyDB Express is a preview configuration of AlloyDB for PostgreSQL built for prototypes and small workloads. Three properties from its documentation decide the bill:</p>
-<p>A database that cannot grow past 2 compute units or 20 GB has a worst case. Priced from the Cloud Billing Catalog API for us-west1, with the instance never idle and storage full:</p>
-<p>That is the ceiling for a database left busy around the clock. A daily sweep keeps it awake for minutes a day, and the free tier covers that: each month includes 50 compute units and 2 GB of storage per billing account for the first 12 months.</p>
-<p>A zombie resource still bills and no longer does any work. A stopped VM whose disks still cost money, a snapshot of a disk that was deleted, a static IP attached to nothing, a secret nobody has updated in months.</p>
-<p>They collect in projects used for one experiment, in zones you tried once, and behind instances that were stopped and forgotten instead of deleted.</p>
-<p>Partly. Recommender has idle-resource recommenders for VMs, persistent disks, IP addresses, custom images, Cloud SQL instances and GKE clusters. This sweep queries 7 of them.</p>
-<p>zombiescan-gcp is an open-source scanner with 20 checks, among them orphaned snapshots, stale Artifact Registry repositories, stale secrets, Cloud NAT gateways serving nothing, Filestore instances nothing can mount, unused firewall rules and subnets, Cloud DNS zones and uptime checks for deleted resources. Zombie Sweep runs both sources in every sweep and compares them resource by resource, so the report shows which source found what.</p>
-<p>One Cloud Run job image runs in three modes. One AlloyDB Express instance holds two tables and two views. One Cloud Run service holds the agent and its SQL tools.</p>
-<p>The Express commands from the documentation, with this project's names:</p>
-<p>us-west1 is the only US region Express supports. The instance reports PostgreSQL 18.4 and max_connections 200, both fixed by Express.</p>
-<p>IAM database login needs one database flag:</p>
-<p>runs holds one row per sweep, keyed by the Workflows execution id, with the agent's briefing. findings holds one row per resource per source:</p>
-<p>The two sources name the same resource differently. zombiescan stores w1; Recommender stores //compute.googleapis.com/projects/p/regions/us-central1/addresses/w1. The view findings_keyed reduces both to (project, kind, name), and findings_compared adds found_by_both:</p>
-<p>python3 sql/apply.py applies the schema and views from a workstation through the AlloyDB Python connector.</p>
-<p>sweep/job.py runs one source against one project and prints one JSON line:</p>
-<p>Each source mode deletes and re-inserts its own rows for the run, so a retried job leaves no duplicates. In Cloud Run the job logs in to AlloyDB with IAM database authentication as its service account: no password in the job, and a zombie_writer role that can write findings and close runs.</p>
-<p>The two sources run as parallel branches, each one a Cloud Run job execution through the Workflows connector:</p>
-<p>Then the workflow posts the run id to the agent's /briefing route and runs the job a third time with MODE=finish to store what came back. A failed briefing does not fail the sweep; the run closes without one.</p>
-<p>The agent's Cloud Run service sits behind Identity-Aware Proxy, so a person opens the report page with a Google sign-in. IAP with the Google-managed OAuth client accepts a JWT signed by a service account with aud set to the URL, so the workflow signs one as itself and sends it as a bearer token:</p>
-<p>The workflow's service account holds Service Account Token Creator on itself only, and roles/iap.httpsResourceAccessor on the agent. Workflows expressions take no map literals, so the claims are built in an assign step first.</p>
-<p>The agent is a FastAPI app running an ADK LlmAgent on Gemini through Vertex AI. Its only access to the data is MCP Toolbox for Databases, running as a second container in the same Cloud Run service on 127.0.0.1:5000. Toolbox connects to AlloyDB with IAM login as the agent's service account, which holds a read-only role.</p>
-<p>Toolbox exposes 8 SQL tools: list_runs, totals, top_waste, count_findings, only_one_source, diff_vs_previous, finding_history and run_briefing. The tool definitions live in Secret Manager and are mounted into the Toolbox container as a file.</p>
-<p>The agent serves four routes: GET / for the report page, POST /ask for questions, POST /briefing for the workflow, and GET /health, because Cloud Run reserves /healthz.</p>
-<p>The agent is told never to add, count, average or compare numbers itself. Every count and sum is a SQL tool, and count_findings takes filters and returns the exact answer:</p>
-<p>The briefing is then checked figure by figure against SQL run directly on the database, with no model involved: .claude/skills/check-briefing/check.py prints the briefing beside the counts, sums and per-check totals PostgreSQL computes for the same run.</p>
-<p>The Toolbox source is declared readOnly: true. With that set, Toolbox keeps a postgres-sql tool only when the tool declares annotations: {readOnlyHint: true}. All 8 tools here carry it. A new tool without it does not appear in the agent's tool list.</p>
-<p>deploy.sh is idempotent and safe to run again. It also keeps only the newest version of the Toolbox secret enabled and sets an Artifact Registry cleanup policy that keeps the newest 3 images, so repeated deploys do not leave a growing pile of billable versions behind.</p>
-<p>The schedule is 0 6 * * * in UTC. Across 11 successful sweeps, each took 54 to 127 seconds end to end.</p>
-<p>One resource was found by both: a static IP address, w1, at $7.30 a month. Everything else came from zombiescan alone:</p>
-<p>The agent's briefing for that run, as stored in runs.briefing:</p>
-<p>Every figure in it matches the SQL computed for the same run.</p>
-<p>From the AlloyDB Express documentation's own comparison:</p>
-<p>docs/cost.py prices the sweep from the Cloud Billing Catalog API and measures usage from the project: 37 Cloud Run job executions averaging 24.4 seconds, 7 briefings averaging 31.6 seconds, and the database at 17880855 bytes. For 30 daily sweeps:</p>
-<p>AlloyDB compute hours are each sweep's duration plus the 15-minute idle period before the instance pauses. The 50 free compute units leave 41.44 a month after the sweeps: room for about 166 more wake-ups from people opening the report page or asking the agent a question.</p>
-<p>The database line stays at $0.00 for as long as the free tier lasts, and after that it has the ceiling worked out above: $89.95 a month for this 1 vCPU instance if it never sleeps at all.</p>
-<p>For a scheduled job that writes a few megabytes a day and is read now and then, use AlloyDB Express. It sleeps between sweeps, its storage cannot grow past 20 GB, and its largest possible bill is a number you can compute before you create it.</p>
-<p>Move to full AlloyDB when the data needs backups, high availability or an SLA. The upgrade is in place and keeps the connection string; there is no way back to Express afterwards.</p>
-<p>The goal of this article was to run a daily sweep for unused Google Cloud resources without adding a database bill to watch. The key to the solution was AlloyDB Express, which scales to zero between sweeps, caps its own storage, and fits this workload inside its free tier, with every number in the report computed by SQL. The results on one project were:</p>
-<p>Scope: one Google Cloud project in us-west1, swept daily from 2026-11-15 to 2026-11-20, one 1 vCPU AlloyDB Express instance. Costs are estimates from Cloud Billing Catalog list prices and measured run times. AlloyDB active hours assume the 15-minute idle period from the launch post. They exclude Gemini, Secret Manager, Workflows, Cloud Scheduler, Artifact Registry, Cloud Build and logging. The sweep is read-only and deletes nothing.</p>
-<p>The strategy for using AlloyDB Express as the store for a daily waste sweep was validated with an incremental step by step approach.</p>
-<p>Join a global network of more than 1,000 professionals. Meet experienced Google technology experts, influencers, and thought leaders. Explore the community, get advice, and network.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>QCon AI New York (December 15-16, 2026): Learn how senior engineers are building AI systems that hold up in production.
+
+                            Register Now</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites and Chief Security Architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>Jayesh Bhayani discusses Tesco’s decade-long enterprise transformation from fragmented legacy systems to a unified cloud-edge platform. He explains how aligning system, talent, and process modernizations allowed Tesco to scale mission-critical retail operations to millions of customers, while sharing practical lessons on build vs. buy, cloud cost management, and preparing for agentic commerce.</p>
+<p>Nicholas Matsakis shares why AI makes Rust the ideal choice for modern production systems, skipping steep adoption hurdles via compiler guardrails. He discusses Symposium - an open-source, agent-oriented toolchain from the Rust Foundation - and demonstrates how the Agent Client Protocol (ACP) standardizes agent-to-tool extensibility across diverse enterprise developer workflows.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>The panelists explore how engineering teams adapt delivery architectures, pipelines, security, and governance for AI-assisted development. They share practical strategies for verifying AI-generated code, solving testing and deployment bottlenecks, maintaining human oversight, and measuring AI’s true impact on software velocity, quality, reliability, and operational cost.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</p>
+<p>Nov 20, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>Uber has redesigned its Go-based translation cache to reduce its initial memory footprint by more than 90% while keeping p99 cache miss latency below one millisecond. The hybrid architecture retains translation keys and frequently accessed values in memory while storing the remaining values on disk. The system serves millions of translations per second and maintains a cache hit rate above 99.9%.</p>
+<p>The optimization addresses two problems identified through memory profiling across Uber's Go services. Garbage collection (GC) consumed more than 20% of CPU utilization in some services, with translations accounting for approximately 70% of allocated objects.</p>
+<p>At Uber's scale, even small inefficiencies in memory management can add up.</p>
+<p>The first optimization replaced Go's sync.Map with a conventional map[string]string protected by an RWMutex. The workload was predominantly read-heavy, with infrequent updates and no individual deletions. The previous implementation created multiple objects and pointers for each translation entry, increasing GC overhead. Moving to a value-based map reduced object allocations and improved CPU utilization by more than 30% in the affected service.</p>
+<p>However, reducing object allocations did not solve the overall memory consumption problem. Translation datasets could contain two to three million keys, although individual services typically accessed only a small subset. Cache refreshes introduced another issue: the service built a replacement cache in the background before atomically swapping it with the existing one. Both copies therefore occupied memory simultaneously, causing some services to run out of memory during refreshes.</p>
+<p>Uber considered external caching and generating service-specific translation subsets, but both introduced additional operational or maintenance costs. The team instead adopted a hybrid storage design that preserves the existing Get() and Put() API. All keys remain available in memory for fast lookups, while translation values are stored in disk-backed files.</p>
+<p>Uber's hybrid translation cache (Source: Uber Blog Post)</p>
+<p>The implementation uses 256 shards, each with its own read-write mutex, in-memory entries, and disk file. Six-byte hash-based keys reduce metadata overhead, with a fallback to the original key format to handle collisions. A time-based global least recently used (LRU) policy manages in-memory entries. During cache refreshes, the system uses access history to preload translations accessed within the previous 15 minutes, avoiding a cold cache after the swap.</p>
+<p>In one example, a translation dataset that previously consumed approximately 800 MB in memory required around 40 MB for metadata after the redesign. With a configured limit of 50,000 in-memory entries, actual memory consumption typically ranged between 80 MB and 120 MB. In another reported workload, approximately 30,000 of more than four million entries were loaded in memory, while the cache hit rate remained above 99.9%. The p99 latency for disk-backed cache misses stayed below 100 microseconds.</p>
+<p>Memory usage decreased from approximately 2.7 GB to 750 MB (Source: Uber Blog Post)</p>
+<p>Uber's experience highlights the cost implications of in-memory caching at scale. The team recommends minimizing object references to reduce GC overhead and measuring how frequently cached values are accessed. When only a small proportion of cached data is actively used, a hybrid approach can retain frequently accessed values in memory while moving the rest to disk.</p>
+<p>Presented by: Kiran Gangadharappa - Engineering Advisor at Harness, and Scott Davis - Senior Engineering Manager at Harness</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/gde/zombie-sweep-on-google-cloud-a-daily-waste-report-on-alloydb-express-with-a-database-bill-you-can-305g" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/uber-go-translation-cache/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

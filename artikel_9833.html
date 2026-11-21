@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stormi</title>
+    <title>Trap Streets for Code: How Mapmakers Caught Copiers, and How I Do It in Git</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9833.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,86 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Stormi</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>Trap Streets for Code: How Mapmakers Caught Copiers, and How I Do It in Git</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fr6dtmqclr3bfxeysb1uh.png" alt="Trap Streets for Code: How Mapmakers Caught Copiers, and How I Do It in Git" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fr6dtmqclr3bfxeysb1uh.png" alt="Trap Streets for Code: How Mapmakers Caught Copiers, and How I Do It in Git" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            An AI team on your iPhone that does real work
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/stormi?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1322985?app_id=339">Link</a>
-          </p></p>
+                <p>In the 1920s, two mapmakers at General Drafting, Otto G. Lindberg and Ernest Alpers, put a town on their map of New York that didn't exist. They called it Agloe, an anagram of their initials, and placed it at a dirt-road crossing in the Catskills. The idea was simple: if Agloe ever showed up on someone else's map, that someone had copied theirs.</p>
+<p>It did. Agloe turned up on a Rand McNally map. When General Drafting objected, Rand McNally had an answer ready: Delaware County had a business on record named Agloe. Someone had read the fake town off a map and named a lodge after it. The trap worked so well that it briefly became real. The USGS still lists it today as "Agloe (Not Official)."</p>
+<p>Mapmakers call these trap streets. Dictionaries have them too. The 1975 New Columbia Encyclopedia had a lovingly detailed entry for Lillian Virginia Mountweazel, a fountain designer and photographer of rural mailboxes, who died in an explosion while on assignment for Combustibles magazine. She never existed. In 2001, the New Oxford American Dictionary defined "esquivalience" as "the wilful avoidance of one's official responsibilities." That word never existed either, until it did.</p>
+<p>My favorite version doesn't involve fake towns at all. In 2001 the UK's Automobile Association paid Ordnance Survey £20 million to settle a case over copied maps. Ordnance Survey said it hadn't planted deliberate mistakes. It identified the copies by their fingerprints, details like the width of the roads.</p>
+<p>So there are three kinds of evidence: a thing you planted on purpose, a thing that behaves in a way only you'd predict, and the shape of the work itself.</p>
+<p>That's TrapR. It's open source, it's Python with no required dependencies, and it plants all three kinds in your code.</p>
+<p>I work across several repos: Neo (multi-agent coordination), Braxis (keeps AGENTS.md and CLAUDE.md in sync with the code), and a growing pile of side projects. They sprawl, and I wanted a way to actually see my own work across them: which files are mine, how the set grows over time, and whether any of it has wandered off somewhere it shouldn't be.</p>
+<p>Git history doesn't answer that last part. It proves what you committed. It says nothing about a repo you've never seen that contains your code with your name filed off. A LICENSE file is one rm away from not existing.</p>
+<p>Every source file gets a header line like this one, which is actually sitting in TrapR's own trapr.py right now:</p>
+<p>It looks like boring build metadata, and that's the point. It's an HMAC:</p>
+<p>tag = HMAC-SHA256(secret_key, file_path)[:8]</p>
+<p>The first half is the project tag, and the second half is derived from the secret key and that file's path. Here's why it's keyed instead of a plain hash: anyone can hash a public file, so a plain hash proves nothing. Without the key, you can't forge a valid marker, and you can't tell which file a marker was made for. So if build-id: 8113f5bb-6572d2d8 shows up in someone else's utils.py, I can prove it came from my trapr.py.</p>
+<p>The key lives in a vault that never goes into the repo. In my setup, the vaults sit in a separate private repo. The vault also gets a SHA-256 commitment, timestamped on Bitcoin through OpenTimestamps. That lets me prove the markers existed before a given date without revealing the key. It's a dated notary stamp that doesn't give away the secret.</p>
+<p>Markers are comments, and comments are easy to delete. A careful thief strips them with one sed.</p>
+<p>So TrapR also plants behavioral canaries: small, legitimate-looking helper functions such as a stable hash for routing work to a worker, a cache tag, or an avatar color picker. Their constants are derived from your key. Feed one a specific input and it returns an output that only your vault can predict.</p>
+<p>You wire them into real code, for example worker = workers[node_for_key(tenant_id, len(workers))]. Now deleting the canary breaks the app, and keeping it keeps your fingerprint. Rename it, reformat it, move it into another file: TrapR's verifier runs the function in a sandbox, checks six input and output pairs, and matches the constants. Mountweazel still dies in the explosion, just with a different first name.</p>
+<p>I tested it on a throwaway project. The careful thief copied the files, stripped every license line and every marker line, and renamed the functions. The verdict was still DEFINITIVE, from the canaries alone.</p>
+<p>Layer 3: the fingerprint (the width of the roads)</p>
+<p>For everything else, there's structure. TrapR fingerprints every file in two ways, using winnowing, the same family of technique MOSS has used to catch plagiarism since 2003:</p>
+<p>Tokens: comments are stripped, identifiers normalized and literals bucketed, so renaming total to compute_sum doesn't change a thing.
+AST shape: the syntax tree's structure. That's loops inside conditionals inside functions, regardless of what anything is called.</p>
+<p>These matches are graded STRONG or MODERATE, never DEFINITIVE. Only markers and canaries reach DEFINITIVE. Structure is a lead, not a verdict.</p>
+<p>The part nobody warns you about: keeping it current</p>
+<p>A trap street is useless if the map moves and the trap doesn't. Neo has around 300 files, and I merge constantly. Marking by hand lasted about a day.</p>
+<p>So TrapR runs as a merge gate, a GitHub Actions check:</p>
+<p>push / PR → trapr-gate lists tracked source files with no marker
+          → missing? dispatch the private sync (repo holds no secret)
+          → sync marks the files with the key, commits, updates the vault
+          → gate re-runs → green</p>
+<p>The public repo never sees the key. The sync lives in a private repo and refuses to run if that repo is ever made public, because I don't trust Future Me at 1 a.m.</p>
+<p>On my demo repo, a PR went from red to bot-fixed to green in 34 seconds, with nobody touching anything. TrapR now runs that gate on itself, so the tool that catches copiers would catch someone copying the tool. Very meta. Extremely dramatic.</p>
+<p>Two sync requests shared one concurrency group, so GitHub cancelled one. Now each repo gets its own queue.
+Two runs raced to push the vault. Now they pull and retry.
+My dispatch token was set to 7 days, and it expired. Set it to 90 days, folks.
+The boss fight: "I'll just rewrite it in Node"</p>
+<p>Here's where every trap street dies. Port Python to JavaScript and the markers are gone (they're comments), the AST is different, and the canary may be rewritten.</p>
+<p>But ports leave evidence too. Translators change syntax, not substance. The error messages, the magic numbers and the config keys all make the trip unchanged. So the similarity command does three things:</p>
+<p>python
+python
+SIM_FAMILY = {"def": "FUNC", "function": "FUNC", "func": "FUNC", "fn": "FUNC",
+              "elif": "IF", "switch": "IF", "except": "CATCH", "catch": "CATCH",
+              "self": "SELF", "this": "SELF", "None": "NULL", "nil": "NULL", ...}
+
+It maps keywords across languages to neutral tokens.
+It drops modifiers and type words (public static final int) that only some languages write.
+It compares distinctive literals separately. These are phrases of three or more words, or hash-like tokens. A string like "rate limit exceeded: slow down and retry" doesn't happen by accident in two codebases.</p>
+<p>Then I tried hard to make it lie. My first version flagged every repo, because it was counting "boolean" and 1000 as evidence and matching import blocks. Every project imports the same libraries. After fixing that:</p>
+<p>Test    Result
+22 unrelated popular repos (incl. other rate limiters in Python and Java)   0 false leads
+14 held-out unrelated repos 0 false leads, max score 0.19
+A real copy (fork, LICENSE and markers stripped)    1.00 containment, 12 shared literals, flagged
+A clean 45-line port, Python → JS / Java  not flagged</p>
+<p>That last row is a real miss, and it's in the test suite as a printed known limit, not a hidden failure. The rules are precision-first on purpose. I would rather miss a small port than accuse an innocent project.</p>
+<p>What TrapR will not do for you
+A similarity score isn't proof. It's a reason to look. Markers and canaries are the proof.
+A clean-room rewrite is undetectable, and it should be. That's called competition.
+Private copies are invisible. Code search only finds what GitHub indexes, and it doesn't index forks, which is why TrapR also walks the fork network plus PyPI and npm.
+It isn't new science. Software watermarking, canary traps and code-model memorization audits all have research and patents behind them. TrapR packages them into one workflow you can actually run on a Tuesday. If you're thinking about novelty claims, talk to a lawyer, not a blog post.</p>
+<p>shell
+bash
+pip install git+https://github.com/jaykrishna316/TrapR
+cd ~/code/your-project
+trapr protect --license MIT --owner "Your Name" --dry-run</p>
+<p>Try the dry run first, then a throwaway repo. Keep the vault somewhere private. If you get a false positive, a lead on code you know is independent, please send it to me. That's the most valuable bug report this tool can get.</p>
+<p>Agloe started as a lie, caught a copier, and ended up a real place on the map. I'm hoping for slightly less drama, but I'll take the catch.</p>
+<p>Sources for the history: Agloe, New York (Wikipedia), NPR: An Imaginary Town Becomes Real, Fictitious entry (Wikipedia).</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/stormi" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/jayakrishna_i_0129840aa6c/i-put-a-fake-town-in-my-codebase-heres-how-it-catches-copiers-3gb8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

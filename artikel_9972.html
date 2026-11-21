@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</title>
+    <title>Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9972.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://res.infoq.com/news/2026/11/uber-go-translation-cache/en/card_header_image/generatedCard-1793504736709.jpg" alt="Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/healthy-code-AI-tokens/en/headerimage/header-1794837764807.jpg" alt="Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/uber-go-translation-cache/en/card_header_image/generatedCard-1793504736709.jpg" alt="Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/healthy-code-AI-tokens/en/headerimage/header-1794837764807.jpg" alt="Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
-<p>Learning budget left this year? Use it for a QCon conference or a live InfoQ certification cohort, if your employer's policy allows. 
+<p>QCon AI Boston (July 8-9, 2027): Agents. Context. Evals. Security. See how other teams make decisions.
 
-                            Explore your options.</p>
+                            Register Now</p>
 <p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
 <p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
 <p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites and Chief Security Architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
@@ -44,26 +44,34 @@
 <p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
 <p>InfoQ Homepage
 News
-Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 1 MS</p>
-<p>Nov 20, 2026
+Producing Healthy Code with Artificial Intelligence Costs Fewer Tokens</p>
+<p>Nov 19, 2026
 								
 								
 								
 									
-									2
+									4
 									min read</p>
-<p>Uber has redesigned its Go-based translation cache to reduce its initial memory footprint by more than 90% while keeping p99 cache miss latency below one millisecond. The hybrid architecture retains translation keys and frequently accessed values in memory while storing the remaining values on disk. The system serves millions of translations per second and maintains a cache hit rate above 99.9%.</p>
-<p>The optimization addresses two problems identified through memory profiling across Uber's Go services. Garbage collection (GC) consumed more than 20% of CPU utilization in some services, with translations accounting for approximately 70% of allocated objects.</p>
-<p>At Uber's scale, even small inefficiencies in memory management can add up.</p>
-<p>The first optimization replaced Go's sync.Map with a conventional map[string]string protected by an RWMutex. The workload was predominantly read-heavy, with infrequent updates and no individual deletions. The previous implementation created multiple objects and pointers for each translation entry, increasing GC overhead. Moving to a value-based map reduced object allocations and improved CPU utilization by more than 30% in the affected service.</p>
-<p>However, reducing object allocations did not solve the overall memory consumption problem. Translation datasets could contain two to three million keys, although individual services typically accessed only a small subset. Cache refreshes introduced another issue: the service built a replacement cache in the background before atomically swapping it with the existing one. Both copies therefore occupied memory simultaneously, causing some services to run out of memory during refreshes.</p>
-<p>Uber considered external caching and generating service-specific translation subsets, but both introduced additional operational or maintenance costs. The team instead adopted a hybrid storage design that preserves the existing Get() and Put() API. All keys remain available in memory for fast lookups, while translation values are stored in disk-backed files.</p>
-<p>Uber's hybrid translation cache (Source: Uber Blog Post)</p>
-<p>The implementation uses 256 shards, each with its own read-write mutex, in-memory entries, and disk file. Six-byte hash-based keys reduce metadata overhead, with a fallback to the original key format to handle collisions. A time-based global least recently used (LRU) policy manages in-memory entries. During cache refreshes, the system uses access history to preload translations accessed within the previous 15 minutes, avoiding a cold cache after the swap.</p>
-<p>In one example, a translation dataset that previously consumed approximately 800 MB in memory required around 40 MB for metadata after the redesign. With a configured limit of 50,000 in-memory entries, actual memory consumption typically ranged between 80 MB and 120 MB. In another reported workload, approximately 30,000 of more than four million entries were loaded in memory, while the cache hit rate remained above 99.9%. The p99 latency for disk-backed cache misses stayed below 100 microseconds.</p>
-<p>Memory usage decreased from approximately 2.7 GB to 750 MB (Source: Uber Blog Post)</p>
-<p>Uber's experience highlights the cost implications of in-memory caching at scale. The team recommends minimizing object references to reduce GC overhead and measuring how frequently cached values are accessed. When only a small proportion of cached data is actively used, a hybrid approach can retain frequently accessed values in memory while moving the rest to disk.</p>
-<p>Explore how Azul helps Java teams reduce JVM vulnerability risk, strengthen application security, and prepare their Java environments for agentic AI. Discover practical strategies for securing Java workloads while maintaining performance and reliability. Learn more.</p>
+<p>Agentic AI can speed up velocity, but the gains vanish within months as code complexity grows. In his presentation on AI-friendly code at GOTO Copenhagen, Adam Tornhill showed that healthy code makes AI perform better and costs fewer tokens. Safeguarding means keeping code health high through agentic refactoring, with an MCP supplying code health data, so AI can maintain the code it generates.</p>
+<p>Developing software with agents is significantly harder than writing code manually, Tornhill argued. But with agentic AI, they can complete tasks two to three times faster, he added. It also helps them unblock themselves and reduces coordination needs.</p>
+<p>Tornhill mentioned a study done on 1000+ open-source projects which showed that with AI, velocity went up during the first few weeks, but after two months the velocity gains were fully canceled out due to a massive increase in code complexity:</p>
+<p>AI operates in a self-harm mode, often writing code it cannot reliably maintain later.</p>
+<p>Code health measures how easy code is to understand, change, and maintain. Research done on human coding (before AI) shows that if you have healthy code, you can be up to 10x faster than someone who works on similar problems in unhealthy code, Tornhill said. The defect risk is reduced 15 times, and code reviews go twice as quickly, he added.</p>
+<p>Building a prototype was never the hard problem in software; 95% of the costs for any software project come after the first release. This is where code quality, maintainability, and architecture start to matter, Tornhill said.</p>
+<p>Recent research shows that large language models perform consistently better in healthy code. AI won’t generate perfect code; if we want to survive in the Agentic age, we need to focus on safeguarding, Tornhill said.</p>
+<p>The average codebase has a code health of 5.15, where AI-friendly code starts at 9.5. Technical depth is a bottleneck for enterprise adoption of agentic coding; what’s needed is an agentic refactoring, Tornhill argued. Claude can be used to fix code health issues, but only to a certain extent:</p>
+<p>As a best-case scenario, an agent can fix roughly 50% of the code health issues for lower-health code. Once the code health improves, the AI performance drops sharply, and Claude can only correctly refactor 20% of the code. AI tends to become conservative, doing small changes that don’t really move the needle on code quality.</p>
+<p>Adding an MCP with code health data can lead to a 90%-100% fix rate, Tornhill said. Agentic refactoring turned out to be a predictable and mechanical process at scale, where AI was capable of doing codebase-specific refactorings.</p>
+<p>Healthy code is also financially viable code, with healthy code, you can do things with 40% to 45% fewer tokens, Tornhill said.</p>
+<p>By refactoring code, modularizing it and making it healthy, we can also reduce organizational friction, Tornhill said. Code quality at the module level is a largely solved problem with the automation we now have. Scaling AI friendliness to the design and architectural level is the next big challenge, he concluded.</p>
+<p>InfoQ interviewed Adam Tornhill after his talk.</p>
+<p>Adam Tornhill: Code Health is a multifacetted concept, so we need to combine multiple metrics. We’ve found that it works best when combining measures from three levels of software design:</p>
+<p>InfoQ: How do you safeguard AI-generated code?</p>
+<p>Tornhill: Safeguarding needs to happen at multiple levels, and all safeguards need to be completely automated in an agentic context. Examples of concrete safeguards include linting, code coverage, mutation testing to ensure your tests actually test, and higher-level metrics like Code Health. In practice, these safeguards are exposed to agents as local MCP servers or command-line tools.</p>
+<p>InfoQ: How can we do refactoring at scale with agents?</p>
+<p>Tornhill: The main steps are to establish a baseline, build a safety-net for behavior, and provide a feedback loop to the agents refactoring the code. The whole process is highly iterative.</p>
+<p>December 15–16, 2026.
+Examine how senior practitioners run agents, evals, model serving, and AI-assisted engineering in production, including what failed and what changed. Register Now.</p>
 <p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
         
 			View an example</p>
@@ -75,7 +83,7 @@ Uber Cuts Translation Cache Memory by up to 90% While Keeping P99 Latency Below 
                 See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
 <p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.infoq.com/news/2026/11/uber-go-translation-cache/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/healthy-code-AI-tokens/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

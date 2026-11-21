@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rebuilding my local voice assistant pipeline</title>
+    <title>Flaws in VMware and KVM need attention, if you have time while fixing Java, PHP, and everything else</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10116.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Rebuilding my local voice assistant pipeline</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>Flaws in VMware and KVM need attention, if you have time while fixing Java, PHP, and everything else</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://s3.platypush.tech/static/images/voice-assistant-pipeline.png" alt="Rebuilding my local voice assistant pipeline" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/262623.jpg?imageId=262623&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="Flaws in VMware and KVM need attention, if you have time while fixing Java, PHP, and everything else" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://s3.platypush.tech/static/images/voice-assistant-pipeline.png" alt="Rebuilding my local voice assistant pipeline" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/262623.jpg?imageId=262623&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="Flaws in VMware and KVM need attention, if you have time while fixing Java, PHP, and everything else" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I wrote an article a couple of months ago describing how I rebuilt my old voice assistant pipeline in Platypush.</p>
-<p>And I wrote earlier articles describing my journey through self-hosted voice assistants - in 2024 (with Picovoice), in 2020 (diving into the legacy assistant.google integration, the now defunct assistant.alexa integration, the now defunct Snowboy integration, the now defunct DeepSpeech integration and Picovoice) and the original article in 2019 describing the Google Assistant integration.</p>
-<p>For a couple of months I used the voice pipeline described in my latest article as my main driver, but after getting used to the robustness of commercial voice assistants I was unhappy with the high rates of false positives/negatives of my self-hosted pipeline, as well as its lack of robustness in detecting start/end of speech, especially in noisy environments and using cheap microphones.</p>
-<p>After a bit of experimentation, I decided to swap and fine tune a few parts, and after a couple of days of trying the results are satisfying enough for me to write a short article about it.</p>
-<p>Hotword detection- assistant.microwakeword (local)</p>
-<p>Speech-to-text- assistant.openai (cloud)- assistant.vosk (local)</p>
-<p>Generate response- openai (cloud or local)</p>
-<p>Text-to-speech- tts.openai (cloud)- tts.piper (local)</p>
-<p>Hotword detection- assistant.microwakeword (local)</p>
-<p>Speech-to-text- assistant.openai (cloud)- assistant.vosk (local)</p>
-<p>Generate response- openai (cloud or local)</p>
-<p>Text-to-speech- tts.openai (cloud)- tts.piper (local)</p>
-<p>Until recently I used assistant.openwakeword, which wraps openWakeWord.</p>
-<p>It works, but the project has been quiet for a while and all of its pre-trained models are v0.1 files from 2023, mostly trained on synthetic speech.</p>
-<p>In practice I was getting both false positives (the hotword triggering on background noise) and false negatives (the hotword not detected unless I was close to the microphone).</p>
-<p>I added a new plugin, assistant.microwakeword, on top of microWakeWord through the pymicro-wakeword Python bindings.</p>
-<p>microWakeWord is the engine used by ESPHome and Home Assistant Voice, its models are actively maintained, and the built-in models (okay_nabu, hey_jarvis, hey_mycroft, alexa) ship with the package — no download required.</p>
-<p>The current official models are provided under the ESPHome micro-wake-word-models repository.</p>
-<p>Custom models are supported too: drop a microWakeWord JSON manifest (with its .tflite model) in the plugin's models directory and reference it by name.</p>
-<p>The plugin exposes the same API as assistant.openwakeword (same models, detection_threshold, frame_duration, patience_frames, input_device, input_volume parameters, same list_models action, same HotwordDetectedEvent), so switching is a matter of just changing the configuration to point to the new plugin:</p>
-<p>assistant.openai records audio when a conversation starts and transcribes it through Whisper.</p>
-<p>The tricky part has always been end-of-speech detection: knowing when the user has finished talking. The previous implementation used a per-frame boolean from WebRTC VAD, and any single frame classified as speech would reset the silence timer. With even a bit of background noise, phrases would only end when the maximum conversation duration was hit.</p>
-<p>The audio preprocessing layer (AudioPreprocessor, shared by the STT integrations) has been reworked:</p>
-<p>Hysteresis + sliding window: a frame becomes speech above the VAD threshold and stays speech until its score drops by a margin, and the per-frame decisions are smoothed by majority vote over a 0.5s window. A single noise burst can no longer keep a conversation alive.</p>
-<p>Adaptive noise floor: the background noise level is tracked over time, and frames that aren't louder than noise_floor_factor (default 2.0, ~6 dB) times the floor are never considered as speech.</p>
-<p>On a synthetic benchmark (Piper-generated phrases mixed with babble and burst noise), the old settings kept conversations open for 6–10 seconds after the speech had ended; the new pipeline ends them 1.0–1.6 seconds after the last word, which is the configured conversation_end_timeout plus the smoothing lag.</p>
-<p>Since the changes on Platypush have been performed directly in the AudioPreprocessor also used by other native speech-to-text engines, other speech-to-text plugins also benefit from them - e.g. if you use assistant.vosk for full on-device detection.</p>
-<p>The transcribed phrase is processed by the openai plugin, which handles both the API key and the conversation context. By default the assistant renders the response through the configured tts_plugin; if the response ends with a question mark, the conversation continues with a follow-up.</p>
-<p>Custom hooks can intercept phrases before the default response kicks in — for example, to handle home automation commands locally without an LLM round-trip:</p>
-<p>And the hotword event is wired to the conversation start with a similar hook:</p>
-<p>Responses are rendered by tts.openai, with volume and voice configurable. In my tests however tts.piper also yielded good results, and it runs entirely locally. In my tests on a RaspberryPi 5 however it added ~3-4s of latency to process the response to audio compared to tts.openai.</p>
-<p>Since the TTS output goes to the speakers and the wake word detector listens on the microphone, the assistant plugins pause hotword detection while a conversation is active — otherwise the assistant would hear itself.</p>
-<p>The microphone on my RPi doesn't support 16 kHz natively, so audio is captured at 44.1 kHz and software-resampled — it works, but if detection feels sluggish software resampling is usually the first suspect.</p>
-<p>The VAD and threshold defaults were tuned on synthetic audio plus a couple of my audio recordings.</p>
-<p>Different rooms, microphones and acoustics may yield different results. You may want to adjust detection_threshold on the wake word plugin and noise_floor_factor on the STT plugins if you don't feel satisfied with your mileage.</p>
-<p>To interact via Webmentions,
-          send an activity that references this URL from a platform that supports Webmentions,
-          such as Lemmy,
-          WordPress with Webmention plugins,
-          or any IndieWeb-compatible site.</p>
-<p>https://blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline</p>
-<p>It's 2026. You deserve a good local-first or local-only voice assistant on your #RaspberryPi</p>
-<p>blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline</p>
+                <p>Critical Virtzilla bugs allow authentication bypass, as a nested virtualization issue got Digital Ocean ducking</p>
+<p>If you’ve got a moment to spare in between sorting out emergency patches for PHP, Java, and PostgreSQL, VMware has just bid for any remaining space on your schedule by publishing two critical-rated security advisories.</p>
+<p>VMSA-2026-0009 addresses CVE-2026-123890, a 9.8-rated flaw that VMware says means a malicious actor with network access to vCenter may exploit this issue to bypass authentication and gain unauthorized access to the system. vCenter is the tool admins use to manage fleets of virtual machines. The flaw is present in VMware’s flagship Cloud Foundation suite.</p>
+<p>VMware also wants its users to address CVE-2026-123891, which allows attackers to read and write the database used by SDDC Manager, the tool for managing entire software-defined datacenters. Attackers can execute arbitrary commands and elevate privileges to root.</p>
+<p>The prospect of an unknown party getting access to vCenter or SDDC manager is not pleasant. At least VMware has fixed its software.</p>
+<p>The virty giant hasn't done the same to address a second advisory, VMSA-2026-0010, which warns that Cloud Foundation, Aria Operations, and VCF Operations HCX products all use Apache – which has a 9.8-rated remote code execution vulnerability (CVE-2026-119618).</p>
+<p>VMware plans to ship new versions of its products with a patched version of Apache, but for now only has workarounds that disable the http2 protocol.</p>
+<p>Admins who oversee virtual infrastructure also need to pay attention to Linux KVM, the subject of a curious incident over the last 24 hours.</p>
+<p>This mess started with the November 18 disclosure of CVE-2026-99312, a bug which allows an attacker to use a guest virtual machine to inflict Denial of Service (DoS) or memory corruption attacks on the host.</p>
+<p>It’s bad news whenever someone with access to a guest VM can attack the host, because it means gaining access to a single tenant can potentially harm all the other guest VMs or peer into the memory a guest uses.</p>
+<p>This flaw, however, isn’t a worst-case scenario guest-host escape, because it only impacts users of AMD processors who employ nested virtualization – the practice of running a hypervisor inside a virtual machine. Nested virtualization isn’t commonly used in the enterprise, but clouds employ it to do things like powering OS emulators. The bug’s CVSSv3 score is therefore a modest 5.5.</p>
+<p>Security researcher Oren Tomtov of Terra Security says the flaw meant he could access 127 GB of host RAM on a Digital Ocean “Droplet” – the junior cloud’s name for its cloudy VMs.</p>
+<p>Yomtov says he told Digital Ocean and the Linux kernel security team about the flaw in October. Maintainers got busy and delivered a fix to the mainline kernel on November 2, full fixes landed on the 17th. The CVE then appeared on November 18.</p>
+<p>Yomtov and Terra Security quickly posted their analysis of the flaw – but then took the posts down within hours.</p>
+<p>The Register understands that Digital Ocean asked for the posts to come down because it needed more time to update its Linux implementations. The company has not responded to multiple requests for comment.</p>
+<p>Terra’s analysis of the flaw asserts that it was introduced to KVM in 2022, when developers wrote a fix for CVE-2022-3344. The company believes 3.2 percent of CVEs in the Linux kernel were introduced by the fix for another CVE.</p>
+<p>The good news about CVE-2026-99312 is it’s easy to defeat without an update, by disabling nested virtualization in KVM. ®</p>
+<p>Bot-based buying is here or not, depending on where you stand in the Amazon empire</p>
+<p>Like a parent disciplining a misbehaving child, PHP’s annual update clamps down on loose default behaviors to curb malicious hacker horseplay.</p>
+<p>PARTNER CONTENT: As carriers tighten underwriting, a backup job marked green is no longer enough. Here’s the evidence underwriters expect</p>
+<p>No financial details, but plenty of other clues</p>
+<p>Pre-digital tech can't be transformed and automated</p>
+<p>Apple, Google, and Microsoft called out for failing to provide developers with adequate AI agent controls</p>
+<p>Security shop buys the hand that feeds it</p>
+<p>Selected customers can put Dragonfly AI200 through its paces on Cirrascale's cloud</p>
+<p>AI has birthed some truly colossal supers, they just aren't on the Top500</p>
+<p>Nvidia unveils an HPC-optimized Rubin GPU to challenge AMD's 288 teraFLOPS MI430X</p>
+<p>Ride-hailing biz says stolen credentials allowed crooks to help themselves to driver's license data</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Only a minority want to ban it. Plus plenty of updates on 16 projects</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://blog.platypush.tech/article/Rewriting-my-voice-assistant-pipeline" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/security/2026/11/20/flaws-in-vmware-and-kvm-need-attention-if-you-have-time-while-fixing-java-php-and-everything-else/5311193" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

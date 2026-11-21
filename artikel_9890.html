@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cómo inventariar Service Principals en Azure y ligarlos a proyectos y repositorios</title>
+    <title>Your Experts Have Partners. There&#x27;s HOPE for Keeping Them Together</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9890.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,201 +15,56 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Cómo inventariar Service Principals en Azure y ligarlos a proyectos y repositorios</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>Your Experts Have Partners. There&#x27;s HOPE for Keeping Them Together</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdanieljsaldana.dev%2F_vercel%2Fimage%3Furl%3D%252Fimages%252Fposts%252Finventario-service-principals-azure.png%26w%3D932%26q%3D100" alt="Cómo inventariar Service Principals en Azure y ligarlos a proyectos y repositorios" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/6ab2f79bd8000a811c648a32/xZT8tg4be3bgZIx2EQS_m.png" alt="Your Experts Have Partners. There&#x27;s HOPE for Keeping Them Together" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdanieljsaldana.dev%2F_vercel%2Fimage%3Furl%3D%252Fimages%252Fposts%252Finventario-service-principals-azure.png%26w%3D932%26q%3D100" alt="Cómo inventariar Service Principals en Azure y ligarlos a proyectos y repositorios" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6ab2f79bd8000a811c648a32/xZT8tg4be3bgZIx2EQS_m.png" alt="Your Experts Have Partners. There's HOPE for Keeping Them Together" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 20
-•
-Originally published at danieljsaldana.dev on Nov 20</p>
-<p>Los registros de aplicaciones, los Service Principals y las identidades administradas forman parte del día a día de cualquier plataforma que trabaje con Azure.</p>
-<p>Al principio es fácil mantenerlos bajo control. Hay pocos pipelines, pocas integraciones y todo el equipo recuerda para qué sirve cada identidad. Sin embargo, a medida que crece la plataforma, empiezan a aparecer preguntas difíciles de responder:</p>
-<p>Microsoft Entra permite consultar identidades y asignar propietarios. Azure RBAC muestra qué permisos tiene cada identidad sobre los recursos de Azure. Pero gran parte del contexto operativo suele vivir fuera de ambos sistemas: en GitHub, Azure DevOps, una base de datos interna, una hoja de cálculo o, en el peor de los casos, en la memoria del equipo.</p>
-<p>El problema no suele ser descubrir que una identidad existe. El problema es entender rápidamente qué depende de ella y quién debe actuar cuando algo falla.</p>
-<p>La buena noticia es que no hace falta construir una gran plataforma de gobierno para mejorar esta situación. Con un sistema pequeño puedes cubrir lo esencial:</p>
-<p>En este artículo veremos cómo plantear ese sistema paso a paso utilizando Microsoft Graph, el SDK de identidad de Azure y una base de datos sencilla para almacenar el contexto operativo.</p>
-<p>Son las nueve de un lunes y uno de los pipelines de producción empieza a fallar con el siguiente error:</p>
-<p>Abres Microsoft Entra, buscas el client ID que aparece en el log y encuentras la Enterprise Application asociada.</p>
-<p>El problema empieza cuando intentas responder a la siguiente pregunta:</p>
-<p>¿Qué repositorio está utilizando este Service Principal?</p>
-<p>Quizá sea el repositorio de pagos, el de facturación o una integración antigua que nadie ha modificado durante dos años. La identidad puede tener propietarios asignados en Entra, pero eso no indica necesariamente qué workflow utiliza el secreto, qué entorno depende de él o qué servicio dejará de funcionar.</p>
-<p>Empieza entonces una investigación manual:</p>
-<p>La renovación del secreto puede llevar cinco minutos. Descubrir dónde se utiliza puede llevar varias horas.</p>
-<p>Ese vacío entre la identidad técnica y el contexto operativo es el que queremos cerrar.</p>
-<p>Antes de construir el inventario, es importante diferenciar varias piezas que habitualmente se agrupan bajo expresiones como «la aplicación» o «el SPN».</p>
-<p>La App Registration contiene la definición de la aplicación. El Service Principal representa esa aplicación dentro de un tenant concreto.</p>
-<p>El campo que normalmente conecta ambos objetos es appId, conocido también como client ID.</p>
-<p>Un pipeline de GitHub Actions, un backend desplegado fuera de Azure o una integración con un SaaS suelen autenticarse utilizando ese client ID junto con un secreto, un certificado o una identidad federada.</p>
-<p>Sin embargo, no todos los Service Principals tienen una App Registration local.</p>
-<p>Cuando instalas una aplicación SaaS, utilizas una aplicación multi-tenant o consumes determinados servicios publicados por Microsoft, puede existir un Service Principal en tu tenant sin que aparezca una App Registration equivalente en /applications.</p>
-<p>Por eso, un inventario que consulte únicamente App Registrations estará incompleto.</p>
-<p>Microsoft Entra conoce la identidad, sus credenciales, su estado y sus propietarios administrativos. Pero normalmente no conoce el contexto completo en el que esa identidad se utiliza.</p>
-<p>Por ejemplo, Entra no responde directamente a preguntas como:</p>
-<p>Los propietarios de Entra indican quién puede administrar una identidad, pero no siempre quién conoce el servicio que depende de ella.</p>
-<p>Tampoco existe un recurso ARM natural sobre el que añadir etiquetas de proyecto, repositorio o producto cuando hablamos de Service Principals.</p>
-<p>Por eso es útil mantener dos capas separadas:</p>
-<p>Antes de empezar a inventariar secretos, conviene recordar que no todos los escenarios deberían utilizar uno.</p>
-<p>Siempre que sea posible, las Managed Identities y la Workload Identity Federation deberían ser la opción preferente. Reducen la necesidad de almacenar credenciales de larga duración y eliminan gran parte del trabajo manual de rotación.</p>
-<p>Aunque una organización priorice la federación, seguirá teniendo Service Principals tradicionales durante bastante tiempo.</p>
-<p>Además, las Managed Identities también aparecen en Microsoft Graph como objetos servicePrincipal, normalmente con:</p>
-<p>Por tanto, el inventario debería incluirlas. No necesitan una alerta de rotación manual, pero sí puede ser útil conocer:</p>
-<p>No es necesario empezar con una aplicación compleja.</p>
-<p>Una primera versión puede dividirse en dos capas:</p>
-<p>¿Qué identidades existen y en qué estado se encuentran?</p>
-<p>¿A qué proyecto, repositorio, entorno o equipo pertenece cada identidad?</p>
-<p>Juntas permiten responder una tercera pregunta mucho más útil:</p>
-<p>¿Quién tiene que actuar cuando una credencial está a punto de caducar?</p>
-<p>Para consultar las aplicaciones y los Service Principals del tenant puedes utilizar @azure/identity.</p>
-<p>Una implementación básica con ClientSecretCredential sería la siguiente:</p>
-<p>Para obtener un token de Microsoft Graph:</p>
-<p>El Service Principal que ejecute este inventario debe ser una identidad de lectura independiente de las identidades que se están inventariando.</p>
-<p>Para consultar aplicaciones y Service Principals necesita normalmente:</p>
-<p>Debe configurarse como permiso de aplicación y recibir consentimiento de administrador.</p>
-<p>Si Graph devuelve un error 403, conviene mostrar un mensaje explícito:</p>
-<p>Evita transformar todos los errores en un mensaje genérico como «Azure no está disponible». Una configuración incorrecta debe poder distinguirse de un problema de red o de throttling.</p>
-<p>Si el inventario forma parte de una aplicación más grande, quizá no quieras que toda la aplicación deje de arrancar cuando Azure no está configurado.</p>
-<p>En ese caso puedes crear la credencial solo cuando se utilice:</p>
-<p>Así, una persona puede trabajar en otras partes de la aplicación sin disponer necesariamente de credenciales de Azure.</p>
-<p>El panel de identidades puede mostrarse como no configurado o degradado, mientras el resto del sistema sigue funcionando.</p>
-<p>Uno de los errores más frecuentes es consultar únicamente:</p>
-<p>Para construir un inventario completo deberías consultar al menos:</p>
-<p>Una función sencilla para construir las URLs puede ser:</p>
-<p>Microsoft Graph devuelve resultados paginados mediante @odata.nextLink.</p>
-<p>Una función reutilizable podría tener esta forma:</p>
-<p>Validar que nextLink pertenece a graph.microsoft.com evita seguir ciegamente una URL inesperada.</p>
-<p>También es recomendable establecer un timeout. Un tenant grande puede requerir varias páginas y no debería mantener un proceso bloqueado indefinidamente.</p>
-<p>Una misma aplicación puede aparecer en las dos consultas.</p>
-<p>La App Registration contiene la definición. El Service Principal representa su instancia dentro del tenant.</p>
-<p>Si muestras ambos resultados por separado, duplicarás muchas identidades. Si consultas únicamente uno de los endpoints, perderás información.</p>
-<p>En tenants complejos puede haber más de un Service Principal asociado al mismo appId, por lo que quizá necesites adaptar la relación a tu caso.</p>
-<p>Para una primera versión, almacenar ambos identificadores suele ser suficiente:</p>
-<p>Puedes normalizar los resultados en tres categorías principales:</p>
-<p>Esta clasificación facilita mucho la interfaz.</p>
-<p>No tiene sentido mostrar una Managed Identity como si tuviera una credencial ausente. Su estado debería ser algo como:</p>
-<p>Una Enterprise Application de terceros sin credenciales visibles puede marcarse como:</p>
-<p>Y una App Registration propia sin secretos ni certificados puede mostrarse como:</p>
-<p>Microsoft Graph puede devolver credenciales en la App Registration, en el Service Principal o en ambos objetos.</p>
-<p>Por eso conviene reunirlas en una única lista:</p>
-<p>La deduplicación puede hacerse por keyId:</p>
-<p>Sin esta deduplicación, una misma credencial podría producir dos alertas y generar ruido innecesario.</p>
-<p>Microsoft Graph devuelve fechas, pero no proporciona directamente un estado como «caduca en 12 días».</p>
-<p>Ese cálculo debe hacerse en tu aplicación.</p>
-<p>Puedes definir una ventana de renovación:</p>
-<p>Después puedes calcular el estado global de una identidad.</p>
-<p>Con estos datos puedes ordenar la interfaz para mostrar primero:</p>
-<p>Imagina que el sistema muestra lo siguiente:</p>
-<p>La alerta es correcta, pero todavía no indica:</p>
-<p>Por eso el inventario técnico debe conectarse con una capa de contexto operativo.</p>
-<p>Consultar Microsoft Graph cada vez que una persona abre el panel no es una buena estrategia.</p>
-<p>Un tenant puede tener cientos o miles de Service Principals. Además de aumentar la latencia, las consultas frecuentes pueden provocar throttling.</p>
-<p>Para un sistema pequeño tienes varias opciones:</p>
-<p>Una implementación sencilla puede actualizar el inventario cada hora o varias veces al día.</p>
-<p>La respuesta de la API debería incluir metadatos como:</p>
-<p>Así, quien consulte el inventario sabe cuándo se actualizó.</p>
-<p>También puedes permitir un refresco manual después de renovar una credencial, evitando que el panel muestre datos obsoletos hasta el siguiente proceso programado.</p>
-<p>Los datos de Microsoft Graph son ricos, pero no siempre están preparados para relacionarse con tus propios proyectos o repositorios.</p>
-<p>Conviene transformar cada identidad en un modelo más pequeño y estable:</p>
-<p>proporciona un identificador estable dentro de tu sistema.</p>
-<p>No conviene utilizar únicamente el nombre visible, porque puede cambiar y no tiene por qué ser único.</p>
-<p>El appId, en cambio, debe mantenerse como campo de búsqueda porque es el valor que aparecerá con más frecuencia en:</p>
-<p>La segunda parte del sistema no procede de Microsoft Graph.</p>
-<p>Debes definir qué tipos de elementos operativos quieres relacionar con las identidades.</p>
-<p>Una primera versión puede utilizar los siguientes ámbitos:</p>
-<p>Puedes representar cualquier ámbito con un modelo común:</p>
-<p>Los proyectos pueden proceder de tu propia base de datos. Los repositorios pueden cargarse desde GitHub o Azure DevOps.</p>
-<p>Para una primera versión incluso podrías mantenerlos manualmente.</p>
-<p>Lo importante es que los identificadores sean estables y no dependan únicamente del nombre visible.</p>
-<p>Una asignación relaciona una identidad con un ámbito operativo.</p>
-<p>Antes de guardar la asignación deberías validar que la identidad existe en el inventario actual:</p>
-<p>De esta manera evitas crear referencias manuales a Service Principals inexistentes o eliminados.</p>
-<p>También es recomendable crear un índice único:</p>
-<p>Así, una identidad no puede asignarse dos veces al mismo ámbito.</p>
-<p>Sin embargo, sí puede relacionarse simultáneamente con:</p>
-<p>Eso permite reflejar distintos niveles de propiedad.</p>
-<p>La relación entre una identidad y un repositorio no debería limitarse a dos identificadores.</p>
-<p>Añadir una justificación aporta mucho contexto:</p>
-<p>Los cambios deberían registrarse en una bitácora:</p>
-<p>No es necesario crear un sistema complejo de auditoría desde el primer día. Una colección o tabla de eventos suele ser suficiente para saber:</p>
-<p>Supongamos que el sistema detecta lo siguiente:</p>
-<p>Sin contexto operativo, alguien debe investigar dónde se utiliza.</p>
-<p>Con las asignaciones, el sistema puede mostrar:</p>
-<p>El tiempo se dedica a resolver el problema, no a descubrir quién utiliza la identidad.</p>
-<p>El sistema no solo debe permitir buscar un Service Principal y ver sus proyectos.</p>
-<p>Esta capacidad convierte un simple listado en una herramienta operativa.</p>
-<p>Uno de los indicadores más útiles es el número de identidades activas sin ninguna asignación.</p>
-<p>Una identidad activa y sin propietario operativo puede significar varias cosas:</p>
-<p>El sistema no debe eliminar identidades automáticamente solo porque estén huérfanas.</p>
-<p>Debe convertirlas en elementos que requieren revisión.</p>
-<p>No necesitas construir un gran dashboard desde el principio.</p>
-<p>Una primera interfaz puede tener tres vistas.</p>
-<p>Incluso una tabla con filtros puede aportar suficiente valor para una primera versión.</p>
-<p>Una API pequeña podría ofrecer estos endpoints:</p>
-<p>No hace falta exponer todos los datos originales de Microsoft Graph. La API debería devolver únicamente los campos que necesita la interfaz.</p>
-<p>Es fácil confundir Microsoft Graph con Azure Resource Manager porque ambos pueden utilizar credenciales obtenidas mediante @azure/identity.</p>
-<p>Sin embargo, responden preguntas distintas.</p>
-<p>El inventario de Service Principals vive principalmente en Microsoft Entra y Microsoft Graph.</p>
-<p>El contexto de negocio —proyectos, repositorios, productos y equipos— vive en tu propia capa de gobernanza.</p>
-<p>Una evolución natural del sistema es consultar qué roles tiene cada Service Principal sobre recursos de Azure.</p>
-<p>Sin embargo, esta consulta aumenta la complejidad:</p>
-<p>Por eso puede dejarse fuera de la primera versión.</p>
-<p>El sistema ya aporta valor relacionando identidades con proyectos y repositorios, incluso sin inventariar todo Azure RBAC.</p>
-<p>El permiso requiere consentimiento de administrador.</p>
-<p>La identidad lectora debería utilizar el principio de mínimo privilegio y no compartir credenciales con otros procesos si puede evitarse.</p>
-<p>En producción, guarda el secreto en un gestor adecuado, como Azure Key Vault, y evita incluirlo en archivos .env distribuidos con la aplicación.</p>
-<p>El inventario contiene información sensible, aunque no almacene el valor de los secretos.</p>
-<p>Por eso conviene aplicar algunas medidas básicas:</p>
-<p>El sistema necesita conocer los metadatos de las credenciales, pero nunca debería recuperar ni guardar sus valores.</p>
-<p>Microsoft Graph tampoco devuelve el valor de un secreto existente.</p>
-<p>Un inventario solo es útil si se mantiene.</p>
-<p>Estas prácticas ayudan a integrarlo en el proceso operativo.</p>
-<p>Cuando se crea un Service Principal nuevo, la tarea no debería considerarse terminada hasta que se indique:</p>
-<p>Programa una revisión periódica de identidades activas sin asignación.</p>
-<p>Cada una debería terminar en una de estas situaciones:</p>
-<p>Treinta días suele ser una ventana razonable para empezar.</p>
-<p>Algunas organizaciones necesitarán 60 o 90 días debido a sus procesos de cambio.</p>
-<p>Lo importante es que la ventana sea visible y compartida.</p>
-<p>La convención no sustituye a las asignaciones, pero reduce mucho el tiempo de búsqueda.</p>
-<p>Cada nuevo pipeline basado en Workload Identity Federation es un secreto menos que inventariar y rotar.</p>
-<p>El sistema también puede registrar que una identidad utiliza federación:</p>
-<p>Así distingues entre identidades que requieren rotación manual y las que no.</p>
-<p>Deja fuera Enterprise Applications, Managed Identities y aplicaciones de terceros.</p>
-<p>Consulta siempre /applications y /servicePrincipals.</p>
-<p>Relaciónalos mediante appId y conserva los object IDs de ambos.</p>
-<p>No necesita secretos rotables, pero sigue siendo una identidad con permisos.</p>
-<p>Los nombres pueden cambiar y no tienen por qué ser únicos.</p>
-<p>Utiliza el object ID para la clave interna y conserva el appId como identificador de búsqueda.</p>
-<p>Un propietario administrativo no siempre es el responsable operativo del servicio.</p>
-<p>Registra explícitamente proyecto, repositorio y equipo.</p>
-<p>Es posible utilizar atributos de extensión, pero puede mezclar responsabilidades y complicar el modelo.</p>
-<p>Mantener el inventario técnico separado de las asignaciones operativas suele ser más flexible.</p>
-<p>El sistema puede seguir mostrando una credencial antigua hasta que expire la caché.</p>
-<p>Incluye un refresco manual o un proceso frecuente.</p>
-<p>Un inventario para seguridad, otro para plataforma y otro en una hoja de cálculo terminarán divergiendo.</p>
-<p>Mantén una única fuente técnica y permite diferentes vistas sobre los mismos datos.</p>
-<p>Una identidad sin asignación no siempre es una identidad inútil.</p>
-<p>Empieza generando alertas y revisiones humanas antes de automatizar acciones destructivas.</p>
-<p>No hace falta implementar todo desde el principio.</p>
-<p>El objetivo no es construir desde el primer día una plataforma completa de Cloud Security Posture Management.</p>
-<p>El objetivo es resolver una pregunta concreta:</p>
-<p>Cuando esta identidad tenga un problema, ¿sabremos inmediatamente qué depende de ella y quién debe actuar?</p>
-<p>Microsoft Entra ya permite descubrir las identidades de un tenant. El verdadero reto es añadir el contexto que falta alrededor de ellas.</p>
-<p>Un sistema pequeño puede aportar mucho valor si combina dos capas:</p>
-<p>Con esa base puedes detectar secretos próximos a caducar, localizar Service Principals huérfanos y reducir el tiempo necesario para responder a un incidente.</p>
-<p>Siempre que sea posible, utiliza Managed Identity o Workload Identity Federation para reducir el número de secretos. Pero mientras existan Service Principals tradicionales, merece la pena mantener un inventario claro y una forma sencilla de relacionarlos con los servicios que dependen de ellos.</p>
-<p>Porque el problema no es descubrir que una identidad existe.</p>
-<p>El problema es saber qué dejará de funcionar cuando esa identidad falle.</p>
-<p>Esta misma propuesta la he implantado en una de las soluciones que estoy desarrollando Goliat - Dashboard</p>
-<p>Si quereis ver una demo podeis visitar el sitio web del proyecto</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Mixture-of-Experts (MoE) models have enabled state-of-the-art LLMs to be scaled to hundreds of billions of parameters, but they come with a fundamental and costly caveat: every expert MLP must occupy memory at inference time, even though the vast majority are idle for any given token. For example, Qwen3.5-122B has 256 experts in each of its 48 MoE layers, and 95% of its ~250 GB parameter memory footprint is taken up entirely by these expert MLPs alone. However, for any given token, only 8 experts in each layer are actually used.</p>
+<p>Expert pruning is one of the most direct fixes to this memory bottleneck. That is, permanently delete the least useful experts. Pruning avoids the latency issues which make dynamic loading/off-loading of experts impractical; it does not require any training; and it composes with quantization. Given these attractive benefits and the simplicity of the idea, it's easy to see why expert pruning has become a go-to approach for shrinking MoEs. The difficulty lies in deciding which experts are safest to remove.</p>
+<p>Existing pruning methods score each expert independently, assigning every expert a scalar importance score (based on a calibration dataset), and cutting out the least important experts (in each layer independently). These are first-order methods, because they assume each expert's contribution is independent of all others. In reality, experts form cooperative groups. We observe consistent clusters of co-activated experts in our own experiments, and independent work has shown that expert cooperation is a stable property of MoEs and is important for model performance. Ignoring these interactions leads to suboptimal pruning, especially at aggressive rates.</p>
+<p>Our newest paper derives HOPE (Higher-Order Pruning of Experts), a second-order method that accounts for pairwise expert interactions. At 50% pruning, HOPE achieves the best average rank of any method, with gains of up to +6.1% on agentic coding tasks over the next-best pruning method.</p>
+<p>In this post, we explain how HOPE works, show where it outperforms existing methods, and walk through how to use it for your own models. For readers unfamiliar with MoE architectures, see Mixture of Experts (MoEs) in Transformers.</p>
+<p>In a standard MoE, each layer has EEE experts, and each input token xxx is routed independently to KKK such experts ( K=8 K = 8 K=8 is a typical choice). Routing is performed by a single layer which produces softmax-normalized gate weights gk(x)g_{k}(x)gk​(x) for each expert kkk, wherein the KKK experts with the highest gate weights are selected to form the active set of experts, T(x)⊂{1,..,E}T(x) \subset\{1,..,E\}T(x)⊂{1,..,E}. The output of the layer is then ∑k∈T(x)gk(x)fk(x)\sum\limits_{k\in T(x)}g_{k}(x)f_{k}(x)k∈T(x)∑​gk​(x)fk​(x), where fk(x)f_{k}(x)fk​(x) is the output of expert kkk for token xxx.</p>
+<p>Left: typical MoE layer, where each token is routed to the top-K experts. Right: first-order methods rank and delete experts based on a scalar importance score, but the best pruning decisions will also consider the strength of interactions between experts.</p>
+<p>Importantly, experts in the selected set T(x)T(x)T(x) are not independent. Experts form stable cooperative groups that get consistently co-activated together. This has been observed before in the literature, as well: expert co-selection patterns emerge early in training and stabilize throughout.</p>
+<p>This means that when we prune experts from an MoE layer, pruning decisions need to consider the higher-order effects between these experts. Removing expert A might seem fine on its own, but if expert B—which frequently cooperates with and relies on A—is highly important, then removing A would dismantle a cooperative group just through a single deletion. First-order methods miss this entirely, because they score A and B separately.</p>
+<p>This effect compounds at high pruning rates. When we remove up to 50% of experts, we risk breaking many cooperative links. This is where second-order pruning is most advantageous.</p>
+<p>(See Appendix A in our corresponding paper for the full derivation of the HOPE objective)</p>
+<p>When we delete a set of PPP experts from some MoE layer, the selected set of experts T(x)T(x)T(x) (for any token xxx) can change. The pruned experts that would have been selected are replaced by the experts with the next-highest gate weights. The resulting change in layer output is the pruning error. Our goal is to find the prune-set PPP (of some predefined pruning budget ∣P∣\vert P\vert∣P∣) that minimizes the resulting pruning error (over tokens xxx from our calibration set).</p>
+<p>Unfortunately, minimizing the pruning error over PPP directly is intractable. The pruning error depends on the identities of the replacement experts, which in turn depend on the prune-set PPP itself. HOPE sidesteps this by defining a tractable surrogate ZZZ, which strictly upper-bounds the dominant component of the pruning error:</p>
+<p>Z=[∑j∈P∩T(x)gj(x)∥fj(x)∥2]2≥true errorZ = \bigl[\sum\limits_{j \in P\cap T(x)} g_{j}(x)\Vert f_j(x)\Vert_{2}\bigr]^{2} \geq \text{true error}Z=[j∈P∩T(x)∑​gj​(x)∥fj​(x)∥2​]2≥true error</p>
+<p>Because ZZZ is a squared sum, expanding it naturally produces cross-terms gi(x)gj(x)∥fi(x)∥2∥fj(x)∥2g_{i}(x)g_{j}(x)\Vert f_{i}(x)\Vert_{2}\Vert f_{j}(x)\Vert_{2}gi​(x)gj​(x)∥fi​(x)∥2​∥fj​(x)∥2​ between pairs of experts. These are the interaction terms that first-order methods discard.</p>
+<p>To find the optimal prune-set, HOPE minimizes E[Z]\mathbb{E}[Z]E[Z] over the calibration set, which can be reformulated as the following quadratic program:</p>
+<p>P∗=arg min⁡p  p⊤Fps.t.p∈{0,1}E,∑k=1Epk=∣P∣P^{*} = \argmin_{p}\; p^{\top}Fp \quad \text{s.t.} \quad p \in \{0,1\}^{E}, \sum\limits_{k=1}^{E}p_{k} = \vert P\vertP∗=pargmin​p⊤Fps.t.p∈{0,1}E,k=1∑E​pk​=∣P∣</p>
+<p>where F∈RE×EF\in\mathbb{R}^{E\times E}F∈RE×E is defined as:</p>
+<p>Fi,j=1∣Xi,j∣∑x∈Xi,jgi(x)gj(x)∥fi(x)∥2∥fj(x)∥2whereXi,j={x:i,j∈T(x)}F_{i,j} = \frac{1}{\vert \mathcal{X}_{i,j}\vert} \sum\limits_{x\in\mathcal{X}_{i,j}} g_{i}(x)g_{j}(x)\Vert f_{i}(x)\Vert_{2}\Vert f_{j}(x)\Vert_{2}\quad\text{where}\quad \mathcal{X}_{i,j} = \{x: i,j \in T(x)\}Fi,j​=∣Xi,j​∣1​x∈Xi,j​∑​gi​(x)gj​(x)∥fi​(x)∥2​∥fj​(x)∥2​whereXi,j​={x:i,j∈T(x)}</p>
+<p>This F-matrix is collected on the calibration dataset, and the optimal prune-set is obtained by solving the resulting quadratic program (QP) with a continuous relaxation (then rounding to binary solutions). Each entry Fi,jF_{i,j}Fi,j​ captures the average gate-weighted output product of experts iii and jjj, across tokens where both are co-activated. Whereas the diagonal Fk,kF_{k,k}Fk,k​ measures individual expert importance, the off-diagonal entries ( Fi,jF_{i,j}Fi,j​ for i≠ji\neq ji=j) measure pairwise cooperative contribution.</p>
+<p>What does FFF look like in practice? It shows the structure of expert cooperation, which depends on layer:</p>
+<p>Visualization of the interaction matrix F for GLM-4.5-Air (128 experts per layer, 106B parameters total) at three representative layers (early, middle, late). Experts have been clustered to reveal block structure. Bright blocks along the diagonal indicate groups of experts with strong pairwise interaction scores.</p>
+<p>In terms of practical cost, HOPE requires the same calibration pass as any other expert-pruning method (one forward pass over calibration data). The only addition is solving the quadratic program, which is non-convex, but can be solved efficiently via a standard QP solver (1–2 seconds each layer). The total additional overhead is negligible compared to first-order methods, as the time for calibration dominates.</p>
+<p>Notably, HOPE has a strong connection to Router-weighted Expert Activation Pruning (REAP), a state-of-the-art first-order expert-pruning method. HOPE's F-matrix encodes individual expert importance scores on the diagonal, and this diagonal effectively recovers the scores used by REAP to independently rank experts for pruning (differing only by the variance of expert contributions). The diagonal of FFF recovers REAP's expert rankings almost perfectly (Spearman ρ=0.988\rho = 0.988ρ=0.988). Thus, any improvement HOPE achieves over REAP is attributable to the second-order interaction terms in the off-diagonal entries of the FFF-matrix.</p>
+<p>We evaluated HOPE as an expert pruning method using 3 models (Qwen3.5-122B, Qwen3.5-35B, and GLM-4.5-Air), with 2 calibration datasets (Evol-CodeAlpaca and SWE-Bench Verified trajectories). We used the Tulu3 suite and SWE-Bench Pro (agentic coding) to test the resulting pruned models, comparing HOPE to 4 first-order baselines (REAP, MAN, EAN, and Frequency) across pruning rates spanning from 10% to 50%.</p>
+<p>HOPE achieves the best overall rank across conditions and dominates at aggressive pruning rates. Left: average rank (lower = better) across all models, calibration sets, and benchmarks. Right: SWE-Bench Pro performance on Qwen3.5-35B.</p>
+<p>Across all conditions, HOPE achieved the best average rank (2.07 out of 5 methods), with the highest rate of top-1 finishes (39% of conditions) and top-2 finishes (67%). In a head-to-head comparison, HOPE beats every other baseline in the majority of conditions.</p>
+<p>As expected, HOPE's advantage grows at higher pruning rates. As more experts are removed, more cooperative links are broken, and the off-diagonal terms of FFF become more important. At 50% pruning, HOPE's average rank improves to 1.58 (vs. 2.42 for the next-best method, REAP). This is also the most deployment-relevant setting, where memory savings are large enough to accommodate longer contexts, deeper reasoning, and more tool calls.</p>
+<p>HOPE's advantage is most pronounced on SWE-Bench Pro, an agentic coding benchmark where models must solve real GitHub issues autonomously. These problems involve compositionally diverse tasks (e.g. coding, tool calls, reasoning, etc.) over many turns and likely exercise diverse expert combinations—exactly the regime where preserving cooperative structure matters most. On Qwen3.5-35B-A3B at 50% pruning, HOPE achieved 42.3 on SWE-Bench Pro, matching the unpruned model's 41.8 (while REAP dropped to 36.2, a 13% regression).</p>
+<p>Notably, pruned models can occasionally match or exceed the unpruned baseline, likely because the removal of low-relevance experts reduces noise on the target tasks. This effect is not unique to HOPE and has been observed across pruning methods. Furthermore, our experiments showed that code-focused calibration with any pruning method (including HOPE) did not severely degrade non-coding benchmarks, and HOPE performed well across the Tulu3 suite regardless of calibration set.</p>
+<p>Average strength of cooperation (measured by F-matrix value) with retained experts, split by experts on which HOPE and REAP disagree.</p>
+<p>HOPE's advantage stems from optimizing over the entire interaction matrix FFF. To understand how this affects pruning decisions in practice, we examine the experts where HOPE and REAP disagree. For each disputed expert, we compute its cooperative score (i.e. its average F-value with other retained experts). Experts retained only by HOPE consistently have higher cooperative scores than experts retained only by REAP. In other words, as part of the QP optimization, HOPE sacrifices some individually high-scoring experts in favor of preserving cooperative clusters. The gains in benchmark performance (shown above) validate that this trade-off is advantageous.</p>
+<p>We created a basic package to run HOPE. It has three steps: 1) calibrate; 2) solve; 3) prune. Our package has been tested on Qwen3, Qwen3-Next, Qwen3.5, and GLM-4.5.</p>
+<p>The calibration step runs a single forward pass over calibration data, whether it be agentic rollouts or single-turn traces. This uses HuggingFace transformers to hook into the forward pass of each individual MoE layer. For each token, this records which experts are selected, their gate weights, output norms, and pairwise co-activation statistics. The output of this step is the F-matrix, stored in an HDF5 file.</p>
+<p>This command materializes the F-matrix and solves the binary quadratic program via a continuous relaxation. This takes a few seconds per layer, and the output is a JSON file which contains the prune-set. This is technically the final output of the HOPE algorithm.</p>
+<p>To complete the pipeline, we run this command to actually create the smaller model checkpoint from the prune-set. The pruned model is a standard HuggingFace checkpoint which is smaller on disk and in memory (no changes to vLLM or SGLang model definitions needed).</p>
+<p>We also released a more compact Python API:</p>
+<p>HOPE's advantage is most pronounced at higher pruning rates (40–50%). At lower pruning rates (10–20%), first-order methods like REAP and MAN are sometimes competitive, and HOPE's advantage shrinks. Additionally, as with most expert-pruning algorithms, HOPE prunes each layer independently and does not account for cross-layer interactions. In our paper, we presented a theoretical framework for cross-layer HOPE, but the results remain preliminary. Finally, HOPE captures pairwise interactions, but even higher-order interactions (triplets and beyond) could provide additional signal, although they are combinatorially difficult to estimate.</p>
+<p>For more information, see our corresponding paper and codebase.</p>
+<p>To see how HOPE can be applied to next-generation hybrid architectures, see our corresponding repository.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/danieljsaldana/como-inventariar-service-principals-en-azure-y-ligarlos-a-proyectos-y-repositorios-4dn" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/amazon/higher-order-pruning-experts" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

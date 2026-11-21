@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Agent Aced the Task. Will It Do It Again?</title>
+    <title>White House Replaces Cyber Director After Tech Outages</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10062.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,233 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Your Agent Aced the Task. Will It Do It Again?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-20</p>
+        <h1>White House Replaces Cyber Director After Tech Outages</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/government_64.png" alt="White House Replaces Cyber Director After Tech Outages" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6435a1131860001f144239ea/dI5J2sSc3TSprk9VB4EVJ.jpeg" alt="Your Agent Aced the Task. Will It Do It Again?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/government_64.png" alt="White House Replaces Cyber Director After Tech Outages" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Your agent works in rehearsal, but during the live demo, it takes a different path and fails the same task.</p>
-<p>That is embarrassing onstage. In production, it is a reliability problem: a workflow that succeeded once may fail the next time a user makes the same request. For mission-critical work, such as reconciling a financial transaction or checking a contract for an obligation, that can be a showstopper.</p>
-<p>Most benchmarks hide this variability behind an average. On AppWorld, a ReAct agent using GPT-4.1 succeeded on 77.4% of runs across five repetitions. But it succeeded in all five runs for only 53.0% of tasks — a 24.4-point consistency gap.</p>
-<p>Most benchmarks report the first number. We built a way to measure the second — and improve it.</p>
-<p>In an earlier post, we introduced ALTK-Evolve — a system that turns an agent's own past trajectories into reusable guidelines, distilled automatically and injected back at inference time. It measurably improves task success, but those results only asked the average-case question too.  This post introduces consistency guidelines, a new guideline type in altk-evolve built on top of a diagnostic tool we call the Consistency Analyzer, that targets this gap directly.</p>
-<p>Standard agent evaluation reports Mean@k: run a benchmark k times, average the pass rate. Often k=3, sometimes just 1. It's the number on every leaderboard, and it's what "77% accurate" means in practice.</p>
-<p>Mean@k answers "how good is this agent, on average?" It does not answer the question a real user cares about: will it still be good if I ask this exact question again? For that you need Pass^k: the fraction of tasks where the agent succeeds on all k runs.</p>
-<p>⚠️ Pass^k is not Pass@k. The familiar Pass@k is optimistic — it asks whether at least one of k attempts succeeded, the right question when you can verify and retry. Pass^k is its pessimistic mirror image: every attempt must succeed. Same letters, opposite question. Pass^k ≤ Mean@k ≤ Pass@k, always.</p>
-<p>A ReAct agent backed by GPT-4.1 posts a Mean@5 of 77.4% — genuinely strong. But Pass^5 is only 53.0%. Nearly a quarter of the benchmark consists of tasks the agent can sometimes solve and sometimes can't, with nothing about the task changing between runs. We call this gap — Mean@k minus Pass^k — the consistency gap.</p>
-<p>This isn't a capability problem you fix with a bigger model. It's an orthogonal axis: an agent can be capable and inconsistent at the same time.</p>
-<p>Every time an LLM agent decides something — which API to call, what argument to pass, whether to retry — that decision comes out of a probability distribution over next tokens. What matters is the shape of that distribution. A sharp one puts most of its mass on a single token: the runners-up are far behind, and the same choice comes out run after run. A flat one spreads comparable mass across several near-tied tokens, and which one wins is close to a coin flip.</p>
-<p>The shape decides how much noise it takes to change the outcome. Sharp distributions are resilient — GPU floating-point non-associativity, request batching, and other platform-side effects nudge the numbers slightly, but nowhere near enough to reorder a clear winner. Flat distributions are vulnerable to exactly that nudge: near-ties may reorder under small perturbations. And because a trajectory chains dozens of decisions, a small per-step chance of flipping compounds into a large chance that some run goes differently. That's where a 24-point gap comes from.</p>
-<p>This is also why the problem survives your decoding settings. Greedy decoding and a fixed seed both govern how a distribution gets turned into a token — they say nothing about the distribution itself. On a hosted endpoint the probabilities shift slightly from run to run, so the same prompt to the same model at temperature zero can still resolve a near-tie one way today and the other way tomorrow.</p>
-<p>Our setup: the ReAct agent runs at temperature 0.0, so none of the variance above is ordinary sampling.</p>
-<p>Which turns the problem into a search: which steps in a given trajectory were the flat ones — and what do you do about them once you know?</p>
-<p>Consistency guidelines come out of a two-stage pipeline that plugs into ALTK-Evolve's existing machinery — with a new source signal driving what gets written.</p>
-<p>1. Detect — the Consistency Analyzer. 
-Given one recorded trajectory, the analyzer replays each decision step through controlled resampling, measuring how much the model's output actually varies at that point. Concretely, that's one additional model call per decision step, done once offline — issued with the sampling parameter set to draw k completions at once (k=5 by default) — replayed against the already-recorded context, not new tool calls, not new environment interactions, and not a second end-to-end rollout of the task. This yields a consistency score per decision step that is written into a scorecard to pinpoint exactly which decisions are at risk of flipping on the next run. Detection is fully black-box — no logits, no model internals, no instrumentation beyond the trace you already have.</p>
-<p>2. Generate — targeted guidelines.  Every flagged step becomes a candidate consistency guideline in the standard ALTK-Evolve format, so it slots into the existing storage and retrieval pipeline. Here's a real example, generated by GPT-4.1 from a trajectory of the AppWorld task "How many activities are done in my bucket list as per my SimpleNote note?":</p>
-<p>[Guideline 1] When counting checkbox-style markers in note content, use a line-anchored regex match rather than a plain substring count — note titles often repeat the marker symbol in a legend line.</p>
-<p>[Guideline 2] Always verify search results for note queries by checking for multiple matches and confirming the correct note before proceeding.</p>
-<p>Nothing here is task-specific trivia. String-counting bugs and unverified search results are decision points that show up with high uncertainty across many AppWorld tasks. That's the point: the analyzer targets instability, not failure — so it catches steps the agent happened to get right this time but could easily get wrong next time.</p>
-<p>Watch the 2-minute demo — five parallel runs of the agent split 3-2 on this task because of agent uncertainty about the counting strategy, then run again after these guidelines in context: all five agree.</p>
-<p>We evaluated on AppWorld test_normal (168 tasks) with a ReAct agent on GPT-4.1, generating consistency guidelines from a single baseline trajectory per task and testing them on 5 fresh runs.</p>
-<p>Mean@5 (%), aggregate — same scale as Pass^5 above.</p>
-<p>The consistency gap is cut roughly in half. Aggregate Pass^5 rises 53.0% → 69.0% while Mean@5 rises 77.4% → 81.0%, narrowing the gap between "looks capable" and "can be counted on" from 24.4pp to 12.0pp. Nearly a third of previously-inconsistent tasks become tasks the agent passes on every single run.</p>
-<p>The middle and hard tiers gain most. Medium +22.9pp (+44% relative), Hard +14.3pp (+45% relative) — effectively tied in relative terms, with Medium ahead absolutely. Easy gains +12.2pp, having had the least room. This is consistency guidelines doing what they're designed to do: finding and stabilizing the specific decision points where an agent's own uncertainty was leaking into the outcome.</p>
-<p>Mean@5 never drops. Preserving average accuracy was a hard requirement, not a nice-to-have: a system that boosts Pass^5 by trading away Mean@5 would just be shifting unreliability around, not fixing it. Mean accuracy holds or improves at every difficulty level.</p>
-<p>Applied to a different but related task in the same AppWorld scenario — another variant of the scenario the guidelines were mined from — consistency guidelines still lift Pass^5 by +13.0pp, only 3 points below the same-task number. A guideline derived from one run isn't just patching that run; it's capturing something that transfers.</p>
-<p>The sharper evidence comes from a weaker model, gpt-oss-120b. Same-task Pass^5 rose +6.0pp from a much lower baseline (10.1% → 16.1%) — and, interestingly, the similar-task generalization number (+8.7 pp) actually exceeded the same-task gain, suggesting the guidelines were capturing genuinely reusable failure patterns rather than memorizing one trajectory's specifics.</p>
-<p>Try the ALTK-Evolve — the open-source repo now includes the Consistency Analyzer and consistency-guideline generation used in these experiments — or read the technical report on arXiv for the complete methodology.</p>
-<p>If accuracy numbers you can't reproduce on your own tasks sound familiar, we'd like to hear about it — concrete examples of flip-prone behavior in your own agents are exactly the kind of feedback that shapes what we build next. Open an issue or a discussion.</p>
-<p>Great perspective on agent reliability. Measuring consistency alongside accuracy seems especially important as AI agents move into workflows where reproducibility matters. The Consistency Analyzer approach is a fascinating way to identify unstable decisions without requiring full task replays.</p>
-<p>The useful split is the one most dashboards still refuse to print: Mean@k answers “how good is this agent on average?” Pass^k answers “will the same request still succeed if I ask again?”</p>
-<p>Once you’ve watched a trajectory chain dozens of near-tied tool choices, a strong average with a wide consistency gap is exactly the demo that fails live. Capability and consistency are orthogonal — buying a bigger model can lift Mean without closing the gap.</p>
-<p>What I want teams to take from the Consistency Analyzer framing is operational, not the guideline machinery itself: treat flip-prone decision steps as first-class eval targets. One offline resample pass over a recorded trace is a cheaper reliability signal than another end-to-end leaderboard screenshot.</p>
-<p>Practical ask for anyone shipping agents from this: do you report Pass^k (even k=3) next to Mean@k in the release gate, and do you refuse the “stable” label when the consistency gap is still large on your hard tier?</p>
-<p>Reproducible reliability will not remove disagreement about which guidelines to inject. It will make the disagreement about the right metric.</p>
-<p>Thanks, and you've landed on exactly the operational takeaway we hoped for: flip-prone decision steps should be eval targets in their own right. Beyond that, knowing where they are also turns the eval into a diagnostic: a consistency gap tells you that an agent is unreliable, while the flip-prone steps tell you where and why.</p>
-<p>On your release-gate question: we'd strongly encourage it, and k=3 is a sensible default. A few things we'd suggest to anyone adopting Pass^k as a gate:</p>
-<p>I'd like to understand your closing point better. In our experiments, we didn't choose among individual guidelines: for each new task, we injected the guidelines derived from the most similar task. I'm curious where you see the disagreement about which guidelines to inject arising.</p>
-<p>https://huggingface.co/spaces/observantdistressed/minimax-h3</p>
-<p>Loved your space, any plan to set it up again in near future?</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>In a November 2025 appearance at the Aspen Cyber Summit, Cairncross said one of the administration's primary goals is "introducing costs and consequences" on adversaries.
+ 
+"I think, as a country, we have not done a terrific job of sending a signal to our adversaries that this behavior is not consequence-free," he said. "And we need to do that because it is scaling and it is becoming more aggressive every passing day."Since we have a Russian asset in the White House, Russia has nothing to fear.</p>
+<p>In a November 2025 appearance at the Aspen Cyber Summit, Cairncross said one of the administration's primary goals is "introducing costs and consequences" on adversaries.
+ 
+"I think, as a country, we have not done a terrific job of sending a signal to our adversaries that this behavior is not consequence-free," he said. "And we need to do that because it is scaling and it is becoming more aggressive every passing day."</p>
+<p>Since we have a Russian asset in the White House, Russia has nothing to fear.</p>
+<p>That makes sense, Cairncross was fired for problems which had absolutely nothing to do with him . a totally inane decision.</p>
+<p>Perhaps, I know, this is way out there, but it could be that Cairncross was also expected to advise and explain. And perhaps that advice and those explanations were inadequate, or even erroneous.</p>
+<p>Then again, do you know the job description well enough to explain what deficiencies or failures would justify replacement? Sure you do. Try.</p>
+<p>It is enough to know that no cyber attacks were involved, both the Microsoft outage and the ATC outage were down to problems totally unrelated to security.</p>
+<p>I think the president would want to know a little more.</p>
+<p>I think the president would want to know a little more.President TRUMP?!?  No. He would not like to know more.  Unless its about a big beautiful ballroom.</p>
+<p>I think the president would want to know a little more.</p>
+<p>President TRUMP?!?  No. He would not like to know more.  Unless its about a big beautiful ballroom.</p>
+<p>You seem to have an astonishingly high estimation of what this president would want to know.</p>
+<p>There's no evidence that he knows anything at all on this subject, or has any motivation to want to know anything at all.</p>
+<p>Is that better ?No we weren't attacked, we are just too incompetent, cheap and stupid to maintain our critical networks, even during peacetime.I am a sad panda and the US is drowning in grift and stupidity.</p>
+<p>According to the summary, Temu Goebbels wanted him out due to "concerns about his technical qualifications" - that gibbering idiot isn't qualified to judge anyone's qualifications for more than wearing klan robes.</p>
+<p>It wouldn't surprise me if Cairncross saw this as a good time to get off the clown car before he gets blamed for even worse and ends up having to answer to Congress on it under oath.</p>
+<p>Since we have a Russian asset in the White House, Russia has nothing to fear.Russia? My friend the American administration has demonstrated utter incompetence dealing with literally every adversary they have named.Their dealings with the imaginary adversary of "trade deficit" has left the economy weak to the point of having to socialise the cost of bailing out farmers.Their war against brown people and those who don't sound American English has led to their asses getting kicked in the courts.Their actual war headed by the Department of War has resulted in an effective loss leaving t</p>
+<p>Since we have a Russian asset in the White House, Russia has nothing to fear.</p>
+<p>Russia? My friend the American administration has demonstrated utter incompetence dealing with literally every adversary they have named.</p>
+<p>Their dealings with the imaginary adversary of "trade deficit" has left the economy weak to the point of having to socialise the cost of bailing out farmers.Their war against brown people and those who don't sound American English has led to their asses getting kicked in the courts.Their actual war headed by the Department of War has resulted in an effective loss leaving t</p>
+<p>Since we have a Russian asset in the White House, Russia has nothing to fear.No, we have someone who thinks flattery is an important part of negotiations. Yes, that is a very questionable belief.
+However this person warned Germany not to buy oil and gas from Russia, that it would be a tool of coercion. That's not Russian asset behavior.
+This person was the first to authorize lethal aid to Ukraine after the Russian invasions, high end weapons that contributed greatly to Ukraine stopping the initial attack on Kiev. That's not Russian asset behavior.
+This person allowed Ukraine to have</p>
+<p>Since we have a Russian asset in the White House, Russia has nothing to fear.</p>
+<p>No, we have someone who thinks flattery is an important part of negotiations. Yes, that is a very questionable belief.
+However this person warned Germany not to buy oil and gas from Russia, that it would be a tool of coercion. That's not Russian asset behavior.
+This person was the first to authorize lethal aid to Ukraine after the Russian invasions, high end weapons that contributed greatly to Ukraine stopping the initial attack on Kiev. That's not Russian asset behavior.
+This person allowed Ukraine to have</p>
+<p>This person was the first to authorize lethal aid to Ukraine after the Russian invasions, high end weapons that contributed greatly to Ukraine stopping the initial attack on Kiev. That's not Russian asset behavior.Remind me, who was President in 2022 during the initial attack?This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administrationI am pretty sure you know that you are misrepresenting what happened. The special council was clear that the lack of evidence was due to an effective cover up. The investigation did not exonerate him.</p>
+<p>This person was the first to authorize lethal aid to Ukraine after the Russian invasions, high end weapons that contributed greatly to Ukraine stopping the initial attack on Kiev. That's not Russian asset behavior.</p>
+<p>Remind me, who was President in 2022 during the initial attack?</p>
+<p>This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administrationI am pretty sure you know that you are misrepresenting what happened. The special council was clear that the lack of evidence was due to an effective cover up. The investigation did not exonerate him.</p>
+<p>This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administration</p>
+<p>I am pretty sure you know that you are misrepresenting what happened. The special council was clear that the lack of evidence was due to an effective cover up. The investigation did not exonerate him.</p>
+<p>The investigation was not ALLOWED to investigate REDACTED, only to investigate if they had reason to investigate REDACTED. And because we have so many E-file people protecting each other, that was left hanging.</p>
+<p>But Mueller as the last Boy Scout pretended that there was integrity. Congress chose not to read the document and the "wink wink" he's guilty as crap.</p>
+<p>He's a Russian asset. Manafort was a fixer for Russian oligarchs. We can see his BEST FRIENDS are oligarchs and Putin and Epstein and every modeling age</p>
+<p>Remind me, who was President in 2022 during the initial attack?The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.
+The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.
+The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to ex</p>
+<p>Remind me, who was President in 2022 during the initial attack?</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.
+The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.
+The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to ex</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.Obama was President in 2022?The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.When did that push happen, and who was President? The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts? Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.</p>
+<p>The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.When did that push happen, and who was President? The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts? Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?</p>
+<p>The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.</p>
+<p>When did that push happen, and who was President?</p>
+<p>The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts? Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?</p>
+<p>The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.</p>
+<p>Moving the goalposts? Just above, you wrote that Biden didn't authorize any lethal military aid.</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.Obama was President in 2022?The initial russian invasion was in 2014.The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.When did that push happen, and who was President?The Trump/Pence administration was the first to deliver Javelin missiles in 2018. The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts?Nope, just pointing out that Biden behaved in a manner more influenced by Putin.Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?No, I pointed out that the first to authorize and deliver was Trump. And that Biden tended to slow the deliver of long range or more advance systems whenever Putin threatened to escalate. Putin's objections did not stop Trump from delivering Javelins. Javelins that are credited with greatly contributing to st</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.Obama was President in 2022?</p>
+<p>The Obama/Biden administration was in power during the initial attack. They only authorized non-lethal aid. Ex. blankets and MREs.</p>
+<p>The initial russian invasion was in 2014.</p>
+<p>The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.When did that push happen, and who was President?The Trump/Pence administration was the first to deliver Javelin missiles in 2018. The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts?Nope, just pointing out that Biden behaved in a manner more influenced by Putin.Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?No, I pointed out that the first to authorize and deliver was Trump. And that Biden tended to slow the deliver of long range or more advance systems whenever Putin threatened to escalate. Putin's objections did not stop Trump from delivering Javelins. Javelins that are credited with greatly contributing to st</p>
+<p>The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.When did that push happen, and who was President?</p>
+<p>The Trump/Pence administration authorized lethal aid. Ex. The Javelin anti-tank missiles that were so critical at stopping the Russian armored push towards Kiev.</p>
+<p>When did that push happen, and who was President?</p>
+<p>The Trump/Pence administration was the first to deliver Javelin missiles in 2018.</p>
+<p>The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts?Nope, just pointing out that Biden behaved in a manner more influenced by Putin.Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?No, I pointed out that the first to authorize and deliver was Trump. And that Biden tended to slow the deliver of long range or more advance systems whenever Putin threatened to escalate. Putin's objections did not stop Trump from delivering Javelins. Javelins that are credited with greatly contributing to st</p>
+<p>The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.Moving the goalposts?</p>
+<p>The Biden/Harris administration slowed the deployment of long range systems like artillery and F-16s each time Putin threatened to escalate. Biden was criticized for only allowing Ukraine to have enough to hang on to existing territory, not win the war.</p>
+<p>Nope, just pointing out that Biden behaved in a manner more influenced by Putin.</p>
+<p>Just above, you wrote that Biden didn't authorize any lethal military aid.Could your lies be even more obvious?No, I pointed out that the first to authorize and deliver was Trump. And that Biden tended to slow the deliver of long range or more advance systems whenever Putin threatened to escalate. Putin's objections did not stop Trump from delivering Javelins. Javelins that are credited with greatly contributing to st</p>
+<p>Just above, you wrote that Biden didn't authorize any lethal military aid.</p>
+<p>No, I pointed out that the first to authorize and deliver was Trump. And that Biden tended to slow the deliver of long range or more advance systems whenever Putin threatened to escalate. Putin's objections did not stop Trump from delivering Javelins. Javelins that are credited with greatly contributing to st</p>
+<p>Your posts all talked about the push to Kyiv. That didn't happen in 2014. And Biden authorized Javelins and other types of lethal weapons sufficiently early in 2022 to help repel the Russian advance on Kyiv.</p>
+<p>I don't dispute that Biden could have been more aggressive with weapons deliveries to Ukraine.</p>
+<p>I note that you are using the old Russian-derived spelling for Kyiv. Didn't your handlers tell you the name has changed?</p>
+<p>Moving the goalposts again?Nope. The key point was the authorization and delivery of weapons like the Javelin in 2018. That years later turned out to be so critical.</p>
+<p>Nope. The key point was the authorization and delivery of weapons like the Javelin in 2018. That years later turned out to be so critical.</p>
+<p>"The special council said there may be evidence of obstruction. The fact remains that the special council ran down the leads he wanted to and in the end found no evidence of collusion."</p>
+<p>There was definite evidence of obstruction, including Trump directing White House counsel Don McGahn to have Mueller removed. As for collusion, Manafort shared internal campaign polling data with Kilimnik, whom the Senate Intelligence Committee committee identified as a Russian intelligence officer. Campaign associates sought</p>
+<p>Manafort shared internal campaign polling data with KilimnikActually it was mostly public data, and the internal campaign data is not gov't info. And Mueller knew all this, and concluded it was not evidence of campaign collusion with Russia regarding election interference. I't been a while since I read the Mueller report -- yes, read it myself, its a primary source, you don't trust other people's summaries on important things -- but I recall Mueller saying things like not knowingly or willfully cooperating with the Russians. In other words they did not know it was g</p>
+<p>Manafort shared internal campaign polling data with Kilimnik</p>
+<p>Actually it was mostly public data, and the internal campaign data is not gov't info. And Mueller knew all this, and concluded it was not evidence of campaign collusion with Russia regarding election interference. I't been a while since I read the Mueller report -- yes, read it myself, its a primary source, you don't trust other people's summaries on important things -- but I recall Mueller saying things like not knowingly or willfully cooperating with the Russians. In other words they did not know it was g</p>
+<p>"the internal campaign data is not gov't info", so what? Why are you trying to whitewash this? It clearly was collusion.</p>
+<p>Campaign associates also sought to exploit releases of Democratic emails stolen by Russian intelligence, including through efforts involving WikiLeaks. The investigations documented substantial contacts, willingness to benefit from Russian assistance, and evidence of obstruction. You are trying awful hard to downplay this for some reason.</p>
+<p>"I recall Mueller saying things like not knowingly o</p>
+<p>"the internal campaign data is not gov't info", so what? Why are you trying to whitewash this? It clearly was collusion.Nope. The Russians posed as US citizens. See Mueller quotes below.Campaign associates also sought to exploit releases of Democratic emails stolen by Russian intelligence, including through efforts involving WikiLeaks.And again Mueller states there was no evidence of conspiracy there. The information was in the wild."I recall Mueller saying things like not knowingly or willfully cooperating",he said there wasn't sufficient evidence to charge a campaign member with participating in a criminal conspiracy. That would be a much higher bar than mere collusion. Nope. The evidence was insufficient because the campaign thought they were interacting with US citizens. "Intent" is a required component of criminal activity, if you DO NOT KNOW you are interacting with Russians you can't be convicted of conspiring with Russians. Mueller also said “a statement that the investigation did not establish particular facts does not mean there was no evidence of those facts.”It means the evidence is somehow flawed, as in the case of russians that "posed as</p>
+<p>"the internal campaign data is not gov't info", so what? Why are you trying to whitewash this? It clearly was collusion.</p>
+<p>Nope. The Russians posed as US citizens. See Mueller quotes below.</p>
+<p>Campaign associates also sought to exploit releases of Democratic emails stolen by Russian intelligence, including through efforts involving WikiLeaks.And again Mueller states there was no evidence of conspiracy there. The information was in the wild."I recall Mueller saying things like not knowingly or willfully cooperating",he said there wasn't sufficient evidence to charge a campaign member with participating in a criminal conspiracy. That would be a much higher bar than mere collusion. Nope. The evidence was insufficient because the campaign thought they were interacting with US citizens. "Intent" is a required component of criminal activity, if you DO NOT KNOW you are interacting with Russians you can't be convicted of conspiring with Russians. Mueller also said “a statement that the investigation did not establish particular facts does not mean there was no evidence of those facts.”It means the evidence is somehow flawed, as in the case of russians that "posed as</p>
+<p>Campaign associates also sought to exploit releases of Democratic emails stolen by Russian intelligence, including through efforts involving WikiLeaks.</p>
+<p>And again Mueller states there was no evidence of conspiracy there. The information was in the wild.</p>
+<p>"I recall Mueller saying things like not knowingly or willfully cooperating",he said there wasn't sufficient evidence to charge a campaign member with participating in a criminal conspiracy. That would be a much higher bar than mere collusion. Nope. The evidence was insufficient because the campaign thought they were interacting with US citizens. "Intent" is a required component of criminal activity, if you DO NOT KNOW you are interacting with Russians you can't be convicted of conspiring with Russians. Mueller also said “a statement that the investigation did not establish particular facts does not mean there was no evidence of those facts.”It means the evidence is somehow flawed, as in the case of russians that "posed as</p>
+<p>"I recall Mueller saying things like not knowingly or willfully cooperating",he said there wasn't sufficient evidence to charge a campaign member with participating in a criminal conspiracy. That would be a much higher bar than mere collusion.</p>
+<p>"I recall Mueller saying things like not knowingly or willfully cooperating",</p>
+<p>he said there wasn't sufficient evidence to charge a campaign member with participating in a criminal conspiracy. That would be a much higher bar than mere collusion.</p>
+<p>Nope. The evidence was insufficient because the campaign thought they were interacting with US citizens. "Intent" is a required component of criminal activity, if you DO NOT KNOW you are interacting with Russians you can't be convicted of conspiring with Russians.</p>
+<p>Mueller also said “a statement that the investigation did not establish particular facts does not mean there was no evidence of those facts.”It means the evidence is somehow flawed, as in the case of russians that "posed as</p>
+<p>Mueller also said “a statement that the investigation did not establish particular facts does not mean there was no evidence of those facts.”</p>
+<p>It means the evidence is somehow flawed, as in the case of russians that "posed as</p>
+<p>You are either lying, or being hoodwinked by propaganda bullshit.</p>
+<p>February 24, 2022: Russia invadesMarch 16, 2022: Biden issues a $800 million presidential drawdown, with Stinger anti-aircraft missiles, Javelin and AT-4 anti-armor systems, small arms, and ammunition; followed by progressively heavier weapons and air defense systems through the end of Biden's term in January 2025.  But I'm sure they were using all that shit as fireworks in celebratory scenes, right?</p>
+<p>October 17, 2023: Ukraine is using medium-ra</p>
+<p>You are either lying, or being hoodwinked by propaganda bullshit.Or you are ignorant of the fact that the war began in 2014 with "little green men" not in official russian uniforms seizing territory in eastern Ukraine and Crimea.
+Crimea was also Ukrainian territory.February 24, 2022: Russia invades
+March 16, 2022: Biden issues a $800 million presidential drawdown, with Stinger anti-aircraft missiles, Javelin and AT-4 anti-armor systems, small arms, and ammunition ...That's a few weeks after the attack that Putin expected to take 3 days. Without Trump's 2018 change in US policy Ukraine would not have had the weapon systems and the training and practice to stop the initial assault. ... followed by progressively heavier weapons and air defense systems through the end of Biden's term in January 2025.Systems that were delayed or had restrictions attached after Putin threatened escalation. Res</p>
+<p>You are either lying, or being hoodwinked by propaganda bullshit.</p>
+<p>Or you are ignorant of the fact that the war began in 2014 with "little green men" not in official russian uniforms seizing territory in eastern Ukraine and Crimea.
+Crimea was also Ukrainian territory.</p>
+<p>February 24, 2022: Russia invades
+March 16, 2022: Biden issues a $800 million presidential drawdown, with Stinger anti-aircraft missiles, Javelin and AT-4 anti-armor systems, small arms, and ammunition ...That's a few weeks after the attack that Putin expected to take 3 days. Without Trump's 2018 change in US policy Ukraine would not have had the weapon systems and the training and practice to stop the initial assault. ... followed by progressively heavier weapons and air defense systems through the end of Biden's term in January 2025.Systems that were delayed or had restrictions attached after Putin threatened escalation. Res</p>
+<p>February 24, 2022: Russia invades
+March 16, 2022: Biden issues a $800 million presidential drawdown, with Stinger anti-aircraft missiles, Javelin and AT-4 anti-armor systems, small arms, and ammunition ...</p>
+<p>That's a few weeks after the attack that Putin expected to take 3 days. Without Trump's 2018 change in US policy Ukraine would not have had the weapon systems and the training and practice to stop the initial assault.</p>
+<p>... followed by progressively heavier weapons and air defense systems through the end of Biden's term in January 2025.Systems that were delayed or had restrictions attached after Putin threatened escalation. Res</p>
+<p>... followed by progressively heavier weapons and air defense systems through the end of Biden's term in January 2025.</p>
+<p>Systems that were delayed or had restrictions attached after Putin threatened escalation. Res</p>
+<p>Anyone who is still defending the YOB is... Can't think of sufficiently negative adjectives, but don't you have other uses for your time than pointing out what an idiot the YOB-defender is?</p>
+<p>"While the public conversation focuses on the spectacle of deep strikes designed to incur pain on the Russian population," he said, the U.S. view is that they have not shortened the war.Meanwhile, Russia deliberately strikes a civilian shelter, killing over 50 civilians [egyptindependent.com], and the U.S. remains silent.
+
+ 
+
+In fact, one would be hardpressed to come up with more than one or two instances of the U.S. saying a single bad word about Russia no matter how many civilians it kills, or how many power plants are attacked, or even Russia's invasion on Ukraine in general.  In fact, Ukraine was chastised for starting the war [nbcnews.com].
+
+ 
+
+So yes, there is a Russian asset in the White House.</p>
+<p>"While the public conversation focuses on the spectacle of deep strikes designed to incur pain on the Russian population," he said, the U.S. view is that they have not shortened the war.</p>
+<p>Meanwhile, Russia deliberately strikes a civilian shelter, killing over 50 civilians [egyptindependent.com], and the U.S. remains silent.
+
+ 
+
+In fact, one would be hardpressed to come up with more than one or two instances of the U.S. saying a single bad word about Russia no matter how many civilians it kills, or how many power plants are attacked, or even Russia's invasion on Ukraine in general.  In fact, Ukraine was chastised for starting the war [nbcnews.com].
+
+ 
+
+So yes, there is a Russian asset in the White House.</p>
+<p>This is what the U.S. Undersecretary of Defense had to say  [yahoo.com] about Ukraine's deep strikes into Russia:"While the public conversation focuses on the spectacle of deep strikes designed to incur pain on the Russian population," he said, the U.S. view is that they have not shortened the war.Note "incur pain on the Russian population". Pain on the Russian population does not shorten the war, Putin does not care about pain on the Russian population. Much like Hitler did not care about pain the German population. Leveling Berlin and other cities did not shorten the war. So the statement above is accurate, pain on the population does not shorten the war with someone like Putin in charge. 
+
+It is the destruction of military assets and logistics infrastructure that shortens wars. Both WW2 and the cu</p>
+<p>This is what the U.S. Undersecretary of Defense had to say  [yahoo.com] about Ukraine's deep strikes into Russia:</p>
+<p>"While the public conversation focuses on the spectacle of deep strikes designed to incur pain on the Russian population," he said, the U.S. view is that they have not shortened the war.</p>
+<p>"While the public conversation focuses on the spectacle of deep strikes designed to incur pain on the Russian population," he said, the U.S. view is that they have not shortened the war.</p>
+<p>Note "incur pain on the Russian population". Pain on the Russian population does not shorten the war, Putin does not care about pain on the Russian population. Much like Hitler did not care about pain the German population. Leveling Berlin and other cities did not shorten the war. So the statement above is accurate, pain on the population does not shorten the war with someone like Putin in charge. 
+
+It is the destruction of military assets and logistics infrastructure that shortens wars. Both WW2 and the cu</p>
+<p>The recent deep attacks into Russia were directly aimed at Russia's logistics and war-fighting capability.While Ukraine does not intentionally target civilians, as Russia does, they do target both military and civilian infrastructure. Ukraine is trying to make the Russian middle class in major cities "feel" an impact from the war in an attempt to put pressure on the regime, to further encourage the population's criticism of the war. They don't want the Russian middle and upper classes to remain immune, for the burden of the war to fall mostly on the poorer more rural citizens who's kids are largely the target o</p>
+<p>The recent deep attacks into Russia were directly aimed at Russia's logistics and war-fighting capability.</p>
+<p>While Ukraine does not intentionally target civilians, as Russia does, they do target both military and civilian infrastructure. Ukraine is trying to make the Russian middle class in major cities "feel" an impact from the war in an attempt to put pressure on the regime, to further encourage the population's criticism of the war. They don't want the Russian middle and upper classes to remain immune, for the burden of the war to fall mostly on the poorer more rural citizens who's kids are largely the target o</p>
+<p>Again, my point is that a dictator like Putin is likely to be unmoved by civilian pain, that only the attacks military infrastructure will impact him.Not just military infrastructure.  I suspect that if they could get drones deep within Russia and hit random government buildings on a daily basis, him feeling personally in danger might also shorten the war.But short of getting close enough to make him feel personally targeted, yeah, nothing short of wiping the floor with their military capabilities or completely cutting off their supply lines (roads, bridges, trains, etc.) is likely to help much.</p>
+<p>Again, my point is that a dictator like Putin is likely to be unmoved by civilian pain, that only the attacks military infrastructure will impact him.</p>
+<p>Not just military infrastructure.  I suspect that if they could get drones deep within Russia and hit random government buildings on a daily basis, him feeling personally in danger might also shorten the war.</p>
+<p>But short of getting close enough to make him feel personally targeted, yeah, nothing short of wiping the floor with their military capabilities or completely cutting off their supply lines (roads, bridges, trains, etc.) is likely to help much.</p>
+<p>There are many reasons to dislike or disapprove of this person, but Russian Asset is a debunked political fabrication manufactured by his political opponents.What would he do differently then?</p>
+<p>There are many reasons to dislike or disapprove of this person, but Russian Asset is a debunked political fabrication manufactured by his political opponents.</p>
+<p>There are many reasons to dislike or disapprove of this person, but Russian Asset is a debunked political fabrication manufactured by his political opponents.What would he do differently then?Not warn of being dependent on russian oil and gas, not authorized lethal weapon systems for ukraine, not kill Russian mercenaries in syria, not support expanding nato, not encouraging nato to spend more money on defense and be less of a paper tiger, etc</p>
+<p>There are many reasons to dislike or disapprove of this person, but Russian Asset is a debunked political fabrication manufactured by his political opponents.What would he do differently then?</p>
+<p>There are many reasons to dislike or disapprove of this person, but Russian Asset is a debunked political fabrication manufactured by his political opponents.</p>
+<p>Not warn of being dependent on russian oil and gas, not authorized lethal weapon systems for ukraine, not kill Russian mercenaries in syria, not support expanding nato, not encouraging nato to spend more money on defense and be less of a paper tiger, etc</p>
+<p>This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administration.</p>
+<p>I'm assuming you're talking about the Mueller report.  I read the Mueller report, and that's not what it said. 
+It defined collusion as criminal conspiracy.  It listed a bunch of evidence and said that it was insufficient to get a conviction beyond a reasonable doubt.  It cautiously said that the insufficient evidence</p>
+<p>This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administration.
+I'm assuming you're talking about the Mueller report.  I read the Mueller report, and that's not what it said.I read the Mueller report as well back in the day. And here is an excerpt from the summary: 
+
+"As set forth in detail in this report, the Special Counsel’s investigation established that Russia interfered in the 2016 presidential election principally through two operations. First, a Russian entity carried out a social media campaign that favored presidential candidate Donald J. Trump and disparaged presidential candidate Hillary Clinton. Second, a Russian intelligence service conducted computer-intrus</p>
+<p>This person was thoroughly investigated by the opposition party's independent council who determined that there was no evidence of collusion with russia by his campaign or his administration.</p>
+<p>I'm assuming you're talking about the Mueller report.  I read the Mueller report, and that's not what it said.</p>
+<p>I read the Mueller report as well back in the day. And here is an excerpt from the summary: 
+
+"As set forth in detail in this report, the Special Counsel’s investigation established that Russia interfered in the 2016 presidential election principally through two operations. First, a Russian entity carried out a social media campaign that favored presidential candidate Donald J. Trump and disparaged presidential candidate Hillary Clinton. Second, a Russian intelligence service conducted computer-intrus</p>
+<p>Every criminal outfit willing to drop a dime has nothing to fear.</p>
+<p>All together now: "Maybe if Trump hadn't had DOGE completely gut CISA in the first place...".</p>
+<p>Site your sources for your claims.Sources? The post is literally by a bot for a foreign agent, look at its username.</p>
+<p>Sources? The post is literally by a bot for a foreign agent, look at its username.</p>
+<p>Not many bots out there telling you to eat a bag of dicks. Yet. I guess that would make me a frontier model.</p>
+<p>It doesn't take a shedload of GPUs and gigawatts of energy to summon the context necessary to tell that guy to eat a bag of dicks - I'm pretty sure any old single-GPU model running inside 8GB can handle that.</p>
+<p>#2 is my educated opinion. I am the source. Are you an offended fuckwit?</p>
+<p>Source for them being a waste of money and space? https://www.dhs.gov/sites/defa...  [dhs.gov] I don't know what you got for $2.87billion. But "change passwords" and "practice safe computing" seems like a massive waste of my hard earned dollars.</p>
+<p>P.S. the word you were looking of was cite, as in citation. "Site" is a location.</p>
+<p>On November 16, 2018, President Donald Trump signed into law the Cybersecurity and Infrastructure Security Agency Act of 2018 (or the CISA Act), which established CISA, effectively elevating NPPD to the level of a federal agency, opening the door to an increased budget and authority. https://en.wikipedia.org/wiki/... [wikipedia.org]</p>
+<p>... notes Axios, "His pick for the top job at the Cybersecurity and Infrastructure Security Agency, which helps defend federal civilian networks and critical infrastructure, Palantir executive Michael LoSapio, faced a combative confirmation hearing Thursday."</p>
+<p>Yeah, 'combative' isn't the word. The guy was so worried about offending Trump he twisted himself in knots to deny reality.</p>
+<p>"Trump's pick for agency providing election security says Jan. 6 was not an attack"  https://www.nbcnews.com/politi... [nbcnews.com]</p>
+<p>https://gizmodo.com/whos-going... [gizmodo.com]</p>
+<p>Budget slash, system crash...CISA was created by Trump in his first administration. CISA was politicized by Biden and was part of the effort to label nearly any criticism of the Biden admin policies as "misinformation" or "disinformation".. The second Trump administration cut out the bloat involved in the political "disinformation". The Trump admin's stated rationale: "narrow CISA back to what it calls its “core mission”—protecting federal networks and critical infrastructure." [Google]</p>
+<p>CISA was created by Trump in his first administration. CISA was politicized by Biden and was part of the effort to label nearly any criticism of the Biden admin policies as "misinformation" or "disinformation".. The second Trump administration cut out the bloat involved in the political "disinformation". The Trump admin's stated rationale: "narrow CISA back to what it calls its “core mission”—protecting federal networks and critical infrastructure." [Google]</p>
+<p>CISA was created by Trump in his first administration.Before CISA it was US-CERT.  Been on their mailing list for decades, not like it is a new thing.</p>
+<p>CISA was created by Trump in his first administration.</p>
+<p>Before CISA it was US-CERT.  Been on their mailing list for decades, not like it is a new thing.</p>
+<p>Did you post this from your new 11 striped Trump phone?</p>
+<p>Did you post this from your new 11 striped Trump phone?No, my Blush colored Apple MacBook Neo. ;-)</p>
+<p>Did you post this from your new 11 striped Trump phone?</p>
+<p>No, my Blush colored Apple MacBook Neo. ;-)</p>
+<p>Rumor is the FAA ground stop was because NORAD went down, shortly before NSA went down.</p>
+<p>The gal who looked after the uptime of an ice cream website isn't in the same ZIP Code as these problems.</p>
+<p>Corporate IT Security is a real and valuable job with a remarkably distinct skillset.</p>
+<p>There are some Computer Science and Engineering types who can stand on both sides of the line from a theory perspective but even they need lieutenants who've been in the trenches where information is gained.</p>
+<p>Davies' career also has included technology and cyber roles at Estee Lauder  Don't forget she is a seasoned vet from that make-up place also.</p>
+<p>Davies' career also has included technology and cyber roles at Estee Lauder</p>
+<p>Don't forget she is a seasoned vet from that make-up place also.</p>
+<p>If you are a woman in this administration, odds are you won't be in the administration very much longer.</p>
+<p>This guy loves to fire women, and keep incompetent men around.</p>
+<p>My own pitch for who to blame (and Funny) would have been at Microsoft for the EULA with "no liability here". Again, not an original idea, but Microsoft perfected it.</p>
+<p>Well the new Administrator be a tall statuesque blond?</p>
+<p>Do you think the director of this agency is going through router configs and wire traces and shit?  They're a bureaucrat, who runs a bureau.  They are three levels of management away from any analyst who actually does technical work.  Why wouldn't you want a professional manager who understands budgets for that role?</p>
+<p>"Stephen Miller pushed for Cairncross' removal over concerns about his technical qualifications"</p>
+<p>So they're realizing NOW that the current guy didn't have the qualifications? One would think that should have been top priority when they hired him in the first place...</p>
+<p>The new girl doesn't have any technical qualifications either.</p>
+<p>https://en.wikipedia.org/wiki/... [wikipedia.org]</p>
+<p>Nobody ever would, Trump was never going to appoint a nerd to a post like this. Having good instincts about who to delegate to is the most important quality for this job.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>California Issues Subpoena to Nvidia Over Chip Sales to China</p>
+<p>Google Is Putting AI Chats Right On the Homepage</p>
+<p>Committees have become so important nowadays that subcommittees have to
+be appointed to do the work.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/altk-evolve-consistency" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://yro.slashdot.org/story/26/11/20/1739245/white-house-replaces-cyber-director-after-tech-outages?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
