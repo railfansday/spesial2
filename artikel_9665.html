@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RDMA vs Kernel TCP: Bypassing the Stack to Buy Lower Latency</title>
+    <title>Glassmail</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9665.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,38 +15,24 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>RDMA vs Kernel TCP: Bypassing the Stack to Buy Lower Latency</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>Glassmail</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4k5l70b9dsdgaqzrikoq.png" alt="RDMA vs Kernel TCP: Bypassing the Stack to Buy Lower Latency" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4k5l70b9dsdgaqzrikoq.png" alt="RDMA vs Kernel TCP: Bypassing the Stack to Buy Lower Latency" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Two servers exchanging a small message can do it through the normal TCP stack, where the kernel owns the socket and the data is copied from application memory into kernel buffers and out again, or through RDMA, where the network adapter is given permission to place the bytes directly into the receiving application's memory. Both get the message there intact. One is a general-purpose path that works over almost any network; the other is a specialised path that removes the operating system from the critical section.</p>
-<p>Kernel TCP moves each message through the operating system with several data copies and interrupt-handling costs, while RDMA lets a network card write directly into application memory for single-digit microsecond latency — the trade is a dedicated fabric and pinned memory instead of a general-purpose network.</p>
-<p>The interesting part is not the peak bandwidth, which modern TCP can saturate, but what happens to latency and CPU use when millions of tiny messages fly per second.</p>
-<p>The kernel TCP path is built for fairness and generality. An application calls send, the kernel copies the buffer, the protocol stack segments it, the driver hands packets to the NIC, and the receiving end reverses the process with interrupts and context switches. Each step is well understood and robust against misbehaving peers, and the same code works over Ethernet, Wi-Fi or a tunnel. The price is that a short message can spend more time in copies and scheduling than in actual transmission.</p>
-<p>RDMA removes those steps. The application registers a region of memory with the NIC, which pins those pages so they cannot be swapped, and then posts a work request. The adapter reads or writes that memory over the network without the CPU touching the data and without an interrupt on the fast path. The application polls a completion queue instead of waiting to be woken, which eliminates scheduling jitter.</p>
-<p>A kernel TCP round trip on a fast local network typically lands around tens of microseconds with several memory copies, while an RDMA write can complete in under two microseconds with zero copies — but only after memory is pinned and a lossless or carefully tuned fabric is in place.</p>
-<p>The mechanism is where the CPU is involved. In TCP, the CPU is in the data path for every message, doing copies and protocol work, which is fine up to a point and then becomes a ceiling: at high message rates the cores are busy moving bytes rather than running the application. RDMA moves the data path into hardware, so the CPU only sets up the transfer and checks completion, which leaves cores free and drives latency down to the wire.</p>
-<p>That shortcut has preconditions. Memory must be pinned, which consumes physical RAM that cannot be reclaimed. The fabric must be lossless or tightly controlled, because RDMA transports historically react badly to packet loss; this is why InfiniBand and lossless Ethernet with flow control are common. And the programming model is different: polling loops burn CPU even when idle, so an application must decide whether to spin for low latency or sleep for efficiency.</p>
-<p>A daily example is a distributed storage cluster. With TCP, serving a million small reads can keep a significant share of each node's CPU busy with network processing, leaving less for the actual disk work. With RDMA, those same reads bypass the kernel, the CPU cost drops, and the latency a user sees when opening a file becomes more consistent under load.</p>
-<p>But the choice is not free for a small team. RDMA needs NICs that support it, switches configured correctly, and application code written against a different API. A web application running over the public internet cannot use it at all. The benefit appears in a controlled datacentre where you own every hop and the workload consists of many small, frequent transfers.</p>
-<p>Use kernel TCP for general connectivity and workloads where a few extra microseconds are invisible; use RDMA when you own the fabric and the message rate makes CPU-per-message the bottleneck — the win is a hardware path, not a faster library.</p>
-<p>The useful mental model is that TCP optimises for universality while RDMA optimises for a controlled environment. One works everywhere with no special setup; the other works extremely well only where you can guarantee the conditions it assumes.</p>
-<p>For most systems, the right move is to keep TCP until profiling shows the network stack is actually consuming the CPU budget. When it does, RDMA is less a tweak than a change of architecture, and it should be chosen with that weight.</p>
-<p>High-performance interconnects are a substantial datacentre market, with InfiniBand and RDMA-capable Ethernet adapters shipping into AI training and distributed storage clusters in the millions of ports per year. As large-model training pushes more nodes together, the share of servers equipped with a high-performance fabric keeps rising, turning what was a niche interconnect into a standard line item.</p>
-<p>These are order-of-magnitude estimates from published shipment ranges and stated assumptions, not a forecast for any vendor.</p>
-<p>Kernel TCP is robust and cheap but copies data and crosses the kernel boundary; RDMA bypasses both for microsecond latency — at the cost of a separate fabric and careful memory registration.</p>
-<p>Creating this takes real effort — thank you for the support.
-HCqPmPJM3NVtS6YrmVaTZYnuP8XZ2PFgQZKT94VK1LkS</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>
+            A fast Mac email app with AI that never leaves your Mac
+          </p>
+          <p>
+            <a href="https://www.producthunt.com/products/glassmail?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
+            |
+            <a href="https://www.producthunt.com/r/p/1316562?app_id=339">Link</a>
+          </p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/gxqwb_ai/rdma-vs-kernel-tcp-bypassing-the-stack-to-buy-lower-latency-28ek" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.producthunt.com/products/glassmail" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

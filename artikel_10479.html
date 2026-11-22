@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams</title>
+    <title>Apple Intelligence, decoded: How to make sense of Apple’s confusing AI lineup</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10479.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,45 +15,131 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>Apple Intelligence, decoded: How to make sense of Apple’s confusing AI lineup</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_42c7784289.png" alt="What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_42c7784289.png" alt="What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>We sent 1,000 streaming calls at the same moment through three self-hosted LLM gateways: the Langfuse AI Gateway, the LiteLLM proxy and AcruxCore. Each gateway was limited to 2 CPUs. As shipped, Langfuse finished 261 of the 1,000 streams and LiteLLM finished 403. Neither failure came from the gateway's own code.</p>
-<p>Langfuse's failures came from Linux's open-file limit, which Docker sets to 1,024 by default. LiteLLM had that problem too, plus a second one: an empty key cache sent hundreds of database lookups at once, and the ones that waited longer than 10 seconds were rejected. This article shows how each failure looked, how we traced it to its cause, and the settings that fixed it.</p>
-<p>This benchmark measured the resource consumption of three LLM gateways under scaling concurrent streaming loads.</p>
-<p>Full latency, memory, and feature results are available in the Langfuse vs LiteLLM vs AcruxCore benchmark.</p>
-<p>First-token times are medians of the streams that succeeded. Up to 250 streams, every gateway succeeded. Then the errors started, and they did not look alike:</p>
-<p>A 502 and a 503 point at different layers, so we expected two different causes. Two of the three turned out to share one cause.</p>
-<p>Linux counts every network connection as an open file, and it caps how many open files one process may hold. The cap has two values. The soft limit is the cap that is in force now. The hard limit is the ceiling: a process may raise its own soft limit up to that value, and no further.</p>
-<p>A streaming gateway holds two connections for each stream: one from the client, and one to the model provider. That makes about 1,000 open files at 500 streams, and about 2,000 at 1,000 streams. A gateway also needs a few more files for its database, its logs and its own libraries.</p>
-<p>Docker on our machine gave every container a soft limit of 1,024 and a hard limit of 524,288. All three gateways received the same two numbers. What differed was how each program treats them when it starts:</p>
-<p>Node.js raises its own soft limit to the hard limit at startup. The Rust and Python services keep 1,024, and neither project's Compose file sets a higher value. So the two gateways ran out of open files near 500 streams, which is the point where the errors started.</p>
-<p>The out-of-files error appeared as a failed connection, not as a clear message. The Langfuse gateway's logs showed failed connections to OpenAI, and also failed connections to Langfuse's own web service, which the gateway asks to check each key. Both come from one cause: a process that cannot open another file cannot open another socket. Its client then receives a 502.</p>
-<p>Read the limit the process actually has, not the one you think Docker gave it. Process 1 is usually the main process in a container:</p>
-<p>If the gateway runs under a supervisor or several workers, check each worker's process ID instead of process 1. To see how close a process is to its limit under load, count its open file descriptors:</p>
-<p>Raise the limit for the gateway service in its Compose file. We used 65,536 for all three gateways:</p>
-<p>The same ulimits block works on the LiteLLM service. On Kubernetes or another platform, check /proc/<pid>/limits inside a running container rather than assuming a value.</p>
-<p>With the open-file limit raised, the Langfuse gateway finished all 1,000 streams. LiteLLM still returned 503 errors. To separate the two causes, we ran LiteLLM with one worker and only the open-file limit raised. All 500 streams succeeded in that ladder, but 595 of 1,000 failed with 503.</p>
-<p>The 503 message names the authentication database, so we read LiteLLM's logs and its source. The log gave the same reason for all 840 failed streams in these runs, 595 in that ladder and 245 in the cold-cache runs below:</p>
-<p>When 500 calls arrive while the key is not in the cache, each call looks the key up in Postgres. All of those lookups queue for 10 connections. The worker was also using its whole CPU allowance at this point, which slows every query it sends and receives. We infer that this CPU load lengthens the queue, but we did not measure it separately. Whatever the share of each, the lookups at the back of the queue miss the 10-second deadline.</p>
-<p>If that explanation is right, the failures should depend on whether the key is already in the cache. So we ran 500 streams four more times. Three runs started after 75 seconds with no calls, which is longer than the 60-second cache. One run started right after a single warm-up call:</p>
-<p>The warm run had no failures. The cold runs failed by different amounts, 161, 84 and 0, because the result depends on how many lookups miss the deadline, and that changes from run to run. This probably explains why the earlier ladder succeeded at 500 and failed at 1,000. A run is a race between the lookup queue and the deadline, so a single ladder does not show where the limit is.</p>
-<p>The warm-up result is the one we measured. Send one call with each virtual key after LiteLLM starts, and avoid quiet periods longer than 60 seconds before a traffic spike. A steady flow of traffic keeps the key in the cache.</p>
-<p>LiteLLM also exposes three settings that act on this path. We did not test them, so treat them as places to look rather than proven fixes:</p>
-<p>We raised the open-file limit to 65,536 for all three gateways and gave LiteLLM 2 workers, one per CPU, as its production guide recommends for a single machine. Then we ran the full ladder again:</p>
-<p>The open-file errors were gone for every gateway, and the Langfuse gateway gave the fastest first token of the three. LiteLLM still returned 120 × 503 at 500. That level started about 60 seconds after the first call of the ladder, so the cached key had probably just expired. All 1,000 succeeded at the next level, which started within 60 seconds of the 500 level.</p>
-<p>Once nothing failed, CPU decided the first-token times. LiteLLM used its whole 2-CPU allowance from 100 streams on, and its median first token took 19.2 seconds at 1,000 streams. AcruxCore also used both CPUs from 100 streams on, and its first token at 1,000 streams was 3.8 s at the median and 9.7 s at p95. The Langfuse gateway peaked at 1.65 CPUs and 168 MiB, with a first token of 1.7 s at the median and 9.6 s at p95.</p>
-<p>Each gateway also needs the rest of its stack, and that stack uses CPU too. While the Langfuse gateway served 500 streams, its whole stack used up to 3.1 CPUs, because the web service checked keys and the worker and ClickHouse stored usage. AcruxCore's whole stack peaked at 4.0 CPUs, because its API writes a trace for every call to Postgres. Size the stack around the gateway, not only the gateway container.</p>
-<p>Talha Anwar is a senior AI and full-stack engineer and writes about building and running AI systems at talhaanwar.com.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p><p class="wp-block-paragraph">Apple has received much criticism for being late to the AI game. While OpenAI helped define the AI boom beginning in late 2021, and Google and other tech giants quickly jumped on the AI train the following year, Apple didn’t make its first real foray into <a href="https://www.fastcompany.com/section/artificial-intelligence" title="AI">artificial intelligence</a> until 2024 with Apple Intelligence.</p>
+
+
+
+<p class="wp-block-paragraph">Though the <a href="https://www.fastcompany.com/91214305/apple-intelligence-launch-iphone-ios-18-siri-ai-photo-summary-proofread">initial capabilities of Apple Intelligence</a> were rather lackluster compared with its peers, Apple spent the next two years rapidly refining its offerings. In 2026, Apple made its AI system much more capable and expansive by introducing more advanced AI tools, including the <a href="https://www.fastcompany.com/91603194/siri-ai-kill-switch-how-to-use-it-apple-iphone-18-intelligence">Siri AI chatbot</a> and <a href="https://www.fastcompany.com/91603935/new-apple-watch-ai-features-hint-at-how-apple-plans-to-address-privacy-concerns-in-future-smart-glasses-audio-intelligence">Audio Intelligence</a>. And just last month, Apple also debuted an additional AI tool dubbed “intelligent assistant.”</p>
+
+
+
+<p class="wp-block-paragraph">The thing is, Apple now has <em>so many</em> AI offerings that it’s getting hard for the average consumer to keep track of what each one does, which devices support which AI tool, and which tools require a fee to access. So, here’s a cheat sheet for making sense of Apple’s increasingly confusing AI lineup.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-apple-intelligence">Apple Intelligence</h2>
+
+
+
+<p class="wp-block-paragraph">Apple Intelligence is the oldest of the company’s modern AI offerings, <a href="https://fastcompanyme.com/technology/apple-intelligence-launches-this-week-how-to-get-it-and-what-you-can-do-with-it/">introduced</a> in 2024. Think of Apple Intelligence as the foundational artificial intelligence layer integrated into Apple’s operating systems, including iOS, macOS, and watchOS.</p>
+
+
+
+<p class="wp-block-paragraph">Apple Intelligence includes a suite of smaller AI tools tailored to specific tasks. For example, Apple Intelligence powers Visual Intelligence, which lets Apple’s AI see and understand what’s on your screen or through your camera and take action on it; for example, it can tell you the nutritional information of the food on your plate.</p>
+
+
+
+<p class="wp-block-paragraph">Apple Intelligence powers <a href="https://www.fastcompany.com/91603935/new-apple-watch-ai-features-hint-at-how-apple-plans-to-address-privacy-concerns-in-future-smart-glasses-audio-intelligence">Audio Intelligence</a>, a tool that can help you identify sounds and music and even recap your spoken conversations on some Apple Watches. It is also the engine behind numerous other AI features across your Apple products, including image generation, live translation, select photo editing tools, message summaries, and more.</p>
+
+
+
+<p class="wp-block-paragraph">Not every device that supports Apple Intelligence supports all its features. Any Mac with an Apple Silicon chip will run Apple Intelligence, but you&#8217;ll need a Mac with an M3 chip and 12 GB of RAM or more to use some of its most advanced features, including custom Siri Voices and advanced AI dictation. </p>
+
+
+
+<p class="wp-block-paragraph">For the iPhone, you&#8217;ll need an iPhone 17 Pro or later to use those advanced Apple Intelligence features (iPhone 15 Pro and later is required for most Apple Intelligence features). As for Audio Intelligence on the Apple Watch, that&#8217;s limited to the new Apple Watch Series 12 and Apple Watch Series 4.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-siri-ai">Siri AI</h2>
+
+
+
+<p class="wp-block-paragraph">Siri AI is Apple’s new chatbot. Though people often use the terms &#8220;Siri AI&#8221; and &#8220;Apple Intelligence&#8221; interchangeably, they are actually distinct. </p>
+
+
+
+<p class="wp-block-paragraph">Apple Intelligence is the foundational AI system integrated into Apple&#8217;s operating systems. Siri AI is the natural-language gateway to Apple Intelligence—it lets you communicate as you would with a person to give it commands or find information, which it then carries out using Apple Intelligence&#8217;s capabilities.</p>
+
+
+
+<p class="wp-block-paragraph">Siri AI runs on the cloud on any device that supports iOS 27, macOS 27, iPadOS 27, visionOS 27, watchOS 27, and (soon) tvOS 27. However, if you want to run some aspects of Siri AI locally on your device, you&#8217;ll need a Mac with an M3 chip and 12GB of RAM or more, or an iPhone 17 Pro, iPhone Air, or later.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-intelligent-assistant">Intelligent Assistant</h2>
+
+
+
+<p class="wp-block-paragraph">This is Apple’s newest major artificial intelligence tool, the most impressive, and the one that most muddies Apple’s AI <a href="https://www.fastcompany.com/section/branding" title="Branding">branding</a>.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">“Intelligent assistant,” <a href="https://www.apple.com/newsroom/2026/10/apple-creator-studio-adds-powerful-new-ai-features-and-even-more-creative-tools/">introduced</a> last month and released this month as part of the updated Logic Pro, Pages, Numbers, and Keynote apps in Apple’s paid Creator Studio suite, is a new natural-language AI tool aimed at helping creators be more <a href="https://www.fastcompany.com/section/productivity" title="Productivity">productive</a>.</p>
+
+
+
+<p class="wp-block-paragraph">The tool is integrated into the above apps in the form of a chatbot. There’s a text field where you type instructions to the intelligent assistant (“make this piano track sound like it was recorded in a concert hall” or “fix the formula errors in this spreadsheet”). The changes happen like magic—all very impressive stuff.&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">As a matter of fact, it’s way more impressive than the other capabilities Apple has shown off for Apple Intelligence and Siri AI. So why hasn’t Apple branded these new AI features as Apple Intelligence?</p>
+
+
+
+<p class="wp-block-paragraph">The answer: Intelligent assistant is not powered by Apple Intelligence or Siri AI. Instead, the new AI tools use Apple Foundation Models <em>combined</em> with additional models from third-party providers, in this case, OpenAI and Google. This explains why intelligent assistant is so capable (both OpenAI and Google have a huge lead over Apple in the AI space) and also why Apple has eschewed the Apple Intelligence branding for the work it carries out.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-does-apple-charge-for-ai">Does Apple charge for AI?</h2>
+
+
+
+<p class="wp-block-paragraph">This is where things get really muddied for people. Apple&#8217;s AI pricing runs from free, to a monthly subscription fee, to higher usage limits with select iCloud Plus plans.</p>
+
+
+
+<p class="wp-block-paragraph">Currently, using Apple Intelligence and Siri AI is free for all users. However, Apple says this won&#8217;t last. With the release of the 27.3 versions of its operating systems in December, customers will have daily limits when using Siri AI and Apple Intelligence. If they exceed those limits, they won&#8217;t be able to use any Apple Intelligence features that require cloud processing (which costs Apple compute power). </p>
+
+
+
+<p class="wp-block-paragraph">If users do want higher Apple Intelligence and Siri AI limits, they can get more by paying for an iCloud Plus plan (if they don&#8217;t already have one). The 50GB iCloud Plus plan, which costs just 99 cents per month, doesn&#8217;t increase your AI limits. However, the other iCloud Plus plans do:</p>
+
+
+
+<ul class="wp-block-list">
+<li>200GB ($2.99 per month): 2x limit increase</li>
+
+
+
+<li>2TB ($9.99 per month): 5x limit increase</li>
+
+
+
+<li>6TB ($29.99 per month): 10x limit increase</li>
+
+
+
+<li>12TB ($59.99 per month): 20x limit increase</li>
+</ul>
+
+
+
+<p class="wp-block-paragraph">As for intelligent assistant access in Logic Pro, Pages, Keynote, and Numbers, users already need to pony up. Intelligent assistant is available only as part of Apple&#8217;s Creator Studio subscription bundle, for which it charges $12.99 per month or $129 per year.</p>
+
+
+
+<p class="wp-block-paragraph">This means that if you want as much access as possible to Apple&#8217;s AI offerings, you&#8217;ll need to subscribe to two subscription plans.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-breaks-when-a-self-hosted-llm-gateway-hits-1-000-concurrent-streams/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.fastcompany.com/91640406/apple-intelligence-decoded-how-to-make-sense-of-apples-confusing-ai-lineup" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

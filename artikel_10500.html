@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What Actually Happens When a Kafka Region Fails?</title>
+    <title>A hidden limit of space and time could unlock electronics 100,000 times faster</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10500.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,88 +15,65 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What Actually Happens When a Kafka Region Fails?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>A hidden limit of space and time could unlock electronics 100,000 times faster</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Global_Streaming_Resilience_Network_05ab6a05b0.png" alt="What Actually Happens When a Kafka Region Fails?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/extremely-short-electron-wave-packet-at-limits-of-space-and-time.webp" alt="A hidden limit of space and time could unlock electronics 100,000 times faster" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Global_Streaming_Resilience_Network_05ab6a05b0.png" alt="What Actually Happens When a Kafka Region Fails?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/extremely-short-electron-wave-packet-at-limits-of-space-and-time.webp" alt="A hidden limit of space and time could unlock electronics 100,000 times faster" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Most Kafka deployments in the industry plan to survive the loss of a single Kafka broker or an availability zone. But that's not enough for critical Tier-0 infrastructure where downtime or data loss of even a few seconds could have a massive business impact.</p>
-<p>In such scenarios, the failure model should consider not just the loss of a broker or a zone, but the loss of an entire region. The business is expected to operate without interruption even when a whole region goes down, and it should be possible to also roll the cluster safely while operating in that state, to apply any break-glass changes.</p>
-<p>But what actually happens inside Kafka when an entire region goes down? What happens to the replicas, producer writes, and KRaft quorum? And what happens when that region comes back?</p>
-<p>Let's walk through these scenarios using a Tier-0 multi-region Kafka architecture.</p>
-<p>For a Tier-0 multi-region Kafka cluster, we need three different regions with isolated failure domains and a minimum of two brokers in each region.</p>
-<p>Brokers in each region should be configured with rack awareness to indicate their failure domains as follows:</p>
-<p>For Tier-0 workloads, each topic's partitions should be configured to have a replication factor (RF) of 6. Kafka's rack-aware replica assignment will spread the replicas across the three regions. If the automatic replica assignment doesn't allocate two replicas per region, we have to explicitly reassign replicas immediately after topic creation to meet our availability guarantees.</p>
-<p>This way, if one region goes down entirely, we still have four replicas surviving and the cluster would still continue to operate.</p>
-<p>But just running brokers in multiple regions is not the solution here. In fact, that's the easy part. The hard question is, what guarantee remains when one of those regions disappears, and does it solve the business needs?</p>
-<p>The two brokers in that region become unavailable, leaving four surviving replicas across Regions B and C.</p>
-<p>For any partitions whose leaders were in Region A, Kafka needs to elect new leaders from the surviving in-sync replicas.</p>
-<p>But having four surviving replicas alone does not determine whether Kafka will continue accepting writes.</p>
-<p>The next step is to define what is considered a successful write in this Kafka setup. For this, we need two configs:</p>
-<p>min.insync.replicas determines the minimum number of replicas that should be present in the in-sync replica set (ISR) of a partition for Kafka to accept writes when producers use acks=all.</p>
-<p>acks=all is a producer-side config that ensures that the producer will get an acknowledgment only when the write has been successfully replicated to the required in-sync replicas.</p>
-<p>These two settings work together to satisfy the durability guarantees we want.</p>
-<p>When all three regions are healthy, ISR would include all six replicas. Let's say one region goes down, then the ISR would drop down to four.</p>
-<p>Since minISR is three, writes will still continue to work.</p>
-<p>There may be temporary interruptions while Kafka detects the failure, elects new leaders, and clients reconnect to them. But once the surviving leaders are available, the cluster can continue accepting writes as long as the ISR requirements are met.</p>
-<p>The goal isn't availability at any cost, but rather the system should be available as long as the durability guarantees that we designed for can be maintained.</p>
-<p>Now let's make the scenario more interesting.</p>
-<p>Region A is still down. We have four replicas surviving across Regions B and C.</p>
-<p>What if we need to roll the cluster one broker at a time, to apply any break-glass changes?</p>
-<p>During that time, the ISR can go down from four to three. But since minISR is three, writes will still continue to work.</p>
-<p>Let's look at how the cluster behaves under different failure scenarios.</p>
-<p>Kafka will stop accepting writes only when the surviving ISR drops below three.</p>
-<p>This is an important distinction for Tier-0 workloads.</p>
-<p>It's not sufficient to design a cluster that survives a region failure. We also need to consider whether the cluster can continue operating safely while already in that degraded state.</p>
-<p>So far, we focused on the data plane. Now switching gears, the KRaft controllers have a completely different availability model.</p>
-<p>They form the metadata quorum, and a majority is needed to continue operation.</p>
-<p>For our setup, five controllers could be distributed as 2 + 2 + 1 across the three regions, requiring a majority of three to maintain quorum.</p>
-<p>If either of the regions containing two controllers goes down, three controllers remain. If the region containing one controller goes down, four remain.</p>
-<p>So, the controller quorum survives the loss of any one region.</p>
-<p>But, unlike brokers, we cannot necessarily roll the controllers at that point because taking one controller down could cause the quorum to drop below three.</p>
-<p>With a static quorum, one way to solve this is to use more controllers, and a 3 + 3 + 3 distribution would provide this. Losing one region would leave six controllers with room to still roll the controllers, as we only need five to maintain quorum.</p>
-<p>On the flip side, an increase in quorum size also increases the coordination overhead. The official Kafka documentation typically recommends three or five controllers, which tolerate one or two concurrent failures respectively.</p>
-<p>Alternatively, with dynamic KRaft quorum (KIP-853), introduced in Kafka 3.9, we can add or remove controllers from the voting quorum without restarting the cluster.</p>
-<p>For example, with our 2 + 2 + 1 setup, if a region containing two controllers goes down, the remaining three controllers can still maintain quorum. We can then remove the failed controllers from the voting membership, one at a time, reducing the quorum size to three. This allows us to roll one of the surviving controllers while still maintaining the new majority of two.</p>
-<p>However, dynamic quorum reconfiguration is not automatic. The surviving controllers must be able to maintain quorum and successfully commit the membership changes before we can proceed with the controller restart.</p>
-<p>You need to consider whether you want the same availability guarantee for the controllers as that of the data plane, and whether dynamic quorum reconfiguration during a regional outage is acceptable for your Tier-0 workloads.</p>
-<p>So far, we assumed that a region either works or goes down completely.</p>
-<p>But the WAN itself becomes a failure mode.</p>
-<p>In this setup, a partly working WAN between two regions can be more dangerous than a link that's completely down.</p>
-<p>Increased latency, packet loss, or intermittent connectivity issues between regions can cause replication to lag, ultimately resulting in replicas falling out of ISR.</p>
-<p>The three regions might be independently healthy, but if the connectivity between them is not, then the availability of the cluster might be impacted.</p>
-<p>Going back to the CAP theorem, to tolerate a network partition, we must choose between consistency and availability.</p>
-<p>So, if a partition's ISR falls below the configured min.insync.replicas of three due to a network partition, Kafka stops accepting writes with acks=all rather than weakening those guarantees.</p>
-<p>Similarly, if the KRaft controller quorum is lost, then no metadata changes, like leader elections, can happen in the cluster, even though existing data-plane traffic may continue for some time.</p>
-<p>The availability guarantees we discussed also come with their own costs.</p>
-<p>The first cost is client latency. With cross-region replication and acks=all, the network latency between these regions directly affects producer latency. Consumers can also pay the WAN latency cost when consuming from partition leaders located in a different region.</p>
-<p>The second cost is replication overhead. With RF=6, there is additional storage, network traffic, and replication-related coordination cost in the brokers compared to a smaller number of replicas.</p>
-<p>So, in an architecture like this, monitoring the health of the network paths between these regions is as critical as monitoring the Kafka brokers and controllers.</p>
-<p>Metrics like round-trip latency (RTT) between regions, packet loss, TCP retransmissions, connection errors/timeouts, and network throughput/bandwidth utilization are a good start.</p>
-<p>When one region goes down, all the partition leaders in that region would move to the two other surviving regions.</p>
-<p>This implies that those two regions would have to handle more producer and consumer traffic, network throughput, and disk I/O.</p>
-<p>Even if the cluster is designed to satisfy its ISR and controller quorum requirements, if it's not sized to handle these failures when one region goes down, the surviving regions would be overloaded, resulting in higher latencies, timeouts, and operational instability.</p>
-<p>So, for Tier-0 infrastructure, capacity planning should always be done for failure states and not stop at normal operations.</p>
-<p>Now let's say Region A comes back online.</p>
-<p>The brokers in the recovered region might have to catch up on a significant amount of data before they become fully in sync again.</p>
-<p>This can result in a sudden burst of cross-region network traffic and disk I/O across all regions.</p>
-<p>Region recovery needs to be controlled so that it doesn't overwhelm the healthy part of the cluster.</p>
-<p>This can be achieved by throttling the replica catch-up, with the trade-off of longer recovery time to minimize the impact on live production traffic.</p>
-<p>Replication throttling needs a deeper discussion of its own, so we won't go into details here.</p>
-<p>The important point is that bringing a failed region back online is not simply a matter of restarting its brokers. We need to make sure that the recovery process itself doesn't impact the business.</p>
-<p>Before putting a Tier-0 multi-region Kafka cluster into production, validate these scenarios:</p>
-<p>There is no shortage of ways to deploy Kafka across multiple regions. The challenge here is to pick the right architecture that addresses all our durability guarantees.</p>
-<p>For Tier-0 workloads, this means designing the architecture around failures first.</p>
-<p>What happens when a region goes down? Can we still roll the cluster? What continues to work, and at what point do we deliberately stop accepting writes?</p>
-<p>Lastly, can we safely bring back the region that was down without impacting the business?</p>
-<p>That is ultimately the difference between simply running Kafka across multiple regions versus actually supporting a mission-critical Tier-0 workload.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Quantum physics places fundamental limits on what scientists can know about the behavior of particles. Werner Heisenberg's famous uncertainty principle states that certain properties, such as a particle's position and momentum, cannot both be measured with unlimited precision. This restriction is not caused by flaws in scientific instruments. It is built into the laws of nature.</p>
+<p>But position and time are different. Heisenberg's uncertainty principle does not impose the same restriction on these quantities. Now, researchers have experimentally demonstrated another fundamental limitation: an electron's location and its behavior over time cannot both be determined with arbitrary precision. Known as the "space-time limit," this newly observed relationship could have major implications for the future of quantum technology and ultrafast electronics.</p>
+<p>The discovery comes from an international collaboration involving research groups at the Regensburg Center for Ultrafast Nanoscopy (RUN), led by Profs. Jascha Repp, Rupert Huber, Franz Giessibl, and Klaus Richter, along with a team at the Max Planck Institute in Hamburg led by Angel Rubio.</p>
+<p>Watching Electrons Move at Incredible Speeds</p>
+<p>Understanding how matter behaves at the smallest scales is essential for developing the next generation of technology. Advances in clean energy, quantum computing, and powerful electronics for artificial intelligence all depend on knowing how chemical reactions unfold, how light interacts with materials, and how electrons travel through electronic devices.</p>
+<p>However, even the sharpest microscopic photographs cannot reveal the full picture. Scientists also need to observe how these processes change over time, effectively creating slow-motion movies of events occurring at the atomic scale.</p>
+<p>At RUN, researchers are developing ultrafast microscopes capable of recording the movements of electrons, atoms, and molecules with extraordinary precision in both space and time. About ten years ago, scientists in Regensburg used ultrafast scanning tunneling microscopy to resolve the movement of a single molecule across space and time for the first time.</p>
+<p>Tracking individual electrons presents an even greater challenge. At these microscopic distances, electrons can move roughly a thousand times faster than atoms and molecules, with important changes taking place over just attoseconds.</p>
+<p>To appreciate how extreme these scales are, consider that an atom is approximately ten million times smaller than a millimeter. An attosecond is one-billionth of a billionth of a second. The difference between an attosecond and a second is comparable to the difference between one second and the entire age of the universe.</p>
+<p>Making these measurements is especially difficult because electrons do not behave like ordinary objects. Their motion follows the unusual laws of quantum mechanics rather than the familiar rules of classical physics.</p>
+<p>Ultrafast Lasers Reveal Quantum Tunneling</p>
+<p>To observe electron behavior at these extraordinary speeds, the researchers built a new laser system that provides much finer time resolution than earlier experiments. The system allows them to control and study the quantum motion of individual electrons directly.</p>
+<p>In the experiments, carefully timed laser pulses drive electrons from an extremely sharp metal tip toward a silver surface. The distance they travel is only a few atomic diameters.</p>
+<p>The researchers detect this movement by measuring the resulting electrical current. To determine exactly when the electrons move, they use two pulses of light separated by a precisely controlled interval.</p>
+<p>Simon Maier, the lead author of the paper, explains: "By varying the time interval between the two laser pulses, we can directly observe how the electrons respond."</p>
+<p>This approach revealed clear evidence of electron motion occurring on attosecond timescales. It showed that the laser pulses could transfer electrons within these incredibly brief intervals while allowing scientists to observe the process as it happened.</p>
+<p>What makes the result particularly remarkable is how the electrons travel. Instead of moving like conventional particles, they behave as quantum waves. This allows them to pass through an energy barrier separating the metal tip from the silver surface, even though classical physics predicts they should not have enough energy to cross it.</p>
+<p>This phenomenon, known as quantum tunneling, is somewhat like an object passing through a solid wall without breaking or damaging it.</p>
+<p>"Our measurement can be understood as a high-speed camera for the electron wave packets, since you can see at what point in time the tunneling process takes place," explains Katharina Glöckl, a doctoral student and co-author of the publication.</p>
+<p>To understand the measurements more deeply, researchers working with Prof. Angel Rubio performed sophisticated quantum simulations of the electrons' behavior near the "space-time limit."</p>
+<p>Their calculations closely reproduced the experimental findings and uncovered another remarkable detail. The electrons did not respond to the light field instantaneously. Instead, their motion lagged behind it by approximately 500 attoseconds.</p>
+<p>At such extreme scales, several fundamental features of quantum physics become important simultaneously.</p>
+<p>For example, the researchers found that the laser pulses could not be described entirely by treating light as a wave or entirely by treating it as individual particles called photons. Their effects displayed characteristics of both descriptions. This combination was essential for exploring electron behavior so close to the "space-time limit."</p>
+<p>The team also discovered that controlling electron motion over extremely short intervals changes how the electrons are distributed in space. Quantum mechanics describes these electrons using wave packets, which represent how their wave properties extend across different locations.</p>
+<p>The relationship between the timing of electron motion and the spatial extent of these wave packets revealed the central limitation behind the discovery.</p>
+<p>Raffael Spachtholz, another co-author of the study, explains: "The more precisely we want to pin down the electron's position in time, the more energy we need to provide. And as a result, the electron wave packet spreads out more spatially."</p>
+<p>In other words, improving the precision of an electron's timing comes with a cost. The more tightly researchers define when its motion occurs, the more broadly its quantum wave packet spreads through space.</p>
+<p>To examine this relationship experimentally, the team placed a single atom on the surface to confine the electron wave packets to an extremely small region immediately before the laser pulses arrived.</p>
+<p>This setup allowed the scientists to directly measure the connection between the electrons' spatial distribution and the timing of their motion.</p>
+<p>Importantly, even when the electrons received substantial energy from the laser pulses, their wave packets remained sufficiently localized for microscopy with atomic spatial resolution and attosecond time resolution.</p>
+<p>The findings provide experimental insight into a fundamental space-time constraint that scientists had previously only suspected. They also make it possible to systematically investigate how changes in electron motion over time affect the spatial structure of quantum wave functions.</p>
+<p>Could Quantum Electronics Become Hundreds of Thousands of Times Faster?</p>
+<p>Beyond revealing a new aspect of quantum behavior, the discovery could open the door to technologies that operate on timescales far beyond the capabilities of today's electronics.</p>
+<p>One especially promising possibility involves using precisely controlled electron wave packets to influence chemical reactions.</p>
+<p>Transferring a single electron to a molecule represents the smallest possible transfer of electric charge. But when that electron is concentrated within an exceptionally small region of space and time, the resulting local peak current density can reach as much as 1 trillion amperes per square centimeter.</p>
+<p>Such extreme conditions could give scientists new ways to control chemical bonds and observe how molecules change during reactions.</p>
+<p>"In the future, we want to use such wave packets to specifically trigger chemical reactions and observe, on the relevant length and time scales, how chemical bonds can be broken or altered," explains Prof. Jascha Repp enthusiastically.</p>
+<p>The implications could extend well beyond chemistry. Greater control over electron motion may eventually help engineers develop electronic devices and quantum information systems that operate at speeds approaching the fundamental limits of electron dynamics.</p>
+<p>"In the long term, the insights gained could also contribute to operating electronics and quantum information processing at the intrinsic speed limit of electron motion itself -- hundreds of thousands of times faster than the currently dominant CMOS technology," adds Prof. Rupert Huber.</p>
+<p>That possibility remains a long term technological goal rather than an achievement demonstrated in the current experiments. Nevertheless, the findings provide a new foundation for exploring how electrons can be manipulated at the smallest distances and shortest timescales.</p>
+<p>For Repp and Huber, the results suggest that the range of potential applications is extraordinarily broad. They believe that future advances in controlling electrons at the space-time limit may ultimately depend more on human creativity than on the constraints imposed by nature.</p>
+<p>Materials provided by University of Regensburg. Original written by Karoline StÃ¼rmer. Note: Content may be edited for style and length.</p>
+<p>New Once-Daily Pill Slashes Bad Cholesterol by Nearly 65% in Clinical Trial</p>
+<p>A Major Review Reveals Three Antidepressants That May Outperform Prozac</p>
+<p>Does the Sun Have a Secret Companion? A Controversial Theory Could Explain Earthâs Mass Extinctions</p>
+<p>Heart Stents May Not Prevent Heart Attacks or Early Death, Landmark Study Finds</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-actually-happens-when-a-kafka-region-fails/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/11/261106174537.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

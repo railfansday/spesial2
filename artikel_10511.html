@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why Transactional Emails Fail After Deployment: A Practical Debugging Guide for Developers</title>
+    <title>Why ‘you don’t have to use AI’ is the new AI pitch</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10511.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,132 +15,109 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Why Transactional Emails Fail After Deployment: A Practical Debugging Guide for Developers</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>Why ‘you don’t have to use AI’ is the new AI pitch</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Debugging_Email_Failures_e38bfd4eaf.png" alt="Why Transactional Emails Fail After Deployment: A Practical Debugging Guide for Developers" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Debugging_Email_Failures_e38bfd4eaf.png" alt="Why Transactional Emails Fail After Deployment: A Practical Debugging Guide for Developers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Transactional emails are easy to overlook during application development. A registration form works, the database stores the user's information, and the backend successfully triggers an email. Everything appears to be functioning as expected.</p>
-<p>Then a user reports that their password-reset message never arrived.</p>
-<p>The problem might not be in the email template or the sending function. It could involve DNS configuration, authentication failures, message formatting, queue processing, recipient-server policies, or an incorrectly configured production environment.</p>
-<p>For developers building SaaS applications, ecommerce platforms, and web services, reliable email delivery is an important part of the user experience. An account-verification message that never arrives can prevent someone from accessing an application, while a delayed security notification can create unnecessary confusion.</p>
-<p>Understanding how to investigate these problems requires looking beyond the email-sending function. This guide explores a practical debugging workflow, the technical layers involved, and the tools developers can use to identify common email delivery failures.</p>
-<p>One of the first mistakes developers make when troubleshooting email is assuming that a successful API response means the message has reached the recipient.</p>
-<p>When an application submits an email through an SMTP server or an email service provider's API, the provider may accept the request and return a successful response. However, the receiving mail server still needs to process the message.</p>
-<p>Depending on its configuration and policies, the receiving server might:</p>
-<p>Accept the message and place it in the inbox.</p>
-<p>Accept the message but classify it as spam.</p>
-<p>Reject the message because of authentication or policy issues.</p>
-<p>Accept the message but place it in another folder.</p>
-<p>A successful request therefore confirms only that a particular stage of the process completed.</p>
-<p>Developers should distinguish between three important states:</p>
-<p>Submission: The application successfully handed the message to its sending provider.</p>
-<p>Acceptance: The receiving mail server accepted responsibility for the message.</p>
-<p>Inbox placement: The message became visible in the recipient's expected inbox.</p>
-<p>These distinctions make troubleshooting considerably easier. Instead of immediately rewriting an email template, developers can identify which stage is actually failing.</p>
-<p>Before investigating external email infrastructure, examine the application's own implementation.</p>
-<p>A common example is a password-reset workflow. The application receives a request, generates a temporary token, creates a reset URL, and sends an email containing that URL.</p>
-<p>Several problems can occur before the message even reaches an email provider.</p>
-<p>The application generates an expired token.</p>
-<p>The reset URL points to a staging environment.</p>
-<p>An asynchronous task fails before processing the message.</p>
-<p>The email service credentials are incorrect.</p>
-<p>An API request times out without being retried.</p>
-<p>The application records success before confirming the provider's response.</p>
-<p>Start by logging the important stages of the process.</p>
-<p>For example, a Node.js application might use structured logging:</p>
-<p>This example assumes that the email provider returns a message identifier. Adapt the response fields to the actual SDK being used.</p>
-<p>Notice that the logs identify the recipient through an internal ID rather than exposing their complete email address.</p>
-<p>Avoid logging passwords, authentication tokens, reset URLs, or other sensitive information.</p>
-<p>The objective is to establish a traceable record of what happened without introducing additional security risks.</p>
-<p>Email authentication is another important area to investigate when messages are rejected or consistently classified as spam.</p>
-<p>Three commonly used mechanisms help receiving servers evaluate whether a message is authorized to represent a particular domain.</p>
-<p>Sender Policy Framework (SPF) allows a domain owner to specify which servers are authorized to send messages using that domain.</p>
-<p>This information is published through DNS.</p>
-<p>A simplified SPF record might look like this:</p>
-<p>The actual record must reflect the sending services authorized by the domain owner.</p>
-<p>Forgetting to authorize a new email provider.</p>
-<p>Publishing multiple SPF records for the same domain.</p>
-<p>Leaving outdated sending services in the record.</p>
-<p>Remember that SPF evaluates the sending infrastructure against the envelope sender domain. It does not automatically guarantee that the visible From address is aligned.</p>
-<p>DomainKeys Identified Mail (DKIM) adds a cryptographic signature to outgoing messages.</p>
-<p>The receiving server can retrieve the corresponding public key through DNS and verify that the signature is valid.</p>
-<p>A mismatch between the configured selector and published record.</p>
-<p>Developers integrating multiple email providers should verify that each provider has the correct signing configuration.</p>
-<p>Domain-based Message Authentication, Reporting, and Conformance (DMARC) builds on SPF and DKIM.</p>
-<p>It allows domain owners to define how receiving servers should handle messages that fail authentication and alignment requirements.</p>
-<p>A basic monitoring-oriented DMARC record might look like this:</p>
-<p>This is an illustrative configuration. The reporting address must be valid, and the domain should have an appropriate monitoring and policy-enforcement plan.</p>
-<p>Developers can use MXToolbox to inspect DNS records and investigate common authentication problems.</p>
-<p>For additional technical background, SitePoint's guide to HTML email development explains why email environments require different implementation considerations from ordinary web pages.</p>
-<p>An email template that looks perfect in a browser can behave differently when rendered by Gmail, Outlook, Apple Mail, or another email client.</p>
-<p>This happens because email clients do not implement HTML and CSS in exactly the same way.</p>
-<p>A layout may break because of unsupported CSS properties, image restrictions, unexpected font rendering, or differences in how tables are handled.</p>
-<p>For this reason, email testing should be part of the development process rather than something performed only after users report a problem.</p>
-<p>HTML validation: Check the markup for malformed elements, missing attributes, and unnecessary code.</p>
-<p>Rendering tests: Preview the email across desktop and mobile email clients.</p>
-<p>Link verification: Confirm that buttons, links, and personalized URLs point to the correct destinations.</p>
-<p>Image testing: Check whether the message remains understandable when images are blocked.</p>
-<p>Content inspection: Review subject lines, sender information, and the plain-text alternative.</p>
-<p>Deliverability checks: Examine authentication, content-related warnings, and potential inbox placement problems.</p>
-<p>Developers can also incorporate pre-send diagnostics into their release workflow to identify potential deliverability problems before a message is sent to a larger audience.</p>
-<p>The important point is to treat these checks as one part of quality assurance, not as a guarantee that every message will reach the primary inbox.</p>
-<p>For more information about email rendering differences, SitePoint's article on essential HTML email coding tips provides useful examples of client-specific behavior.</p>
-<p>Testing transactional emails with real customer addresses during development can create unnecessary problems.</p>
-<p>A better approach is to use a dedicated testing environment that captures outgoing messages without delivering them to actual recipients.</p>
-<p>For example, Mailpit provides a local SMTP server and web interface for inspecting messages during development.</p>
-<p>The final output generated by the application.</p>
-<p>Another option is Mailtrap, which provides email testing capabilities for development workflows.</p>
-<p>Consider a registration feature that sends a welcome message whenever a new user creates an account.</p>
-<p>Instead of sending hundreds of test messages to real addresses, developers can configure the development environment to capture them in a testing inbox.</p>
-<p>This makes it possible to repeatedly test different templates without affecting actual customers or generating unnecessary email traffic.</p>
-<p>A separate testing environment also reduces the risk of accidentally sending development notifications to production users.</p>
-<p>Applications that send large numbers of emails often use background workers instead of processing every message during the original HTTP request.</p>
-<p>This approach helps keep the application responsive, but it introduces another potential source of failures.</p>
-<p>Imagine an ecommerce application that sends order confirmations after checkout.</p>
-<p>The application creates an order successfully and places an email task in a queue. However, the background worker becomes unavailable before processing the task.</p>
-<p>The customer receives an order confirmation much later than expected, or perhaps not at all.</p>
-<p>To investigate these problems, developers should monitor:</p>
-<p>Retries are particularly important, but they need to be implemented carefully.</p>
-<p>A temporary network failure may justify another attempt. A permanent rejection caused by an invalid recipient address usually does not.</p>
-<p>Exponential backoff can help prevent repeated requests from overwhelming an unavailable service.</p>
-<p>In a production system, add random jitter to avoid having multiple workers retry simultaneously.</p>
-<p>Also consider idempotency. If a worker processes the same task twice, the application should avoid sending duplicate transactional messages whenever possible.</p>
-<p>A reliable queue architecture should distinguish between temporary failures and permanent failures rather than retrying every error indefinitely.</p>
-<p>Testing before deployment is important, but it cannot reveal every issue that may occur in production.</p>
-<p>Real email traffic introduces changing conditions, including recipient-server behavior, sender reputation, invalid addresses, and differences between email providers.</p>
-<p>Developers should therefore establish ongoing monitoring.</p>
-<p>For Gmail-related monitoring, Google Postmaster Tools provides information about domain reputation, spam rates, and authentication.</p>
-<p>It is particularly useful for teams sending enough email to generate meaningful reporting data.</p>
-<p>Another useful resource is Can I Email, which documents HTML and CSS feature support across email clients.</p>
-<p>These tools address different problems. Monitoring sender reputation will not fix a broken password-reset URL, just as validating HTML will not resolve a DNS authentication failure.</p>
-<p>The best approach is to monitor each layer independently.</p>
-<p>A repeatable checklist helps developers investigate problems without overlooking important details.</p>
-<p>Before releasing a new email feature, review the following:</p>
-<p>Confirm that the application successfully submits the message.</p>
-<p>Verify that provider credentials and environment variables are correct.</p>
-<p>Inspect SPF, DKIM, and DMARC configuration.</p>
-<p>Validate the HTML and plain-text versions.</p>
-<p>Preview the message on desktop and mobile email clients.</p>
-<p>Verify that development and production configurations are separated.</p>
-<p>Check delivery events and provider error reports.</p>
-<p>Monitor bounce and complaint rates after deployment.</p>
-<p>Not every application needs an expensive testing platform or a complicated monitoring stack.</p>
-<p>A small project might only require a local email testing environment, basic DNS checks, and structured application logs.</p>
-<p>A larger SaaS platform may benefit from automated integration tests, provider webhooks, queue monitoring, authentication reports, and dedicated deliverability testing.</p>
-<p>The right setup depends on the application's sending volume, complexity, and the importance of its email workflows.</p>
-<p>Reliable email delivery requires more than calling an SMTP function or integrating an email API.</p>
-<p>Developers need to understand the complete process, from application logic and message construction to authentication, queue processing, recipient-server acceptance, and inbox placement.</p>
-<p>The most effective troubleshooting strategy is to isolate these layers instead of treating every missing message as a template problem.</p>
-<p>Start with application logs, inspect provider responses, validate authentication records, test email rendering, and monitor production behavior.</p>
-<p>By incorporating these checks into development and deployment workflows, teams can reduce avoidable failures and build applications that communicate more reliably with their users.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p><p class="wp-block-paragraph" id="h-watching-adobe-s-keynote-at-its-max-conference-in-miami-this-week-i-couldn-t-help-but-think-about-the-tightrope-it-s-walking-with-ai-and-how-similar-it-is-to-what-the-media-industry-is-going-through-in-both-there-s-a-desire-to-be-ai-forward-and-skate-to-where-the-puck-is-going-at-the-same-time-they-need-to-deal-with-a-hostile-crowd-meaning-the-growing-backlash-against-ai-among-many-of-their-customers">Watching Adobe&#8217;s keynote presentation at the 24th annual Max conference in Miami this week, I couldn&#8217;t help but think about the tightrope the software giant is walking with <a href="https://www.fastcompany.com/section/artificial-intelligence" title="AI">AI</a>, and how similar it is to what the media industry is going through. In both cases, there&#8217;s a desire to be AI-forward and skate to where the puck is going. At the same time, they need to deal with a hostile crowd—meaning the growing <a href="https://www.fastcompany.com/91553925/the-backlash-against-ai-in-4-charts" rel="noreferrer noopener" target="_blank">backlash against AI</a> among many of their customers.</p>
+
+
+
+<p class="wp-block-paragraph">At Adobe&#8217;s last two annual Max events, AI was a huge emphasis. The company touted AI features, including ways to generate content directly in its Creative Cloud apps, such as Photoshop and Premiere. Adobe hyped up Firefly, which was then mostly associated with the company&#8217;s image models. In 2024, Adobe told the audience that &#8220;2024 will go down as the year that creativity changed forever.&#8221; In 2025, the headliners were a new Firefly image model and a lineup of third-party models from Google, OpenAI, Runway, and others, and &#8220;choice&#8221; mostly meant choosing which AI model to use. The lone nod to skeptics was a passing aside: &#8220;Of course, you can ignore it all as well.&#8221;</p>
+
+
+
+<p class="wp-block-paragraph">This year, the tone shifted. In fact, one of the first things incoming CEO Anil Chakravarthy emphasized during the opening keynote was that users <a href="https://www.fastcompany.com/91573804/how-not-to-use-ai" rel="noreferrer noopener" target="_blank">didn&#8217;t have to use AI if they didn&#8217;t want to</a>. &#8220;Some of you don&#8217;t want to have anything to do with AI,&#8221; he said, promising to give those users &#8220;the precision and control that you&#8217;re looking for, and the option to <em>not</em> use AI.&#8221;</p>
+
+
+
+
+
+<p class="wp-block-paragraph"><br />Instead of a new Firefly model number, the keynote spotlighted upgrades with no AI in them at all, like a rebuilt color mode in Premiere and Dynamic Text in Illustrator. Firefly is still an area of focus, but it&#8217;s evolved into a catch-all creative studio, more like Figma than an AI model. (Disclosure: Adobe paid for my travel to the Max conference, though it had no input on this column.)</p>
+
+
+
+<h2 class="wp-block-heading" id="h-ai-optional-doesn-t-mean-ai-free">AI-optional doesn&#8217;t mean AI-free</h2>
+
+
+
+<p class="wp-block-paragraph">None of this is to say Adobe is walking away from AI. Far from it: During that same keynote, Chakravarthy announced Adobe would be providing a way for AI services to access Creative Cloud applications directly through the <a href="https://www.fastcompany.com/91637530/adobe-is-fully-entering-its-agent-era" rel="noreferrer noopener" target="_blank">model context protocol (MCP)</a> standard. That means AI users will be able to have <a href="https://www.fastcompany.com/section/claude" rel="noreferrer noopener" target="_blank">Claude</a>, <a href="https://www.fastcompany.com/section/chatgpt" rel="noreferrer noopener" target="_blank">ChatGPT</a>, or <a href="https://www.fastcompany.com/section/gemini" rel="noreferrer noopener" target="_blank">Gemini</a> act as an agent, effectively &#8220;driving&#8221; Photoshop and other Creative Cloud apps to edit projects, create content, and export files directly on their computers. The integrations go into private beta testing in <a href="https://thenextweb.com/news/adobe-mcp-integrations-photoshop-premiere-ai-agents" rel="noreferrer noopener" target="_blank">early 2027</a>.</p>
+
+
+
+<p class="wp-block-paragraph">Adobe already provides an AI connector that works similarly, but the MCPs would take things to a new level of precision and control. <a href="https://www.fastcompany.com/91637530/adobe-is-fully-entering-its-agent-era" rel="noreferrer noopener" target="_blank">Jesus Diaz has a great breakdown</a> of exactly how they would work and what it means for creators. In addition, Adobe is building out its own agents. The new Creative Agent is essentially an Adobe chatbot: You describe what you want, and the agent handles the execution in the appropriate app. It&#8217;s now in beta inside Premiere, Illustrator, InDesign, After Effects, and <a href="http://frame.io" rel="noreferrer noopener" target="_blank">Frame.io</a>.</p>
+
+
+
+<p class="wp-block-paragraph">All this makes it clear Adobe isn&#8217;t slowing down on AI. It has, however, recognized that a great bifurcation is taking place, one that&#8217;s affecting all industries to some extent, but especially the media. On the one hand, you have your <a href="https://www.fastcompany.com/91612962/purpose-is-your-organizations-antidote-to-ai-skepticism" rel="noreferrer noopener" target="_blank">AI skeptics</a>, the customers who are suspicious of AI generally and AI-generated or -assisted content specifically. And on the other, you have the AI enthusiasts, the ones who are using AI to enhance and speed up their work, including through tools from other companies.</p>
+
+
+
+<p class="wp-block-paragraph">This is the AI tightrope, and all businesses will need to navigate it over the next few years. Not just because AI represents &#8220;the future&#8221; in some vague sense, but because, if it does, it opens up a new kind of customer.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-now-everyone-knows-kung-fu">Now everyone knows kung fu</h2>
+
+
+
+<p class="wp-block-paragraph">My business is actually a pretty good example of this. I use various software, including Photoshop and Premiere, to help produce content like <em>The Media Copilot</em> podcast. But I&#8217;m not a creator <em>per se</em>, and I&#8217;m probably using only about 10% of the features that would help my use case. For many, that skill gap is the difference between subscribing and not. But an agent that bridges the gap could mean Adobe customers are no longer just enthusiasts and experts. Suddenly, we&#8217;re all Neo in the Matrix: Just plug an agent into your workstream, and you know kung fu. In fact, one of the Max keynote demos was more or less my exact workflow: an outside AI agent <a href="https://www.archyde.com/adobe-debuts-ai-agents-for-creative-cloud-anil-chakravarthy-says/" rel="noreferrer noopener" target="_blank">turning a long-form podcast into a batch of short clips</a> for social media.</p>
+
+
+
+<p class="wp-block-paragraph">There&#8217;s also an urgency here, and again, my use case is a good example. I&#8217;ve already begun off-loading some of my production process to agents. Claude Code and OpenAI Codex are both excellent at analyzing workflows and recommending software solutions that they (not I) can operate. Often, it&#8217;s open-source software that gets the job done at virtually no cost other than the tokens I expend. And Adobe users can even employ computer use—in which the AI uses your machine, just as you would—to operate the software. It&#8217;s messier than an MCP, but it gets the job done, and AI is getting better at this by the day.</p>
+
+
+
+<p class="wp-block-paragraph">In other words, the AI world is moving toward agentic work, with or without Adobe. Businesses of all kinds are beginning to demand this kind of functionality, and even if open-source software is cheaper, there are advantages to using commercial software. Security, reliability, and auditability are all very important to enterprises. And it&#8217;s mutually beneficial to Adobe, since the number of licenses those businesses buy will no longer be limited by the number of experts they have. Notably, the MCP integrations <a href="https://www.fastcompany.com/91637530/adobe-is-fully-entering-its-agent-era" rel="noreferrer noopener" target="_blank">require the apps to be installed and licensed</a> on the user&#8217;s machine. Even when an agent is the one driving Photoshop, someone is still paying for the seat.</p>
+
+
+
+<h2 class="wp-block-heading" id="h-media-s-version-of-the-same-customer">Media&#8217;s version of the same customer</h2>
+
+
+
+<p class="wp-block-paragraph">There&#8217;s a corollary here in media. As people turn more and more to AI answers for information, it means bots scrape all kinds of sites to find the best possible answer. A consequence of this is that niche sites—in particular B2B media—have become some of the most sought-after sources on the web. TollBit&#8217;s latest <a href="https://tollbit.com/state-of-the-bots/q3-q4-2025/" rel="noreferrer noopener" target="_blank">&#8220;State of the Bots&#8221; report</a> ranks B2B and professional sites among the most heavily scraped categories it tracks, with scraping up <a href="https://www.theregister.com/2026/02/04/ai_bot_traffic_web_browsers/" rel="noreferrer noopener" target="_blank">62%</a> from Q2 2025 to Q4 2025. </p>
+
+
+
+<p class="wp-block-paragraph">Their specialized knowledge might sometimes be impenetrable to mainstream audiences, but never to AI agents. They can quickly parse the bits that are important and relevant, then break them down in a way that&#8217;s understandable to anyone. Just like with those Photoshop agents, lack of expertise is no longer a barrier to adoption.</p>
+
+
+
+<p class="wp-block-paragraph">But what about those AI skeptics? They&#8217;re an important part of any company&#8217;s existing customer base, and they&#8217;ve made their views clear: They don&#8217;t want to see AI in the content they consume. I&#8217;ve written about <a href="https://www.fastcompany.com/91599434/ai-detectors-cant-solve-the-problem-they-were-built-for" rel="noreferrer noopener" target="_blank">the problem with AI tells in text</a>, and the same goes for images and video: Audiences consistently say they don&#8217;t like them. That doesn&#8217;t mean all AI is bad, and many Adobe AI-powered features garnered lots of applause at Max. But it needs to be in the right context. </p>
+
+
+
+<p class="wp-block-paragraph">A good rule of thumb: AI behind the scenes is generally okay, but you need to be careful with generative content. The audience research lines up almost exactly. In the Reuters Institute&#8217;s &#8220;<a href="https://www.niemanlab.org/2025/10/people-are-using-chatgpt-twice-as-much-as-they-were-last-year-theyre-still-just-as-skeptical-of-ai-in-news/" rel="noreferrer noopener" target="_blank">Generative AI and News Report 2025</a>,&#8221; only 12% of people said they were comfortable with news generated entirely by AI, compared with 62% for news produced entirely by humans. But 55% were fine with AI fixing spelling and grammar.</p>
+
+
+
+<p class="wp-block-paragraph">Most media companies have arrived at a similar place. There are tantalizing opportunities for content to reach new audiences through AI search engines and agent protocols like MCP. At the same time, they need to tread lightly when implementing artificial intelligence in their own operations, lest they lose trust with their existing audience. That&#8217;s the AI tightrope, and staying balanced is obviously the trick to moving forward. </p>
+
+
+
+<h2 class="wp-block-heading" id="h-getting-the-agents-to-pay-up">Getting the agents to pay up</h2>
+
+
+
+<p class="wp-block-paragraph">But what&#8217;s on the other end? At least for Adobe, the answer is clearer: a new and potentially huge customer base that doesn&#8217;t want to use tools but is happy for agents to. For media, the other end of the rope is murkier. The agents are already here, reading trade publications and national news alike, but most of them are still taking what they find without paying for it. AI apps send publishers a sliver of the traffic Google does, and the deals that would make up the difference are stuck in courtrooms and licensing negotiations.</p>
+
+
+
+<p class="wp-block-paragraph">Adobe found a way to charge for the agents using its tools. Until the media figures out how to get agents to pay for the privilege of reading content, it&#8217;s walking the same tightrope, just without a net.</p>
+
+
+
+
+
+<p class="wp-block-paragraph"></p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/why-transactional-emails-fail-after-deployment-a-practical-debugging-guide-for-developers/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.fastcompany.com/91642976/why-you-dont-have-to-use-ai-is-the-new-ai-pitch" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

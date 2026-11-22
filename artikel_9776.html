@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformers Model Integration Contracts</title>
+    <title>Time-Series Models in the Streamhouse: A New Frontier and Use Cases</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9776.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,142 +15,76 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Transformers Model Integration Contracts</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>Time-Series Models in the Streamhouse: A New Frontier and Use Cases</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/64e8143f6de557454220921e/yf6E9vJHIkGHG_toGSasb.gif" alt="Time-Series Models in the Streamhouse: A New Frontier and Use Cases" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/transformers-mic/mic-logo.png" alt="Transformers Model Integration Contracts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/64e8143f6de557454220921e/yf6E9vJHIkGHG_toGSasb.gif" alt="Time-Series Models in the Streamhouse: A New Frontier and Use Cases" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>On July 30, 2026, Transformers enabled PyTorch's scaled dot-product attention
-(SDPA) for T5. As a side effect, UMT5's decoder could attend to future tokens.
-During training, it could peek at the answer it was supposed to predict.
-Nothing crashed, and the bug stayed in main for almost two months.</p>
-<p>When we later replayed those commits, a small UMT5 model running on CPU flagged
-it on every one of them. This post is about that model and the tests built
-around it.</p>
-<p>Transformers supports over 750
-model types, and its test suite is big: 88,000+ CPU tests on main, plus
-200,000+ GPU tests in a daily run. Model tests are only part of it: we also
-test pipelines, training, distributed execution, quantization and attention
-kernels.</p>
-<p>The integration tests load real checkpoints and exercise the model's API on
-real hardware. Running all of that on every PR would mean keeping a lot of GPUs
-busy all day long, which isn't practical. By the time a scheduled run finds a
-regression, it may already be in main.</p>
-<p>Our approach is to shrink the model instead. We build a fixture: a small
-model made from the real checkpoint's configuration, with fewer and narrower
-layers but every kind of layer it has, and its tokenizer and processor files
-unchanged. It is published once, then reused. We run "fast integration tests"
-against it on a cheap CPU runner. In our
-CPU study,
-the experimental UMT5 fixture used 66 MB of weights; the source checkpoint
-is 1,227 MB.</p>
-<p>This also covers very large models: some don't fit on our standard GPU
-runners, but their fixtures run on CPU.</p>
-<p>Model integrators already build tiny test models (Transformers' tiny-random-*
-checkpoints). We wanted a common recipe, and
-checks that go beyond loading the model and running a forward pass. The UMT5
-bug would have passed a forward pass just fine.</p>
-<p>Fixtures won't replace full integration tests, but on PRs they give us a
-chance to catch bugs before they reach main.</p>
-<p>transformers-mic is a proposed
-standard for packaging these tests. A Model Integration Contract (MIC) has
-three parts:</p>
-<p>The contract holds if running the usage path on the fixture still produces the
-baselines.</p>
-<p>A contract covers an architecture and a usage path, not a single checkpoint:
-compatible checkpoints can share a fixture, while each keeps its own expected
-results. We publish them in huggingface-mic.</p>
-<p>For example, the SmolLM contract generates from prompts such as "The capital
-of France is" and compares its token IDs with a recorded answer. After loading
-the model and tokenizer, the generation code is, simplified to one prompt:</p>
-<p>It also compares training loss, checks that gradients are finite and verifies
-that an optimizer step changes the weights. See the full
-usage.md.</p>
-<p>A fleet dataset
-on the Hub pins each MIC to a frozen revision, along with the package versions
-used to record its baselines. Each CI run records the fleet revision it
-used, so we can reproduce it later.</p>
-<p>On a PR, we pick MICs based on the files the patch changes.</p>
-<p>We replayed frozen MICs over five months of Transformers commits. The small
-UMT5 fixture flagged the regression from its introduction on July 30, 2026
-until its fix on September 28.
-Label log-probabilities differed from the reviewed baseline by 1.22 and training
-loss by about 0.20.</p>
-<p>One detail mattered: the contract used SDPA, the default attention path.
-Running only the eager attention variant missed the bug. A fixture only
-helps if it goes through the same code as the real checkpoint.</p>
-<p>We then reverted the fix on a proof branch in Transformers' CI. The check
-failed with the same differences, and the selected T5 contract's runner step
-took 13.4 seconds on CPU, excluding setup.</p>
-<p>The replay results
-and the CI demo
-have the measurements and reproduction details.</p>
-<p>The first recipe was simple: make the dimensions smaller and keep fewer
-layers. That wasn't enough for mixed architectures. Keeping two layers is no
-use if both use sliding attention and the full-attention layers disappear.</p>
-<p>We also keep the original weights file format. Otherwise we would skip the
-conversion code that runs when a user loads the real checkpoint.
-The full recipe
-has more detail.</p>
-<p>The Llama 4 Scout shrink report
-shows what this looks like on a big model. 108.6 billion parameters become 44.7
-million. The vision stack goes from 34 layers to 2 and the language stack from
-48 to 4, keeping the checked layer kinds and MoE routing style.</p>
-<p>Our CLI, tmic, creates the contract and builds the fixture. For a new
-model, an LLM drafts the usage code and manifest, and CPU and GPU runs measure
-the candidate baselines. The LLM drafts; it doesn't approve. Changed
-expectations require human review.</p>
-<p>To try it on your machine, use your source checkpoint in place of org/model:</p>
-<p>It drafts the contract, builds the fixture and records its baselines on your
-machine, asking you to review each step, and stops before uploading anything.
-For a new model, the draft comes from an LLM through Inference Providers, billed
-to your own account (--bill-to ''). The
-CLI docs
-cover the individual steps.</p>
-<p>We used agents to build MICs across model families. When they hit an edge
-case, we fixed the recipe itself rather than the one fixture, with help from
-model experts. The published models and remaining gaps are in the
-coverage space.</p>
-<p>With random weights, our Whisper fixture barely responded to changes in
-the audio. It ran, but that made it a poor test of the audio path.</p>
-<p>So we trained it on a few tones paired with words such as "red" and "green".
-We weren't teaching it speech recognition, just making audio changes visible
-in its outputs. In our weight-initialization study,
-the random Whisper fixtures caught 18 of 24 injected faults. The overfit
-fixtures caught all 24.</p>
-<p>That gives us two ways to build the weights:</p>
-<p>The Whisper result doesn't settle which is better. Those were synthetic
-faults, and we haven't found a real regression caught only by the overfit
-version. Both versions missed an assisted-decoding bug that the real Whisper
-checkpoint exposed.</p>
-<p>So we keep random weights when they pass the checks, and overfit when we need
-better sensitivity or readable answers. Training takes seconds, but it is one
-more step that can fail to converge, and one more thing to maintain. The comparison
-has the results for both.</p>
-<p>As of November 1, 2026, the MIC job in Transformers CI
-reports failures without blocking PRs. Whether it should block depends on
-things we haven't measured yet:</p>
-<p>We also don't know how many bugs, like the Whisper assisted-decoding one, only
-show up with real weights, or whether overfitting catches real bugs that random weights miss.</p>
-<p>Coverage is still partial, across model families and the APIs people use.
-When a regression slips through, we can add the missing usage path and replay
-it on the broken and fixed versions. We'll keep existing tests until their
-coverage is accounted for.</p>
-<p>Finally, we'd like to link original Hub model pages to their MICs, so a
-developer or an agent using a checkpoint could start from an example tested on
-that checkpoint, its environment and its expected outputs.</p>
-<p>Want to help? Pick an uncovered model from the
-coverage space, try
-the tmic workflow,
-and contribute a usage path or review a generated contract.</p>
-<p>MIC contract coverage of Transformers model types</p>
-<p>t5/umt5 in a blog post in 2026, never thought I’d see the day 😍</p>
-<p>MIC contract coverage of Transformers model types</p>
+                <p>Real-time forecasting, anomaly detection, and optimization, powered by IBM time-series models with more than 50 million downloads. Now available natively on Confluent, in the cloud and on premises, running on CPUs.</p>
+<p>Every business generates a continuous record of change: a machine reading, a payment, a sale, an order, or a change in inventory. These observations form time series, and they carry signals that can help teams anticipate what happens next.</p>
+<p>The challenge is turning those signals into decisions while they still matter. A forecast delivered after a production run, a stockout, or a payment authorization may be accurate, but too late to influence the outcome.</p>
+<p>IBM and Confluent are bringing time-series foundation models closer to the data as it flows. With Apache Flink, teams can apply forecasting , anomaly detection and semantic intelligence to streaming data using SQL, making model outputs available to the applications and people responsible for the next action.</p>
+<p>Foundation models have changed how organizations work with text, images, and documents. Time-series foundation models extend a similar idea to numerical data by learning general patterns from diverse historical data and then applying that knowledge to new series and tasks. The models can provide a starting point without requiring teams to train a separate model for every series. Depending on the task and deployment, teams can also fine-tune a model or combine its outputs with other data and business logic.</p>
+<p>Figure 1. More than 50 million downloads, and the family of four models behind them</p>
+<p>Now the time series foundation models run natively inside Confluent as built-in functions in the cloud and on premises. In Confluent Cloud they are fully managed, with nothing to deploy (documentation). On premises, the models can run within your own infrastructure using Confluent Platform for Apache Flink.(documentation). The models run on CPUs, without requiring GPUs.</p>
+<p>The models can support a range of mission-critical use cases, from helping keep production lines in spec and detecting unusual store activity to improving product-level planning. They can also provide signals to assess card payments and forecast trading volume to help place large orders. These building blocks can be applied across manufacturing, retail, banking, and airlines, bringing insights closer to where decisions are made.</p>
+<p>See how time series and real-time context come together to create value:</p>
+<p>Businesses operate continuously. Orders are updated, payments arrive, shipments are delayed, and inventory changes throughout the day. Yet the information behind these events often sits across systems that update at different times or rely on periodic batch processes. When applications and AI agents act on outdated or inconsistent information, they risk making decisions that no longer reflect what is happening.</p>
+<p>A Streamhouse addresses this by continuously capturing, processing, governing, and serving current business context. Confluent’s Data Streaming Platform brings together five capabilities—connect, stream, process, govern, and query—to make that context available to applications, analytics, and agents. Apache Flink transforms and enriches data as it flows, while Lightning Tables provide low-latency access to the current state.</p>
+<p>Figure 2. The Streamhouse on Confluent: from existing data sources to current business context that agents, applications, analytics and lakehouses use anywhere.</p>
+<p>Time-series models add predictive power to this architecture. Flink can prepare the data, invoke forecasting and anomaly detection, and make the results available alongside the events that produced them. Other models—including large language models, statistical models, and specialized machine learning systems—can contribute where appropriate.</p>
+<p>Figure 3. The intelligence layer of the Streamhouse: time series models, large language models, and ML and statistical models, with orchestration across them.</p>
+<p>This approach can help teams in four ways:</p>
+<p>-Scale model development. A pretrained model can provide a common starting point across many time series, reducing the need to develop and maintain a separate model for each one.</p>
+<p>-Refresh predictions as data changes. Forecasts can incorporate recent observations as part of a streaming workflow, subject to the model’s requirements and the pipeline’s configuration.</p>
+<p>-Put signals closer to decisions. Forecasts and anomalies can be routed to operational applications sooner, where teams can combine them with business context, rules, and human judgment.</p>
+<p>-Run compact models on CPUs. The models are small enough to run on standard CPUs alongside the streaming pipeline, in the cloud or on premises, which can reduce the need for dedicated GPU infrastructure and simplify deployment.</p>
+<p>Figure 4. Stream native time-series intelligence on Confluent</p>
+<p>The following scenarios illustrate how organizations could combine time-series models, streaming data, and application logic.</p>
+<p>An ice cream line’s quality depends on overrun—the amount of air whipped into the mix. Today, the process engineer and operator rely on QA lab measurements taken after the tubs are filled. If a new cream lot or a warm, humid day changes the process, hours of production may already need rework by the time the team sees the result.</p>
+<p>To get ahead of the problem, a pretrained TTM model reads SCADA telemetry and QA measurements every 10 minutes. It forecasts the share of tubs expected to be in spec four hours ahead, along with a likely range.</p>
+<p>When the forecast falls below the plant’s target, an optimization process evaluates combinations of freezer draw temperature and airflow. Because the model takes these control variables as inputs, it can score each option before anything changes on the line. The operator approves the recommended setpoints, while routine adjustments can be automated within predefined guardrails.</p>
+<p>The outcome is a more proactive process: less rework, lower energy use per tonne, and more consistent quality. The same approach can be applied to ovens, dryers, kilns, and mills.</p>
+<p>Figure 5. A forecast of product quality helps the operator evaluate freezer setpoints before making an adjustment.</p>
+<p>A store operations team monitors sales for thousands of products across hundreds of stores. Fixed thresholds often flag predictable weekend peaks while missing quieter changes, such as a product selling less than expected. As alerts accumulate, it becomes harder for the team to know where to focus.</p>
+<p>AI_DETECT_ANOMALIES gives each sales series an expected range based on its recent history. Each new reading is compared with that range at a confidence level the team chooses, without training a separate model for every product and store.</p>
+<p>When sales fall outside the expected range, the signal can be combined with inventory and store data to help identify a likely cause and recommend a next step—for example, checking the shelf or replenishing stock. The same approach can be applied to machine sensors, API telemetry, meter readings, and payment volumes.</p>
+<p>Figure 6. Store sales are compared with an expected range. In the view shown, recurring peaks remain within the range and no anomaly is flagged.</p>
+<p>A category planner and a replenishment team need to keep products available across every store without carrying excess inventory. But forecasts may be refreshed only once a week, often focusing on top-selling products, while the long tail is managed with simpler rules. When sales patterns change between planning cycles, one store can run out while another has too much stock.</p>
+<p>With AI_FORECAST, a pretrained model can forecast demand across products and stores. In this example, it produces a 28-day forecast with a P10–P90 range, refreshed as new sales data arrives. The planning application combines the forecast with inventory, lead time, and the planner’s chosen service level to calculate a reorder point.</p>
+<p>When stock is projected to fall below that point, an agent can draft a purchase order for review. The same approach can support planning for spare parts, staffing, ATM cash, and energy demand.</p>
+<p>Figure 7. A store-level demand forecast informs a reorder point and a proposed purchase order for oat milk.</p>
+<p>Fraud teams already rely on sophisticated rules and models to evaluate transactions. One continuing challenge is that a threshold applied across many cardholders may not reflect how each person normally spends.</p>
+<p>A time-series signal can add that individual context. In this example, each payment is compared with an expected spending range based on the card’s recent history. A transaction outside that range is passed to the bank’s existing fraud systems as an additional input, alongside other signals and business rules.</p>
+<p>The bank can then decide whether to approve the payment, request additional authentication, or investigate further. The decision and the signals behind it can be retained for review.</p>
+<p>Figure 8.A payment outside the card’s expected spending range prompts a step-up authentication in an illustrative fraud workflow.</p>
+<p>An execution desk needs to divide a large order into smaller trades while managing its effect on the market. Historical volume curves offer a starting point, but today’s trading activity may look very different from the average.</p>
+<p>On each one-minute bar, PatchTST-FM forecasts trading volume for the next 30 minutes, with a P10–P90 range. The execution algorithm uses that forecast to pace the order within the participation limit set by the desk.</p>
+<p>If a news event changes market activity, the algorithm can pause and replan. If trading is quieter than expected, it can reduce the size of each slice and signal that the order may take longer to complete. Each forecast and the resulting execution decisions can be retained in the audit trail.</p>
+<p>Figure 9. Volume forecast informs the proposed execution schedule for a 100,000-share order.</p>
+<p>A reliability engineer investigating an unusual sensor pattern may want to know whether similar behavior appeared elsewhere in the plant.</p>
+<p>TSPulse can produce representations of time-series windows that support similarity search. In a separately built application, those representations could be indexed and used to retrieve historical patterns across equipment. An engineer could search for shapes such as a spike and recovery, a gradual rise, or a step change, then inspect the associated maintenance records and operating conditions.</p>
+<p>This application requires an embedding pipeline, an index, and access to the relevant context. Similarity can help narrow an investigation; it does not establish a root cause by itself.</p>
+<p>Figure 10. Time-series embeddings can support a search for similar patterns across equipment and other signals.</p>
+<p>The same models and building blocks can support different workflows across industries:</p>
+<p>Figure 11. The plant twin, from sensor to setpoint. A new cream lot pulls overrun off target. The forecast reads the line, the agent proposes a new draw temperature and air flow, the operator approves, and the tubs are back in spec. Simulated data.</p>
+<p>Figure 12. The store twin, a store and its supply chain. A promo is coming for oat milk. The forecast prices in the promo and sets the reorder point, the agent raises a purchase order, the planner approves, and the shelf is full on promo day. Simulated data.</p>
+<p>Banking: payments and the trading desk. The fraud lead wants to stop card testing without blocking good customers, and the trader wants a large order done without moving the price. Every card and every symbol is scored against its own expected pattern, event by event. Fraud and security holds the odd swipe before authorization, anomaly detection spots the unusual flow, and trading paces each order with the forecast volume.</p>
+<p>Airlines: hub operations, fleet and network. Operations control wants to see a disruption coming while there is still time to act. Engine, gate and network streams are forecast and checked in real time. Anomaly detection catches the engine reading that drifts, production optimization rebalances gates and crews, and supply chain planning puts the spare part where the aircraft will be.</p>
+<p>In every industry, the Streamhouse does the same work: Flink runs the Granite models to forecast, detect and optimize, Streaming Agents act on the live context, and people approve the exceptions.</p>
+<p>Explore the models on Confluent to see how time-series intelligence can support real-time decisions.</p>
+<p>Code and notebooks: github.com/ibm-granite/granite-tsfm</p>
+<p>Real-Time Intelligence with IBM Time Series Models on Confluent</p>
+<p>Ensemble forecasting with IBM Granite time-series models</p>
+<p>IBM releases SOTA Granite Time Series PatchTST-FM-r2 model with commercial-friendly license</p>
+<p>New in Confluent Intelligence and AI Tools: Making Agents Native to the Stream, Expanded Model Support, New Agent Skills, and Confluent Assistant</p>
+<p>What's New in Q4'26 Confluent Data Streaming Platform</p>
+<p>What's New for Confluent Platform for Apache Flink, November 2026</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/transformers-mic" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/ibm-research/time-series-powered-streamhouse" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

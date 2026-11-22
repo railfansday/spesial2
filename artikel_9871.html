@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Removing binder.c</title>
+    <title>Getting Past the Post-Quantum Cryptography Discovery Phase</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9871.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,152 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Removing binder.c</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-21</p>
+        <h1>Getting Past the Post-Quantum Cryptography Discovery Phase</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3f96ce16a435deca/6a3d55be62f12d27e415ed3c/quantum_computer-Peter_Hansen-getty-2214879776.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Getting Past the Post-Quantum Cryptography Discovery Phase" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3f96ce16a435deca/6a3d55be62f12d27e415ed3c/quantum_computer-Peter_Hansen-getty-2214879776.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Getting Past the Post-Quantum Cryptography Discovery Phase" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The final talk at Kangrejos 2026 was about the removal of the C implementation
-of Android's
-
-Binder driver, the primary interprocess communication mechanism
-used on Android devices. Carlos Llamas announced that he had deleted the C
-code to general applause, and then shared some insights about what went into
-replacing the C implementation. Alice Ryhl, who has worked on the Rust
-implementation for some years, added her own thoughts about what the most
-difficult and interesting parts of the transition were.</p>
-<p>Binder was added to the kernel in 2008, Llamas said, as an interprocess
-communication mechanism for Android devices. Its design originated in
-
-BeOS, but
-it has grown significantly since then. It provides a rich set of operations for
-allowing processes to communicate with the minimum amount of overhead. It also,
-therefore, presents a large attack surface for Android. Many complicated chained
-attacks against Android have involved Binder at one step or another, Llamas
-explained. Google's internal "red team" (the team dedicated to proactive
-security research) deemed Binder to be the most vulnerability-dense component in
-the entire operating system, with more CVEs per line than anywhere else.</p>
-<p>That made it an obvious candidate for porting to Rust, Llamas said. Binder was the first user
-of Rust in the kernel, he added, although Ryhl did not
-
-publicly post the first version
-of what became the Rust implementation until 2023, well after the Rust experiment started
-in 2021. All told, the effort took more than
-five years. Binder is used for every single screen touch, permission check,
-and cross-application message on Android, which runs on more than three billion
-devices. In total, it works out to hundreds of billions of Binder transactions
-per second, globally, he added. That scale meant that even the smallest discrepancy between the
-interface provided by the C version and the one provided by the Rust version
-would cause problems and regressions for some use case.</p>
-<p>One particularly tricky aspect has been performance, Ryhl said. Throughput
-doesn't matter that much; what matters is the tail latencies. Most
-screen frames on Android have a Binder transaction in the critical path of the
-frame, she explained. So, a difference of two microseconds on average is not a
-real problem, but if Binder is ever twenty milliseconds slower, even once
-in a while, people will notice and care.</p>
-<p>The actual algorithms that the C and Rust implementations use are identical, she
-continued, so there are no large differences in throughput. But, because Rust
-handles locking differently, there were problems with the tail latency
-from lock contention that she had to debug. For example, one user-reported
-traceback showed Binder attempting to take a mutex that was held by another
-process. That process was preempted, and did not resume executing for twenty
-milliseconds, well past the sixteen millisecond budget to render a single frame.</p>
-<p>It was a classic case of priority inversion. To solve the problem in Binder, Ryhl moved
-as many operations out from under the lock as possible, and was able
-to replace it with a spinlock, which made the problem go away. The equivalent
-lock in the C implementation was already a spinlock: "I deviated from C
-Binder, and pow. It has eighteen years of accumulated quirks."</p>
-<p>Eventually, however, the Rust implementation was good enough for most use cases.
-And the C implementation was still producing new vulnerabilities every time
-someone tried to introduce a new feature. Eventually, Llamas and Ryhl decided to
-only add new features to the Rust implementation, in order to motivate people to
-switch and to avoid headaches from the C implementation. That policy has
-resulted in the Rust version becoming faster than the C version,
-because Ryhl was able to introduce an algorithmic improvement that reduced the
-number of needed system calls, a change that had been considered too complex for
-the C implementation. Now that the C implementation has been deleted, there are
-more of those coming, she promised.</p>
-<p>Another area that proved difficult was dealing with tracepoints. Users aren't
-supposed to rely on the presence or behavior of most kernel-internal
-tracepoints, but they do. This meant that Ryhl had to copy
-the existing tracepoints in Binder as a de facto part of the driver's API. That
-even extended into some of the data structures involved in the driver. In one
-case, she said, there was a reference-counted structure that had a slightly
-different reference count in the Rust implementation, because the Rust code was
-holding an additional pointer to the structure. That turned out to be a
-problem for one particular piece of client code, since it relied on checking the
-reference count via a tracepoint in order to determine when the C implementation
-had reached a particular state.</p>
-<p>There was also a lot of toolchain support needed, Ryhl continued. The Rust
-implementation had to work with kernel address-space layout randomization
-(KASLR), control-flow integrity (CFI), and profile-guided optimization.
-Production Android kernels are built with all of those enabled, and since they impact code
-generation, the Rust code needed to account for them.</p>
-<p>Llamas then went into more detail about the deployment plan that will be used
-to convert users to the Rust implementation. A major problem with just rolling
-the Rust implementation out is the existence of
-
-vendor hooks: custom
-tracepoints used to inject vendor-specific behavior into the kernel. The Rust
-implementation of Binder was not able to reproduce those in every case, and
-therefore many vendors are stuck on the C implementation until they update their
-code. That's going to be a slow process.</p>
-<p>Old stable
-versions of the kernel will continue to have the C Binder, and receive security
-fixes, which gives the various Android vendors a little bit of leeway until
-they're forced to update. After the conference, the patch removing the C
-implementation
-
-was merged as part of the 7.4 merge window, so that is the
-version past which the Rust implementation is required. 7.3 is the designated
-long-term-support release for 2026.</p>
-<p>One person asked whether this would pose a problem for people compiling
-the kernel with GCC. Miguel Ojeda responded that many distributions are using a
-workaround for the current lack of Rust support in GCC: they are building
-the C side of the kernel with GCC, and the Rust side with LLVM. He said that he
-had advised against compiling the kernel in that way, because it is "a
-complete hack", though people who use it are unlikely to complain about
-being forced onto Clang. Greg Kroah-Hartman added that it will take months or
-years to learn about anyone who has problems with the Rust version of the
-driver, given how slowly Android vendors update their kernels. Furthermore, the
-removal is a single patch that can be cleanly reverted, if someone needs
-to continue using the C version.</p>
-<p>Llamas thought that it was worth considering what the removal process should
-look like for other code that gets ported to Rust. He asked what people thought
-should happen to the C version of converted drivers on long-term-support
-branches. Ojeda said that the process would be exactly the same as the existing
-policy for replaced C code. The only difference
-between Rust and C in long-term-support releases is that the Rust maintainers
-backport fixes for soundness problems, he said.
-Kroah-Hartman told Llamas not to worry about code that has been replaced:
-"Just delete it. I take patches for subsystems that have been deleted. It's
-fine."</p>
-<p>With that declaration, the session, the conference, and the presence of the C
-Binder driver in the kernel were all over. Binder is the first nontrivial component
-in the
-kernel to be ported to Rust, and its journey has revealed several pitfalls that
-don't apply to new drivers written in Rust from scratch. Still, the most
-difficult problems were not Rust-specific; they were the compatibility problems
-that any rewrite would face. Whether any other kernel components will find the hassle
-of a rewrite worth it, and how long they will take to accomplish it, remains to
-be seen.</p>
-<p>[ Thanks to the Linux Foundation, LWN's travel sponsor, for supporting my travel
-to Kangrejos. ]</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Note: you can avoid this step in the future by logging
-        into your LWN account.</p>
-<p>Copyright © 2026, Eklektix, Inc.
-            This article may be redistributed under the terms of the
-              Creative
-              Commons CC BY-SA 4.0 license
-            Comments and public postings are copyrighted by their creators.
-            Linux  is a registered trademark of Linus Torvalds</p>
+                <p>News, news analysis, and commentary on the latest trends in cybersecurity technology.</p>
+<p>Most organizations haven't sorted out their cryptographic estate enough to even know where they'd start with post-quantum cryptography (PQC).</p>
+<p>The pressure is mounting for security leaders to get serious about their post-quantum cryptography (PQC) transition plans, but most organizations aren't even ready to get ready for PQC.</p>
+<p>Studies show that, yes, CISOs today do see PQC as a priority they need to plan for. However, the bulk of organizations don't have a detailed enough cryptographic inventory to help them sketch out a road map of where to start.</p>
+<p>"When it comes to post-quantum cryptography, every company, no matter which ones you talk to, are kind of stuck in the discovery phase," says Anurag Swarnim Yadav, Ph.D., founder and CTO of startup QubitAC.</p>
+<p>Recent numbers back his observations. According to a July study by DigiCert, while 87% of organizations say they're planning, testing, or implementing PQC, only 44% have developed transition plans or created inventories. That mirrors another study by Ponemon Institute that found only 43% of organizations have full visibility of their cryptographic estate. Those respondents reported that their inability to discover those assets and improve that visibility is their No. 1 concern about PQC migration.</p>
+<p>Related:Attackers in Binance Breach Targeted Known Weakness, Missing Controls</p>
+<p>Cryptography sits in Web servers, certificates, VPNs, code signing, vendor products, and all nature of assets in between. Getting every encryption use case ready for a post-quantum world will be a sweeping transition, and the latest research suggests developments in quantum computing are proceeding on a much faster timeline than originally anticipated. If an enterprise can't enumerate all the cryptography impacted, it means they're not toeing the start line for this footrace.</p>
+<p>Getting all of those assets into post-quantum readiness will be a generational effort easily on par with the Y2K effort. Unlike Y2K, however, there's no set-in-stone deadline for post-quantum.</p>
+<p>The closest thing is Q Day, the point when a cryptographically relevant quantum computer (CRQC) can break the public-key cryptography behind key exchange and digital signatures. The big problem with building a widespread sense of urgency is that nobody knows exactly when Q Day will arrive.</p>
+<p>Estimates run from 2030 to 2040 and beyond, according to Yadav, but his own bet is that attackers could pull it off by 2029 based on how the research is shifting. The expected window until Q Day arrives keeps compressing as quantum researchers perfect their craft. Last year Google researchers calculated that breaking 2048-bit RSA encryption would take a quantum computer 20 times smaller than they had estimated in 2019. And in March Google set a 2029 target for its own PQC migration, influenced by such research and recent progress in quantum hardware.</p>
+<p>Related:Investors Dish on New Startups & What They'd Back Next</p>
+<p>Global governments are also starting to get firm about their own timing expectations for PQC transition in the run-up to Q Day. NIST finalized its PQC transition road map in late October, and a June executive order requires federal high-value assets and high-impact systems to move key establishment to post-quantum algorithms by 2030 and digital signatures by 2031. The UK's National Cyber Security Centre recommends that large organizations complete discovery and assessment and build an initial migration plan by 2028, then finish migrating by 2035.</p>
+<p>Even if we don't know exactly when Q Day will come, the math behind what will happen after that day is well understood. Public-key cryptography lets two parties who have never met agree on a secret and prove who they are. It works because some math is easy to run forward and impractical to reverse. RSA relies on the difficulty of factoring huge numbers, while elliptic curve cryptography and Diffie-Hellman key exchange rely on a related problem called the discrete logarithm.</p>
+<p>Quantum computers use subatomic particles instead of transistors to represent data. This gives them an edge in how they process the ones and zeros of computing. For years cryptography experts have warned that a sufficiently advanced enough quantum computer could use that edge to factor huge numbers and solve discrete logarithms at a rate of efficiency unheard of from even the most advanced classical super computers.</p>
+<p>Related:AI Agents as Insider Threats: Inside Microsoft's Bet on a Unified Security Stack</p>
+<p>There's also a more immediate deadline that's brewing from what attackers are likely doing today to prepare for Q Day. It's fairly trivial for the bad guys to vacuum up high-value encrypted traffic today with the promise that they might have a chance to decrypt it at a later date. For long-lived information like financial or health details or secret sauce intellectual property, the long-game of this harvest now, decrypt later (HNDL) is worth the effort for future-minded criminals.</p>
+<p>"The data is worthless to attackers right now but becomes priceless later," Yadav explains.</p>
+<p>He offers credit card numbers as a classic example. They stay valid for years, so a cache of encrypted numbers harvested now could still be good if Q Day lands inside that window.</p>
+<p>In its recently finalized road map, the National Institute of Standards and Technology (NIST) pointed to HNDL as one of the main reasons the transition is so urgent. NIST mathematician and cryptographic expert Andrew Regenscheid says HNDL reframes the whole PQC timeline for critical information stores across industry and government systems.</p>
+<p>"This information may need to remain secret for years, or even decades, into the future," he explained in a NIST Q&A this past summer. "For that kind of information, waiting until a cryptographically relevant quantum computer arrives is waiting too long."</p>
+<p>Considering that the most isolated cryptographic migrations can still linger for upward of a decade or longer, even a conservative 2040 estimate for Q Day should be enough to have security experts scrambling to plan PQC transitions. The scale of changes needed will take significant planning and prioritization that will need to be phased in.</p>
+<p>"Changing these algorithms is something that's been done before. It's a complex process that takes years," Regenscheid said. "Based on our experience and the challenge of navigating the post-quantum world, we expect this process to be the most challenging one yet. The breadth of these systems and the complexity of the change will dwarf what we've done before."</p>
+<p>The destination, at least, is defined. In 2024, NIST finalized three post-quantum standards, one for key exchange (ML-KEM) and two for digital signatures (ML-DSA and SLH-DSA), built on math that's expected to hold up against quantum computers. The harder job is finding every place RSA and elliptic curve cryptography still run, then planning how and when to swap out each use case. Because of HNDL, NIST suggests prioritizing the first transition phases around data that is particularly sensitive or has to stay secure for a long time.</p>
+<p>In a September study on PQC readiness, Frost & Sullivan analysts emphasized how important risk-based prioritization like this will be for PQC readiness.</p>
+<p>"A non-compliant cryptographic asset supporting a low-value application may represent limited immediate risk, while the same technology supporting sensitive information or a critical business process could require urgent remediation," they wrote.</p>
+<p>But sorting through all the assets and ranking them depends on having a solid inventory on hand. This is why the discovery is so crucial. Frost &Sullivan concurred that the discovery process is proving to be trickier than many thought it would be.</p>
+<p>"The inventory needs to extend beyond simply identifying algorithms to understanding the dependencies between cryptographic assets and business-critical applications," they explained.</p>
+<p>Tools — commercial and open source — designed to assist organizations in their PQC journey are already available. These tools have their own approaches and varying levels of maturity. One tool is AC Scanner, which Yadav and QubitAC co-founder Joseph Wilson demoed at Black Hat Arsenal this past August. The free open source tool is purpose-built to kickstart the inventory process, Yadav says. It's a fast, lightweight tool that runs from command line, scans for outward facing TLS and SSH services, and creates an inventory for the IP range it's pointed at.</p>
+<p>"You start with nothing but a domain name, and by the end you get a complete cryptographic bill of materials [CBOM]," Yadav says. The CBOM is an inventory of the algorithms, keys, certificates and protocols in use, and the scanner pairs it with two scores, one for overall security health and one for post-quantum readiness based on NIST's post-quantum standards.</p>
+<p>It also doubles as an outside check on HNDL exposure. Every encrypted session starts with a key exchange, where the two sides agree on a secret. If a public-facing endpoint still uses a classical exchange, traffic an attacker records today could be unlocked later by a quantum computer. A hybrid exchange that adds post-quantum math protects that traffic, provided the client uses it, too; the scanner reports which kind each endpoint offers.</p>
+<p>Classical endpoints are the ones most exposed to HNDL, and Yadav sees AC Scanner as giving organizations a starting point for making HNDL-aware transition plans.</p>
+<p>Of course, any security professional will be quick to point out that a scan is just an informational snapshot. What happens after that information is in hand is what really counts. Scanning tools can kick-start discovery, but organizations need to follow up what they find with a migration plan and start executing on it. NIST'’s Regenscheid says the sooner organizations can get to these plans, the better.</p>
+<p>"Given how long these transitions take, the organizations that start planning and begin moving to post-quantum products and services now will be in a far stronger position later," he says, adding that this is an opportunity to modernize a lot of the process. "Many steps must occur in sequence, which is why an early start is crucial."</p>
+<p>An award-winning freelance reporter with nearly two decades of experience covering B2B cybersecurity, Ericka Chickowski has tackled every angle of security and risk for Dark Reading since 2009. Her coverage has spanned the full range of cyber topics important to every kind of cybersecurity stakeholder, including cybersecurity practitioners, CISOs, security-minded business managers, and security-aware board directors. She specializes in going deep on topics, breaking down how the technology trends affect real people, and how risk impacts the bottom line.</p>
+<p>Some special areas of focus include: adversarial AI; AI risk and resilience; AI and agentic governance; application security (AppSec); governance, risk, and compliance (GRC); cloud security; network security; software supply chain risk; cyberinsurance; DevSecOps; enterprise risk management; and CISO career development.</p>
+<p>In addition to Dark Reading, Ericka has written for many different IT and business publications over the years. Her byline has appeared in dozens of trade and consumer magazines, including Baseline, Consumer Digest, Channel Insider, CIO Insight, CSOOnline.com, DevOps.com, eWeek, Entrepreneur, Forbes, InformationWeek, SC Magazine, and SecurityBoulevard. She regularly contributes independent stories about AppSec and supply chain risk to the ReversingLabs Blog. She was one of the founding contributing editors for DevOps.com and has deep expertise in digital transformation and development best practices. This helps inform her stories on software risks and business resilience.</p>
+<p>Ericka is also a prolific executive ghost writer, with experience helping cybersecurity and IT leaders bring their ideas to life. She's helped them craft important position pieces for respected publications like the Financial Times and The Wall Street Journal.</p>
+<p>Prior to beginning her freelance career, Ericka served in a number of editorial staff roles, including West Coast Bureau Chief for SC Magazine. Before that position, she was editor-in-chief for a cluster of regional technology and lifestyle magazines in the Seattle area, as well as a beat reporter for a regional business newspaper. She holds a bachelor's degree in English from the University of Washington. Her work is well-regarded and has won multiple awards from the Society of Professional Journalists.</p>
+<p>NIST Finalizes Post-Quantum Cryptography Guidance, GAO Offers a Reality Check</p>
+<p>Attackers in Binance Breach Targeted Known Weakness, Missing Controls</p>
+<p>Phishing-Resistant Isn't Enough; Yubico Takes Aim at Identity-Verification Gap</p>
+<p>Investors Dish on New Startups & What They'd Back Next</p>
+<p>So Many AI Security Benchmarks, but None Tell the Whole Story</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lwn.net/Articles/1102982/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cybersecurity-operations/getting-past-post-quantum-cryptography-discovery" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
