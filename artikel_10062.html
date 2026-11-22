@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scaling Git horizontally: how we moved beyond Multi-Raft</title>
+    <title>Andy Clarke answers six questions about Standout Designs for the Web</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10062.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Scaling Git horizontally: how we moved beyond Multi-Raft</h1>
+        <h1>Andy Clarke answers six questions about Standout Designs for the Web</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft/opengraph-image-fx5gi7/card?d0c3feb5081f2f2e" alt="Scaling Git horizontally: how we moved beyond Multi-Raft" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/10/standout-design-thumbmnail.png" alt="Andy Clarke answers six questions about Standout Designs for the Web" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft/opengraph-image-fx5gi7/card?d0c3feb5081f2f2e" alt="Scaling Git horizontally: how we moved beyond Multi-Raft" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/10/standout-design-thumbmnail.png" alt="Andy Clarke answers six questions about Standout Designs for the Web" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>tl;dr: We replaced our Multi-Raft system with a simpler design that pairs Raft's replication with failover from Vertical Paxos, which allows us to keep complexity low while achieving much better horizontal scalability of up to 300,000 repositories in a single Enroute cluster.</p>
-<p>With Enroute, our goal is to make Git scale for the most demanding agentic workloads, which means scaling in multiple directions. The first one we tackled was vertical: We covered in our launch post, Everyone is doing Git on S3 wrong, how a single repository got past 7,600 pushes per second. However, that's not the full story.</p>
-<p>Coding agents like Cursor are going more vertical on code hosting and app builders like Lovable or Replit are seeing some of the most demanding Git workloads out there. This shows how important horizontal scalability is for code hosting infrastructure: It needs to support millions of repositories or more.</p>
-<p>This is what we have been focused on for the past few weeks, and our newest release (0.4.0) lands some of the first results of this work.</p>
-<p>Before we dive deeper, let's do a quick recap on Enroute's architecture. Enroute separates compute from storage, like many modern databases. A cluster has three parts:</p>
-<p>When thinking about how many repositories we can fit on a single Enroute cluster, there are really two numbers to consider:</p>
-<p>While we had implemented some early optimizations already, two measurements showed where we still fell short:</p>
-<p>Every repository's log was its own state machine on a separate Raft log. Raft keeps a leader alive with heartbeats and when it fails, replaces it with an election, so every log had its own timers, votes, pre-votes and leader. With hundreds of thousands of repositories, that machinery became the workload.</p>
-<p>It turns out that mature Multi-Raft-based systems have a well-known toolbox for this, which we began to make use of as best as possible. We allowed idle logs to go to sleep, moved liveness from each log to the node, and we woke a failed node's logs only as they were needed, to prevent kicking off thousands of leader elections at the same time when a single node fails.</p>
-<p>These fixes worked. Together, they took the setup that had previously collapsed at 2,048 writers to about 14,000 pushes per second at 100,000 repositories with no failures.</p>
-<p>However, taking a step back, it felt like we were just piling more complexity on top of the core Multi-Raft setup, which is already quite complex to start with. What's worse, this complexity was not only in code, but also directly translated into failure modes and edge cases.</p>
-<p>In short, it became obvious that continuing on this path would lead to a system that would be much harder to understand and operate, which motivated us to start looking for alternatives.</p>
-<p>Looking at our setup at this point, most of the complexity came from the fact that we ran membership, and by extension leadership elections, on a per-repository basis. So we began looking at ways we could take leader election out of the per-repository log.</p>
-<p>There are a number of systems that put an external configuration master in charge of their replicas today. Among all of those, we liked Vertical Paxos (Lamport, Malkhi and Zhou, 2009) the best. The key insight behind it is that if something outside the log decides who's responsible for deciding its entries, the log itself needs no timers at all.</p>
-<p>To apply this to Enroute, we introduced a singular "root log" that is responsible for tracking node membership per repository, while keeping the actual repository state inside each repository's log (which we'll call "shard log") and which is decided by a "sequencer" that's appointed via the root log.</p>
-<p>On top of this, we then kept the parts from Raft that already worked well, and adopted specific pieces from Vertical Paxos.</p>
-<p>What we keep from Raft is everything about how a log is written:</p>
-<p>What we adopt from Vertical Paxos is everything about how leadership changes:</p>
-<p>In our Multi-Raft setup, every ledger node was a member of every repository's Raft group, so each log lived on all of them. That also meant adding a ledger node added a copy of every log, without any way to spread the load across more nodes.</p>
-<p>With this new design, thanks to the root log leader being in charge of appointing sequencers, it is straightforward to extend this responsibility to placement: The root log can now decide which ledger nodes to appoint as responsible for a certain shard log, which means we can distribute the responsibility for tracking repository metadata across a larger pool of ledger nodes.</p>
-<p>Based on this idea, the root log leader we implemented is already capable of:</p>
-<p>Our plan is to extend this placement logic further in upcoming releases to improve how Enroute balances load across ledger nodes and make this process more continuous rather than purely failover-driven.</p>
-<p>Consensus protocols can be treacherous, and so a new consensus protocol naturally deserves suspicion. This is where the simpler design pays off: without an election in every log, the protocol is small enough to put under a model checker, which Raft with our fixes layered on top was not. We tested our new design in two ways.</p>
-<p>Model checking the code the engine runs. The core protocol is written ("sans-IO" as the cool kids say) as a state machine without I/O: messages, proposals and clock ticks become inputs, and the pending messages and disk I/O tasks are output. This made it possible for us to use Stateright to exhaustively check the actual implementation rather than just a model, which simulates every possible interleaving of sequencers, appointments, reads, crashes and lost unsynced writes (within small bounds).</p>
-<p>Jepsen against real processes. Here, our previous investment in setting up a Jepsen suite paid off. It drives Git clients while it partitions, kills and pauses nodes, with every ledger on LazyFS to simulate disk failures, while Elle checks ref reads for strict serializability. While working on our new consensus engine, it found two smaller non-safety-critical bugs not in the engine itself, but in how it integrated with the rest of the system (which is why the Stateright model checks didn't pick it up earlier). Luckily, both were easy to fix.</p>
-<p>To find out how well these improvements worked, we tested our old implementation (0.3.0) against the new shard log based one (0.4.0), and grew each cluster in steps up to 100,000 repositories, and 0.4.0 on to 300,000.</p>
-<p>The real win however doesn't even show in these numbers: Enroute's consensus layer now has far fewer moving parts, which makes it much easier to understand, operate and extend in the future as we continue our scaling journey.</p>
-<p>With the newly won headroom on the ledger tier, here are the directions we're thinking of taking it next:</p>
+                <p>Web designer, author, and Stuff & Nonsense founder Andy Clarke has released Standout Designs for the Web, a new e-book that encourages designers to move beyond familiar templates and conventional layouts to create more personality-driven websites.</p>
+<p>The book draws on Clarke’s thirty years of web design experience. It explores how storytelling, color, typography, imagery, and layout can work together to create websites that people recognize and remember. We asked Andy a few questions about the book and the ideas that went into it.</p>
+<p>I’ve been designing websites for over thirty years, and I can’t remember a time when designers had more tools, techniques, and technology available to them. Yet, somehow, so many websites look remarkably similar.</p>
+<p>I’m not suggesting every website needs a novelty design. Far from it. But I do think that — somewhere along the way—designers have become a little too comfortable with familiar patterns and predictable layouts.</p>
+<p>I wrote Standout Designs for the Web to encourage designers to rediscover the creativity and personality that made me fall in love with the web in the first place.</p>
+<p>Absolutely. Familiarity helps people understand how websites work, and there’s no reason to make something difficult to use just to be different. The problem is when familiarity makes every design look alike. When you visit a hotel website, an insurance company, or an online shop, you should be able to recognise something of the company behind it.</p>
+<p>I call this sameness “commodity design,” and it’s perfectly fine when all you want is fine, but it does little to make a company recognisable or its website memorable. I’m not arguing against using conventions. I’m asking designers to make more thoughtful decisions about when to use them.</p>
+<p>When I talk about storytelling, I don’t mean writing a lengthy company history or filling a website with marketing messages.</p>
+<p>Every company has a story worth telling. It might be how it started, the people behind it, its personality, or something unexpected about what it does. Those details can influence everything from the words you write to the colours, typography, illustrations, and layouts you choose.</p>
+<p>I spend a lot of time talking to clients because I’m looking for what makes them different. Sometimes, something they mention almost in passing becomes the inspiration for an entire design. The trick is recognising which details are worth developing and turning them into something visual.</p>
+<p>Ha! Because I wanted a vehicle for my explanations and to have some fun. Wheelman is a fictional company for getaway drivers, and it gave me the freedom to explore ideas without worrying too much about the practical constraints of a real client project. Its characters, criminal connections, and rather questionable business activities gave me plenty of opportunities to experiment with personality.</p>
+<p>But there’s a serious point behind the silliness. I use Wheelman to demonstrate how a company’s character can influence ordinary business pages, e-commerce, editorial content, and even transactional forms. If I can make a donation form for retired criminals interesting, designers have no reason not to bring more personality to everyday websites.</p>
+<p>I think twelve-column grids have become the default setting for web design. They’re familiar and useful, but they’re only one way to organise content. When designers begin every project with twelve columns, they’re already limiting their possibilities before they’ve considered what the content needs.</p>
+<p>In the book, I explore column, compound, and modular grids; ratios; symmetry versus asymmetry; and other ways to create rhythm and movement across a page. I’m not suggesting designers abandon column grids, but I want them to understand layout well enough to choose the right type and combine several—to make their layouts more interesting.</p>
+<p>I’d like them to approach their next project with a little more curiosity. Before opening Figma or Sketch, choosing a typeface, or deciding on a layout, I’d like them to spend more time discovering what makes the company they’re designing for interesting.</p>
+<p>Then I’d encourage them to question their first design decisions. Does this layout suit the content, or is it just familiar? Does this typography express the company’s personality? Can an illustration communicate something more effectively than an AI-generated image or a stock photo?</p>
+<p>I don’t expect every website to be extraordinary, and I certainly don’t think every design needs to break conventions. But I’d like designers to feel more confident making decisions that give their work character.</p>
+<p>You can purchase Standout Designs for the Web in the CSS-Tricks store.</p>
+<p>Andy Clarke shows you how to create designs that people recognize and remember in his brand-new e-book, Standout Designs for the Web. Pre-order it today!</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://enroute.sh/blog/scaling-horizontally-how-we-moved-beyond-multi-raft" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/andy-clarke-standout-designs-for-the-web-interview/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

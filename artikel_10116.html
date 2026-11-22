@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Trust Layer: Securing Agentic AI with Docker AI Governance</title>
+    <title>The Frankenstein Table</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10116.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Trust Layer: Securing Agentic AI with Docker AI Governance</h1>
+        <h1>The Frankenstein Table</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
         
         <div class="article-body">
-            <img src="https://www.docker.com/app/uploads/2025/03/image.jpg" alt="The Trust Layer: Securing Agentic AI with Docker AI Governance" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/10/zombie-table.jpg" alt="The Frankenstein Table" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/2025/03/image.jpg" alt="The Trust Layer: Securing Agentic AI with Docker AI Governance" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/10/zombie-table.jpg" alt="The Frankenstein Table" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The security problem changes once an AI agent can do more than answer a prompt. It can execute code, access files, connect to services, and call external tools. That creates a new security question for enterprises: how do you give an agent enough freedom to be useful without giving it more access than it actually needs?</p>
-<p>A model decision is not automatically an authorized action. That distinction becomes important the moment an agent can turn a model output into an action in a real system.</p>
-<p>The answer can’t rely only on the model. Agent behavior can vary, while security controls need to be clear and enforceable. That means putting controls around the environment where the agent runs, what it can access, which tools it can use, and what happens when a policy allows or blocks an action. For a CISO, this creates a trust gap. Approving the use of AI agents means being able to answer more than whether the model is capable: what access does the agent have, where are those boundaries enforced, and what evidence is available afterward? The goal is to let teams adopt agents without making model behavior itself the security boundary.</p>
-<p>Docker AI Governance approaches this through three areas: Sandbox Policies, MCP Tool Governance, and Audit + Visibility.</p>
-<p>Together, they address three practical questions security teams need answered: Where can the agent operate? What can it do? And can we see what happened?</p>
-<p>In this article, I use “trust layer” as shorthand for the infrastructure between what an agent wants to do and what the organization actually allows it to do.</p>
-<p>There is a related trust question too: what software artifacts are these agentic workflows building and using? Docker Hardened Images address that software supply-chain side of the problem, alongside the runtime controls discussed below.</p>
-<p>Figure 1: The three layers of Docker AI Governance: Sandbox Policies, MCP Tool Governance, and Audit + Visibility.</p>
-<p>An agent needs enough access to get real work done. A coding agent may need to install packages, build containers, edit project files, or connect to external services. The security challenge is deciding where those actions are allowed before the agent starts taking them.</p>
-<p>Docker Sandboxes give each agent an isolated microVM environment a lightweight virtual machine with its own Docker Engine, filesystem, and network. Docker AI Governance adds policy around that environment so security teams can control network and filesystem access centrally.</p>
-<p>Network policies can allow or block specific domains, IP ranges, and ports. Filesystem policies control which host paths can be mounted into a sandbox and whether that access is read-only or read-write. These controls are enforced at the network proxy and filesystem mount layers rather than depending on the agent to follow an instruction.</p>
-<p>For an organization, that means the same boundaries can follow developers across their sandboxes instead of being configured differently on every machine. Teams still get the access they need for their work, but an individual agent cannot simply expand those boundaries on its own.</p>
-<p>A developer can check the effective boundary before starting the agent:</p>
-<p>The important part is that the result comes from the active policy, not from an instruction the agent is expected to follow.</p>
-<p>This answers the first governance question: Where can the agent operate?</p>
-<p>Once an agent has a controlled place to run, the next question is what it should be allowed to do through external tools.</p>
-<p>MCP (Model Context Protocol) gives agents a common way to connect to external tools, services, and capabilities, but that also expands what an agent can act on. For enterprise use, making a tool available should not automatically mean every agent can use it.</p>
-<p>Docker AI Governance puts policy around MCP activity handled through Docker’s MCP Gateway. Administrators can control which MCP servers may be registered and what agents can do through them, including tool calls, resources, prompts, and approval requirements. These organization policies are written in Cedar, a policy language used to express authorization rules. When MCP policy enforcement is active, governed requests are denied unless a matching policy permits them. For example, a policy can permit read-only tool calls for a specific registered MCP server:</p>
-<p>Here, readOnly comes from the MCP tool’s annotations. Those annotations are supplied by the server and are advisory, so this example relies on metadata provided by that server.</p>
-<p>This makes tool access an explicit policy decision rather than something left to each agent or developer to configure independently. A team can be given access to the tools it needs, while other servers or actions remain unavailable. Policies can also require confirmation for specific tool calls when an action needs an additional checkpoint.</p>
-<p>One boundary is worth making clear: MCP policies apply to activity handled by Docker’s MCP Gateway. If an agent connects directly to a remote MCP server from inside a sandbox, that connection falls under the sandbox’s network policy instead.</p>
-<p>With the environment constrained and tool access governed, we can answer the second question: What can the agent do?</p>
-<p>Setting a policy is only part of the job. Security teams also need to know when that policy was applied, what action triggered it, and whether the action was allowed or denied.</p>
-<p>Docker AI Governance records sandbox policy decisions and sandbox session events as structured audit records. Each record captures details such as the principal, action, target, decision, and time. The records contain governance metadata rather than the contents of prompts or agent responses.</p>
-<p>Audit records can be kept locally or delivered to the cloud. With cloud delivery enabled, teams can search the organization-wide record, export it for further analysis, or forward events into existing SIEM (security information and event management) workflows.</p>
-<p>Denied actions are especially useful. A team can see not only that an action failed, but that a governance rule blocked it and why. Allowed decisions matter too: they provide a record of how policy was applied while the agent was working.</p>
-<p>Current audit coverage includes Docker Sandboxes policy decisions and sandbox session events. The same schema can support additional Docker AI sources as they become available.</p>
-<p>That closes the third part of the governance loop: Can we see what happened?</p>
-<p>AI Governance controls access around the agent at runtime. There is a separate question that matters to the workflows those agents participate in: what container images and software artifacts are they building, testing, or deploying?</p>
-<p>Docker Hardened Images provide minimal, secure, and production-ready container images, Helm charts, and system packages maintained by Docker.</p>
-<p>In practical terms, this gives teams evidence about what is inside an image and how that image was produced. Docker Hardened Images include signed SBOMs, VEX information, cryptographic signatures, and SLSA Build Level 3 provenance. Instead of simply trusting where an image came from, teams can inspect what is inside it and verify information about how it was built.</p>
-<p>For organizations with additional compliance requirements, Docker also provides FIPS-enabled and STIG-ready variants through relevant DHI offerings. These capabilities sit alongside the broader DHI security and supply-chain controls rather than making any single standard the foundation by itself.</p>
-<p>AI Governance and Docker Hardened Images solve different parts of the trust problem. Governance controls the authority an agent has while it works; DHI helps establish trust in the container artifacts that the workflow depends on.</p>
-<p>Figure 2: Docker Hardened Images combine minimal container images with signed supply-chain metadata and verifiable build provenance.</p>
-<p>Consider a developer using a coding agent to investigate an issue, update a service, and use an approved internal tool along the way.</p>
-<p>The agent begins inside a Docker Sandbox. It can work with the project and run the commands needed for the task, but its access is still bounded by policy. If it tries to reach a network destination or mount a host path that the organization has not allowed, the applicable sandbox policy can block that access.</p>
-<p>Now suppose the agent needs an MCP tool to look up information from another service. The request goes through Docker’s MCP Gateway, where organization policy determines whether that server and tool are permitted. A routine lookup might be allowed, while a more sensitive tool call could require confirmation or remain unavailable altogether.</p>
-<p>For governance activity currently covered by AI Governance Audit Logs, Docker records the policy decision and relevant session metadata. Security teams can see who initiated the activity, what policy-controlled action was evaluated, and whether it was allowed or denied. Those records can then feed the organization’s existing monitoring and SIEM workflow.</p>
-<p>If that same agent builds or tests a containerized application, the software entering the workflow matters too. Docker Hardened Images provide a more verifiable software foundation for that workflow, while AI Governance controls what the agent is authorized to do at runtime.</p>
-<p>The model is still making decisions about how to complete the task. What changes is the authority around those decisions. The agent can work autonomously inside the boundaries the organization has defined, while access outside those boundaries remains a policy decision.</p>
-<p>That is the practical value of the three layers working together:</p>
-<p>Sandbox Policies define where the agent can operate.</p>
-<p>MCP Tool Governance defines what tools it can use.</p>
-<p>Audit + Visibility shows how governed activity was handled.</p>
-<p>Taken together, the pattern is straightforward: define the boundary, check it before the agent starts working, enforce it while the agent is running, and use the resulting audit trail to understand what happened. If a boundary needs to change, the policy changes, not the expectation that the model will simply behave differently.</p>
-<p>The challenge with agentic AI is not simply that agents can make decisions. It is that those decisions can now lead directly to actions.</p>
-<p>That makes the boundary around the agent just as important as the model itself. Docker AI Governance addresses that boundary through Sandbox Policies, MCP Tool Governance, and Audit + Visibility: controlling where agents can operate, what tools they can use, and how governed activity is recorded.</p>
-<p>Docker Hardened Images address a related supply-chain concern by helping teams work with smaller, verifiable container artifacts.</p>
-<p>The goal is not to remove autonomy from agents. It is to make sure autonomy does not automatically come with unlimited authority.</p>
-<p>As agents take on more real work, that distinction will matter more and more.</p>
-<p>Docker launches a new brand built on trust. Learn why Docker is evolving for AI agents, what stays the same, and how to run agents securely with Docker.</p>
-<p>Docker publishes fixed images for both Java4Shell and the NGINX HTTP/2 in the Docker Hardened Images (DHI) catalog.</p>
-<p>Learn how Docker AI Governance secures agentic AI with sandbox policies, MCP tool governance, and audit visibility to support controlled AI agent workflows.</p>
+                <p>It was naivety, but when I first came across Flexbox, and then CSS Grid, I had this feeling all those positioning properties (align-self, justify-content…) would be available to use on block and inline elements; things like tables, lists, fixed elements, everything. The workings might be different under the hood, depending on the reference boxes, but the syntax and expected outcomes would be same: push to one edge, keep at the center, spread around evenly, etc.</p>
+<p>Although that didn’t happen, what if I made something of that sort?</p>
+<p>For example, I could take out the soul of an HTML table and stitch it back together with CSS Grid. In other words, it reads like a table, but acts like a grid, allowing me to use grid properties. Believe it or not, some form of this was used in the past to make tables responsive.</p>
+<p>Before I kill off a table in this article though: there are a lot of advantages to straight-up tables. They provide a clean semantic layout that browsers perfectly understand and translate for assistive technology when needed. There’s even a <caption> element.</p>
+<p>On the CSS side of things, there are indeed circumstances where CSS Grid is necessary for its intrinsic responsiveness, source order independence, and positioning. That’s why it’s an indispensable tool for layouts. Use that and let HTML tables to do the work of actually displaying tabular data!</p>
+<p>But there’s the presentational benefit of table we should consider. Technically, <table> is not a presentational element like a <div>. It’s semantic: the browser and I share a common meaning for it. But whether the browser understands it as such or not, if I read <th> I believe it’s a heading followed by data. Let’s say that’s pseudo-semantic to me, if presentation is not the right term.</p>
+<p>That pseudo-semanticism is still useful. It’s the difference between me having to read this:</p>
+<p>Despite there being semantic elements for titles, like <h1> and <strong>, they don’t bring in the connection that <th> and <td> have, and it’s better to reserve <dt> and <dd> for textual structuring like glossaries rather than layouts.</p>
+<p>So, is it okay if I use <th> this way? I mean, the table itself merely used as pseudo-semantic markup skin:</p>
+<p>Then, this CSS and its outcome (for the first markup):</p>
+<p>To me, the latter markup example — a pseudo-semantic table — is easier to scan than a handful of generic divs. I get the pseudo-semantics of table, and the ease of using CSS Grid for the layout. As for browsers, none of them have shunned this sort of Frankenstein creation, at least yet. The VoiceOver and keyboard navigation works as if it’s a real table.</p>
+<p>But it’s understandable why it looks more than a little gross and against the grain of what we should be able to. We’re encouraged to maintain a separation of concerns between content and presentation and this does exactly that without affecting the tables semantics, such as its role. But maybe it should? There are plenty of other HTML elements that CSS is capable of busting.</p>
+<p>Andy Clarke shows you how to create designs that people recognize and remember in his brand-new e-book, Standout Designs for the Web. Pre-order it today!</p>
+<p>Interesting concept. I like the idea of building out a data/stats card (say, one you’d see in the header of a CRUD edit/view page) with this method.</p>
+<p>yes this is indeed scary and i would not use it for these reasons:</p>
+<p>– headings are more appropriate in this layout (slap a list or group on it if you want to be more verbose)
+– changing the display alone already stripped the soul (semantic) of the table
+– pseudo-semantic is only a developer convenience, not for the end users (VoiceOver is only one of many screen readers, not enough to confirm it works like a real table)</p>
+<p>I would suggest a “ in your example. Also the bank does not have a label, correct would be `IssuerName of the bank`. So most of the time there are other ways before using a table with all its markup.</p>
+<p>Ha! HTML elements got stripped. So I meant a definition list (dl) and the “Issuer” would be the “th” and “Name of the bank” would be the “td”.</p>
+<p>You don’t need to resort to misusing HTML tables for this layout. Your original HTML version could be much improved by simply using sections, headings and paragraphs. In addition, you can also hand over the all-caps and line-breaks styling to CSS while you’re at it. No divs, spans, nor incorrect use of the strong element.</p>
+<p>The pseudo-semantic angle is what really sold me here. I run an informational niche site that’s full of reference tables (status codes, payment schedules), and scanning raw markup with / pairs is so much easier to read than a pile of nested divs. That said, Mike Mai’s point about VoiceOver gives me pause — I’ll probably keep this trick for decorative layouts and leave the actual data tables semantically intact.</p>
+<p>This is a fun experiment, and I especially liked the distinction you drew between a real table and a pseudo-semantic one. Once display: grid is applied, the browser no longer treats the th and td relationship the way it does in a normal table, so the visual connection stays for sighted readers while the structural meaning is lost. That trade-off is what makes Mike Mai’s point land for me: it is convenient for the author, but assistive technology does not get the same benefit. I would keep this pattern for a purely presentational card only where the same information is also available in a straightforward, accessible form, rather than using it for actual data.</p>
+<p>This is a fun experiment, and I especially liked the distinction you drew between a real table and a pseudo-semantic one. Once display: grid is applied, the browser no longer treats the th and td relationship the way it does in a normal table, so the visual connection stays for sighted readers while the structural meaning is lost. That trade-off is what makes Mike Mai’s point land for me: it is convenient for the author, but assistive technology does not get the same benefit. I would keep this pattern for a purely presentational card only where the same information is also available in a straightforward, accessible form, rather than using it for actual data.</p>
+<p>I’m curious as to why you avoided using a DL here. MDN says “Common uses for this element are to implement a glossary or to display metadata (a list of key-value pairs).” These days you can also wrap the dt/dd in div elements to more easily style these pairs.</p>
+<p>As for browsers, none of them have shunned this sort of Frankenstein creation, at least yet.</p>
+<p>They have for years. It was such a common barrier I made a function in 2018 to try to restore some table semantics. While it took years for browsers to catch up, even in 2022 tables with display properties were a mess and, unsurprisingly, there are still regressions and new bugs. Using display: contents is equally risky, and this is partly because it wasn’t well specified (meaning the spec did a poor job and browser vendors didn’t recognize all the gaps).</p>
+<p>In addition, this is not a well-formed table. A linter or other automated code checker should call this table out for missing a cell in row two:</p>
+<p>The experience for a screen reader use navigating down the right column might be that they never hear that cell (and I assume that brand is important if it’s included). The user may also get incorrect row and column cell counts.</p>
+<p>I encourage readers to test with more than VoiceOver, and additionally to test with daily screen reader users. Further, given the years of display regressions (looking at Safari in particular), to re-test this construct for every new browser release.</p>
+<p>Your email address will not be published. Required fields are marked *</p>
+<p>Save my name, email, and website in this browser for the next time I comment.</p>
+<p>Notify me of follow-up comments by email.</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.docker.com/blog/agentic-ai-security-docker-governance/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/the-frankenstein-table/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
