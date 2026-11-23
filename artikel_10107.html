@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency</title>
+    <title>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10107.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-22</p>
+        <h1>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183005_7d7eb59768.png" alt="Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183005_7d7eb59768.png" alt="Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>A retrieval-augmented generation (RAG) app is usually drawn as a language model plus a vector database. When it goes live, the part that fails first is rarely the retrieval. It is GPU memory on the generation model, because a model that loads fine for one request can run out of memory when several users send long questions at once.</p>
-<p>This article shows how to estimate that limit before you deploy, with a short script you can run, and then covers what else in the pipeline can slow responses down.</p>
-<p>Serving a model takes more than its weights. The GPU also holds:</p>
-<p>the key-value (KV) cache, which grows with the length of every active request</p>
-<p>memory used by the inference runtime itself</p>
-<p>SitePoint's guide to running a local LLM on 10GB of VRAM makes the same point for a single desktop GPU: the usable budget is the total VRAM minus overhead, and the KV cache grows with the context window, so the real model budget is smaller than the number on the box.</p>
-<p>For a RAG service, the KV cache matters even more. Retrieved passages are pasted into the prompt, so every request carries a long context, and every concurrent request holds its own cache.</p>
-<p>The cache size per token depends on the model's architecture: two tensors (keys and values) for every layer, for every KV head. This script turns those numbers into a rough limit on concurrent requests:</p>
-<p>def kv_bytes_per_token(layers, kv_heads, head_dim, dtype_bytes=2):</p>
-<p># Keys and values, for every layer, for one token.</p>
-<p>return 2 *layers *kv_heads *head_dim *dtype_bytes</p>
-<p>def max_concurrent(vram_gb, weights_gb, ctx_tokens, per_token, reserve_gb=2.0):</p>
-<p>budget = (vram_gb - weights_gb - reserve_gb) * GIB</p>
-<p>return int(budget // (ctx_tokens * per_token))</p>
-<p>per_token = kv_bytes_per_token(32, 8, 128)</p>
-<p>print(per_token // 1024, "KiB per token")</p>
-<p>n = max_concurrent(24, 16, ctx, per_token)</p>
-<p>print(ctx, "tokens ->", n, "concurrent requests")</p>
-<p>For a 24 GB GPU holding about 16 GB of fp16 weights with 2 GB kept in reserve, it prints:</p>
-<p>The numbers are estimates. Real runtimes add their own overhead, and the architecture values come from the model's configuration file, so read them from the model you actually use. The pattern is what matters: doubling the context length halves the number of requests that fit. A RAG prompt that stuffs in ten retrieved chunks costs real capacity.</p>
-<p>Serving runtimes do not simply crash when the cache is full. The vLLM documentation on optimization and tuning explains that when KV cache space is insufficient for all batched requests, the engine preempts some of them and recomputes them later, which can hurt end-to-end latency. Its suggested remedies include giving the cache more memory, reducing the number of concurrent sequences or batched tokens, or sharding the model across GPUs.</p>
-<p>So the symptom of undersizing is often not an error. It is slow, uneven responses under load. Test with realistic prompt lengths and several simultaneous users, not a single request.</p>
-<p>Embedding and ingestion have a different profile from generation. Embedding is often lighter than serving a large language model, and some teams run it on CPU. Document parsing, chunking and tokenization also run on CPU, so a fast GPU cannot make up for a slow CPU upstream. SitePoint's tutorial on a local RAG system for private documents walks through chunking, embeddings, vector storage and reranking, and is a good map of which stages run where.</p>
-<p>RAM: vector indexes, document loaders and caches all live in system memory, so large collections need more of it.</p>
-<p>Storage: model files, indexes, logs and backups add up. Fast storage shortens model loading and re-indexing.</p>
-<p>Network: if the vector database, application server and model server sit in different places, latency adds to every request.</p>
-<p>Two layouts are common. A single instance runs everything and is simplest for prototypes and internal tools. Separated services put ingestion and retrieval on smaller machines and keep the GPU for generation, which scales better as traffic grows.</p>
-<p>Memory estimates only hold if the GPU memory is really yours. On a shared or time-sliced GPU, other workloads can take memory and compute away from your service, which makes capacity hard to plan. Hosting providers describe this in different terms, such as passthrough, vGPU, MIG and time-slicing. For a view of how one GPU hosting provider explains those allocation methods, GPU Mart's GPU virtualization guide compares them. It is a hosting company's page, so confirm any provider's claims about isolation and performance with your own load test.</p>
-<p>Whatever provider you choose, ask these questions:</p>
-<p>Is the physical GPU assigned to you exclusively, or partitioned or time-sliced?</p>
-<p>Do you have root access to install your own drivers, CUDA libraries and containers?</p>
-<p>Which minimum commitments, regions and support terms apply?</p>
-<p>A small stack can run as a handful of containers: an API service for request handling and prompt assembly, an ingestion worker, a vector database and a model server. Keeping them separate lets you monitor each one's memory and CPU use and move the heavy one to bigger hardware without rewriting the rest.</p>
-<p>For a service that stays up all month, a fixed monthly term is easier to forecast than hourly capacity. Hourly capacity suits testing quantization settings or processing a one-off document batch.</p>
-<p>Is GPU memory always the bottleneck for RAG?</p>
-<p>Not always. Generation usually hits memory first, but slow parsing, a small CPU or a distant vector database can dominate response time.</p>
-<p>Does quantization solve the memory problem?</p>
-<p>It shrinks the weights, but the KV cache still grows with context length and concurrency. Test with your real prompt sizes.</p>
-<p>It depends on volume. Small workloads can run on CPU, while a large ingestion job may benefit from a GPU for a limited time.</p>
-<p>Size a RAG service for the worst realistic moment, not the single-request demo. Estimate the KV cache from the model's architecture, remember that long retrieved contexts reduce how many requests fit, watch for preemption under load, keep CPU, RAM, storage and network in the plan, and find out whether the GPU is exclusive or shared. The script above is small, but it turns a vague worry about memory into numbers you can check.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>In our previous posts - Easy FunctionGemma finetuning with Tunix on Google TPUs and Autonomous LLM post-training with Tunix on TPUs - we showed how Google Tunix streamlines Supervised Fine-Tuning (SFT) and single-turn Group Relative Policy Optimization (GRPO) on Cloud TPUs. Real-world AI agents, however, rarely finish their job in a single turn. They have to reason over partial observations, invoke tools, observe environment feedback, and adapt their strategy across multiple steps. So in this post, we will walk through how to train a multi-turn, tool-using LLM agent using Tunix's agentic reinforcement learning pipeline on Cloud TPU v6e-8. You can find the complete code in this GitHub repository.</p>
+<p>We will revisit the Plane Strike board game from an earlier TensorFlow/JAX reinforcement learning blog, replacing the custom MLP policy with Gemma 4 E2B in thinking mode on a single Cloud TPU v6e-8 host. Plane Strike is played on a 6x6 grid (A1 to F6) where one 8-cell plane is hidden in one of 4 orientations. Each turn, the agent sees the result of its previous strike and the raw visible board (. untried, X hit, O miss), thinks through candidate placements, and calls the strike(cell="...") tool to strike one cell. The game ends when all 8 plane cells are hit, or after 23 strikes.</p>
+<p>Sorry, your browser doesn't support playback for this video</p>
+<p>Although google/gemma-4-E2B-it has decent spatial reasoning and tool calling capabilities, out of the box, it wins only 9.4% of games on held-out boards (averaging 22.44 strikes). After 100 steps of agentic GRPO with Tunix, its win rate reaches 95% while cutting the average game length to ~16 strikes.</p>
+<p>We set up the multi-turn RL pipeline in four modular components:</p>
+<p>Let's look at the key steps for each piece.</p>
+<p>In env.py, we subclass Tunix's BaseTaskEnv to implement PlaneStrikeEnv. Each environment instance receives a task dictionary with a seed that fixes the hidden plane position so all 8 rollouts in a GRPO group play the exact same board:</p>
+<p>On each turn, _step_impl evaluates the struck cell index against the hidden board, updates the visible grid, computes the step reward (summed into the trajectory-level reward over the episode), and returns EnvStepResult(observation, reward, done, info).</p>
+<p>For standard multi-tool agents, tunix.rl.agentic also provides ready-to-use ToolEnvironment, ToolAgent and ToolManager abstractions out of the box so we don't have to write custom message/observation plumbing unless we need custom turn control.</p>
+<p>In Gemma 4, tool schemas are declared in the system prompt inside <|tool>declaration:...<tool|>, and a model turn that calls a tool ends with:</p>
+<p><|tool_response> is one of Gemma 4's native stop tokens: the model pauses there and waits for response:strike{value:<|"|>...<|"|>}<tool_response|>, then continues generating its next thought and tool call within the same assistant turn.</p>
+<p>In strike_tool.py, we define StrikeTool(BaseTool) and subclass Tunix's Gemma4ChatTemplateParser to append the tool declaration to the system prompt and render "tool" messages as in-turn responses:</p>
+<p>In agent.py, PlaneStrikeAgent(ConversationAgentBase) translates between environment observations and model messages.</p>
+<p>When the model finishes a turn, tool_strike ignores everything inside <|channel>thought...<channel|> and parses the final answer after <channel|>; only a final answer with a single valid strike call counts as a valid board coordinate (otherwise INVALID_ACTION is returned). If the model stopped at <|tool_response>, the next board observation is appended with role="tool" so the model continues its turn:</p>
+<p>In train_planestrike.py, we configure Tunix's asynchronous vllm rollout engine, RLEngine, and GRPOLearner:</p>
+<p>Multi-turn agentic RL is often bottlenecked by variable-length rollout generation, so we set rollout_vllm_server_mode to true to enable continuous asynchronous multi-turn rollouts via vllm-tpu and enable_prefix_caching to true to true to cache the growing multi-turn conversation history. Since we are using a v6e-8 single host, the actor model, the reference model, and the rollout workers share the 8 chips.</p>
+<p>We then pass our actor, tokenizer, ClusterConfig, GRPOConfig (loss_algo="gspo-token", advantage_estimator="rloo", exact_token_continuity=True to preserve exact token IDs across multi-turn rollouts without retokenization drift), agent, and environment into RLEngine and PlaneStrikeGRPOLearner:</p>
+<p>All of these enable us to launch the 100-step training job with:</p>
+<p>Over 100 steps (8 boards x 8 games per step), the agent learns both reliable tool calling and spatial deduction:</p>
+<p>With Tunix's tunix.rl.agentic abstractions, vllm-tpu, and GRPOLearner, multi-turn, tool-using agentic RL on Cloud TPUs is easy and efficient. Check out the planestrike-gemma4-rl GitHub repository and read the Tunix documentation to train your own agentic model with Tunix and Google TPUs.</p>
+<p>Agent Anomaly Detection: Safeguarding agents across other clouds</p>
+<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
+<p>Securing Your Agents: A Hands-On Guide to Agent Anomaly Detection</p>
+<p>Check what your AI agents do before they do it, with Semantic governance policies</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/sizing-gpu-memory-for-a-rag-service-kv-cache-context-and-concurrency/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://developers.googleblog.com/multi-turn-agentic-reinforcement-learning-with-tunix-and-gemma-4-on-google-tpus/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
