@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agents are sessions, not requests: size GKE node pools for AI agent sessions</title>
+    <title>Meet the New Docker: Built to Run on Trust</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9992.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,53 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Agents are sessions, not requests: size GKE node pools for AI agent sessions</h1>
+        <h1>Meet the New Docker: Built to Run on Trust</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Screenshot_2026-11-11_at_4.46.52P.2e16d0ba.fill-1200x600.png" alt="Agents are sessions, not requests: size GKE node pools for AI agent sessions" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Meet the New Docker: Built to Run on Trust" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Screenshot_2026-11-11_at_4.46.52P.2e16d0ba.fill-1200x600.png" alt="Agents are sessions, not requests: size GKE node pools for AI agent sessions" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Meet the New Docker: Built to Run on Trust" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Sorry, your browser doesn't support playback for this video</p>
-<p>Your company wants to move its coding agents from developer laptops to a shared GKE cluster, for persistence, scale, and governance. Each of those agent sessions stays open all day but works only part of it, and how you run them decides how much of your node bill pays for waiting.</p>
-<p>By the end of this article, you will know why an agent session needs a different runtime than a web request, how Agent Substrate and AX run sessions on GKE, and how to identify cost optimization opportunities in your GKE node pools. This article assumes you know Kubernetes Pods and node pools. If not, check out the GKE overview.</p>
-<p>A web request lasts milliseconds. The server answers it, keeps nothing, and serves the next one, so Kubernetes scales a web app by its traffic: more requests, more Pods.</p>
-<p>An agent session works another way. A coding agent's workspace can stay open for the developer's whole workday: it keeps its memory and its files between prompts, and it works only after a prompt arrives.</p>
-<p>How much of that day does the agent really work? Much less than it waits. In a July 2026 study of agent traces, Banruo Liu and colleagues found that in a typical session with several prompts, the agent waits for the user about 80% of the time. A turn, one prompt and the agent's whole response to it, takes about 6.5 minutes of agent work on average</p>
-<p>Put those numbers on one developer's day. With 2 prompts an hour over an 8 hour workday, which is our assumption, the agent works 22% of the day and waits for nearly 78% of it. If each session holds a machine, you pay for that waiting time</p>
-<p>Teams usually pick one of two answers, and both work well for web apps.</p>
-<p>The first is to give each session its own Pod. The session keeps its state, but its Pod holds 1 vCPU and 1 GiB all day. For example, a c3-standard-4 node fits 3 such Pods after GKE's reservations, so in our cost model 100 coding agents need 34 nodes and about USD 1,288 a month, for agents that work 22% of the time.</p>
-<p>The second is to scale the Pod to zero between prompts. The node's capacity is released, and files on a persistent volume survive, but the process and its memory do not, so the next prompt starts a new agent process.</p>
-<p>Based on that, you want a third option: keep the session, and free the machine while the session waits.</p>
-<p>Agent Substrate and AX are built for that: the developer's session stays open, and the sandbox that serves it gives its machine back while the session waits. Together they cover the parts of an agentic platform that are the same for most teams: the control plane, the runtime, and the sandbox. Agent Substrate answers where and how an agent runs. AX answers what the agent is.</p>
-<p>Following the CNCF donation of gVisor, Agent Substrate, and OpenRL in November 2026, you can run Agent Substrate on GKE or on other Kubernetes clusters. Agent Substrate 1.0 is generally available on GKE.</p>
-<p>One distinction helps from here on. The session is the multi turn interaction between the developer and the agent, with its conversation history. The compute that serves it is an isolated sandbox: an actor in Agent Substrate, or a Task in AX. Parking acts on the sandbox, and the session stays open.</p>
-<p>Agent Substrate answers where and how an agent runs. It separates the stateful agent from the compute it runs on. An actor is the sandbox for one agent, and it holds the agent's running processes, files, and identity. A worker is a reusable sandbox drawn from a warm pool of Kubernetes Pods, and one worker hosts several actors.</p>
-<p>An agent runs code that a model wrote, so anything in its environment can leak through a prompt injection or a bad command, API keys included. Gateways control the actor's inbound and outbound traffic and add credentials on the way out, based on the actor's identity, so credentials stay out of the agent's environment.</p>
-<p>SuspendActor snapshots an idle actor to object storage and frees its worker, and the next request restores the actor on a warm worker with room for it. Agent Substrate snapshots memory by default and falls back to files when it cannot capture memory. Many parked sessions share a small warm pool, so in our cost model the same 100 agents need 16 nodes instead of 34.</p>
-<p>AX answers what the agent is and what it knows. You declare a Task, which says what runs (image, command, and limits), and a Workspace, which says what the agent knows (repositories and files). AX runs each Task as an actor. ax suspend parks the task and keeps its /workspace. Today AX asks for a volume snapshot, so the files come back on resume and the agent's processes start fresh (runner guide).</p>
-<p>AX passes suspend, resume, and delete to Agent Substrate. The AX roadmap plans to add budgets, policies, and gateways, which limit what an agent may do, and a record of what each task did.</p>
-<p>Two details decide the bill before you size anything.</p>
-<p>First, you decide when a sandbox parks. Agent Substrate does not suspend an idle actor by itself (#424), so your agent harness, or the service in front of it, calls the suspend API after an idle timeout. Until then, an idle actor keeps its worker. When idle actors hold every worker, a request for another actor waits up to 5 seconds by default, then fails with HTTP 503 (Agent Substrate docs).</p>
-<p>Second, you decide how much CPU each sandbox is promised. An actor is sized by its CPU and memory limits, and each worker books those limits against the capacity you declare for its pool (API guide). Our cost model sets that capacity to what the node really has, so every actor keeps its full limit. You can declare more capacity than the node has, and then you overcommit CPU at the pool instead of in each Pod.</p>
-<p>Our cost model prices parking for the same 100 coding agents, at Google Cloud on-demand list prices, as of November 2026, in us-central1.</p>
-<p>With a 2 minute idle timeout, each session holds a worker nearly 29% of its open time. A warm pool sized for bursts (the 99th percentile of sessions holding a worker at once, if sessions act independently, plus 15% headroom) needs 15 nodes. Add one node that runs around the clock for the Agent Substrate control plane and its PostgreSQL database, and a job that scales the pool to zero after hours:</p>
-<p>Parking saves nearly 40% of the node bill. The pool is full about once in 3,000 turns, so a prompt rarely meets that 503. In an hour at 2.5 prompts instead of 2, the same 15 nodes are full for 3% of turns, so size the pool for your busiest hour.</p>
-<p>Keep in mind that parking pays most when your agents wait the most. At 2 prompts an hour, the saving is nearly 40%. At 4 prompts an hour, the agent works 44% of the hour, the pool grows to 27 nodes, and the saving is 4%. Above about 4 prompts an hour, one Pod per session becomes the cheaper option, so measure your prompt rate first.</p>
-<p>Also, the pool size is yours to set. The autoscaling option in the GKE install guide follows worker Pods, not suspended actors, so scale the pool to zero after hours with a scheduled job: a pool that runs all 730 hours of the month costs nearly twice the one Pod per session bill.</p>
-<p>Finally, the fleet size matters. The Agent Substrate control plane costs the same for 10 sessions or 1,000, so parking pays from about 37 coding sessions, or 13 for an assumed chat assistant that works about a minute an hour.</p>
-<p>Overcommit changes the comparison. If your Pods request less CPU than their limit, Kubernetes places them by their requests. A Pod that requests 0.25 vCPU with a 1 vCPU limit packs 12 to a node (its 1 GiB of memory caps it there), so the same 100 coding agents fit on 9 nodes, fewer than our parked pool. Agent Substrate can overcommit too, through the capacity you declare on the worker pool, and our cost model does not price that case.</p>
-<p>Overcommit has the same cost on both sides: agents share CPU and slow down when their neighbors are busy, during builds and tests. Compare like with like before you decide to park: Pods and actors with the same CPU guarantee.</p>
-<p>Back to the shared cluster. Agents are sessions, not requests: size the warm pool for the sessions that hold a worker, not the sessions that are open.</p>
-<p>We would park long lived sessions that wait most of the hour, and keep one Pod per session when developers prompt more than about 4 times an hour. Size the warm pool for working time plus a short idle timeout at your busiest hour, and compare with your current Pods at the same CPU guarantee before you park.</p>
-<p>Thanks for reading! If you run agent sessions on Kubernetes today, how many prompts an hour do your users send? The prompt rate is the input we are least sure of. You can reach Ivan on LinkedIn or X with your numbers, questions, and corrections.</p>
-<p>TPU Model Design Considerations and Optimization Guide</p>
-<p>Agent Anomaly Detection: Safeguarding agents across other clouds</p>
-<p>Did the user ask for this? Securing AI agents against intent hijacking with Semantic governance policies</p>
-<p>Check what your AI agents do before they do it, with Semantic governance policies</p>
+                <p>Today, Docker is officially launching its new brand, and I’m excited to tell you what it’s all about and why we think now is the time for change.</p>
+<p>Let’s start with the big picture. We’re living through a transformative moment: for Docker, for developers, for the industry, and quite possibly, for humanity itself. AI is creating possibilities that would have sounded like science fiction not long ago.</p>
+<p>But it’s also forcing the industry to confront an almost existential question: how do we harness all that power and intelligence without compromising security, governance, or control? Or, put more simply: how do we get to a point where we can actually trust agents?</p>
+<p>That one seemingly simple yet infinitely complex question is why we’re here today, introducing you to a new Docker.</p>
+<p>Ok, not exactly here, but once upon a time, a decade or so ago, the tech industry was at a similar inflection point. Digital transformation was the term du jour, promising a new way of engaging customers and powering the global economy. There was one big constraint, though: teams needed a better way to build, ship, and run software consistently across any environment.</p>
+<p>Enter a company you might have heard of: Docker.</p>
+<p>Together with all of you, Docker built the standard trusted by millions of developers. For over a decade, developers have relied on us to make software portable, open, reproducible, and secure. Docker turned the frustration of “Well, it works on my machine!” into the assurance that “Yes, it works everywhere.”</p>
+<p>Today, of course, the challenge confronting us is new and evolving, and we all need to evolve with it. We cannot simply continue to do what we’ve always done and expect to succeed in this new era. That applies to business leaders, developers, tech companies, everyone. It certainly applies to Docker. That’s what this rebrand is about: evolving to meet the moment for our customers.</p>
+<p>Let me be unequivocal: this is not about leaving Docker’s legacy or heritage behind. We’ve spent more than a decade earning your trust. This is about building on that foundation, not replacing it.</p>
+<p>The qualities you value us for aren’t changing. We’re still committed to openness and industry collaboration. We’re still, and always will be, developer-first. We’re still fanatical about simplicity, and about showing up everywhere you need us.</p>
+<p>On the product front, the containers you know and love aren’t going anywhere. Containers still play a huge role in the software development lifecycle. As long as that’s the case, Docker will continue leading the way.</p>
+<p>Agents have introduced a new problem. Containers isolate workloads. But agents aren’t workloads. Agents are actors.</p>
+<p>Agents make their own decisions about what to run, what to access, and what to change. Developers and enterprises need solutions built specifically to isolate and govern them, so they can give those agents real autonomy without giving up control.</p>
+<p>Docker’s next chapter is about delivering exactly that: security, isolation, and governance, so we can all trust agents to do meaningful work without feeling like we’re always one step from catastrophe.</p>
+<p>In case I haven’t made it blindingly obvious yet, the new Docker is all about trust.</p>
+<p>Trust Docker because our track record speaks for itself. Trust Docker because we’re proven, neutral, and secure. Trust Docker because it’s pretty darn clear you can’t trust the agents to manage themselves.</p>
+<p>Trust us because we have a software supply chain that is already the standard for building securely. Trust us because nobody isolates agents where they run better than we do. Trust us because we’re taking a comprehensive approach to improving governance and minimizing risk across the entire enterprise.</p>
+<p>Trust Docker because we’re not egotistical enough to think we can solve a challenge this big alone. Trust us because everything about our history, our heritage, and our actions over the past year tells you we’ll partner with the smartest and build alongside the best, and not create vendor lock-in.</p>
+<p>Most of all, trust Docker because we’re not just talking the talk. We’ve got the goods to back it up: trusted supply chain for your agents to build from, trusted runtime to isolate your agents, and a trusted ecosystem to ensure all the layers of trust are covered, whether made by Docker or not.</p>
+<p>As our product team innovated to meet the moment and our messaging in the market began to shift, one thing became clear: the speed and scale of evolution happening inside Docker called for an equally momentous evolution on the outside. Something that makes it unmistakably clear that it’s a new day for Docker. Something that says and shows, loud and clear, for all the world to see, that Docker is not just about containers anymore.</p>
+<p>I’m talking, of course, about our beloved Moby.</p>
+<p>If you know Docker, then you know Moby, and if Docker is evolving, Moby should too. The only question was to how and to what extent? We looked at a lot of whales, folks. (I may or may not have been seeing whales in my sleep.) Ultimately, with the help of our friends at the strategic brand transformation company, Motto, we landed on a new Moby for the new Docker.</p>
+<p>In many ways, Moby is a microcosm for Docker and the changes we’re making: the Moby you love and trust, evolved for a new era. Just as the new Docker is no longer singularly defined by containers, neither is the new Moby.</p>
+<p>We’ve got lots to show you. Poke around our new website. Find and engage with the new Docker brand on social media. And if you want to see what trust in the agentic era looks like in practice, try Docker Sandboxes and Docker AI Governance. We’d love to hear what you think.</p>
+<p>Wherever this new era takes us, Docker will always honor and cherish the trust you continue to place in us. Now, let’s go build what’s next.</p>
+<p>Terri Avnaim is the CMO of Docker, where she leads global marketing and shapes the company’s positioning and go-to-market strategy for the agentic era.</p>
+<p>Docker launches a new brand built on trust. Learn why Docker is evolving for AI agents, what stays the same, and how to run agents securely with Docker.</p>
+<p>Docker publishes fixed images for both Java4Shell and the NGINX HTTP/2 in the Docker Hardened Images (DHI) catalog.</p>
+<p>Learn how Docker AI Governance secures agentic AI with sandbox policies, MCP tool governance, and audit visibility to support controlled AI agent workflows.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/agents-are-sessions-not-requests-size-gke-node-pools-for-ai-agent-sessions/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.docker.com/blog/meet-the-new-docker-built-to-run-on-trust/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

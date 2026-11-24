@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Up to 3.2x Faster Inference with LFM2.5-DSpark</title>
+    <title>Agoda Reduces API Code Review Time by 64% with Modular Architecture</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9757.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,36 +15,70 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Up to 3.2x Faster Inference with LFM2.5-DSpark</h1>
+        <h1>Agoda Reduces API Code Review Time by 64% with Modular Architecture</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/ZMoThfdqzAz8cbxweVQfO.gif" alt="Up to 3.2x Faster Inference with LFM2.5-DSpark" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/agoda-modular-monolith-framework/en/headerimage/generatedHeaderImage-1793569078425.jpg" alt="Agoda Reduces API Code Review Time by 64% with Modular Architecture" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/ZMoThfdqzAz8cbxweVQfO.gif" alt="Up to 3.2x Faster Inference with LFM2.5-DSpark" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/agoda-modular-monolith-framework/en/headerimage/generatedHeaderImage-1793569078425.jpg" alt="Agoda Reduces API Code Review Time by 64% with Modular Architecture" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Today, we release DSpark draft model checkpoints for three models from our LFM2.5 family: LFM2.5-1.2B-Instruct, LFM2.5-2.6B, and LFM2.5-8B-A1B. These add a speculative decoding path that trades a minimal memory increase for a large decoding speedup without changing output quality:</p>
-<p>The decode phase in LLM inference is traditionally memory-bound. Most latency comes from streaming weights from DRAM into SRAM, not from intense computation. Speculative decoding addresses this by using a lightweight draft model to produce candidate tokens, then having the target model verify them all in a single forward pass, sharing the cost of loading the weights across all tokens we verify.</p>
-<p>Over the years, multiple approaches of speculation have been proposed, with the most prominent being EAGLE-3, DFlash, and, most recently, DSpark, which combines three components:</p>
-<p>We follow the DSpark recipe with a larger and more diverse data mix covering SFT, chat, code, and function-calling data. Based on our ablations, the first versions of the draft models are simplified attention-only draft models, with 5 layers and a block of 9. For each draft model, we ran 15 epochs on the entire dataset and selected the epoch with the highest acceptance rate rather than the lowest loss.</p>
-<p>The resulting draft models are relatively small, with each around ~300M parameters.</p>
-<p>Under greedy decoding, a draft token is only accepted if it matches the target model’s distribution. On rejection, the target model's own token takes its place. The emitted sequence is therefore identical to baseline greedy by construction, so benchmark accuracy (pass@1 or exact match) is unchanged.</p>
-<p>Our DSpark draft models for LFM2.5 ship with day-one support for llama.cpp (implementation builds on top of the official codebase, which we run with experimental metal kernels) and **SGLang (**implementation builds on the official SGLang implementation of DSpark).</p>
-<p>We measure on-device throughput with llama.cpp and Metal on an M4 Max MacBook Pro using FP16 GGUF weights and up to 256 output tokens. We measure GPU throughput with SGLang on a single H100 80 GB in BF16. Both configurations use a DSpark block size of 9, a batch size of 1, and a temperature of 0. We evaluate them on five benchmark datasets.</p>
-<p>All three drafter models deliver noticeable throughput improvements on both the large-scale accelerator (H100) and the edge deployment (M4 Max MacBook).</p>
-<p>For LFM2.5-2.6B, speedup on the MacBook is especially noticeable, as it pushes the interactivity level a user can enjoy far beyond the throughput offered by most proprietary cloud models (around ~140 tok/s, depending on the dataset).</p>
-<p>Across various multi-tool scenarios, DSpark reduces the latency by 57% on average for LFM2.5-2.6B.</p>
-<p>For LFM2.5-1.2B-Instruct, we see much more variance in dataset acceptance rates, so speedup varies by as much as 52% depending on the underlying text distribution.</p>
-<p>For LFM2.5-8B-A1B, the acceptance rate increases compared to two dense models, yet on-device we get only an 18% improvement on average. This gap is due to the current MoE implementation in llama.cpp's Metal backend, and to the fact that verifying k tokens activates more experts and thus more weight traffic than a single decode step.</p>
-<p>Running the DSpark draft models with SGLang requires an SGLang build with DSpark support for LFM2 targets (PR #31041). Launch the target with the draft attached:</p>
-<p>Then query the OpenAI-compatible endpoint at http://localhost:30000/v1. The block size is read from the draft's config.json; the baseline is the same command without the three --speculative-* flags.</p>
-<p>Running them with llama.cpp requires the respective llama.cpp build (PR#27383).</p>
-<p>The block size is read from the sidecar metadata (n-max is clamped to it). Speculative decoding is exact: the target verifies every proposed token, so greedy output equals the target alone; per-response timings report draft_n / draft_n_accepted.</p>
-<p>The DSpark draft model checkpoints are available on Hugging Face as Safetensors and in GGUF format:</p>
-<p>For citations, please use the following reference or BibTeX:</p>
-<p>Liquid AI, "LFM2.5-DSpark: Up to 3.2x Faster Inference from H100 to MacBook", Liquid AI Blog, Aug 2026.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Learning budget left this year? Use it for a QCon conference or a live InfoQ certification cohort, if your employer's policy allows. 
+
+                            Explore your options.</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites, and chief security architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>Michael Stiefel spoke to Zhou Yu about using dynamic simulations to evaluate AI agents. One particular focus was conversational agents where actions depend on prior responses, and the non-deterministic nation of LLMs means you cannot rely on static, reference-based benchmarks. You need to test them using dynamic simulations that incorporate different personas, goals, and corner cases.</p>
+<p>Dio Rettori discusses the operational realities of enterprise AI inference. Moving beyond fast token generation, he explores why inference requires dedicated systems engineering, tackles GPU utilization pitfalls, compares on-prem versus cloud TCO, and analyzes multi-agent latency determinism. He shares why teams must embed domain ontology directly into models rather than relying solely on RAG.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>The panelists explore how engineering teams adapt delivery architectures, pipelines, security, and governance for AI-assisted development. They share practical strategies for verifying AI-generated code, solving testing and deployment bottlenecks, maintaining human oversight, and measuring AI’s true impact on software velocity, quality, reliability, and operational cost.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Agoda Reduces API Code Review Time by 64% with Modular Architecture</p>
+<p>Nov 23, 2026
+								
+								
+								
+									
+									2
+									min read</p>
+<p>Agoda has introduced a modular monolith framework in its post-booking API to reduce code coupling and enforce domain boundaries without rewriting the existing service. The approach combines component-based code organization, automated architecture checks, and incremental migration. The team reported 64% shorter median code review time and 34% shorter time to initial substantive feedback for framework-backed changes compared with legacy code.</p>
+<p>The change addresses growing maintenance challenges in BAPI, which coordinates cancellations, booking amendments, refunds, and customer communications. Agoda extracted the API from its aging core monolith in 2019 through a largely line-by-line migration. As development increased, merge requests more than quadrupled between 2022 and 2025, while some files exceeded 4,000 lines.</p>
+<p>The team characterized the migration as a tactical design trade-off, drawing on John K. Ousterhout's A Philosophy of Software Design,</p>
+<p>We had deliberately traded a strategic design approach for a tactical one to prioritize speed to market. This tactical mindset was exactly what the business needed at the time.</p>
+<p>Rather than undertake a complete rewrite, the team introduced architectural boundaries incrementally.</p>
+<p>The framework, called Platform, organizes code around business domains such as cancellations, rebooking, and payments rather than technical layers. Each component encapsulates its business logic and data access behind defined interfaces, with application, service, repository, and model layers contained within the component. This package-by-component approach aims to localize changes and reduce dependencies between business domains.</p>
+<p>Platform framework boundaries inside a domain module (Source: Agoda Blog Post)</p>
+<p>Agoda uses the Data Mapper pattern to keep repository-specific models, including database entities and API payloads, out of business logic. Typed builders centralize object creation and transformations, making it easier for developers to find where domain objects and service inputs are constructed.</p>
+<p>The team also uses ArchUnit to encode architectural constraints as automated tests in continuous integration. For example, repository-specific models can only be accessed by their respective repositories. Violations fail the build rather than relying on code reviewers to identify unauthorized dependencies manually.</p>
+<p>The team described these constraints as architectural fitness functions, a concept discussed by Neal Ford and Mark Richards in Software Architecture: The Hard Parts. One engineer explained:</p>
+<p>By codifying our layer boundaries into an ArchUnit test suite, our CI pipeline serves as an automated guardrail, catching structural drift on every pull request before a human reviewer ever sees it.</p>
+<p>Platform is now the default for new modules, while existing functionality is migrated incrementally when feature development provides an opportunity.</p>
+<p>Agoda compared framework-backed and legacy merge requests in Q2 2026. Median review completion time was 1.08 hours for framework-backed changes, compared with 3.02 hours for legacy changes. Time to first substantive feedback was 10.34 hours versus 15.77 hours. Between June and August, framework-backed changes also used 29% fewer AI prompts per 100 changed lines, although median prompts per merge request were similar (20 vs. 22). Agoda cautioned that the AI findings were directional due to the short observation period. A related approach is Spring Modulith, which provides module verification and dependency-cycle checks for Spring Boot applications.</p>
+<p>December 15–16, 2026.
+Examine how senior practitioners run agents, evals, model serving, and AI-assisted engineering in production, including what failed and what changed. Register Now.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/LiquidAI/lfm25-dspark" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/agoda-modular-monolith-framework/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reverse Engineering a Board Game</title>
+    <title>the algebra of dependent types (2025)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9838.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,87 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Reverse Engineering a Board Game</h1>
+        <h1>the algebra of dependent types (2025)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://wuemeli.com/img/og-image.png" alt="Reverse Engineering a Board Game" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://wuemeli.com/img/og-image.png" alt="Reverse Engineering a Board Game" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I recently received a game called âHitsterâ as a gift. Itâs a board game where you try to identify songs and guess things like when they came out, who the artist or band is, etc. Each card has a QR code that you scan using the Hitster app, which then plays the music through Spotify or Apple Music.</p>
-<p>Sadly, the app requires an Apple Music or Spotify subscription. In this blog post, Iâll go down the rabbit hole of reverse engineering the Android app and bypassing their very, very sloppy attempt at hiding the data.</p>
-<p>First, we need to understand how the game works.</p>
-<p>On the front of each card, youâll find the artist or band name, the year the song came out, and the song title. On the back, thereâs a QR code. Scanning it takes you to a URL with two things in its path: the gameâs region (DE in my case) and the card ID. The music then starts playing in the app or through Spotify.</p>
-<p>This means thereâs a mapping from Card ID â Spotify Track. There are also multiple card versions per region, so the card ID alone isnât enough to identify a song. Card ID 1 might be âWet Dreamâ in the UK, but âTage wie dieseâ in Germany.</p>
-<p>After getting the appâs APK from some sketchy Android APK download website, I used jadx to get the decompiled Java code.</p>
-<p>After digging around for a bit, I found a few JSON files under res/raw. One of them was named gameset_database_4.json, and it seemed to be encrypted.</p>
-<p>I ran a tool to identify the format, and it came back as Base64. Thatâs an encoding, so I decoded it first. The result still wasnât readable, and I guessed it was encrypted with AES or something similar.</p>
-<p>Iâd never reverse engineered an Android app before, so I just searched globally for AES. And guess what? There was a file called k43.java with the entire decryption process laid out in front of me:</p>
-<p>So letâs walk through this step by step.</p>
-<p>The function f takes two strings as inputs. The first, str, contains the Base64-encoded data, which it decodes:</p>
-<p>It then checks whether the decoded data is at least 28 bytes long:</p>
-<p>Next, it passes a bunch of data to the function o, which handles the final stage of decryption:</p>
-<p>The first argument is the first 12 bytes of the decoded data. Thatâs our IV, or nonce. The second argument is the entire decoded byte array.</p>
-<p>The third argument is where things get interesting. It takes the total length minus 28 and passes that, along with str2, to the function m. Those 28 bytes account for the 12-byte nonce and the 16-byte authentication tag.</p>
-<p>Inside m, the remaining length is converted to a string and joined with str2. That combined string is then hashed using SHA-256 to produce the AES key.</p>
-<p>So str2 isnât the AES key itself. Itâs the secret string used to derive it, and we havenât found it yet.</p>
-<p>It sets up AES-GCM with the derived key and nonce, then decrypts the data after the first 12 bytes.</p>
-<p>Thatâs the decryption process figured out. Now we just need the secret string.</p>
-<p>I was doing this in a Discord call in the Rust Language Community server, and someone pointed out that I should look for a byte array with a length of 32 bytes.</p>
-<p>I first searched for byte[32], but didnât find anything useful. I then tried this pattern:</p>
-<p>That led me to m17.java, which contained these two super cool arrays:</p>
-<p>We then tried to figure out how to turn these into something useful. After a bit of experimenting, someone suggested XORing the two arrays together. We interpreted the resulting bytes as text and got this:</p>
-<p>Using this string, I wrote a little decryptor in Rust:</p>
-<p>That gave us this awesome test.txt file with around 31,000 lines of mappings from card IDs to Apple Music and Spotify tracks, plus ISRCs, across multiple regions.</p>
-<p>We then looked around the code a little more and found out that all of this wasnât really needed.</p>
-<p>If weâd searched for an HTTPS URL first, we wouldâve landed on this:</p>
-<p>https://hitster.jumboplay.com/hitster-assets/</p>
-<p>https://hitster.jumboplay.com/hitster-assets/gameset_database.json</p>
-<p>There was the entire thing. No encryption.</p>
-<p>We spent around 18 hours chasing a file that, in the end, wasnât even a real secret.</p>
+                <p>TIL (or this week-ish I learned) why big-sigma and big-pi turn up in
+the notation of dependent type theory.</p>
+<p>Iâve long been aware of the zoo of more obscure Greek letters that
+turn up in papers about type system features of functional programming
+languages, Î¼, Î, Î , Î£. Their meaning is usually clear from context
+but the reason for the choice of notation is usually not explained.</p>
+<p>I recently stumbled on an explanation for Î  (dependent functions)
+and Î£ (dependent pairs) which turn out to be nicer than I expected,
+and closely related to every-day algebraic data types.</p>
+<p>The easiest way to understand algebraic data types is by counting the
+inhabitants of a type. For example:</p>
+<p>the unit type () has one inhabitant, (), and the number 1 is
+why itâs called the unit type;</p>
+<p>the bool type hass two inhabitants, false and true.</p>
+<p>I have even seen these types called 1 and 2 (cruelly,
+without explanation) in occasional papers.</p>
+<p>Or pairs or (more generally) tuples or records. Usually written,</p>
+<p>The pair contains an A and a B, so the number of possible values is
+the number of possible A values multiplied by the number of possible
+B values.</p>
+<p>So it is spelled in type theory (and in Standard ML) like,</p>
+<p>Or disjoint union, or variant record. Declared in Haskell like,</p>
+<p>A value of the type is either an A or a B, so the number of
+possible values is the number of A values plus the number of B
+values.</p>
+<p>In a dependent pair, the type of the second element depends on the
+value of the first. The classic example is a slice, roughly,</p>
+<p>(This might look a bit circular, but the idea is that an array [i64; N] must be told how big it is â its size is an explicit part of its
+type â but an IntSlice knows its own size. The traditional
+dependent âvectorâ type is a sized linked list, more like my array
+type than my slice type.)</p>
+<p>The classic way to write a dependent pair in type theory is like,</p>
+<p>ââââ Î£ len: usize . Array(Int, len)</p>
+<p>The big sigma binds a variable that has a type annotation, with a
+scope covering the expression after the dot â similar syntax to a
+typed lambda expression.</p>
+<p>We can expand a simple example like this into a many-armed sum type:
+either an array of length zero, or an array of length 1, or an array
+of length 2, â¦ but in a sigma type the discriminant is user-defined
+instead of hidden.</p>
+<p>The number of possible values of the type comes from adding up all the
+alternatives, a summation just like the big sigma summation we were
+taught in school.</p>
+<p>When the second element doesnât depend on the first element, we can
+count the inhabitants like,</p>
+<p>And the sigma type simplifies to a product type.</p>
+<p>An aside from the main topic of these notes, I also recently
+encountered the name âtelescopeâ for a multi-part dependent tuple or
+record.</p>
+<p>The name âtelescopeâ comes from de Bruijnâs AUTOMATH, one of the first
+computerized proof assistants. (I first encountered de Bruijn as the
+inventor of numbered lambda bindings.)</p>
+<p>The return type of a dependent function can vary according to the
+argument it is passed.</p>
+<p>For example, to construct an array we might write something like,</p>
+<p>The classic way to write the type of repeat_zero() is very similar
+to the IntSlice dependent pair, but with a big pi instead of a big
+sigma:</p>
+<p>ââââ Î  len: usize . Array(Int, len)</p>
+<p>To count the number of possible (pure, total) functions A â B, we
+can think of each function as a big lookup table with A entries each
+containing a B. That is, a big tuple (B, B, â¦ B), that is,
+B * B * â¦ * B, that is, BA. Functions are
+exponential types.</p>
+<p>We can count a dependent function, where the number of possible
+Bs depends on which A we are passed,</p>
+<p>I have avoided the terms âdependent sumâ and âdependent productâ,
+because they seem perfectly designed to cause confusion over whether I
+am talking about variants, records, or functions.</p>
+<p>It kind of makes me want to avoid algebraic data type jargon, except
+that there isnât a good alternative for âsum typeâ. Hmf.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://wuemeli.com/blog/reversing-hitster-game/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dotat.at/@/2025-05-28-types.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

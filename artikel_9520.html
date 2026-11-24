@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shared PostgreSQL Container vs Per-App Databases in Docker Compose (Measured)</title>
+    <title>8 Fish With More Protein Than Salmon</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9520.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,49 +15,27 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Shared PostgreSQL Container vs Per-App Databases in Docker Compose (Measured)</h1>
+        <h1>8 Fish With More Protein Than Salmon</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fsh6wruqe4iykoyapvhv9.png" alt="Shared PostgreSQL Container vs Per-App Databases in Docker Compose (Measured)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.foodrepublic.com/img/gallery/8-fish-with-more-protein-than-salmon/l-intro-1794934654.jpg" alt="8 Fish With More Protein Than Salmon" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fsh6wruqe4iykoyapvhv9.png" alt="Shared PostgreSQL Container vs Per-App Databases in Docker Compose (Measured)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.foodrepublic.com/img/gallery/8-fish-with-more-protein-than-salmon/l-intro-1794934654.jpg" alt="8 Fish With More Protein Than Salmon" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 24
-•
-Originally published at vpsfolio.com</p>
-<p>Per-container RAM: gitea 180.4 MB · umami 150.5 MB · caddy 42.5 MB · db 28.1 MB (sandbox verified 2026-11-24)</p>
-<p>View the interactive benchmark plate and full VPS sizing comparison or compare all measured stacks on VPSFolio Benchmarks.</p>
-<p>Two apps, one database engine. Gitea and Umami both speak PostgreSQL, both are happy on 16, and both sit idle most of the day. On a 1 GB VPS the question is not whether you can run two Postgres containers — you can — but whether the extra ~30 MB per idle instance is worth the operational isolation you give up.</p>
-<p>This stack puts a single postgres:16-alpine container behind both apps. An inline init script creates two databases (gitea, umami) and two least-privilege roles (gitea_user, umami_user) with separate passwords pulled from the environment. Caddy fronts both apps on 127.0.0.1:18080 and routes by Host header, so git.local hits Gitea on :3000 and analytics.local hits Umami on :3000.</p>
-<p>The trade-off is real: both apps now share a Postgres major version. If Umami someday requires 17 and Gitea pins 16, you either fork the container or migrate one app out. That is the cost of the RAM savings. The measured numbers below make the decision concrete.</p>
-<p>Sizing note: in our sandbox run, the single shared postgres:16-alpine container idled at 28.1 MB RSS serving both Gitea and Umami. Compare that against our verified solo guides, where separate PostgreSQL containers consumed 70.6 MB combined (24.2 MB for Gitea's postgres:16-alpine plus 46.4 MB for Umami's postgres:15-alpine). On a 1 GB VPS, saving ~42.5 MB (roughly 4% of RAM) is modest for two apps, though it compounds if you pack four or more Postgres-backed services onto one box.</p>
-<p>Write compose.yml and .env exactly as below. The init SQL is embedded in configs: — no ./init.sql on the host.</p>
-<p>The init SQL only runs when pg_data is empty. If you change it later, you must recreate the volume — which wipes both apps. Plan accordingly.</p>
-<p>Add the hostnames to /etc/hosts on the machine you are curling from:</p>
-<p>Expect 200 from Gitea (the install page) and 200 from Umami (the login page). If you get 502, Caddy is up but the backend is not ready yet — check docker compose logs gitea umami.</p>
-<p>You should see gitea and umami databases, and gitea_user/umami_user roles. Verify isolation by trying to connect as one role to the other's database — it must fail:</p>
-<p>When you point real domains at the VPS, three things change.</p>
-<p>1. Caddyfile. Remove auto_https off, replace the .local hosts with real domains, and let Caddy issue certificates:</p>
-<p>2. Ports. Publish 80 and 443 on Caddy instead of the loopback-only 18080:</p>
-<p>3. Gitea URLs and Caddy cert persistence. Set GITEA_DOMAIN=git.example.com in .env, change GITEA__server__ROOT_URL in compose.yml from http:// to https://${GITEA_DOMAIN}/, and add named volumes caddy_data:/data and caddy_config:/config to caddy (plus top-level volumes:) so Let's Encrypt certificates persist across container recreates.</p>
-<p>For remote backups, add a pg_dump sidecar or a cron job on the host. A minimal dump of both databases:</p>
-<p>Ship those to object storage with rclone or restic. Do not rely on the volume alone.</p>
-<p>Upgrades. Postgres major upgrades are the sharp edge here. pg_upgrade works, but you are upgrading both apps at once. Test on a copy of the volume first. Gitea and Umami both tolerate 16 today; if either pins a different major later, split the database out for that app and accept the extra ~30 MB.</p>
-<p>Blast radius. One Postgres means one failure domain. A corrupted pg_data takes down both apps. Mitigate with pg_dump on a schedule and a tested restore path. Restore into a scratch container before you trust the backup:</p>
-<p>Connection limits. Default max_connections is 100. Gitea and Umami together use a handful. If you add more apps, watch pg_stat_activity and raise the limit in postgresql.conf via command: in the compose file rather than editing the volume.</p>
-<p>Measured RAM: shared vs. per-app PostgreSQL. Here is the side-by-side comparison from our disposable Docker sandbox runs:</p>
-<p>Consolidating two PostgreSQL instances into one saved 42.5 MB on the database tier (from 70.6 MB down to 28.1 MB) — coincidentally matching the 42.5 MB idle footprint of Caddy itself in this run, so the complete 4-container proxied stack (401.5 MB) still sat 8.7 MB below the two unproxied separate-DB stacks (410.2 MB). Even if both apps already ran postgres:16-alpine (~24–28 MB each), sharing only frees ~20–25 MB (~2% of a 1 GB VPS). For two apps, separate Postgres containers are usually worth that small tax; sharing starts paying real dividends once you run four or more Postgres-backed services on one small VPS.</p>
-<p>When to split. Split when: the apps need different Postgres majors, one app's load starves the other, or compliance requires separate database instances. Until then, one container with two roles is the simpler operational story on a 1 GB VPS.</p>
-<p>Measured in our sandbox run: total memory 401.5 MB (sum of per-container peaks over a 30s idle window after startup) across 4 containers; largest container 180.4 MB; published port(s) 18080; HTTP probe returned 200, 200. The run took 113.0s including the image download. Required secret(s) APP_SECRET, GITEA_DB_PASSWORD, GITEA_INTERNAL_TOKEN, GITEA_JWT_SECRET, GITEA_SECRET_KEY, POSTGRES_SUPERUSER_PASSWORD, TWO_FACTOR_ENCRYPTION_KEY, UMAMI_DB_PASSWORD were generated for the test run, as the tutorial instructs. Container breakdown: gitea 180.4 MB, umami 150.5 MB, caddy 42.5 MB, db 28.1 MB. Verified routes: Gitea on shared Postgres (HTTP 200), Umami on shared Postgres (HTTP 200).</p>
-<p>Verification: we ran this docker-compose stack in a disposable Docker environment and recorded the measurements above. They describe that run, not a guarantee for your host.</p>
-<p>Originally published with full interactive benchmark metrics and server sizing notes at https://vpsfolio.com/stacks/shared-postgres-container-vs-separate-databases-docker/.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Unless you've been living under a rock, you'll know that protein-maxxing is all the rage right now. The conversation largely revolves around go-to options like chicken breast, but we'll let you in on a little-known secret: Several meats out there actually outrank poultry when it comes to the macronutrient. Among them are certain types of fish, a protein source that often gets sidelined in the conversation, but leaving it out would be a serious mistake. Aside from being delicious, versatile, and (much of the time) budget-friendly, fish is also seriously easy to cook.</p>
+<p>Salmon may be the most popular high-protein fish, and 100 grams of the farmed Atlantic variety contains around 20.3 grams of protein. That's already impressive, since it beats the 18.2 grams found in the same amount of 90% lean ground beef and comes up just under 2 grams shy of chicken breast. Compared to other fish, however, salmon actually gets outdone.</p>
+<p>Tuna sits at or near the very top of the seafood protein hierarchy thanks to its lean, muscular build, but beyond whole fish, another serious source of protein is the canned variety. At face value, a tiny, oily anchovy isn't much to look at. But once these fish are packed tightly into cans, you're left with a surprisingly concentrated source of protein, along with a healthy dose of other beneficial nutrients. If anchovies pack too much of a punch for your taste, canned sardines also make for an excellent high-protein swap — and that's only the beginning.</p>
+<p>Salty, briny, and often budget-friendly, canned anchovies contain a whopping 25.4 grams per 100-gram serving. You can enjoy them straight from the can since they're already cured, or if you want to take a more elevated approach, take a cue from the Portuguese and use them as an elegant garnish on toast alongside capers, good-quality olive oil, pickled red onions, and a sprinkling of parsley for good measure.</p>
+<p>Sardines might be tiny, but they're loaded with protein (around 24 grams per 100 grams, to be precise). Like anchovies, they're an oily, nutrient-rich fish, but they set themselves apart with a milder, less salty flavor. Often sold whole, they make for a visually appealing garnish if you're looking to add a little drama to your dishes, and since canned sardines have already been cooked, they're good to eat straight out of the tin.</p>
+<p>Yellowfin tuna, also known as ahi, is one of the more premium tuna species out there. Alongside its firm, beef-like texture and clean flavor, it's loaded with protein, with a 100-gram serving containing around 24.7 grams. It's also exceptionally versatile, since suppliers cut it into loins, saku blocks, and steaks for a hearty meal, while thinly sliced or cubed pieces work wonders in a tropical poke bowl or as delicious nigiri if you're craving something lighter.</p>
+<p>Bluefin is the undisputed king of tuna; it's prized for sushi and sashimi, and its price can reach heights that can only be described as absurd — a 612-pound bluefin once sold for $3 million at a 2019 Tokyo auction. Like its price, its protein content sits on the higher end of the spectrum, too, reaching roughly 23 grams per 100-gram serving. But bluefin is better known for its impressive fat content, with the fatty otoro belly especially prized for its smooth, buttery texture.</p>
+<p>Tilapia is one of the most popular fish in America, and despite its bargain price tag, it delivers a serious amount of protein, with a 100-gram serving containing 26.2 grams. It's also a solid pick if you've got sustainability in mind, since responsibly farmed tilapia can be relatively easy on the environment. This lean whitefish has a firm, flaky texture and mild flavor that stands up beautifully to grilling or pan-searing, making for a quick and satisfying weeknight dinner.</p>
+<p>Halibut is a fan favorite that just edges out salmon's protein content, with approximately 20.8 grams per 100 grams. Despite those similar protein profiles, halibut is a lower-fat alternative with a considerably less fishy taste, making it a popular pick for those who have yet to come around on salmon. There are plenty of ways to prepare it, and grilling, pan-frying, or baking will all make for a delicious meal.</p>
+<p>Notable for its vibrant red skin, firm white flesh, and uniquely sweet, nutty flavor, red snapper is a hugely popular seafood choice that packs 20.51 grams of protein per 100-gram serving. Compared to your everyday whitefish, its price tag ranges from moderate to expensive, but it more than makes up for it with a wonderfully tender texture. To make use of its dramatic red hue, pair your snapper with seasonings and aromatics and bake it whole.</p>
+<p>If you've grown tired of salmon's ever-rising price tag, look no further than rainbow trout. Also available as steelhead trout, this seriously underrated fish has a milder, more delicate flavor than salmon and leaner, finer-flaked flesh. Rainbow trout contains 20.5 grams of protein per 100-gram serving, though its leaner profile makes it less forgiving than salmon at very high heat, so it's best suited to gentler methods like pan-frying or whole roasting.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/gongkang/shared-postgresql-container-vs-per-app-databases-in-docker-compose-measured-1m0p" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.foodrepublic.com/2319313/fish-more-protein-salmon/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

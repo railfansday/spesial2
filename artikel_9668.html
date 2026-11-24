@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lua for data representation</title>
+    <title>Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9668.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,77 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Lua for data representation</h1>
+        <h1>Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt525c0b544f1eeec1/6afe238519e68185a02d38c2/GettyImages-1428094247.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt525c0b544f1eeec1/6afe238519e68185a02d38c2/GettyImages-1428094247.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>my major advocacy is that lua is a very good general purpose language. this is not an opinion shared by all. lua’s major design goal was extending and embedding into existing programs. I think the simplicity and flexibility in design persued towards the end of that goal extends to make lua a very good language in general. that said, it does its job quite well as an embedding language, and one of its more interesting use cases (and actually, one of its oldest use cases) is as a data or configuration format.</p>
-<p>lua’s syntax provides many niceties. for instance, lua has an infinite family of multiline strings: the most basic one starts with [[ and ends with ]]. however, any amount of equal signs can be put between the two square brackets: print([======[hello, world]======]). the only way to close a [===[ is with an accompanying ]===], not with a ]] or a ]==], or a ]====].</p>
-<p>here is a function that for any string, creates the correct multiline string to represent it:</p>
-<p>local function stringize(str)
-    local equal_signs = ""
-    for e in str:gmatch("](=*)]") do
-        if #e >= #equal_signs then
-            equal_signs = e .. "="
-        end
-    end
-    return ("[%s[%s]%s]"):format(equal_signs, str, equal_signs)
-end
-
-of course, you can just use string.format with %q, but multiline strings usually provide nicer looking and more compact results. these strings are very good for representing lua code as strings in other lua code.</p>
-<p>anyway, download this file. if you want to consume massive amounts of memory and possibly crash your computer, run it in cpython. if you want to see “hello, world” printed 5 million times, run it in lua. lua’s parser is designed to handle massive files with stride, which is fairly unique and quite necessary if lua is to be used for this purpose.</p>
-<p>design and implementation choices like these come together to suit lua for this purpose. I’ve seen 3 main styles of using lua code to represent data or configuration. I think lua manages to accomodate each of them well, and each have their appropriate use.</p>
-<p>chunks are much like function bodies. they have return values. so, one thing that one can do is just return a big table from a lua program.</p>
-<p>return {
-    foo = "bar",
-    list = {1, 2, 3},
-    rule_of_thirds = true,
-}
-
-if you’re using this style, you can omit the return and then prepend it when you load the lua files. this makes any trailing statements syntactically invalid because the return statement must be the last statement in the block. keep in mind, though, that this does not prevent arbitrary code because function literals can be used instead.</p>
-<p>return (function() arbitrary_code() end)()
-
-trying to strip out function literals to make this technique safer is fraught and defeats the general elegance of this technique. one can fairly readily use JSON instead.</p>
-<p>what is often missed about lua is that it’s subtly full of metaprogrammability. for instance, lua globals are just stored in a table, and which table is used can be controlled by the code itself. this table is known as the “environment”. an environment may be passed to load as an argument. the way this can be used is that you can load a chunk with an empty environment and then capture the values it sets as globals.</p>
-<p>-- config.lua
-foo = "bar"
-list = {1, 2, 3}
-rule_of_thirds = true
-
-then, you can get a table with all the configuration as simply as this:</p>
-<p>local config = {}
-assert(loadfile("config.lua", "t", config))()</p>
-<p>lua has a bit of sugar that allows you to shed the parenthesis on function calls to make them look cleaner. an imperative style is a very suitable means to represent data in lua, and it’s very powerful.</p>
-<p>path "/path/to/things"
-
-config {
-    foo = "bar",
-    list = {1, 2, 3},
-    rule_of_thirds = true,
-}
-
-lipsum [[
-    Voluptatibus laudantium et omnis ut debitis. Similique omnis molestias
-    consequuntur. Praesentium corporis omnis nihil et quidem dolore. Veritatis
-    fugiat eaque corporis eligendi officiis praesentium. Libero quo vero
-    temporibus impedit sit inventore assumenda
-]]
-
-programming in lua provides a real world example of this.</p>
-<p>the major problem with using an entire programming language to represent data is that untrusted data can be readily crafted to be malicious. indeed, I would not use this technique for untrusted data. with that in mind, it is possible to solve or mitigate the potential vulnerabilities.</p>
-<p>the main technique for sandboxing lua is controlling the environment. when using lua for data representation, an empty enivronment is the most appropriate (or, an environment that only exposes data constructors). this prevents any I/O or access to the larger program’s state. preventing access to all standard library functions is safest. there are a few standard library functions that have consequences you might not expect.</p>
-<p>another concern is denial of service. this is trickier to prevent. it’s fairly trivial to construct a lua chunk which does not return (while true do end). debug.sethook can mitigate this somewhat. even so, it’s probably possible to construct something that uses excessive amounts of memory. that said, denial of service is significantly less problematic than the vulnerabilities that are completely avoided by depriving the untrusted code of any standard library functions.</p>
-<p>finally, make sure to reject lua bytecode. untrusted lua bytecode is not safe and may cause arbitrary nasal demons in the lua interpreter. load can accept both bytecode and lua source by default. however, passing "t" for the mode parameter prevents this.</p>
-<p>clearly, it’s silly to bring in the entire lua interpreter where you would just use JSON or INI. where this use case of lua shines is when you’re already using lua for a project (and then you already have this powerful data description language), or when you need something with a lot of power or flexibility.</p>
-<p>these mini languages can be extended to arbitrary complexity and nuance. unlike JSON, you can add arbitrary type constructors, or anything at all. you can build any kind of language you want, and that’s how lua is designed to be used, and it’s actually approximately the story of how it was invented.</p>
-<p>if you’re anything like me, this will sound a little familiar. indeed, many have said similar things about lisp and forth. both of those languages have very different approaches but reach the same conclusion of “inventing your own language”. I believe lua belongs in their pantheon.</p>
-<p>python? js? ruby? what the hell are those? all I care about is LUA.</p>
+                <p>Cybersecurity In-Depth: Feature articles on security strategy, latest trends, and people to know.</p>
+<p>Ransomware isn't slowing down. A new framework gives security teams the edge to trace attackers back to their source.</p>
+<p>It's a now-familiar scenario: "Warning" abruptly displays on the computer screen as the system locks down. A ransom note follows, threatening data extortion and continued disruptions if a demand is not met. Although it may seem sudden at the moment, the attack was actually the final step in what may have been years of planning, all carried out by a sprawling, interconnected network of underground actors.</p>
+<p>But a new framework based on an identity graph analysis, developed by Flare threat researcher Assaf Morag, aims to help defenders and law enforcement take a more proactive approach to ransomware risk by better understanding who they're up against. When applied during research, the framework can uncover the inner workings of these operations, including indicators of compromise (IoCs) that are critical to incident-response investigations. Researchers can also use it to find connections among various threat actors and groups, which is increasingly important as new groups emerge each year.</p>
+<p>Related:As Test Takers Turn to AI, Exam Security Plays Catch-Up</p>
+<p>Mapping and understanding the connections among the various ransomware gangs is also vital when it comes to documenting the tactics, techniques, and procedures (TTPs) that ransomware groups use against organizations daily. Threat actors are highly adaptable, developing, buying, or renting new tools all the time to bypass endpoint detection and response (EDR) and to craft more convincing phishing emails. So the more available data about their operations, the more predictable their behaviors become for defenders.</p>
+<p>Morag plans to debut his repeatable investigative methodology for mapping criminal organizations in a briefing at Black Hat Europe 2026. He will walk through the framework step by step; anyone can use it to reproduce the research or apply the same process to a new investigation.</p>
+<p>Building a framework wasn't Morag's original goal. He first set out to study how initial access brokers (IABs) operate on Dark Web forums. But he realized the interconnected web of threat actors was too vast to dissect using available resources. His efforts to connect gang operators and affiliates to IABs actually took two long months of manual work, which wasn't a useful process for such a swiftly moving threat landscape. That's when Morag decided to develop a framework to help graph the activity. Once it was ready, the same research took only three hours.</p>
+<p>To build the framework, Morag went into detective mode, gathering clues from forums and chat posts and sorting them into various buckets for "hard evidence" versus "soft evidence." The first included factors like specific messaging IDs, emails, or chat handles, while writing styles, typos, and reused phrases fell into the latter. Once he was able to verify a clue, he could use it to search for other connections. Eventually, the confirmations expanded into a massive map of connected identities with 21 personae, active over 17 years, with 5,437 posts.</p>
+<p>Related:NIST: Solo Shouldn't Mean Less Secure</p>
+<p>Morag's findings support how ransomware attacks are rarely conducted by a single group from start to finish, and how operations often mirror legitimate businesses with everyone playing their role. That makes it hard to parse out exactly who's who.</p>
+<p>That became obvious when Morag came across a notification posted to a Dark Web forum, translated from Russian, that read, "We are the oldest international Russian ransomware affiliate program." The group claimed to be a private program that emerged in 2018. But based on underground forum discussions, he noticed that some members had been active since 2010.</p>
+<p>Tracking Tox IDs was the primary way Morag traced the connections, unveiling the true identity behind the fake personae and generic aliases threat actors use, like "John" or "Michael." Ransomware ecosystems commonly use communication platforms like Tox, Discord, Telegram, and Jabber to conduct payment negotiations with organizations or to recruit new affiliates, among other actions.</p>
+<p>Related:Incidents Move Too Fast for Pen & Paper</p>
+<p>When communicating with someone through a specific Tox address, Morag knew he was reaching one consistent endpoint, whether cloud-based or someone's personal computer. Either way, it's the same device every time, which matters because threat actors often operate under multiple aliases.</p>
+<p>"He can change his name, but if I can take these identifiers and connect them together, that could be a way to look beyond the persona's name, which is usually fake, and that's exactly what I did," Morag tells Dark Reading.</p>
+<p>During the course of investigation, Morag discovered six layers of operational roles across the business flow:</p>
+<p>The homemade ransom layer: Useful for defenders to study, these are the people who develop ransomware strains, loader malware that bypasses antivirus and EDR, and infostealer payloads.</p>
+<p>The ransom deployment layer: The gang operators and their affiliates who select the ransomware/malware, deploy it, and extort the victims.</p>
+<p>Pen-testers: Folks who probe for weaknesses to find ways into organizations.</p>
+<p>The dealers: IABs that buy and sell that initial access, like a sales department for cybercrime. (Morag was able to pinpoint seven individuals active for over nine years, spanning 50 forums and a whopping 1,300 events.)</p>
+<p>Fraud recovery: Organizations that perform diagnostics, negotiate with attackers, and arrange settlements with victims.</p>
+<p>Crypto draining: Those that process stolen seed phrases and private keys at scale and cross-sell crypto services to ransomware victims to compromise and drain wallets.</p>
+<p>While piecing it together, one link particularly surprised Morag: a tie between supposed good-guy fraud-recovery firms and the ransomware deployers. Companies claim to help ransomware victims but secretly defraud them, he notes, and victim organizations have no clue.</p>
+<p>Up until the fraud recovery layer in the business flow, everything was done in Russian. After that, Morag noticed an intentional switch to the English language. Once the ransomware locked an organization's system down, the ransomware deployers swooped in, posing as legitimate businesses looking to provide recovery services. They installed tools on victims' systems, ran diagnostics, offered data recovery, and legal compliance services, Morag says.</p>
+<p>"This is not new, and we've also seen a few cases in the past month in the US. These kinds of organizations that help other organizations fight against ransomware were actually defrauding them," Morag explains. "I haven't seen anyone make the connection between those who do the recovery fraud and those that actually deploy the ransom, which is really amazing."</p>
+<p>While deep in the underground forums, it also became clear to Morag how much threat actors value their reputations. For instance, on Exploit, "a reputable Russian market" where attackers pay $100 to $150 and undergo a test to get in, Morag observed infighting as threat actors accused one another of not being legitimate. The forum is a place where "you don’t want to lose your reputation" or your access, he stresses, because it's where threat actors discuss sensitive dealings, such as zero-day and known vulnerability exploits, and forge new ransomware-as-a-service partnerships. Looking into these disputes offered critical intelligence about how operations run because threat actors will throw each other under the bus by revealing what tools they use, how they move money, or what access they are trading.</p>
+<p>Exploit, Morag says, is "a real gold mine because it explains how they work, what they're doing, the level of leadership, and who reports to who."</p>
+<p>Exploit was one of more than 40 underground forums he visited that, when analyzed together with the framework, revealed the inner workings of cybercrime gangs. Unmasking the players provides more evidence for organizations to fight back against ransomware as the threat disrupts everything, from Coca-Cola production to Japanese frozen food.</p>
+<p>The framework can't directly help organizations push back against ransomware, but it does provide much-needed contextual data for the private and public sectors as problems persist. Morag is applying the framework to help with attacks against financial systems — an obviously huge target for threat actors — for example. He also applied it to investigate another ransomware group more recently and says it yielded helpful results.</p>
+<p>Real insight into a large operation like the one Morag discovered, knowing it included a fake fraud recovery layer, may also make organizations think twice about negotiating. They never know who's on the other line.</p>
+<p>"It's [about] knowing your enemy," Morag says.</p>
+<p>Black Hat Europe returns to the Excel in London with a four-day program this December. The event will open with two-and four-day options of specialized cybersecurity Trainings, with courses of all skill levels. The two-day main conference boasts Briefings featuring the latest in research, developments, and trends in cybersecurity, along with dozens of open-source tool demos in Arsenal, a robust Business Hall, networking, and social events, and much more. Use the code: DARKREADING and get 10% off your pass.</p>
+<p>Arielle spent the last decade working as a reporter, transitioning from human interest stories to covering all things cybersecurity related in 2020. Now, as a features writer for Dark Reading, she delves into the security problems enterprises face daily, providing context and actionable steps. She looks for stories that go past the initial news to understand where the industry is going. Her coverage areas include identity and access management, cyber risk and operations, industrial control systems, operational technology, and ransomware trends.</p>
+<p>She previously lived in Florida where she wrote for the Tampa Bay Times before returning to Boston where her cybersecurity career took off at TechTarget SearchSecurity. When she's not writing about cybersecurity, she pursues personal projects that include a mystery novel and poetry collection.</p>
+<p>What We Missed: Nvidia CEO Scandal Rocks AI Industry</p>
+<p>Navigating Vulnerability Hysteria in the AI Era</p>
+<p>As Test Takers Turn to AI, Exam Security Plays Catch-Up</p>
+<p>Black Hat Asia | Marina Bay Sands, Singapore</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://citrons.xyz/journal/2025-07-23" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cybersecurity-operations/alias-researcher-unmasked-ransomware-actors" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps</title>
+    <title>The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9503.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,87 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps</h1>
+        <h1>The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now.</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fioont2647hrdzl5gupuo.png" alt="Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2026-10/pie%20crumsb.jpg" alt="The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fioont2647hrdzl5gupuo.png" alt="Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2026-10/pie%20crumsb.jpg" alt="The secret to make-ahead pie crust? Pie crumbs.: Get ahead on your pie baking right now." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 24
-•
-Originally published at vpsfolio.com</p>
-<p>Per-container RAM: vaultwarden 46.9 MB · memos 21.7 MB · caddy 10.9 MB (sandbox verified 2026-11-24)</p>
-<p>View the interactive benchmark plate and full VPS sizing comparison or compare all measured stacks on VPSFolio Benchmarks.</p>
-<p>One public entrypoint, many private backends. Caddy 2 sits on a dedicated bridge network (proxy_net) and is the only container that publishes a host port. Vaultwarden and Memos join the same network but never expose ports: to the host, so their HTTP listeners are reachable only from Caddy. That is the whole pattern: a single TLS terminator, a shared L2 segment, and per-app Compose files that can come and go without touching the proxy.</p>
-<p>Caddy is a good fit here because its config is small, its automatic HTTPS is real (ACME + OCSP stapling + HTTP/3), and it handles WebSocket upgrades in reverse_proxy without extra directives. Vaultwarden needs WebSockets for live sync notifications; Memos is a plain HTTP app. Both work through the same reverse_proxy block.</p>
-<p>The sandbox-safe Compose file below uses auto_https off and binds Caddy to 127.0.0.1:18080 so you can verify routing with curl -H "Host: ..." before any DNS or certificate work. In production you flip two lines and Caddy gets real Let's Encrypt certs on 80/443.</p>
-<p>Create the project directory and write both files. The .env holds secrets; the Compose file holds everything else.</p>
-<p>Now the Compose file. Note the inline configs: block: the Caddyfile is embedded, not bind-mounted.</p>
-<p>You should see three containers running. Only caddy has a published port.</p>
-<p>Add the hostnames to /etc/hosts if you haven't already:</p>
-<p>Probe each backend through Caddy. The Host header is what Caddy matches on, so you don't need DNS for this step.</p>
-<p>Expect 200 OK from both. Vaultwarden returns its web vault HTML; Memos returns its SPA shell. If you get 502, Caddy is up but the backend isn't reachable on proxy_net — check docker compose logs vaultwarden and docker compose logs memos. If you get 404, the Host header didn't match a site block; confirm the Caddyfile content with docker compose exec caddy cat /etc/caddy/Caddyfile.</p>
-<p>Confirm the backends are not reachable from the host:</p>
-<p>Both should fail to connect. That's the point of the pattern.</p>
-<p>Two changes turn this into a real TLS terminator.</p>
-<p>1. Remove auto_https off and switch to real hostnames. Edit the caddyfile config block in compose.yml:</p>
-<p>2. Publish 80 and 443. Replace the sandbox port mapping:</p>
-<p>Also update .env and switch DOMAIN in compose.yml from http://${VAULT_HOST:-vault.local} to https://${VAULT_HOST} so Vaultwarden serves HTTPS URLs (required by Bitwarden clients for WebCrypto):</p>
-<p>Apply with docker compose up -d. Caddy will request certificates on first request to each hostname. Watch the logs:</p>
-<p>You should see certificate obtained successfully for each domain. If ACME fails, the usual causes are: port 80 blocked by the provider firewall, DNS not yet propagated, or a CAA record that doesn't allow Let's Encrypt.</p>
-<p>Splitting Caddy into its own stack. Once you have more than a couple of apps, move the proxy to /opt/proxy/compose.yml and use an external network so app stacks can join and leave without restarting Caddy:</p>
-<p>In /opt/proxy/compose.yml, set networks: proxy: external: true and attach Caddy to it. In each app's Compose file, declare the same external network and add it to the service. Caddy resolves backends by container name on that network, so reverse_proxy vaultwarden:80 keeps working as long as the container is named vaultwarden and joined to proxy.</p>
-<p>Remote backups. The named volumes are the state. Back them up with a one-shot container that mounts the volumes read-only and writes a tarball to a remote target. For example, using rclone against an S3 bucket:</p>
-<p>Schedule that with cron or a systemd timer. Restore is the reverse: download the tarball, stop the stack, extract into the volumes, start again.</p>
-<p>Upgrades. Caddy, Vaultwarden, and Memos all publish rolling tags. Pin versions in .env (MEMOS_TAG=0.22.0, and replace vaultwarden/server:latest with a digest) if you want reproducible deploys. Upgrade one service at a time: docker compose pull vaultwarden && docker compose up -d vaultwarden. Caddy reloads its config on SIGHUP, but docker compose restart caddy is simpler and takes under a second.</p>
-<p>Failure modes. If Caddy is down, every app is down — that's the cost of a single entrypoint. Keep the Caddy container's restart policy at unless-stopped and monitor it. If a backend is down, Caddy returns 502 for that host only; the other sites keep serving. If proxy_net gets recreated (e.g., you delete the network), Caddy's upstream DNS cache goes stale; restart Caddy after network changes.</p>
-<p>Backups. The critical volumes are vw_data (Vaultwarden's SQLite DB and attachments) and memos_data (Memos' SQLite DB). caddy_data holds certificates and ACME account keys; back it up too, or accept a brief re-issuance on restore. Test restores quarterly — an untested backup is a guess.</p>
-<p>Trade-offs. A shared Caddy is simpler than per-app reverse proxies and uses less RAM, but it couples app availability to the proxy. Splitting Caddy into its own stack with an external network decouples lifecycle: you can docker compose down an app without touching the proxy. The cost is one more Compose file and a network that must exist before any stack starts. For a 1 GB VPS running two or three apps, the single-file version in this guide is the right default; split when you outgrow it.</p>
-<p>Security headers. The security_headers snippet sets X-Content-Type-Options, Referrer-Policy, and X-Frame-Options. Vaultwarden's admin panel and web vault work fine with these. If you embed Memos in an iframe elsewhere, drop X-Frame-Options for that site block only.</p>
-<p>WebSockets. Vaultwarden's ENABLE_WEBSOCKET=true and IP_HEADER_TRUSTED_PROXIES=local are set so it trusts Caddy's X-Real-IP and accepts upgrade requests. Caddy's reverse_proxy forwards Upgrade and Connection headers automatically; no extra config needed. If live sync doesn't work, check docker compose logs caddy | grep -i upgrade and confirm the browser is hitting the same hostname Caddy is configured for.</p>
-<p>Measured in our sandbox run: total memory 79.6 MB (sum of per-container peaks over a 30s idle window after startup) across 3 containers; largest container 46.9 MB; published port(s) 18080; HTTP probe returned 200, 200. The run took 102.6s including the image download. Required secret(s) ADMIN_TOKEN, PUSH_INSTALLATION_KEY were generated for the test run, as the tutorial instructs. Container breakdown: vaultwarden 46.9 MB, memos 21.7 MB, caddy 10.9 MB. Verified routes: Vaultwarden via shared Caddy (HTTP 200), Memos via shared Caddy (HTTP 200).</p>
-<p>Verification: we ran this docker-compose stack in a disposable Docker environment and recorded the measurements above. They describe that run, not a guarantee for your host.</p>
-<p>Originally published with full interactive benchmark metrics and server sizing notes at https://vpsfolio.com/stacks/shared-caddy-reverse-proxy-multiple-docker-apps/.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>'Tis the season — to start thinking about holiday baking. And while this time of year is full of joy and celebration, it can also be stressful. We’re all searching for ways to get ahead of the curve, and one of the easiest? Make-ahead pie crust, made using pie crumbs.</p>
+<p>I first learned of this technique from a 90-something friend with whom I love to talk baking. Over lunch one day, something she said about pie captured my attention.</p>
+<p>"Did you ever hear of pie crumbs?" she asked. I admitted I hadn't — aside from the obvious: the scraps of pie crust left on the plate after the slice is gone. "My mother used to mix flour and salt and lard together to make this crumbly mixture that she'd store in a crock in the cellar. She called them her pie crumbs. When she wanted to make a pie, she'd just scoop out a few handfuls, add water, and roll out her crust."</p>
+<p>Sounds like a good make-ahead solution for 100 years ago — but now that we have easy access to freezers, why not just make pie dough and freeze it in ready-to-roll disks? A couple of reasons, actually.</p>
+<p>1) Pie crumbs allow you to make any amount of crust, from mini apple pies to a crust for a deep-dish 10" pie. With frozen disks, you're looking at a standard single crust — not always exactly what you want.</p>
+<p>2) Pie crumbs save time. Remove however much of the crumbly mixture you need (more on this below) from the freezer, and within 15 minutes the fat is soft enough that you can add water and roll out your crust. Compare that to the hours it takes to thaw and roll a frozen disk of prepared crust — not to mention the elbow grease if your crust isn’t fully thawed.</p>
+<p>3) Pie crumbs can be more stable in the freezer than pie crust disks. Why? Because without the added water, no ice crystals form. Ice crystals can damage the flour/water matrix, leading to changes in its structure (which can then potentially lead to changes in your pie crust).</p>
+<p>Oh, and one other reason I like pie crumbs: If my friend's mother used them, they were probably a 19th-century kitchen time-saver. And I love the feeling of preserving and carrying forward our American baking traditions — even something as simple as a shortcut for pie crust.</p>
+<p>Choose a standard pie crust recipe: Our Classic Double Pie Crust recipe is good choice, but anything that involves cutting fat into flour (lard, shortening, butter, etc.) will work.</p>
+<p>Mix flour, salt, and shortening and/or butter: Follow your recipe up until all of the fat is incorporated into the flour. You should be left with a bowl of dry, crumbly dough that barely holds together when squeezed. If using butter, you should be able to see visible chunks scattered throughout the dough.</p>
+<p>Weigh the pie crumbs: If you’re making a large batch of pie crumbs, it’s helpful to weigh and label the total gram amount so that you can easily remove the amount of pie crumbs for a single pie crust as needed. Our Classic Double Pie Crust makes 488 grams of pie crumbs; that means 244 grams per single pie crust. Label these amounts on your freezer storage bag.</p>
+<p>Bag, label, and freeze the crumbs: Seal pie crumbs in an airtight, freezer-safe bag and place in the freezer, preferably in the back where it won't be subject to warm air wafting over it each time you open the freezer door.</p>
+<p>Scoop crumbs out of the bag into a bowl: Whether one crust, two crusts, or one and a half, do the math and measure the crumbs based on your recorded gram amounts.</p>
+<p>Let the crumbs thaw for 15 to 20 minutes or so: Wait until the butter chunks feel barely pliable in your fingers.</p>
+<p>Add water and mix: Add water based on your original recipe amount, or just enough water to make a chunky mass when mixed. Squeeze and knead the dough briefly; all you're doing here is bringing the chunks together into one solid piece of dough.</p>
+<p>Roll the dough, place in a pan, and bake accordingly: From here, your pie crust is the same as any fresh-made crust and can be filled and baked or prebaked for a no-bake filling. (Bonus: Because the crumbs were frozen and remain cold as you work with them, there's no need to chill your rolled-out crust before filling and/or baking.)</p>
+<p>Fairly indefinitely, though the longer they're frozen, the more chance they have both to absorb freezer odors, and for the fats to start to go off. I've also found that, after about two weeks in the freezer, I need to add a touch more water than usual to bring the dough together — due to the drying effects inherent in freezing.</p>
+<p>With pie season hard upon us, now's the time to try pie crumbs for make-ahead pie crust. Or maybe you have another old-fashioned pie trick up your sleeve? Share your favorite tips in the comments, below.</p>
+<p>For detailed ingredient amounts for the crust demonstrated above, see our recipe for Classic Double Pie Crust.</p>
+<p>And if you're looking for additional time-saving ways to use your freezer in the run-up to the holidays, check out our recipe for Homemade Brown and Serve Rolls and Apple Pie with Make-Ahead Filling.</p>
+<p>Cover photo and food styling by Liz Neily.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>Top tips from the Things Bakers Know podcast.</p>
+<p>Mini pies may be the secret to a stress-free celebration.</p>
+<p>Because we're all wondering what to do with our apple and pumpkin pies.</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/gongkang/shared-caddy-2-reverse-proxy-for-multiple-self-hosted-docker-apps-i2a" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/10/26/make-ahead-pie-crust" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

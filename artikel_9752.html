@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</title>
+    <title>Netflix at QConSF 2026: Retrofitting the SDLC for AI Coding Agents</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9752.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,79 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</h1>
+        <h1>Netflix at QConSF 2026: Retrofitting the SDLC for AI Coding Agents</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://res.infoq.com/news/2026/11/netflix-sdlc-ai-coding-agents/en/headerimage/netflix-header-1200x630-1795359626158.jpg" alt="Netflix at QConSF 2026: Retrofitting the SDLC for AI Coding Agents" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://res.infoq.com/news/2026/11/netflix-sdlc-ai-coding-agents/en/headerimage/netflix-header-1200x630-1795359626158.jpg" alt="Netflix at QConSF 2026: Retrofitting the SDLC for AI Coding Agents" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>3 months ago, we started a revival of Papers with Code (see also the announcement tweet). Its goal is to make open AI research accessible and digestible, so that people can easily find the artifacts related to a paper, find state-of-the-art (SOTA) across the various domains of AI, share interesting research and build on top of each other's work. In other words, its goal is to power the wave of research that leads to the next Transformer.</p>
-<p>Of course, making AI research accessible requires a powerful search engine, so that humans and agents can quickly find relevant and related work, either through the website or the pwc search CLI command, which agents can use via the Skill.</p>
-<p>It's important to note that searching for research is not quite the same as searching for regular text. A useful paper search engine should find an exact title or arXiv identifier, but it should also understand a query such as “small language models for code generation” even when those words do not appear together in a paper. It needs to recognize that “the original BERT paper” is a navigational request, tolerate an incomplete title or typos, and still respond quickly when a model service is cold or temporarily unavailable.</p>
-<p>For Papers with Code, we built this as a hybrid search system. This is also based on our prior experience at ML6, where we developed RAG-based systems for clients. It turned out that hybrid search typically outperforms keyword- and vector-based search systems, as it combines the best of both worlds (see also this blog for more info). Keyword search finds exact mentions, whereas vector search finds more fuzzy, semantically similar terms. Note that rerankers (also called cross-encoders) can further improve the results, although they also come with additional overhead and latency.</p>
-<p>Papers with Code relies on a PostgreSQL database, hence its full-text search capabilities provide a fast lexical baseline. For dense embeddings, pgvector is used to add semantic recall, and the reciprocal rank fusion (RRF) algorithm combines the two. Three Hugging Face services are used for the dense embeddings:</p>
-<p>Today, the system maintains embeddings for more than 110,000 current papers sourced from arXiv and Daily Papers. This post explains the architecture, the design decisions behind it, and the lessons we learned while taking it to production.</p>
-<p>We deliberately split search into an offline corpus build and an online search service:</p>
-<p>The expensive, throughput-oriented work runs as Jobs. Durable artifacts live in a Bucket. Only the small query-embedding step sits on the request path, behind a protected Inference Endpoint, to power the online search. If that endpoint is cold, busy, or unhealthy, search immediately falls back to full-text retrieval. This separation makes the system both powerful and fast.</p>
-<p>Embedding pipelines often fail in subtle ways: a model revision changes, query and document prompts are mixed up, vectors are truncated differently, or an updated abstract no longer matches its stored vector.</p>
-<p>We avoid this by treating the embedding format as a versioned API. Every paper is encoded as:</p>
-<p>Our production generation uses Qwen/Qwen3-Embedding-0.6B, pinned to an exact revision, with 256-dimensional L2-normalized vectors. We selected the model with help from the MTEB leaderboard, the go-to benchmark for comparing embedding models. Note that newer embedding models like Qwen3 allow for 2 new features:</p>
-<p>This contract follows an embedding from export, through GPU inference, into PostgreSQL, and finally into online retrieval.</p>
-<p>Full-corpus embedding is a classic batch workload. It needs a GPU for a relatively short period, benefits from high throughput, and should not consume resources between runs. Hugging Face Jobs fits that shape well: a Job is defined by a command, a hardware flavor, and optionally a Docker image, and can run uv scripts with their dependencies declared inline.</p>
-<p>Our corpus build starts by exporting the latest version of every paper from a repeatable-read PostgreSQL snapshot. The exporter streams rows rather than loading the catalog into memory, writes bounded JSONL shards, and creates a manifest containing row counts and SHA-256 checksums.</p>
-<p>We sync that immutable run directory to a private Storage Bucket and mount the Bucket directly (using hf-mount) into an l4x1 Job (an NVIDIA L4 GPU, which has 24GB of VRAM). From the worker's perspective it is simply a filesystem:</p>
-<p>Each completed shard has its own marker, so a restarted Job can skip verified work. This is useful for a large corpus: retrying should just resume work rather than overwriting existing embeddings.</p>
-<p>In our 5,000-paper pilot, the Qwen Job encoded about 75 papers per second at 1024 dimensions on an L4 GPU. The same pass could be deterministically materialized at 512 and 256 dimensions, so we could compare the storage and retrieval trade-offs without paying for more inference.</p>
-<p>Storage Buckets are mutable, S3-like object storage on the Hub, optimized for AI workloads. They can be accessed through hf://buckets/... paths and mounted read-write in Jobs without building a separate storage integration.</p>
-<p>For us, the Bucket is more than a place to put vectors. It is the boundary between three systems with different lifecycles:</p>
-<p>We organize artifacts under immutable run prefixes:</p>
-<p>Buckets themselves are intentionally mutable, so immutability is an application-level rule: a run ID is never overwritten, and every artifact is covered by a manifest and checksum.</p>
-<p>Only after the importer rechecks schemas, checksums, dimensions, normalization, unique paper IDs, and current content hashes do we load the vectors into PostgreSQL. We then build a separate HNSW index for the new generation and atomically mark it active only when every eligible current paper is covered (HNSW is the graph-based algorithm that enables fast vector search).</p>
-<p>Batch embeddings solve the document side of retrieval. A user query still needs to be embedded at request time using the same model contract.</p>
-<p>We deploy the pinned model as an authenticated Inference Endpoint backed by Text Embeddings Inference (TEI). The endpoint accepts the query text and returns a normalized 256-dimensional vector using the model's query prompt. Note that one could also leverage vLLM or SGLang here.</p>
-<p>The API then performs a cosine-distance search over the active pgvector generation:</p>
-<p>The HNSW index keeps this lookup fast. On our 5,000-paper pilot, the 256-dimensional Qwen index achieved 0.9955 Recall@20 against exact search, with 1.31 ms p50 and 2.21 ms p95 HNSW lookup latency. Its table and index used about 27% of the storage of the 1024-dimensional version while retaining essentially the same ANN recall in that test.</p>
-<p>The Endpoint is configured with a maximum of one replica and can scale to zero when idle. That is a useful cost lever, as this means you're not paying when there's no usage. However, this also means cold starts must be part of the application design rather than treated as an exceptional event, as it takes some time for the endpoint to spin up and serve traffic.</p>
-<p>Our query client therefore has deliberately strict behavior:</p>
-<p>If the endpoint is scaling up, times out, returns a malformed vector, or has no concurrency available, we skip the semantic branch immediately. Users still receive lexical results instead of waiting for an unreliable dependency.</p>
-<p>Inference Endpoints works really reliably, and includes a nice dashboard so you can quickly see key analytics.</p>
-<p>For every query, the lexical branch retrieves up to 50 candidates using weighted PostgreSQL full-text search. The semantic branch retrieves up to 50 candidates from pgvector.</p>
-<p>We combine their ranks using weighted reciprocal rank fusion (RRF):</p>
-<p>score(d)=∑r ∈ {lexical, semantic}wrk+rankr(d)
-\text{score}(d) = \sum_{r \,\in\, \{\text{lexical},\, \text{semantic}\}} \frac{w_r}{k + \text{rank}_r(d)}
-score(d)=r∈{lexical,semantic}∑​k+rankr​(d)wr​​</p>
-<p>RRF is simple and robust, because it combines ranks rather than scores from two systems with different scales. Basically, if a paper is ranked high both by the lexical branch and the semantic branch, it has a higher chance of being ranked high by the hybrid search. We currently use equal branch weights and (k=60) (k is the "rank constant", a hyperparameter of the RRF algorithm).</p>
-<p>Dense retrieval improves recall for conceptual queries. Full-text retrieval remains excellent for exact terminology, identifiers, and rare names. We also preserve deterministic identity behavior on top of the fused ranking:</p>
-<p>Note: hybrid search isn't always the best option, it is recommended to start with keyword search as a cheap and fast baseline, and only adding semantic and/or hybrid search when it turns out those give a reasonable boost in retrieval quality. One could further improve the search by adding a reranker after keyword/semantic/hybrid retrieval, using a model like Qwen3-Reranker.</p>
-<p>The large initial corpus is embedded with Jobs, but Papers with Code changes continuously. New papers arrive, abstracts are corrected, and new arXiv versions become current.</p>
-<p>Launching a GPU Job for a handful of changed rows would add unnecessary startup and orchestration overhead. Instead, an hourly incremental process selects missing or content-changed papers and sends a bounded delta to the same TEI Endpoint, this time with the document prompt.</p>
-<p>Each run processes at most 500 papers in batches of 16. Before an embedding is written, the source row is locked and its content hash is checked again. If a paper changed during inference, that vector is discarded and picked up by the next run.</p>
-<p>This gives us a useful division of labor:</p>
-<p>The hourly path keeps the active index close to the live catalog without turning an online endpoint into an unbounded batch processor.</p>
-<p>The same document embeddings also power related-paper recommendations on each paper page.</p>
-<p>Because the source paper already has a stored vector, related-paper retrieval requires no model call at request time. It is a single nearest-neighbor query over the active generation. If a vector is temporarily missing, the application can use a previous arXiv version or fill results from the existing task- and citation-based fallback. We fetch citation data through the Semantic Scholar API and also built s2-cli, a command-line interface for querying its citation graph. The latter is used by the agent at https://paperswithcode.co/chat.</p>
-<p>Corpus embedding and query embedding use the same model, but they are different infrastructure problems. Jobs optimize for throughput and bounded cost; Inference Endpoints optimize for availability and request latency.</p>
-<p>Buckets provide an explicit handoff between compute and production. Checksummed artifacts create a reviewable boundary before data enters the production index.</p>
-<p>The revision, dimension, prompt, normalization, and input formatter all affect retrieval. Store them together and validate them everywhere.</p>
-<p>Scale-to-zero is valuable when traffic is intermittent, but only if the product has a fast fallback. Hybrid search gave us that fallback naturally: lexical search is always useful on its own.</p>
-<p>Matryoshka embeddings let us evaluate quality, memory, index size, and latency as one trade-off. In our pilot, 256 dimensions preserved ANN recall while materially shrinking storage compared with 1024 dimensions.</p>
-<p>New generations are imported beside the current one, indexed independently, checked for complete and current coverage, and then activated atomically. Rollback is a configuration change, not an emergency recomputation.</p>
-<p>Feel free to try out the search at https://paperswithcode.co or the chat interface at https://paperswithcode.co/chat, and let us know any feedback!</p>
-<p>The lexical fallback for scale-to-zero and the separate index activation boundary are useful production details. One question for the hybrid setup: do you measure relevance and latency separately when dense search is cold versus warm, so fallback quality is visible rather than hidden in an overall average? We examined lexical-first retrieval and semantic reranking on a smaller workload here: https://huggingface.co/blog/ironbcc/bm25-seb-rag-retrieval (I'm an author). That benchmark doesn't establish behavior on a paper-scale corpus.</p>
+                <p>A monthly overview of things you need to know as an architect or aspiring architect.</p>
+<p>Online InfoQ AI Engineering Certification (Jan 9): Building AI systems that hold up in production.
+
+                            Register Now</p>
+<p>Facilitating the Spread of Knowledge and Innovation in Professional Software Development</p>
+<p>Unlock the full InfoQ experience by logging in! Stay updated with your favorite authors and topics, engage with content, and download exclusive resources.</p>
+<p>In this episode, Christopher "CRob" Robinson, CTO of OpenSSF, Akrites, and chief security architect of the Linux Foundation, explores the state of software supply chain security amid multiple security incidents and explains how tools like Scorecard, the Security Baseline framework, and SLSA help harden software.</p>
+<p>Michael Stiefel spoke to Zhou Yu about using dynamic simulations to evaluate AI agents. One particular focus was conversational agents where actions depend on prior responses, and the non-deterministic nation of LLMs means you cannot rely on static, reference-based benchmarks. You need to test them using dynamic simulations that incorporate different personas, goals, and corner cases.</p>
+<p>Dio Rettori discusses the operational realities of enterprise AI inference. Moving beyond fast token generation, he explores why inference requires dedicated systems engineering, tackles GPU utilization pitfalls, compares on-prem versus cloud TCO, and analyzes multi-agent latency determinism. He shares why teams must embed domain ontology directly into models rather than relying solely on RAG.</p>
+<p>Henry Wilson shares actionable tools from the BBC Sounds re-architecture to help senior engineering leaders drive technical strategy. He discusses building buy-in, navigating active resistors, using RFCs and ADRs, and balancing tradeoffs - showing that effective software architecture is fundamentally about communication, relationship-building, and organizational influence.</p>
+<p>The panelists explore how engineering teams adapt delivery architectures, pipelines, security, and governance for AI-assisted development. They share practical strategies for verifying AI-generated code, solving testing and deployment bottlenecks, maintaining human oversight, and measuring AI’s true impact on software velocity, quality, reliability, and operational cost.</p>
+<p>Work through your production AI decisions with senior engineers from other companies. Apply their perspectives to challenges from your own work.Online. Register Now.</p>
+<p>Compare team design, delivery flow, AI roles, and metrics with experienced practitioners. Online. Register Now.</p>
+<p>Building RAG pipelines or AI agents? Work through retrieval, context, evals, and reliability decisions with experienced practitioners.Online. Register Now.</p>
+<p>Distributed systems, decentralized decisions, platform engineering, and AI architecture. Online. Register Now.</p>
+<p>What's working across AI, architecture, and leadership, from the teams doing it. Register. Early bird ends Nov 10.</p>
+<p>Production AI across agents, context, evals, security, and infrastructure, from the senior engineers building it.Register. Early bird ends Nov 10.</p>
+<p>What early-adopter teams have proven in production, across 15 engineering tracks. Register. Early bird ends Nov 10.</p>
+<p>Learn from the decisions and trade-offs behind AI systems already running in production.Registration open.</p>
+<p>InfoQ Homepage
+News
+Netflix at QConSF 2026: Retrofitting the SDLC for AI Coding Agents</p>
+<p>Nov 23, 2026
+								
+								
+								
+									
+									3
+									min read</p>
+<p>At QCon San Francisco 2026, Mark Khuzam, senior software engineer at Netflix, described how the company's Commerce team retrofitted its software development lifecycle so that AI coding agents and engineers could ship together safely.</p>
+<p>Khuzam argued that most of the work was not about agents at all, but about documentation, consistency and review.</p>
+<p>Much of Commerce runs as server-driven UI, an approach Netflix has discussed at QCon before. A single screen-composition service behind the API gateway builds screens for iOS, Android, web and TV.</p>
+<p>Khuzam opened with a mock company email announcing that every engineer now had Claude Code and asking how much faster everyone was shipping. The problem the team ran into next was summed up in one line.</p>
+<p>The team's first attempt was having an agent migrate tests, and it took four tries. The team started with "migrate this file," then added instructions, then the APIs to use, then how to mock data.</p>
+<p>The docs were also hard to find, since the agent's context window ran out before it found the right page. And they were inconsistent, because tests were not written the same way across the codebase.</p>
+<p>Developers rated the internal framework at a Net Promoter Score of -3. Moving from one test to a whole feature, from screen to data to route to test, meant teaching the agent how the team builds.</p>
+<p>Khuzam described the fix as context engineering, "getting what engineers know into what agents see." The team wrote 45 architecture decision records, each "written for people and for agents."</p>
+<p>Each record covers the context, the decision, a pattern and an anti-pattern, and AI usage notes on what an agent should do. It also links to related docs and code, and the records now ship inside almost every repository.</p>
+<p>To keep those records and more than 300 other documents findable, the team borrowed from how search engines read a site. An AGENTS.md file, the project instructions file that coding agents read before anything else, plays the part of robots.txt.</p>
+<p>The second half of the talk followed code after an agent writes it. Khuzam noted that the CI pipeline is still deterministic, running builds, tests, screenshot diffing, merge queues and canaries.</p>
+<p>What changed is how agents plug into each phase. A review agent pre-reviews each pull request against the docs and ADRs, flags anti-patterns and looks at what depends on the change.</p>
+<p>Its first version left 23 comments on a single PR, starting with "Overall this PR looks great!" It now posts only verified blockers, each with evidence, a fix and the ADR rule it breaks. Engineers can add a revise label to have an agent read the review and push a fix to the same PR. Changes aren't yet auto-merged, and engineers own the code.</p>
+<p>Khuzam reported no Sev 1 incidents in 2026 on a core service and 32% more pull requests year over year. Developer NPS rose from -3 to +25 over three quarters.</p>
+<p>Ahead of the session, Khuzam framed the stakes on LinkedIn: "Agents can write code, but what gives us the confidence to ship Tier 0 services to 300M+ members without everything falling apart?"</p>
+<p>Work that crosses services raised a harder question. A product engineer building one feature touches the payment API, billing, the gateway and every client, so the team had to decide who owns the context and how it follows the work.</p>
+<p>Khuzam listed approaches that did not hold up. Loading every repository did not fit, Git submodules were brittle, a Git MCP server "sees one file, not the system," and shared copies went stale.</p>
+<p>The team needed context that was accurate, portable across agents, owned per domain and kept fresh. It settled on GraphRAG per domain, taking structure from the code and meaning from the docs and ADRs.</p>
+<p>Each graph is pinned to specific commits and served through a single Model Context Protocol tool. Claude Code, Cursor, Codex, a Slack bot and CI review all query the same graph, and every answer cites a file and a line.</p>
+<p>Khuzam closed with three rules: decide what agents should do and tell them, make it easy to find how to do it, and remember that human judgement still matters. "None of this is new. It's good engineering, built for a new reader."</p>
+<p>Developers interested in learning more can watch InfoQ in the coming weeks for video of the session and can view the session details here.</p>
+<p>Microsoft Ignite 2026; Explore What's Next in AI and Software Engineering - Learn how to architect agentic systems, modernize cloud infrastructure, and tackle emerging engineering challenges. Get practical insights from Microsoft experts and industry leaders. Microsoft Ignite is less than two weeks away!
+
+Register now to join us in person or attend online for free, November 17–20.</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+        
+			View an example</p>
+<p>A round-up of last week’s content on InfoQ sent out every Tuesday. Join a community of over 250,000 senior developers.
+		
+			View an example</p>
+<p>Test your approach against the decisions and trade-offs of senior practitioners running agents, evals, model serving, and AI-assisted engineering in production.
+                
+                See what worked, what failed, and what they would do differently. Bring those lessons back to your team to make better-informed architecture and delivery decisions.</p>
+<p>InfoQ.com and all content copyright © 2006-2026 C4Media Inc.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/pwc-search" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.infoq.com/news/2026/11/netflix-sdlc-ai-coding-agents/?utm_campaign=infoq_content&utm_source=infoq&utm_medium=feed&utm_term=global" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

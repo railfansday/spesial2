@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Single-Flight Token Refresh in Swift with Alamofire</title>
+    <title>Not Cocoa Powder Or Coffee: Add This Pantry Staple To Canned Chili For A Major Flavor Boost</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9515.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,96 +15,22 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Single-Flight Token Refresh in Swift with Alamofire</h1>
+        <h1>Not Cocoa Powder Or Coffee: Add This Pantry Staple To Canned Chili For A Major Flavor Boost</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F1yo40c8h2av8w55gf4da.png" alt="Single-Flight Token Refresh in Swift with Alamofire" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.foodrepublic.com/img/gallery/not-cocoa-powder-or-coffee-add-this-pantry-staple-to-canned-chili-for-a-major-flavor-boost/l-intro-1794987816.jpg" alt="Not Cocoa Powder Or Coffee: Add This Pantry Staple To Canned Chili For A Major Flavor Boost" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F1yo40c8h2av8w55gf4da.png" alt="Single-Flight Token Refresh in Swift with Alamofire" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.foodrepublic.com/img/gallery/not-cocoa-powder-or-coffee-add-this-pantry-staple-to-canned-chili-for-a-major-flavor-boost/l-intro-1794987816.jpg" alt="Not Cocoa Powder Or Coffee: Add This Pantry Staple To Canned Chili For A Major Flavor Boost" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>If your iOS app talks to a REST API with expiring tokens, you will eventually hit this bug: the access token expires, five requests fire at once, all five get a 401, and all five try to refresh the token. The server sees five refresh calls. Depending on how your backend rotates refresh tokens, the second call can invalidate the first and log your user out for no reason.</p>
-<p>The fix is called single-flight refresh: no matter how many requests fail at once, only one refresh call runs, and everyone else waits for its result. Here is how I approach it with Alamofire's RequestInterceptor and Swift concurrency.</p>
-<p>1. Guarantee only one refresh with an actor</p>
-<p>An actor gives us thread safety for free. We store the in-flight refresh as a Task, and every caller awaits the same one.</p>
-<p>swift
-actor TokenRefresher {
-    private var refreshTask: Task?
-    func freshToken(using refresh: @escaping () async throws -> String) async throws -> String {
-        if let task = refreshTask {
-            return try await task.value      // join the refresh already running
-        }
-        let task = Task { try await refresh() }
-        refreshTask = task
-        defer { refreshTask = nil }          // allow a new refresh later
-        return try await task.value
-    }
-}</p>
-<p>The first caller starts the task. Anyone arriving while it runs awaits the same task and receives the same new token.</p>
-<p>The interceptor does two jobs: attach the token to each request (adapt), and react to a 401 by refreshing and retrying (retry).</p>
-<p>swift
-final class AuthInterceptor: RequestInterceptor {
-    private let tokenStore: TokenStore 
-    private let refresher = TokenRefresher()
-    init(tokenStore: TokenStore) { self.tokenStore = tokenStore }
-    func adapt(_ urlRequest: URLRequest,
-               for session: Session,
-               completion: @escaping (Result) -> Void) {
-        var request = urlRequest
-        if let token = tokenStore.accessToken {
-            request.setValue("Bearer (token)", forHTTPHeaderField: "Authorization")
-        }
-        completion(.success(request))
-    }
-    func retry(_ request: Request,
-               for session: Session,
-               dueTo error: Error,
-               completion: @escaping (RetryResult) -> Void) {
-        guard request.response?.statusCode == 401, request.retryCount < 1 else {
-            return completion(.doNotRetry)
-        }
-        Task {
-            do {
-                let newToken = try await refresher.freshToken {
-                    try await self.tokenStore.refreshFromServer()
-                }
-                self.tokenStore.accessToken = newToken
-                completion(.retry)
-            } catch {
-                completion(.doNotRetryWithError(error))
-            }
-        }
-    }
-}</p>
-<p>request.retryCount < 1 stops an endless loop if the new token is also rejected.
-If the refresh itself fails, you should treat the session as ended and send the user to the login screen.</p>
-<p>3. Store tokens in the Keychain, not UserDefaults</p>
-<p>Access and refresh tokens are credentials, so keep them in the Keychain. A small TokenStore wrapper keeps the interceptor clean and makes it easy to swap in a fake store for tests.</p>
-<p>4. Refresh before expiry by reading the JWT</p>
-<p>If your tokens are JWTs, you can avoid many 401s by checking the exp claim before sending a request, and refreshing early.</p>
-<p>swift
-func isExpiringSoon(_ jwt: String, leeway: TimeInterval = 60) -> Bool {
-    let parts = jwt.split(separator: ".")
-    guard parts.count == 3 else { return true }
-    var base64 = String(parts[1])
-        .replacingOccurrences(of: "-", with: "+")
-        .replacingOccurrences(of: "_", with: "/")
-    while base64.count % 4 != 0 { base64 += "=" }
-    guard let data = Data(base64Encoded: base64),
-          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let exp = json["exp"] as? TimeInterval else { return true }
-    return Date(timeIntervalSince1970: exp).timeIntervalSinceNow < leeway
-}</p>
-<p>Call it in adapt, and if it returns true, go through the same TokenRefresher before attaching the token. Because both paths share one refresher, a proactive refresh and a reactive one can never run twice at the same time.</p>
-<p>Authentication code touches every request in your app, so I wrap it in a feature flag. If something goes wrong in production, you can turn the new logic off without shipping a new build. I also write a small test harness that fires many parallel requests with an expired token and checks that the refresh endpoint is called exactly once. It is the quickest way to prove the single-flight behavior works.</p>
-<p>Single-flight refresh comes down to three ideas: one shared task, a retry limit, and secure token storage. With an actor and Alamofire's interceptor, the whole thing fits in about fifty lines of Swift.</p>
-<p>I'm Raaju Pahlowan, an iOS developer in Dhaka, Bangladesh, working with Swift, SwiftUI and UIKit. You can see my projects at raajupahlowan.github.io and connect with me on LinkedIn.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>We may receive a commission on purchases made from links.</p>
+<p>A good chili is a solid meal in a bowl that can be made easily at home in the slow cooker. It takes a lot of time, but it can create meals for days. There are plenty of different types of chili to enjoy if you want to try something new. But when you don't want to spend the time in the kitchen with all the beef browning and veggie prep, you can grab a pre-made chili right off the grocery store shelf. Some swear by coffee or cocoa powder to upgrade your chili, but there's one ingredient you likely have in the pantry or fridge that you probably have never considered. To improve the flavor of your canned chili, you should add a touch of jam or jelly as you heat it up.</p>
+<p>Adding a fruit jelly or jam to your canned chili will help build complexity and draw out the flavor of common seasonings found in the dish — like cumin, paprika, cayenne, chili, and garlic and onion powders — while also offering a bit of contrast. It's like adding a pinch of brown sugar, with just a skosh of bright, fruit-forward undertones that can make it taste more like it's fresh, homemade, with subtle nuance usually lost in canned goods. It also helps cut the acidity of the tomato sauce that may sometimes be overpowering, especially in canned chili. Using a bit of the jarred stuff will even improve the look of your meal, adding a nice gloss or top sheen to give you an end result that looks like something right out of the page of a cookbook.</p>
+<p>If you want to go with something gourmet that's relatively easy to find, a jar of Bonne Maman Strawberry Preserves, available online and at retailers like Walmart, will work nicely, but you can use homemade preserves or pretty much any store-bought jam or jelly, like Smucker's Concord Grape Jelly, also available online and in stores. In fact, jellies are often preferred because they blend in seamlessly, and you won't end up with over-sweet chunks of fruit in your chili. If you plan to use something with whole fruit, you may want to simmer it for longer on the stove, so the chili flavor will fully infuse with it. Grape is a pretty solid choice because it will beautifully complement the deep umami flavor of the beef without overpowering it. Fig and apricot jams also work great for some added depth and earthiness.</p>
+<p>When it comes to your base, not all canned chilis are created equal, but this trick will definitely add flavor to whatever you choose to use. You'll want to start with about a half teaspoon of jam or jelly per can as you heat up the chili, then give it a taste once it's simmering. If it's not quite there, you can always add more, but hold back from going too hard right out of the gate.</p>
+<p>Because of the extra sweetness, you may need an extra pinch of salt — although most canned chilis are already pretty sodium-rich. And some spicy additions, like fresh or canned jalapeños, red pepper flakes, or a dash of hot sauce, will balance things out nicely.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/raaju_pahlowan/single-flight-token-refresh-in-swift-with-alamofire-hmn" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.foodrepublic.com/2320182/not-cocoa-powder-coffee-add-this-pantry-staple-canned-chili-major-flavor-boost-jam-jelly/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
