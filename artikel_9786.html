@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vLLM production metrics: running an OpenAI-compatible server with Prometheus and GPU monitoring</title>
+    <title>Seven stable kernels for Monday</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9786.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,45 +15,104 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>vLLM production metrics: running an OpenAI-compatible server with Prometheus and GPU monitoring</h1>
+        <h1>Seven stable kernels for Monday</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fspan.observer%2Fwp-content%2Fuploads%2F2026%2F10%2Fvllm-production-metriques-photo-202610291404.webp" alt="vLLM production metrics: running an OpenAI-compatible server with Prometheus and GPU monitoring" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto/https%3A%2F%2Fspan.observer%2Fwp-content%2Fuploads%2F2026%2F10%2Fvllm-production-metriques-photo-202610291404.webp" alt="vLLM production metrics: running an OpenAI-compatible server with Prometheus and GPU monitoring" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 23
-•
-Originally published at span.observer</p>
-<p>Putting vLLM into production means moving from an LLM that « works on my machine » to an inference service able to absorb hundreds of concurrent requests on datacentre GPUs. Born in a lab at the University of California, Berkeley and now hosted by the PyTorch Foundation, vLLM is one of the most followed open source projects on GitHub for serving language models. This guide covers the vLLM production metrics that matter, alongside the OpenAI-compatible server and GPU monitoring.</p>
-<p>Its strength rests on two ideas: PagedAttention, which manages the key-value cache (KV cache) memory in pages, the way an operating system manages virtual memory, and continuous batching, which inserts new requests into the running batch instead of waiting for it to finish. The result: much better utilisation of GPUs, which are expensive.</p>
-<p>For an SRE, vLLM has another quality: it natively exposes a rich Prometheus endpoint and can emit OpenTelemetry traces. Let us see how to install it, run it as an OpenAI-compatible server, then monitor it all the way into Dynatrace.</p>
-<p>vLLM meets a specific need: serving open models (Llama, Mistral, Qwen, Gemma…) from Hugging Face with high throughput. It offers:</p>
-<p>Its limits: it assumes a serious GPU, its startup time is long (loading weights, compilation, memory pre-allocation) and its many settings require some experience. For a developer workstation, Ollama locally or llama.cpp are lighter.</p>
-<p>On a Linux machine with an NVIDIA GPU and recent CUDA drivers, installation is done with pip, preferably in a virtual environment:</p>
-<p>The supported combinations of Python, CUDA and PyTorch versions change often: check them in the official vLLM installation guide.</p>
-<p>The vllm serve command starts the OpenAI-compatible server, on port 8000 by default. For a gated model on Hugging Face, first export a token in HF_TOKEN:</p>
-<p>--gpu-memory-utilization sets the fraction of GPU memory vLLM allows itself, --max-model-len limits the context length (and therefore the KV cache size), and --tensor-parallel-size spreads the model across several GPUs. The full list of options is available with vllm serve --help.</p>
-<p>In production, replace latest with a specific version. On Kubernetes, the documentation offers deployment examples and community charts; allow a generous startup probe, as loading a large model takes several minutes.</p>
-<p>The server publishes its metrics in Prometheus format on /metrics, prefixed with vllm:. The exact names changed with the move to the « V1 » engine: check them by querying your own instance (curl localhost:8000/metrics) and the « Metrics » page of the documentation. The families to track:</p>
-<p>These application metrics are read alongside GPU metrics: utilisation, memory, power and temperature, provided by NVIDIA’s DCGM exporter (deployed by the GPU Operator on Kubernetes) or by a host agent.</p>
-<p>vLLM logs to standard output the model loading, the memory allocated to the KV cache and, periodically, a summary of throughput and cache usage. On Kubernetes, these logs are collected like those of any other pod.</p>
-<p>For traces, the server accepts an --otlp-traces-endpoint option that sends one span per request to an OTLP collector, with attributes inspired by the GenAI semantic conventions (model, tokens, time in queue, TTFT). The required OpenTelemetry packages must be installed separately; the documentation provides a complete example. If the calling application propagates W3C context, the vLLM span attaches to the end-to-end trace.</p>
-<p>The simplest route is an OpenTelemetry Collector that scrapes /metrics, receives OTLP traces and exports everything. Dynatrace expects OTLP metrics with delta temporality: the cumulativetodelta processor converts cumulative Prometheus counters.</p>
-<p>The token must carry metrics and traces ingest permissions. On Kubernetes, Dynatrace can also scrape annotated Prometheus endpoints directly; check its documentation to choose between the two approaches. Once the data is in Grail, a few dashboards are enough: p95 TTFT, waiting requests, KV cache usage, tokens per second and GPU utilisation per node. The principles of histogram-based SLOs, detailed in our article on histogram metrics with OpenPipeline, apply directly to TTFT.</p>
-<p>For the main endpoints (chat, completions, models, embeddings depending on the model), yes: you just change the SDK’s base URL. Some advanced parameters may differ; the documentation lists those that are supported.</p>
-<p>On the server’s /metrics path, on the same port as the API. Names start with vllm:.</p>
-<p>A CPU mode exists for some platforms, but vLLM is designed for accelerators. Without a GPU, llama.cpp or Ollama are better suited.</p>
-<p>vLLM provides the throughput needed to serve open LLMs at scale, and it has the good sense to be observable straight after installation. By bringing its Prometheus metrics, its OTLP traces and GPU metrics together in a single backend, you can run inference like any other critical service. To choose between vLLM and the other building blocks, see our comparison of self-hosted open source AI stacks.</p>
-<p>span.observer is an independent community blog, not affiliated with Dynatrace LLC or the projects mentioned. Trademarks belong to their respective owners. Tools change quickly: check commands and options in their official documentation.</p>
-<p>Originally published on span.observer. French version: https://span.observer/fr/vllm-production-metriques/.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Greg Kroah-Hartman has announced the 7.3.6,
+6.18.65,
+6.12.119,
+6.6.163,
+6.1.193,
+5.15.226, and
+5.10.275 stable kernels. Each of these contains
+quite a few patches throughout the tree—6.12.119 has the fewest with more
+than 1,700 patches, while 6.6.163 has more than 3,300. Users are advised to
+upgrade.</p>
+<p>Mega
+
+ Posted Nov 23, 2026 17:23 UTC (Mon)
+                               by alspnost (guest, #2763)
+                              [Link] (1 responses)
+      
+
+
+      More than 'quite a few', surely! These would definitely seem to be record-breakers, from my memory? In the old pre-AI days, a few hundred patches was considered big. Now we're into the thousands. Greg's earlier comments suggest this incredible flood may slow down eventually, but not yet...
+
+
+      
+          
+
+
+
+
+
+
+
+Mega
+
+ Posted Nov 23, 2026 17:50 UTC (Mon)
+                               by jzb (editor, #7867)
+                              [Link] 
+      
+
+
+You may be right. In September, Greg made a comment about setting a record with more than 9,000 patches between the 7.2.6, 6.18.52, 6.12.110, 6.6.157, 6.1.188, 5.15.221, 5.10.270 stable kernels—with 7.2 having the most at more than 1,800 patches. This batch seems to be much heftier.</p>
+<p>Mega
+
+ Posted Nov 23, 2026 17:23 UTC (Mon)
+                               by alspnost (guest, #2763)
+                              [Link] (1 responses)
+      
+
+
+      More than 'quite a few', surely! These would definitely seem to be record-breakers, from my memory? In the old pre-AI days, a few hundred patches was considered big. Now we're into the thousands. Greg's earlier comments suggest this incredible flood may slow down eventually, but not yet...
+
+
+      
+          
+
+
+
+
+
+
+
+Mega
+
+ Posted Nov 23, 2026 17:50 UTC (Mon)
+                               by jzb (editor, #7867)
+                              [Link] 
+      
+
+
+You may be right. In September, Greg made a comment about setting a record with more than 9,000 patches between the 7.2.6, 6.18.52, 6.12.110, 6.6.157, 6.1.188, 5.15.221, 5.10.270 stable kernels—with 7.2 having the most at more than 1,800 patches. This batch seems to be much heftier.</p>
+<p>Posted Nov 23, 2026 17:23 UTC (Mon)
+                               by alspnost (guest, #2763)
+                              [Link] (1 responses)</p>
+<p>Mega
+
+ Posted Nov 23, 2026 17:50 UTC (Mon)
+                               by jzb (editor, #7867)
+                              [Link] 
+      
+
+
+You may be right. In September, Greg made a comment about setting a record with more than 9,000 patches between the 7.2.6, 6.18.52, 6.12.110, 6.6.157, 6.1.188, 5.15.221, 5.10.270 stable kernels—with 7.2 having the most at more than 1,800 patches. This batch seems to be much heftier.</p>
+<p>Posted Nov 23, 2026 17:50 UTC (Mon)
+                               by jzb (editor, #7867)
+                              [Link]</p>
+<p>You may be right. In September, Greg made a comment about setting a record with more than 9,000 patches between the 7.2.6, 6.18.52, 6.12.110, 6.6.157, 6.1.188, 5.15.221, 5.10.270 stable kernels—with 7.2 having the most at more than 1,800 patches. This batch seems to be much heftier.</p>
+<p>Copyright © 2026, Eklektix, Inc.
+            
+            Comments and public postings are copyrighted by their creators.
+            Linux  is a registered trademark of Linus Torvalds</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/spanobserver/vllm-production-metrics-running-an-openai-compatible-server-with-prometheus-and-gpu-monitoring-3n14" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://lwn.net/Articles/1108909/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

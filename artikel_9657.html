@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blackberry Cobbler</title>
+    <title>Dataverse PreValidation Doesn&#x27;t Always Run Outside the Transaction: Check IsInTransaction</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9657.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,38 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Blackberry Cobbler</h1>
+        <h1>Dataverse PreValidation Doesn&#x27;t Always Run Outside the Transaction: Check IsInTransaction</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fn8q271behb9drxt8uz34.png" alt="Dataverse PreValidation Doesn&#x27;t Always Run Outside the Transaction: Check IsInTransaction" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fn8q271behb9drxt8uz34.png" alt="Dataverse PreValidation Doesn't Always Run Outside the Transaction: Check IsInTransaction" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>This blackberry cobbler recipe is a summertime delight! It features jammy blackberries underneath a tender, golden, scone-like topping. I&#8217;m quite smitten with this recipe&#8212;something borderline magical happens when you bake blackberries. The heat of the oven seems to enhance their floral undertones and make them taste extra special. This is a simple dessert that you&#8217;ll&#8230;</p>
-<p>The post <a href="https://cookieandkate.com/blackberry-cobbler/">Blackberry Cobbler</a> appeared first on <a href="https://cookieandkate.com">Cookie and Kate</a>.</p></p>
+                <p>Kept thinking PreValidation always runs outside the database transaction in Dataverse.</p>
+<p>Then I tested the same Account Create plugin through two paths.</p>
+<p>PreValidation, Stage 10: IsInTransaction = False</p>
+<p>PreOperation, Stage 20: IsInTransaction = True</p>
+<p>PostOperation (sync mode), Stage 40: IsInTransaction = True</p>
+<p>Model-driven app form save with change set (BPF attached to the table):</p>
+<p>PreValidation, Stage 10: IsInTransaction = True</p>
+<p>PreOperation, Stage 20: IsInTransaction = True</p>
+<p>PostOperation (sync mode), Stage 40: IsInTransaction = True</p>
+<p>Same table. Same message. Same registered steps.</p>
+<p>The difference is the caller path and whether the pipeline already has a transaction active when it reaches PreValidation.</p>
+<p>That is why Stage alone is not enough. IPluginExecutionContext.IsInTransaction tells you what actually matters for that execution.</p>
+<p>PreValidation usually runs before the main transaction, but it can run inside an existing transaction when another operation initiates it. A model-driven app form save can follow a different platform path from a plain Web API create.</p>
+<p>When context.IsInTransaction is true and the plugin throws an exception, Dataverse rolls back the work in that active transaction.</p>
+<p>So in the model-driven app save, an exception thrown at PreValidation was already inside a transaction. In the direct create, PreValidation was outside the transaction, but by PreOperation the work was inside it.</p>
+<p>One small clarification: not every caught error causes a rollback. The exception has to reach the platform. If your code handles it and completes normally, Dataverse treats the step as successful.</p>
+<p>Don't assume. Check context.IsInTransaction.</p>
+<p>If your plugin has logic that depends on transaction behavior, branch on the runtime value, not on the stage name.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://cookieandkate.com/blackberry-cobbler/?adt_ei=*|EMAIL|*" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/prakash_4691/dataverse-prevalidation-doesnt-always-run-outside-the-transaction-check-isintransaction-5em6" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

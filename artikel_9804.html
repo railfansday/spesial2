@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>180B Parameters, 32GB of RAM: Pushing MoE Inference to the Limit with Transformers</title>
+    <title>Getting Past the Post-Quantum Cryptography Discovery Phase</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9804.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,176 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>180B Parameters, 32GB of RAM: Pushing MoE Inference to the Limit with Transformers</h1>
+        <h1>Getting Past the Post-Quantum Cryptography Discovery Phase</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/moe-expert-streaming/thumbnail.png" alt="180B Parameters, 32GB of RAM: Pushing MoE Inference to the Limit with Transformers" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3f96ce16a435deca/6a3d55be62f12d27e415ed3c/quantum_computer-Peter_Hansen-getty-2214879776.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Getting Past the Post-Quantum Cryptography Discovery Phase" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/moe-expert-streaming/thumbnail.png" alt="180B Parameters, 32GB of RAM: Pushing MoE Inference to the Limit with Transformers" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt3f96ce16a435deca/6a3d55be62f12d27e415ed3c/quantum_computer-Peter_Hansen-getty-2214879776.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Getting Past the Post-Quantum Cryptography Discovery Phase" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Streaming MoE experts directly from SSD gets within 6% of Strata on token generation.</p>
-<p>I've been trying to rely less on online models and run bigger ones locally.
-At home I have a PC with two RTX 4090s (let's call it Orthrus - the two-headed hound
-of Greek mythology), and for work I have a MacBook M5 with 32G of unified memory.</p>
-<p>Orthrus runs on Windows 11, because my kids play games all the time. I had a
-dual boot with Ubuntu, but their games ended up taking most of the two
-terabytes of disk.</p>
-<p>I am also a huge fan of RMD (rooms moving development): one hour in the kitchen
-sipping my coffee, two hours at my office desk, then the sofa. A fixed desktop
-tower is not for me.</p>
-<p>My first experiment was to run Qwen 3.8 27B with llama.app on Orthrus and use
-it from my laptop through pi. That model does the coding tasks, an online
-model like Opus does the orchestration, and the second RTX runs a FIM model for
-auto-completion in Neovim.</p>
-<p>When I talked about this on social networks, I got very strong feedback: use
-Strata with Qwen3.8-Flash-Next.</p>
-<p>Strata is an inference engine for MoE models like Qwen. Only the hot experts
-stay in VRAM, the rest goes to RAM, or even to disk. Experts are 90%+ of a MoE
-model's weights, so a 180B model like this one can run on a GPU with much less
-memory. Like my RTX 4090!</p>
-<p>It works on a laptop too, and I stumbled on
-this blog post doing
-exactly that: Qwen3.8-Flash-Next on a 32 GB Mac M4, faster than llama.cpp, at
-13.5 tok/s.</p>
-<p>That's too slow for how I use coding agents, but it's an interesting itch to
-scratch. A whole range of MoE models don't fit in a MacBook's unified memory and
-could run at a decent speed.</p>
-<p>Before committing to Strata, I looked at what llama.cpp, vLLM and Transformers
-do when a MoE model doesn't fit. Three questions matter: where do the experts
-live, where does the expert matmul run, and what moves on each token?</p>
-<p>llama.cpp maps the GGUF file with mmap and can keep the experts on the
-CPU (--cpu-moe, --n-cpu-moe N, -ot "exps=CPU", or --fit on to pick for
-you). Those experts are also computed on the CPU, so only the activations
-cross PCIe, never the weights. Great when the experts fit in RAM. When they
-don't, the page cache thrashes. A GPU expert cache (--moe-cache-mib) just
-landed, but it fragments the graph (2 splits per token become 50) and loses
-~10% even when everything fits.</p>
-<p>vLLM's --cpu-offload-gb N puts N GB of weights in pinned RAM, and kernels
-read them in place over PCIe. For a MoE layer, that's only the routed experts,
-but nothing is cached: a hot expert crosses PCIe again on every token, and
-there's no disk tier. By default the offloaded weights include dense layers,
-read on every token; --cpu-offload-params experts keeps it to the experts. That fits vLLM's big
-batches, which touch almost every expert anyway, less so one user on one GPU.</p>
-<p>Transformers offloads through Accelerate (device_map="auto",
-offload_folder), one module at a time: hooks copy its weights to the GPU
-before forward. For a MoE, that module is a layer's whole expert bank, so
-every token copies every expert of every offloaded layer to use 8 or 10 of them.
-No cache, no notion of routing. And on a Mac, CPU and GPU share the same memory,
-so "offload to CPU" frees nothing.</p>
-<p>I ran all of them on Qwen3.6-35B-A3B on one A10G (24 GB), with plenty of RAM,
-and Harry Mellor reran vLLM with better flags:</p>
-<p>Offloading only the experts doubles vLLM's speed, and FP8 helps on top (half
-the bytes per expert, more of the model on the GPU). vLLM's other offload
-backend, which copies groups of layers ahead of time, ran under 1 tok/s.</p>
-<p>If the experts fit in RAM, llama.cpp is hard to beat. If they don't, you have to
-stream only what the router picks, through a bounded cache, fast enough that the
-SSD is the bottleneck and not Python, ideally reusing the model's fast expert
-kernels. That's Qwen3.8-Flash-Next on a 32 GB Mac, and Transformers couldn't do
-it out of the box.</p>
-<p>Strata was already too slow for me on the laptop, and Transformers was not going
-to beat it anytime soon. But the Accelerate path was so far off that I wanted to
-try fixing offloading in Transformers itself, with the big model on my laptop as
-the target, knowing it would probably stay too slow for how I work.</p>
-<p>All of the code was built with AI: the Transformers PR, the model-specific
-package and the Metal kernels. My part was choosing what to try, reading the
-profiles, and deciding what to keep. Everything is in a Space:
-tarekziade/moe-expert-streaming.</p>
-<p>I started with OLMoE-1B-7B, which fits in memory, so I could compare every token
-with vanilla Transformers.</p>
-<p>First version: experts on disk, an LRU cache on the device, and a Python loop
-running one expert at a time. With every expert already cached, it did 10.1
-tok/s. Vanilla did ~32. The I/O was fine, my loop was not: vanilla uses
-grouped_mm, which runs all the experts of a layer in one kernel.</p>
-<p>The fix, and the key idea of this project, was to turn the cache into a slot
-pool: one preallocated device tensor shared by all layers, plus a per-layer
-table from expert id to slot. Remap the router's expert ids to slots and the
-pool looks like a regular expert bank, so grouped_mm runs on it as is. No
-custom expert matmul needed. That got it to 34.6 tok/s, against 38.1 for
-vanilla.</p>
-<p>I then turned the standalone loader into an option of from_pretrained, in
-huggingface/transformers#50717.
-To try it, install Transformers from that PR:</p>
-<p>Then, moving from OLMoE to the real target, Qwen3.8-Flash-Next:</p>
-<p>That repo
-holds the output of the project's
-conversion script:
-the dense weights, the experts quantized to 3 bits, and the n-gram table.</p>
-<p>Experts mapped to "disk" go through the streaming path instead of Accelerate's
-offload: the loader skips their tensors and MoE layers switch to an offloaded
-implementation. Misses are read by 8 I/O threads, one contiguous read per
-expert. The next two layers' routers run early on the current hidden states to
-guess which experts to prefetch. Experts can be quantized offline so reads are
-smaller. It works for MoE models with the standard experts layout.</p>
-<p>The API is still being discussed with the Transformers maintainers. The
-device_map form came out of that, and quantized experts will probably go
-through the per-layer quantization plan of
-#50245 rather than
-their own option.</p>
-<p>Qwen3.8-Flash-Next has 48 layers of 512 experts (10 active), 121 GB in FP8.
-Streaming them isn't enough: there's also a 51 GB n-gram embedding
-table that needs its own disk path. So:</p>
-<p>The conversion takes ~5 hours. After loading, it uses ~18 GiB, and a 6K prompt
-peaks at 25.4 GiB. That's about the limit: I have to close the browser, or macOS
-starts swapping.</p>
-<p>The model-specific bits (the n-gram table, Metal kernels) live in a small
-package, moe-expert-streaming,
-on top of the PR. The first version ran at about 10 tok/s.</p>
-<p>Then I installed Strata on the same M5, with the same prompts:</p>
-<p>Strata 0.1.60 used IQ3_XXS experts. Both ran greedy, with thinking, MTP and
-speculative drafts off, and 1,024-token prefill chunks. The full setup and raw
-results are on the Space's
-details page.</p>
-<p>I also tried vllm-metal, vLLM on
-Apple GPUs through MLX, which recently got expert offloading. It streams the
-routed experts from an MLX checkpoint through a bounded cache, like this
-project. But it can't run Qwen3.8-Flash-Next on 32 GB, for the n-gram reason
-above: only the experts are streamed, and the n-gram tables stay in memory.
-That's 32 GB in the MLX checkpoints on the Hub, before the ~5 GB of dense layers and any expert cache.</p>
-<p>Most of the time wasn't spent on experts. Here's what helped:</p>
-<p>Here's one MoE layer for one token, as it runs now:</p>
-<p>These are the final results after these optimizations on the same M5 with the same prompts:</p>
-<p>That's about 6% behind Strata on short decode, with slightly faster prefill,
-all through Transformers.</p>
-<p>Most of what's left is host round trips, ~10 ms per token. Waking up after a
-sync is only ~1 ms of that. The rest is the GPU running dry while Python queues
-the next layer. Strata queues the whole token's work up front, and the GPU waits
-on a Metal shared event at each layer while the host reads experts. PyTorch
-doesn't expose that. I tried to fake it with a kernel spinning on a flag the CPU
-writes, and the GPU took anywhere from a second to never to see the write. The
-real fix would be a native op on PyTorch's MPS stream, with a risk of hangs, so
-I haven't built it.</p>
-<p>It runs at ~14 tok/s, close to Strata, and it's still too slow for how I use
-coding agents. Orthrus keeps doing the real work.</p>
-<p>Transformers didn't beat Strata, and closing the last ~6% would take deeper
-changes in the stack, starting with control over that per-layer sync, which
-PyTorch doesn't give you today. The interesting part is how it got that
-close: streaming only the routed experts, a bounded cache that grouped_mm runs
-on as is, and a few targeted Metal kernels. There's no C++ extension in the
-project: just Python, Metal kernels compiled at runtime with
-torch.mps.compile_shader, and prebuilt kernels from the Hub.
-All the Metal kernels written for this experiment are now
-published on the Hub,
-and the project loads them from there.</p>
-<p>Beating Strata was never the only goal, though. Building this was a great way
-to learn how MoEs and LLMs work from a systems perspective: how sparse the
-routing really is, how much an expert cache buys you, where memory bandwidth
-goes per token, and how much time the host and the GPU spend waiting on each
-other. Transformers makes all of that easy to poke at, one module at a time.</p>
-<p>The generic expert streaming implementation is in
-huggingface/transformers#50717,
-and the benchmarks are in the Space.
-Feedback on the approach and the API is welcome.</p>
-<p>Thanks to Pedro, Lysandre and Arthur for their excellent feedback, and to Harry
-for helping test vLLM.</p>
-<p>Finally, thanks to Niko Veit for Strata.
-Strata set the bar for what's possible with expert streaming on consumer
-hardware, and having those numbers to chase is what pushed this work as far as
-it went.</p>
-<p>Generate text with Qwen3.8 using streamed experts</p>
-<p>Generate text with Qwen3.8 using streamed experts</p>
+                <p>News, news analysis, and commentary on the latest trends in cybersecurity technology.</p>
+<p>Most organizations haven't sorted out their cryptographic estate enough to even know where they'd start with post-quantum cryptography (PQC).</p>
+<p>The pressure is mounting for security leaders to get serious about their post-quantum cryptography (PQC) transition plans, but most organizations aren't even ready to get ready for PQC.</p>
+<p>Studies show that, yes, CISOs today do see PQC as a priority they need to plan for. However, the bulk of organizations don't have a detailed enough cryptographic inventory to help them sketch out a road map of where to start.</p>
+<p>"When it comes to post-quantum cryptography, every company, no matter which ones you talk to, are kind of stuck in the discovery phase," says Anurag Swarnim Yadav, Ph.D., founder and CTO of startup QubitAC.</p>
+<p>Recent numbers back his observations. According to a July study by DigiCert, while 87% of organizations say they're planning, testing, or implementing PQC, only 44% have developed transition plans or created inventories. That mirrors another study by Ponemon Institute that found only 43% of organizations have full visibility of their cryptographic estate. Those respondents reported that their inability to discover those assets and improve that visibility is their No. 1 concern about PQC migration.</p>
+<p>Related:Attackers in Binance Breach Targeted Known Weakness, Missing Controls</p>
+<p>Cryptography sits in Web servers, certificates, VPNs, code signing, vendor products, and all nature of assets in between. Getting every encryption use case ready for a post-quantum world will be a sweeping transition, and the latest research suggests developments in quantum computing are proceeding on a much faster timeline than originally anticipated. If an enterprise can't enumerate all the cryptography impacted, it means they're not toeing the start line for this footrace.</p>
+<p>Getting all of those assets into post-quantum readiness will be a generational effort easily on par with the Y2K effort. Unlike Y2K, however, there's no set-in-stone deadline for post-quantum.</p>
+<p>The closest thing is Q Day, the point when a cryptographically relevant quantum computer (CRQC) can break the public-key cryptography behind key exchange and digital signatures. The big problem with building a widespread sense of urgency is that nobody knows exactly when Q Day will arrive.</p>
+<p>Estimates run from 2030 to 2040 and beyond, according to Yadav, but his own bet is that attackers could pull it off by 2029 based on how the research is shifting. The expected window until Q Day arrives keeps compressing as quantum researchers perfect their craft. Last year Google researchers calculated that breaking 2048-bit RSA encryption would take a quantum computer 20 times smaller than they had estimated in 2019. And in March Google set a 2029 target for its own PQC migration, influenced by such research and recent progress in quantum hardware.</p>
+<p>Related:Investors Dish on New Startups & What They'd Back Next</p>
+<p>Global governments are also starting to get firm about their own timing expectations for PQC transition in the run-up to Q Day. NIST finalized its PQC transition road map in late October, and a June executive order requires federal high-value assets and high-impact systems to move key establishment to post-quantum algorithms by 2030 and digital signatures by 2031. The UK's National Cyber Security Centre recommends that large organizations complete discovery and assessment and build an initial migration plan by 2028, then finish migrating by 2035.</p>
+<p>Even if we don't know exactly when Q Day will come, the math behind what will happen after that day is well understood. Public-key cryptography lets two parties who have never met agree on a secret and prove who they are. It works because some math is easy to run forward and impractical to reverse. RSA relies on the difficulty of factoring huge numbers, while elliptic curve cryptography and Diffie-Hellman key exchange rely on a related problem called the discrete logarithm.</p>
+<p>Quantum computers use subatomic particles instead of transistors to represent data. This gives them an edge in how they process the ones and zeros of computing. For years cryptography experts have warned that a sufficiently advanced enough quantum computer could use that edge to factor huge numbers and solve discrete logarithms at a rate of efficiency unheard of from even the most advanced classical super computers.</p>
+<p>Related:AI Agents as Insider Threats: Inside Microsoft's Bet on a Unified Security Stack</p>
+<p>There's also a more immediate deadline that's brewing from what attackers are likely doing today to prepare for Q Day. It's fairly trivial for the bad guys to vacuum up high-value encrypted traffic today with the promise that they might have a chance to decrypt it at a later date. For long-lived information like financial or health details or secret sauce intellectual property, the long-game of this harvest now, decrypt later (HNDL) is worth the effort for future-minded criminals.</p>
+<p>"The data is worthless to attackers right now but becomes priceless later," Yadav explains.</p>
+<p>He offers credit card numbers as a classic example. They stay valid for years, so a cache of encrypted numbers harvested now could still be good if Q Day lands inside that window.</p>
+<p>In its recently finalized road map, the National Institute of Standards and Technology (NIST) pointed to HNDL as one of the main reasons the transition is so urgent. NIST mathematician and cryptographic expert Andrew Regenscheid says HNDL reframes the whole PQC timeline for critical information stores across industry and government systems.</p>
+<p>"This information may need to remain secret for years, or even decades, into the future," he explained in a NIST Q&A this past summer. "For that kind of information, waiting until a cryptographically relevant quantum computer arrives is waiting too long."</p>
+<p>Considering that the most isolated cryptographic migrations can still linger for upward of a decade or longer, even a conservative 2040 estimate for Q Day should be enough to have security experts scrambling to plan PQC transitions. The scale of changes needed will take significant planning and prioritization that will need to be phased in.</p>
+<p>"Changing these algorithms is something that's been done before. It's a complex process that takes years," Regenscheid said. "Based on our experience and the challenge of navigating the post-quantum world, we expect this process to be the most challenging one yet. The breadth of these systems and the complexity of the change will dwarf what we've done before."</p>
+<p>The destination, at least, is defined. In 2024, NIST finalized three post-quantum standards, one for key exchange (ML-KEM) and two for digital signatures (ML-DSA and SLH-DSA), built on math that's expected to hold up against quantum computers. The harder job is finding every place RSA and elliptic curve cryptography still run, then planning how and when to swap out each use case. Because of HNDL, NIST suggests prioritizing the first transition phases around data that is particularly sensitive or has to stay secure for a long time.</p>
+<p>In a September study on PQC readiness, Frost & Sullivan analysts emphasized how important risk-based prioritization like this will be for PQC readiness.</p>
+<p>"A non-compliant cryptographic asset supporting a low-value application may represent limited immediate risk, while the same technology supporting sensitive information or a critical business process could require urgent remediation," they wrote.</p>
+<p>But sorting through all the assets and ranking them depends on having a solid inventory on hand. This is why the discovery is so crucial. Frost &Sullivan concurred that the discovery process is proving to be trickier than many thought it would be.</p>
+<p>"The inventory needs to extend beyond simply identifying algorithms to understanding the dependencies between cryptographic assets and business-critical applications," they explained.</p>
+<p>Tools — commercial and open source — designed to assist organizations in their PQC journey are already available. These tools have their own approaches and varying levels of maturity. One tool is AC Scanner, which Yadav and QubitAC co-founder Joseph Wilson demoed at Black Hat Arsenal this past August. The free open source tool is purpose-built to kickstart the inventory process, Yadav says. It's a fast, lightweight tool that runs from command line, scans for outward facing TLS and SSH services, and creates an inventory for the IP range it's pointed at.</p>
+<p>"You start with nothing but a domain name, and by the end you get a complete cryptographic bill of materials [CBOM]," Yadav says. The CBOM is an inventory of the algorithms, keys, certificates and protocols in use, and the scanner pairs it with two scores, one for overall security health and one for post-quantum readiness based on NIST's post-quantum standards.</p>
+<p>It also doubles as an outside check on HNDL exposure. Every encrypted session starts with a key exchange, where the two sides agree on a secret. If a public-facing endpoint still uses a classical exchange, traffic an attacker records today could be unlocked later by a quantum computer. A hybrid exchange that adds post-quantum math protects that traffic, provided the client uses it, too; the scanner reports which kind each endpoint offers.</p>
+<p>Classical endpoints are the ones most exposed to HNDL, and Yadav sees AC Scanner as giving organizations a starting point for making HNDL-aware transition plans.</p>
+<p>Of course, any security professional will be quick to point out that a scan is just an informational snapshot. What happens after that information is in hand is what really counts. Scanning tools can kick-start discovery, but organizations need to follow up what they find with a migration plan and start executing on it. NIST'’s Regenscheid says the sooner organizations can get to these plans, the better.</p>
+<p>"Given how long these transitions take, the organizations that start planning and begin moving to post-quantum products and services now will be in a far stronger position later," he says, adding that this is an opportunity to modernize a lot of the process. "Many steps must occur in sequence, which is why an early start is crucial."</p>
+<p>An award-winning freelance reporter with nearly two decades of experience covering B2B cybersecurity, Ericka Chickowski has tackled every angle of security and risk for Dark Reading since 2009. Her coverage has spanned the full range of cyber topics important to every kind of cybersecurity stakeholder, including cybersecurity practitioners, CISOs, security-minded business managers, and security-aware board directors. She specializes in going deep on topics, breaking down how the technology trends affect real people, and how risk impacts the bottom line.</p>
+<p>Some special areas of focus include: adversarial AI; AI risk and resilience; AI and agentic governance; application security (AppSec); governance, risk, and compliance (GRC); cloud security; network security; software supply chain risk; cyberinsurance; DevSecOps; enterprise risk management; and CISO career development.</p>
+<p>In addition to Dark Reading, Ericka has written for many different IT and business publications over the years. Her byline has appeared in dozens of trade and consumer magazines, including Baseline, Consumer Digest, Channel Insider, CIO Insight, CSOOnline.com, DevOps.com, eWeek, Entrepreneur, Forbes, InformationWeek, SC Magazine, and SecurityBoulevard. She regularly contributes independent stories about AppSec and supply chain risk to the ReversingLabs Blog. She was one of the founding contributing editors for DevOps.com and has deep expertise in digital transformation and development best practices. This helps inform her stories on software risks and business resilience.</p>
+<p>Ericka is also a prolific executive ghost writer, with experience helping cybersecurity and IT leaders bring their ideas to life. She's helped them craft important position pieces for respected publications like the Financial Times and The Wall Street Journal.</p>
+<p>Prior to beginning her freelance career, Ericka served in a number of editorial staff roles, including West Coast Bureau Chief for SC Magazine. Before that position, she was editor-in-chief for a cluster of regional technology and lifestyle magazines in the Seattle area, as well as a beat reporter for a regional business newspaper. She holds a bachelor's degree in English from the University of Washington. Her work is well-regarded and has won multiple awards from the Society of Professional Journalists.</p>
+<p>CrowdStrike Makes AI Security Push With Blockbuster Zscaler Deal</p>
+<p>How Security Vendors Are Tackling Access-Control Challenges for AI Agents</p>
+<p>Microsoft Debuts Offensive, Defensive Security Tools for the AI Era</p>
+<p>NIST Finalizes Post-Quantum Cryptography Guidance, GAO Offers a Reality Check</p>
+<p>Attackers in Binance Breach Targeted Known Weakness, Missing Controls</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/moe-expert-streaming" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cybersecurity-operations/getting-past-post-quantum-cryptography-discovery" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

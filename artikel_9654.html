@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twice Baked Potatoes</title>
+    <title>Max drawdown and the longest losing streak of a trader, in TypeScript</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9654.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,43 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Twice Baked Potatoes</h1>
+        <h1>Max drawdown and the longest losing streak of a trader, in TypeScript</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fccfaoqg4or523si6qiwj.png" alt="Max drawdown and the longest losing streak of a trader, in TypeScript" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fccfaoqg4or523si6qiwj.png" alt="Max drawdown and the longest losing streak of a trader, in TypeScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Fluffy twice baked potatoes with garlic-paprika butter, sharp white cheddar, sour cream, crispy bacon and fresh chives.</p>
+                <p>A trader shows a 71% win rate. It sounds safe. But a win rate says nothing about how deep the bad runs were, or how long they lasted. Seven losses in a row, most of them larger than any win, can erase a month of small gains.</p>
+<p>This post builds the two numbers that answer that: max drawdown and the longest losing streak. It is about 120 lines of TypeScript, with no library, and it works on any list of closed trades.</p>
+<p>Disclosure: I am the founder of copy.top. copy.top is independent and not affiliated with pump.fun or fomo.</p>
+<p>If you copy a trader with a fixed size, you do not live through one trade at a time. You live through a sequence. What decides whether your account survives is the worst sequence, not the worst single trade. This is the reason the fixed-size approach in copy trading strategies needs a size chosen against the losing run, not against the average trade.</p>
+<p>The sample data below is made up. It looks like a memecoin trader: many small wins, a few large losses, and one clear bad week. It is not a real person.</p>
+<p>The files are TypeScript and run on Node 22.6 or newer with type stripping (tested here on Node 24.7):</p>
+<p>Imports between files need the .ts extension, and types use import type, which this mode requires. For plain JavaScript, rename to .mjs, delete the annotations and the import type lines.</p>
+<p>A closed trade is two fields: when it closed and how many dollars it made or lost.</p>
+<p>Forty-one closed trades over about five weeks. The wins are small and frequent. The losses are rarer and larger. From 2026-09-17 to 2026-09-23 there is a run of seven losses in a row.</p>
+<p>Everything is a pure function: same input, same output, no clock, no network.</p>
+<p>The equity curve starts at a balance and adds each trade in close order. Max drawdown walks that curve, remembers the highest point so far, and measures how far each later point falls below it. The biggest fall wins. The result keeps the peak and the trough so you can see when it happened, and the percent is taken from the peak.</p>
+<p>The losing streak counts consecutive trades with a pnl below zero. A trade at exactly zero ends the streak. The function returns the length, the dates and the total loss of the longest one.</p>
+<p>The last function, maxCopyScale, is explained in the sizing section further down.</p>
+<p>It prints a short summary, then a small table with the five worst trades, then three sizing examples. The starting balance of 5,000 is only the base for the equity curve, so the percentage has something to work against.</p>
+<p>The win rate is 71%, yet the profit factor is only 1.11. The average win is $81 and the average loss is $176, so one loss costs about two wins. Add them up and the whole sample made $236.</p>
+<p>The max drawdown is $1,645, which is 27.2% of the peak, from 2026-09-16 to 2026-09-23. It is the same figure as the longest losing streak: seven trades, 2026-09-17 to 2026-09-23. That is not a coincidence. In this sample the worst fall is exactly the losing run, because no win interrupts it. In real data the two often differ, since a drawdown can include a few small wins inside it.</p>
+<p>A trader with this record looks fine on a win rate chart. The drawdown tells you that for a week, an account of this size was down more than a quarter, and the weeks of small wins that followed won back only part of it.</p>
+<p>Now the practical question. You have a budget, and you pick a floor: the lowest balance you accept to see. If the trader repeats the worst run, what share of their size can you copy?</p>
+<p>The idea is one line. A losing run of $1,645 at the trader's size becomes scale * 1645 at yours. You want budget - scale * 1645 to stay at or above the floor, so scale = (budget - floor) / 1645.</p>
+<p>The function is the last one in stats.ts. The three examples at the end of the output use it:</p>
+<p>A scale of 12.2% means that if the trader risks $400 on a trade, you risk about $49. The more of your budget you are willing to lose, the larger you can copy, and the function makes that trade-off explicit instead of leaving it to a feeling.</p>
+<p>Two limits apply. This assumes the next bad run is no worse than the worst one in the sample, and it will often be worse. It also ignores slippage on each copied trade, which makes every copied loss a little larger than the trader's. Treat the result as an upper bound and copy smaller.</p>
+<p>Past performance does not predict results. Nothing here is financial advice, and copying a trader can lose money, including everything you put in.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.gimmesomeoven.com/twice-baked-potatoes/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/copytop/max-drawdown-and-the-longest-losing-streak-of-a-trader-in-typescript-154a" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

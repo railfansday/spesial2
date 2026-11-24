@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What Actually Happens When a Kafka Region Fails?</title>
+    <title>How to Reduce Hallucinations in LLMs</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10614.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,88 +15,71 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What Actually Happens When a Kafka Region Fails?</h1>
+        <h1>How to Reduce Hallucinations in LLMs</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Global_Streaming_Resilience_Network_05ab6a05b0.png" alt="What Actually Happens When a Kafka Region Fails?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_reduce_llm_halucinations_gp_at_desk_checking_billing_items_89cb43bf21.png" alt="How to Reduce Hallucinations in LLMs" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Global_Streaming_Resilience_Network_05ab6a05b0.png" alt="What Actually Happens When a Kafka Region Fails?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_reduce_llm_halucinations_gp_at_desk_checking_billing_items_89cb43bf21.png" alt="How to Reduce Hallucinations in LLMs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Most Kafka deployments in the industry plan to survive the loss of a single Kafka broker or an availability zone. But that's not enough for critical Tier-0 infrastructure where downtime or data loss of even a few seconds could have a massive business impact.</p>
-<p>In such scenarios, the failure model should consider not just the loss of a broker or a zone, but the loss of an entire region. The business is expected to operate without interruption even when a whole region goes down, and it should be possible to also roll the cluster safely while operating in that state, to apply any break-glass changes.</p>
-<p>But what actually happens inside Kafka when an entire region goes down? What happens to the replicas, producer writes, and KRaft quorum? And what happens when that region comes back?</p>
-<p>Let's walk through these scenarios using a Tier-0 multi-region Kafka architecture.</p>
-<p>For a Tier-0 multi-region Kafka cluster, we need three different regions with isolated failure domains and a minimum of two brokers in each region.</p>
-<p>Brokers in each region should be configured with rack awareness to indicate their failure domains as follows:</p>
-<p>For Tier-0 workloads, each topic's partitions should be configured to have a replication factor (RF) of 6. Kafka's rack-aware replica assignment will spread the replicas across the three regions. If the automatic replica assignment doesn't allocate two replicas per region, we have to explicitly reassign replicas immediately after topic creation to meet our availability guarantees.</p>
-<p>This way, if one region goes down entirely, we still have four replicas surviving and the cluster would still continue to operate.</p>
-<p>But just running brokers in multiple regions is not the solution here. In fact, that's the easy part. The hard question is, what guarantee remains when one of those regions disappears, and does it solve the business needs?</p>
-<p>The two brokers in that region become unavailable, leaving four surviving replicas across Regions B and C.</p>
-<p>For any partitions whose leaders were in Region A, Kafka needs to elect new leaders from the surviving in-sync replicas.</p>
-<p>But having four surviving replicas alone does not determine whether Kafka will continue accepting writes.</p>
-<p>The next step is to define what is considered a successful write in this Kafka setup. For this, we need two configs:</p>
-<p>min.insync.replicas determines the minimum number of replicas that should be present in the in-sync replica set (ISR) of a partition for Kafka to accept writes when producers use acks=all.</p>
-<p>acks=all is a producer-side config that ensures that the producer will get an acknowledgment only when the write has been successfully replicated to the required in-sync replicas.</p>
-<p>These two settings work together to satisfy the durability guarantees we want.</p>
-<p>When all three regions are healthy, ISR would include all six replicas. Let's say one region goes down, then the ISR would drop down to four.</p>
-<p>Since minISR is three, writes will still continue to work.</p>
-<p>There may be temporary interruptions while Kafka detects the failure, elects new leaders, and clients reconnect to them. But once the surviving leaders are available, the cluster can continue accepting writes as long as the ISR requirements are met.</p>
-<p>The goal isn't availability at any cost, but rather the system should be available as long as the durability guarantees that we designed for can be maintained.</p>
-<p>Now let's make the scenario more interesting.</p>
-<p>Region A is still down. We have four replicas surviving across Regions B and C.</p>
-<p>What if we need to roll the cluster one broker at a time, to apply any break-glass changes?</p>
-<p>During that time, the ISR can go down from four to three. But since minISR is three, writes will still continue to work.</p>
-<p>Let's look at how the cluster behaves under different failure scenarios.</p>
-<p>Kafka will stop accepting writes only when the surviving ISR drops below three.</p>
-<p>This is an important distinction for Tier-0 workloads.</p>
-<p>It's not sufficient to design a cluster that survives a region failure. We also need to consider whether the cluster can continue operating safely while already in that degraded state.</p>
-<p>So far, we focused on the data plane. Now switching gears, the KRaft controllers have a completely different availability model.</p>
-<p>They form the metadata quorum, and a majority is needed to continue operation.</p>
-<p>For our setup, five controllers could be distributed as 2 + 2 + 1 across the three regions, requiring a majority of three to maintain quorum.</p>
-<p>If either of the regions containing two controllers goes down, three controllers remain. If the region containing one controller goes down, four remain.</p>
-<p>So, the controller quorum survives the loss of any one region.</p>
-<p>But, unlike brokers, we cannot necessarily roll the controllers at that point because taking one controller down could cause the quorum to drop below three.</p>
-<p>With a static quorum, one way to solve this is to use more controllers, and a 3 + 3 + 3 distribution would provide this. Losing one region would leave six controllers with room to still roll the controllers, as we only need five to maintain quorum.</p>
-<p>On the flip side, an increase in quorum size also increases the coordination overhead. The official Kafka documentation typically recommends three or five controllers, which tolerate one or two concurrent failures respectively.</p>
-<p>Alternatively, with dynamic KRaft quorum (KIP-853), introduced in Kafka 3.9, we can add or remove controllers from the voting quorum without restarting the cluster.</p>
-<p>For example, with our 2 + 2 + 1 setup, if a region containing two controllers goes down, the remaining three controllers can still maintain quorum. We can then remove the failed controllers from the voting membership, one at a time, reducing the quorum size to three. This allows us to roll one of the surviving controllers while still maintaining the new majority of two.</p>
-<p>However, dynamic quorum reconfiguration is not automatic. The surviving controllers must be able to maintain quorum and successfully commit the membership changes before we can proceed with the controller restart.</p>
-<p>You need to consider whether you want the same availability guarantee for the controllers as that of the data plane, and whether dynamic quorum reconfiguration during a regional outage is acceptable for your Tier-0 workloads.</p>
-<p>So far, we assumed that a region either works or goes down completely.</p>
-<p>But the WAN itself becomes a failure mode.</p>
-<p>In this setup, a partly working WAN between two regions can be more dangerous than a link that's completely down.</p>
-<p>Increased latency, packet loss, or intermittent connectivity issues between regions can cause replication to lag, ultimately resulting in replicas falling out of ISR.</p>
-<p>The three regions might be independently healthy, but if the connectivity between them is not, then the availability of the cluster might be impacted.</p>
-<p>Going back to the CAP theorem, to tolerate a network partition, we must choose between consistency and availability.</p>
-<p>So, if a partition's ISR falls below the configured min.insync.replicas of three due to a network partition, Kafka stops accepting writes with acks=all rather than weakening those guarantees.</p>
-<p>Similarly, if the KRaft controller quorum is lost, then no metadata changes, like leader elections, can happen in the cluster, even though existing data-plane traffic may continue for some time.</p>
-<p>The availability guarantees we discussed also come with their own costs.</p>
-<p>The first cost is client latency. With cross-region replication and acks=all, the network latency between these regions directly affects producer latency. Consumers can also pay the WAN latency cost when consuming from partition leaders located in a different region.</p>
-<p>The second cost is replication overhead. With RF=6, there is additional storage, network traffic, and replication-related coordination cost in the brokers compared to a smaller number of replicas.</p>
-<p>So, in an architecture like this, monitoring the health of the network paths between these regions is as critical as monitoring the Kafka brokers and controllers.</p>
-<p>Metrics like round-trip latency (RTT) between regions, packet loss, TCP retransmissions, connection errors/timeouts, and network throughput/bandwidth utilization are a good start.</p>
-<p>When one region goes down, all the partition leaders in that region would move to the two other surviving regions.</p>
-<p>This implies that those two regions would have to handle more producer and consumer traffic, network throughput, and disk I/O.</p>
-<p>Even if the cluster is designed to satisfy its ISR and controller quorum requirements, if it's not sized to handle these failures when one region goes down, the surviving regions would be overloaded, resulting in higher latencies, timeouts, and operational instability.</p>
-<p>So, for Tier-0 infrastructure, capacity planning should always be done for failure states and not stop at normal operations.</p>
-<p>Now let's say Region A comes back online.</p>
-<p>The brokers in the recovered region might have to catch up on a significant amount of data before they become fully in sync again.</p>
-<p>This can result in a sudden burst of cross-region network traffic and disk I/O across all regions.</p>
-<p>Region recovery needs to be controlled so that it doesn't overwhelm the healthy part of the cluster.</p>
-<p>This can be achieved by throttling the replica catch-up, with the trade-off of longer recovery time to minimize the impact on live production traffic.</p>
-<p>Replication throttling needs a deeper discussion of its own, so we won't go into details here.</p>
-<p>The important point is that bringing a failed region back online is not simply a matter of restarting its brokers. We need to make sure that the recovery process itself doesn't impact the business.</p>
-<p>Before putting a Tier-0 multi-region Kafka cluster into production, validate these scenarios:</p>
-<p>There is no shortage of ways to deploy Kafka across multiple regions. The challenge here is to pick the right architecture that addresses all our durability guarantees.</p>
-<p>For Tier-0 workloads, this means designing the architecture around failures first.</p>
-<p>What happens when a region goes down? Can we still roll the cluster? What continues to work, and at what point do we deliberately stop accepting writes?</p>
-<p>Lastly, can we safely bring back the region that was down without impacting the business?</p>
-<p>That is ultimately the difference between simply running Kafka across multiple regions versus actually supporting a mission-critical Tier-0 workload.</p>
+<p>Ask one of the newest language models whether a backpack comes in green, and it'll usually admit it doesn't know. Ask it how to return that backpack, and it may send the customer to a returns page, an account screen, and a return label that the store has never had. That's still a hallucination: an answer that sounds right, comes with total confidence, and isn't true.</p>
+<p>Whatever you're building, the fix is the same: stop trusting the model with the parts it can get wrong, and check its work before anyone sees it.</p>
+<p>In this tutorial we'll build a small support bot for a made-up outdoor gear store, three times over. The first version is the prompt plenty of bots start with. Then we'll apply five fixes, run six tricky customer emails through every version, and finish with a bot where the model can't slip a made-up price, date, or product past the code.</p>
+<p>An LLM hallucination is output that's fluent and confident but not backed by the facts: a product that doesn't exist, a policy nobody wrote, a date that's a week out, or a citation to a paper that was never published. The word covers two different failures:</p>
+<p>Each one needs a different fix, so it helps to keep them apart.</p>
+<p>A language model writes by predicting likely text, one token at a time. It has no separate store of facts it checks against, and nothing in that process says "stop, you don't know this". Training adds to the problem. OpenAI's research on why language models hallucinate points out that when models are graded only on how many answers they get right, a guess scores better than "I don't know", so they learn to guess.</p>
+<p>Newer models are much better at the first one. They'll often say they don't know a price rather than invent one. But they still fill gaps with what's typical, and what's typical isn't always what's true for your business. You can't train that out of a model you call through an API. What you can change is what you ask it to do, what you give it, and what you check.</p>
+<p>A made-up answer costs more than one bad reply. Some of the costs are already on the record:</p>
+<p>In a support inbox, the cost is quieter but adds up: a refund you didn't owe, or a customer who goes looking for a live chat button that isn't there and doesn't come back.</p>
+<p>Northwind Outdoor sells four things: two packs, a rain cover, and a tent. It has two orders on file and three short policies. Here's all of it:</p>
+<p>Six emails come in, and each one is there to trip the bot in a different way:</p>
+<p>The traps: the 40L pack doesn't come in green, but the 28L does. The 40L is water-resistant, not waterproof. There's no 60L. Whether the return is allowed depends on a membership, a sale price, and a count of days since delivery. The tracking details are in one order record. And the store has no price match policy at all.</p>
+<p>Make a folder, add "type": "module" to its package.json, and install the Anthropic SDK and Zod:</p>
+<p>Every version calls the model through one small helper:</p>
+<p>We're using Claude Opus 5.5 at low effort. These are short, simple replies, so the model doesn't need to think for long. Swap in any model you like, because none of the fixes depend on it.</p>
+<p>Opus 5.5 didn't invent a single price, colour, or delivery date across the six emails. Every reply said it couldn't see the store's details. That's real progress compared with older models, but look at what it said instead. Here's the reply to the email about a pack the store doesn't sell:</p>
+<p>It treats the Ridgeline 60L as real and offers to help pick a fit. The other replies made up the store around the customer:</p>
+<p>Northwind has none of those. None of it is a wild guess: it's what a typical online store has. That's exactly why it's dangerous. A customer who goes looking for the live chat or the newsletter discount won't find it, and the bot never answered the question anyway.</p>
+<p>The model can't know Northwind's prices, so give them to it. This is the idea behind retrieval-augmented generation (RAG): find the records that matter and put them in the prompt. Our store is small enough to send all of it.</p>
+<p>Two things changed. The store data goes in the system prompt, wrapped in tags so the model can tell data from instructions. And the prompt tells it to answer only from that data. Here's the green pack email again:</p>
+<p>Right on all three counts, and it even pointed to the pack that does come in green. The return, which needs four facts from two places, came back right as well:</p>
+<p>Delivered October 6, a Trail Club member, so 60 days, so December 5. Bought on sale, so store credit for what was paid, not the list price. Version 2 got all six emails right.</p>
+<p>The last line of that prompt matters as much as the data: "If the answer isn't in the data, say you don't know and that a team member will reply by email." Without it, a model that can't find the answer has to choose between letting the customer down and guessing, and training has taught it to guess. With it, "I don't know" is a right answer, not a failure.</p>
+<p>The price match email is the test, since the store data says nothing about price matching:</p>
+<p>It said it didn't know, passed the question to a person, and answered the parts it could from the data.</p>
+<p>If version 2 got everything right, why build a version 3? Because "right on this run" isn't the same as "right every time":</p>
+<p>The next three fixes take the facts and the rules away from the model completely.</p>
+<p>Version 3 splits the work into three steps. First, the model reads the email, but instead of writing a reply, it fills in a form. Every field is a choice from a list, a yes or no, or text copied from the email:</p>
+<p>Zod describes the form, and z.toJSONSchema() turns it into a JSON schema for the API's structured outputs. The API holds the model to that schema, so product can only be one of our four product IDs, not_sold, or none. There's no way for it to answer ridgeline-60. Zod then checks the answer again, so the rest of the code gets a typed object. SitePoint's guide to LLM structured output with JSON Schema goes deeper on this pattern.</p>
+<p>The model is still reading natural language, which it's very good at. It just isn't trusted to know what the store sells anymore.</p>
+<p>A form also makes the model's mistakes easy to see. The first time I ran this, the form had no asks_something_else field, and the model filed the price match email under product. The reply didn't make anything up, but the email never reached a person. In version 2, a mistake like that would be hidden inside a paragraph. Here it was one wrong value in a JSON object, and the fix was one more field.</p>
+<p>If all you need from this step is decisions like these, a model built for typed answers can do it faster and for less. Our typed AI pipeline tutorial builds the same kind of email sorter with Jev and Clairic.</p>
+<p>Second step: plain code takes the form, looks up the product and the order, applies the rules, and does the maths. What comes out is a list of facts in plain sentences:</p>
+<p>Every number in there was worked out by code that does the same thing every time, and that you can unit test. The 34 days, the December 5 deadline, and the $151.20 in store credit come out the same on every run, whatever the model does.</p>
+<p>The last rule in decide() matters most. If an email asks something the rules don't cover, the facts say so and the email goes to a person. Code decides when to say "I don't know", not the model.</p>
+<p>Third step: the model writes the reply from the facts and nothing else. Writing is the one job here it does better than code.</p>
+<p>Even with the right facts, a model writing a reply can still add something: a helpful "ships in 1–2 business days", or a price it remembers from somewhere. So the last step checks the reply. Anything that looks like a number, an order number, or a product name has to appear in the email or the facts:</p>
+<p>It's simple on purpose. It doesn't understand the reply. It just refuses to let through a value that came from nowhere, and that covers the hallucinations that cost money: prices, dates, quantities, and products. Nothing in the reply can talk it out of a result.</p>
+<p>The writer runs the check on every draft:</p>
+<p>If a draft fails, the model gets one retry and is told exactly which values weren't in the facts. If the retry fails too, the customer gets the facts as a plain list. That's less charming, but it's true.</p>
+<p>A check like this will raise false alarms, and that's fine. On my first run, it read a line about the tent's 2.1 kg weight as a product called "Weighs 2" and sent the draft back for a retry. The weight was right, and it was the only thing flagged. A false alarm costs a few seconds. A missed one costs a customer. I tightened the patterns (the version above has the fix), but I'd still rather it flag too much than too little.</p>
+<p>It's the same thing that separates the better agentic AI coding tools from autocomplete: they run the tests and read the errors instead of trusting their first draft. Model output isn't finished until something other than the model has checked it.</p>
+<p>This script sends each email through all three versions, saves every reply, and runs the check from Fix 5 over all of them. Versions 1 and 2 are checked against everything the store knows:</p>
+<p>The check caught one thing in version 1: the "1–2 business days" it made up for processing an order. It missed the "up to 24 hours" for tracking in the same reply, but only because $24 is the rain cover's price, so 24 counted as a known number. And it couldn't catch the invented returns page or live chat at all, because they aren't numbers. That's why the check is the last fix, not the only one.</p>
+<p>Reading all 18 replies, here's how each version did:</p>
+<p>Version 3 was less helpful than version 2 in one place. It couldn't give the rain cover's price, because decide() only adds facts about the product the email names. Version 2 had the whole store to look at. In version 3, the fix is a rule you write once: when a product has an add-on, include the add-on's facts too.</p>
+<p>Here's version 3's reply to the price match email:</p>
+<p>No model is free of hallucinations, so you can't stop one from ever making something up. What you can do is build so a made-up detail can't reach a customer: let code own the facts, and check the model's output against them before it's used. Where it matters, send anything your rules don't cover to a person.</p>
+<p>It cuts them a lot, because the model no longer has to guess facts it was never given. In our test, putting the store's data in the prompt took the bot from no useful answers to six right ones. It doesn't stop the model misreading what it retrieved, mixing up two records, or filling a gap the retrieved text leaves. Pair it with a way out and a check on the output.</p>
+<p>Not really. Temperature controls how random the wording is. A low temperature makes the model give the same answer more often, including the same wrong answer.</p>
+<p>Collect inputs that have tripped your app (or are likely to), write down the right answer for each, and run every version of your prompt or pipeline over the same set. Automated checks like the one in this tutorial catch made-up values. Read the replies yourself for the rest, because the made-up returns page above would pass any number check.</p>
+<p>Hallucinations come from asking a model to do jobs it isn't built for: knowing facts it was never given, and running small programs in its head. The five fixes take those jobs away:</p>
+<p>The model still does what it's best at: reading messy text and writing a friendly reply. It just isn't trusted with the facts anymore. From here, try a seventh email that asks two things at once, add the add-on rule to decide(), or extend the check to catch colours and sizes as well as numbers.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-actually-happens-when-a-kafka-region-fails/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-reduce-hallucinations-in-llms/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
