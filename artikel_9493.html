@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vegan Caesar Dressing</title>
+    <title>2 GB VPS Automation &amp; Utility Hub: n8n, Actual Budget, Uptime Kuma, and Vaultwarden</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9493.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Vegan Caesar Dressing</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>2 GB VPS Automation &amp; Utility Hub: n8n, Actual Budget, Uptime Kuma, and Vaultwarden</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F1f2apaak61b8a1q94xj0.png" alt="2 GB VPS Automation &amp; Utility Hub: n8n, Actual Budget, Uptime Kuma, and Vaultwarden" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F1f2apaak61b8a1q94xj0.png" alt="2 GB VPS Automation & Utility Hub: n8n, Actual Budget, Uptime Kuma, and Vaultwarden" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>This vegan Caesar dressing is creamy and flavorful like the classic! Traditional Caesar dressings obtain their silky texture and bold flavor from homemade mayonnaise (made of emulsified raw egg yolk in oil), Parmesan and anchovy, but this recipe is free of all those ingredients. It&#8217;s perfect if you need an egg-free, dairy-free option. What&#8217;s in&#8230;</p>
-<p>The post <a href="https://cookieandkate.com/vegan-caesar-dressing/">Vegan Caesar Dressing</a> appeared first on <a href="https://cookieandkate.com">Cookie and Kate</a>.</p></p>
+                <p>Posted on Nov 24
+•
+Originally published at vpsfolio.com</p>
+<p>Per-container RAM: n8n 400.2 MB · actual 144.3 MB · uptime-kuma 112.0 MB · caddy 14.5 MB · vaultwarden 7.3 MB (sandbox verified 2026-11-24)</p>
+<p>View the interactive benchmark plate and full VPS sizing comparison or compare all measured stacks on VPSFolio Benchmarks.</p>
+<p>Four small services, one reverse proxy, one Compose file. That is the whole shape. n8n handles workflow automation, Actual Budget tracks money, Uptime Kuma watches endpoints, and Vaultwarden stores credentials. Each one is a separate container on an internal Docker network. Caddy is the only thing that publishes a host port, and it publishes it on loopback only.</p>
+<p>The 2 GB tier is the constraint that drives every choice here. In our individual single-app runs (n8n, Actual Budget, Uptime Kuma, and Vaultwarden), the four apps summed to 1000.3 MB; combined in this 5-container sandbox run behind Caddy, total idle RAM measured 678.3 MB (n8n 400.2 MB, actual 144.3 MB, uptime-kuma 112.0 MB, caddy 14.5 MB, vaultwarden 7.3 MB). That leaves roughly 1.3 GB of headroom on a 2 GB VPS for OS buffers and active workflow spikes. If you plan to run heavy n8n jobs, schedule them off-peak or move n8n to Postgres on a larger box later.</p>
+<p>Why Caddy instead of nginx or Traefik? Caddy's config is short enough to live inline in compose.yml via the top-level configs: block. No host bind mounts, no separate config file to copy around, no Docker socket exposure. The whole stack is one compose.yml plus a .env. That matters when you are debugging on a VPS at 2 AM.</p>
+<p>All four backends stay on the internal network. Caddy terminates HTTP on port 80 inside the container, and the host sees only 127.0.0.1:18080. In production you swap auto_https off for real TLS and publish 80/443. The article covers that diff in the cutover section.</p>
+<p>You need Docker Engine 24+ and the Compose v2 plugin. A 2 GB VPS with 2 vCPUs and 40 GB of disk is the target. Swap is not optional at this size — add a 2 GB swapfile so the kernel has somewhere to spill when n8n spikes during a workflow run.</p>
+<p>For local testing you will point four hostnames at loopback. Add these to /etc/hosts on your workstation or use curl -H "Host: ..." as shown below:</p>
+<p>Disk sizing: n8n's SQLite database grows with execution history, Actual's budget file grows slowly, Uptime Kuma keeps heartbeat history, and Vaultwarden stores attachments if you enable them. 40 GB is fine for a year of light use. Plan a backup rotation before you need it.</p>
+<p>Create the project directory and write both files. The compose.yml below is the exact file the sandbox runs — no host bind mounts, all persistent state in named volumes, all config inline.</p>
+<p>Now the .env. Generate real secrets — do not ship the placeholders.</p>
+<p>All four backends should report running. Caddy should be running and listening on 127.0.0.1:18080.</p>
+<p>Probe each hostname through Caddy. The Host header is what Caddy matches on, so this works without touching /etc/hosts.</p>
+<p>You should see 200 for n8n, 200 for Actual, 302 (or 200) for Uptime Kuma, and 200 for Vaultwarden. If any return 502, the backend is not ready yet — check docker compose logs <service>.</p>
+<p>Inspect the Caddy config it actually loaded:</p>
+<p>Check the health of Actual specifically, since it has a healthcheck defined:</p>
+<p>If you want to see the full request path, tail Caddy while curling:</p>
+<p>Three changes turn this into a production stack. Do them in order and verify between each.</p>
+<p>1. Real domain names. Point DNS A records for n8n.example.com, budget.example.com, status.example.com, and vault.example.com at your VPS IP. Update .env:</p>
+<p>2. Caddyfile diff. Remove auto_https off, change http://*.local to bare hostnames, and let Caddy issue certificates automatically. The configs: block becomes:</p>
+<p>3. Publish 80 and 443. Change the Caddy ports: block to:</p>
+<p>Caddy needs to write its ACME state somewhere persistent. Add a named volume for /data on the Caddy service:</p>
+<p>And declare them under top-level volumes:. Without this, every restart re-requests certificates and you will hit Let's Encrypt rate limits.</p>
+<p>Watch for certificate obtained successfully lines. Then re-run the probe loop against https:// with real hostnames.</p>
+<p>Remote backups. Vaultwarden's SQLite database and n8n's SQLite database are the two things you cannot afford to lose. Add a cron job on the host that dumps both volumes to object storage:</p>
+<p>Adjust the volume name to match docker volume ls. Do the same for n8n_data and actual_data. Uptime Kuma's history is nice to have but not critical — back it up weekly instead of nightly.</p>
+<p>Upgrades. Pin versions in .env for n8n (N8N_VERSION=1.x.y) and Vaultwarden (vaultwarden/server:1.x.y) once you are stable. stable and latest are fine for the first month, then pin. Upgrade one service at a time:</p>
+<p>n8n migrations run on startup and can take a minute on a large database. Do not restart mid-migration.</p>
+<p>Backups. The named volumes are the source of truth. A docker run --rm -v <vol>:/data alpine tar czf - pattern works for all four. Test a restore into a scratch container before you trust the backup. Vaultwarden's db.sqlite3 is the file that matters; the rest is attachments and config.</p>
+<p>Trade-offs. SQLite everywhere keeps the stack simple and the RAM footprint low, but it means no horizontal scaling and no live replication. If you outgrow this, move n8n to Postgres first — it is the noisiest writer. Vaultwarden can stay on SQLite for a long time; its write volume is tiny. Actual Budget is fine on SQLite indefinitely for personal use.</p>
+<p>Caddy's automatic HTTPS is the reason this stack fits in one file. If you need mTLS, rate limiting, or complex routing rules, Caddy handles those too, but the inline config gets long fast. At that point, split the Caddyfile into its own file and accept the bind mount — but for four services on a 2 GB VPS, inline is the right call.</p>
+<p>One more thing: keep SIGNUPS_ALLOWED=true only until you create your Vaultwarden account, then flip it to false in .env and restart. The same applies to n8n's owner account — create it immediately after first boot, before you expose the hostname publicly.</p>
+<p>Measured in our sandbox run: total memory 678.3 MB (sum of per-container peaks over a 30s idle window after startup) across 5 containers; largest container 400.2 MB; published port(s) 18080; HTTP probe returned 200, 200, 302, 200. The run took 100.6s with the image already cached; a fresh server also has to download it. Required secret(s) ADMIN_TOKEN were generated for the test run, as the tutorial instructs. Container breakdown: n8n 400.2 MB, actual 144.3 MB, uptime-kuma 112.0 MB, caddy 14.5 MB, vaultwarden 7.3 MB. Verified routes: n8n via Caddy (HTTP 200), Actual Budget via Caddy (HTTP 200), Uptime Kuma via Caddy (HTTP 302), Vaultwarden via Caddy (HTTP 200).</p>
+<p>Verification: we ran this docker-compose stack in a disposable Docker environment and recorded the measurements above. They describe that run, not a guarantee for your host.</p>
+<p>Originally published with full interactive benchmark metrics and server sizing notes at https://vpsfolio.com/stacks/2gb-vps-automation-hub-caddy-n8n-actual-uptime-kuma-vaultwarden/.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://cookieandkate.com/vegan-caesar-dressing/?adt_ei=*|EMAIL|*" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/gongkang/2-gb-vps-automation-utility-hub-n8n-actual-budget-uptime-kuma-and-vaultwarden-1d7h" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

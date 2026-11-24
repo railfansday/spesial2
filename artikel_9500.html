@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chipotle Sauce</title>
+    <title>Designing an ESP32 Greenhouse Controller That Fails Safe</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9500.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,34 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Chipotle Sauce</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Designing an ESP32 Greenhouse Controller That Fails Safe</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4zmr4sgczjy3mxt3xtqo.png" alt="Designing an ESP32 Greenhouse Controller That Fails Safe" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4zmr4sgczjy3mxt3xtqo.png" alt="Designing an ESP32 Greenhouse Controller That Fails Safe" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>This creamy chipotle sauce is bold and punchy! It&#8217;s the kind of sauce that takes your meal to the next level, and brings together component-based dishes like tacos and burrito bowls. You can also serve it as an irresistible dipping sauce. It offers a thicker drizzle than chipotle mayonnaise and tastes better, too. To make&#8230;</p>
-<p>The post <a href="https://cookieandkate.com/chipotle-sauce/">Chipotle Sauce</a> appeared first on <a href="https://cookieandkate.com">Cookie and Kate</a>.</p></p>
+                <p>I recently published the firmware for a smart greenhouse controller I have been working on: an ESP32 that reads soil moisture, air temperature and light, waters the plants and runs a ventilation fan on its own, and reports everything over MQTT. The control logic is exercised in a Python simulator for now, with on-hardware sensor calibration as the next step.</p>
+<p>The most interesting part of the project was not connecting the sensors. It was making sure the controller fails safe. Here are the three design decisions that mattered most, with code you can reuse.</p>
+<p>The naive way to control a pump is if (soil < threshold) pump on. The problem: soil moisture hovers right around the threshold, so the relay clicks on and off every few seconds. Relays die young that way, and the pump hates it too.</p>
+<p>The fix is two thresholds instead of one. Water below 35%, stop above 55%:</p>
+<p>The fan gets the same treatment: on at 30 C, off at 27 C. Between the two values the controller simply keeps doing whatever it was already doing. That deadband is what makes a cheap relay board survive a real installation.</p>
+<p>Ask "what breaks this?" for each output, then code the answer:</p>
+<p>That last one is the rule I would put in any project: default to doing nothing when your inputs are untrustworthy.</p>
+<p>Analog soil sensors are not comparable between boards or even between sensors, so thresholds like 35% mean nothing until calibrated. I read the raw ADC value with the probe in dry air (SOIL_DRY) and in water (SOIL_WET) and map between them.</p>
+<p>But calibration only helps if the control rules around it are right. So the repo includes simulator/simulate.py, a small Python model of soil drying and temperature drift that runs the exact same rules as the firmware:</p>
+<p>This let me catch real problems, like pump rest time being shorter than the soil absorption time, without a plant in sight. When the hardware build happens, the thresholds get calibrated per sensor, but the logic arrives already tested.</p>
+<p>Everything publishes to MQTT every 10 seconds as one JSON object:</p>
+<p>One topic, one payload, so Node-RED or Home Assistant can chart it with zero parsing work. There is also a manual override mode through greenhouse/1/cmd/* topics, because a system you cannot override is a system you will eventually have to unplug.</p>
+<p>Most of the value in an automation project is in the boring parts: hysteresis, timeouts, rest periods, and refusing to act on bad data. The sensor wiring takes an afternoon. Getting the failure behavior right is what makes it something you would leave running.</p>
+<p>Full firmware, wiring table and the simulator are on GitHub: smart-greenhouse-esp32. Feedback and war stories from your own builds are very welcome.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://cookieandkate.com/chipotle-sauce/?adt_ei=*|EMAIL|*" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/mosalah_iot/designing-an-esp32-greenhouse-controller-that-fails-safe-4i51" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The model that didn&#x27;t exist, so you made it yourself</title>
+    <title>Test your applications against AWS locally with AWS Emulator</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9827.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,60 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The model that didn&#x27;t exist, so you made it yourself</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Test your applications against AWS locally with AWS Emulator</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/building-with-ml-intern/thumbnail.png" alt="The model that didn&#x27;t exist, so you made it yourself" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/11/11/Header-A-dark-gradient-1-1260x630.png" alt="Test your applications against AWS locally with AWS Emulator" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/building-with-ml-intern/thumbnail.png" alt="The model that didn't exist, so you made it yourself" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/11/11/Header-A-dark-gradient-1-1260x630.png" alt="Test your applications against AWS locally with AWS Emulator" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Last week, I wanted a small version of the prompt rewriter that ships with Qwen-Image 2.1. The official one is a 9B model that needs about 20 GB of memory and thinks for thousands of tokens before writing a single paragraph. On the Hub, I found only compressed copies of that same 9B model. So I described what I wanted to ML Intern, and the next day I had a 0.8B version that runs on a CPU. It returns valid output 99.7% of the time and uses about a quarter of the teacher's tokens. The compute for the whole project, including having the 9B model label 8,797 example requests, came to USD 16.</p>
-<p>Over the course of the next few days, I made five more models the same way. Each one started as a message in HuggingChat with ML-intern switched on, and each one ended as a public model on the Hub with its evaluation in the model card. ML-intern plans the work, asks me for a budget before it spends anything, runs a small test before the real job, then trains, evaluates and publishes on Hugging Face hardware.</p>
-<p>The first message is where I spend my effort. My first prompt, for the citrus model shared below, was about 450 words. By my 6th project it was closer to 2,000, because each project taught me something I wanted in the next one. All seven prompts are on GitHub at yvrjsharma/ml-intern-prompts, exactly as I wrote them.</p>
-<p>A prompt starts with the idea in one line and why I want it. Then it names the exact pieces: the dataset, the base model, the training script. Anything I have already checked goes under a heading that literally says "Verified facts, do not re-derive", so the agent spends its budget on the work instead of rediscovering what I know. For the camera-angle LoRA that section listed which trainer had just added transparent-image support, and which open GitHub issues made the fallback trainer risky.</p>
-<p>Two lines in the prompt are critical. The first asks for a baseline before any training. For example, the citrus prompt says: "Also report the base model's zero-shot score on the same metric before training so we can see the gain." Without it you get a trained model and no idea whether it is better than what you started with. The second is a smoke test with a check attached. For the image LoRAs I asked for 50 training steps, then a check that the saved weights had actually changed, before paying for the full run.</p>
-<p>At the end of the prompt, I lay out the expected deliverables and limit the cost. I define what belongs in the model card and include a instruction like: "Cap total spend at USD 12 and ask me before exceeding it." Because ML-intern begins every task with zero dollar budget and needs permission before executing paid jobs, this spending limit stays strictly enforced. When you leave out a budget, the agent suggests a couple of paths depending on project size and asks which one you prefer.</p>
-<p>You don't necessarily need all of that on your first attempt. For example, I didn't have the verified-facts section in my citrus brief and ML Intern still produced a model that more than tripled the accuracy of the Qwen3.5-2B model. Let me walk you through 6 things I built with Ml-Intern in just a couple of days.</p>
-<p>A general vision model can describe a yellowing citrus leaf. However, telling you whether it is a mite problem or a magnesium deficiency, and the bio and non-bio remedies to treat the plant is very hard. Using Claude, I put together a training dataset merged from three sources hosted by the Project-AgML organization on the Hub. The resulting citrus-disease-vlm-instruct is a dataset containing 3,017 annotated images across 21 distinct pests, illnesses, nutritional gaps, and treatment approaches. ML-intern handled the fine-tuning of Qwen3.5-2B using these examples, making sure to benchmark the foundation model beforehand.</p>
-<p>On the 335 test photos, the base model named the right problem 14.9% of the time. After two epochs on one A10G, the fine-tuned model got 52.8%. Compute cost, about USD 1.90.</p>
-<p>Check out: Model · Dataset · Citrus Doctor App</p>
-<p>Image models know plenty of characters. Huggy, drawn in the flat style of the Hugging Face brand assets, was not one of them. I asked ML-Intern for a LoRA on FLUX.2 klein base 4B, trained on 84 captioned drawings from Chunte/huggy_for_training dataset.</p>
-<p>The agent saved a checkpoint every 100 steps and drew the same set of prompts with each one, which made choosing easy. Step 200 was the first where Huggy was fully on-model. From step 500 on, Huggy's style started bleeding into prompts that had nothing to do with Huggy! The trained LoRA also works on the distilled klein model at 4 steps. Compute cost, about USD 7.60.</p>
-<p>Check out: Model · Dataset · Huggy Generator App</p>
-<p>ML-intern rendered 1,030 scanned household objects from Google Scanned Objects at 24 angles each, 24,722 transparent images, on a CPU job that cost a few cents. It later finalised 461 objects for training and 40 held out for testing, and 1,844 before-and-after training pairs spread evenly over 23 camera instructions.</p>
-<p>Training ran 2,000 steps in about 90 minutes on one A100 (~USD 3.75). The whole project took about half a day and 48 jobs, counting the ones that failed on missing packages or wrong paths and had to be resubmitted by ML-Intern. Total compute cost, about USD 16.</p>
-<p>Check out: Model · Dataset · Viewpoint Orbit App</p>
-<p>No dataset existed for this, so my prompt described how to make one. Start from a real photo in Open Images, remove one object with the LaMa inpainting model, and draw a scribble where the object used to be. The untouched photo is the target. ML-intern wrote and tested the pair-building scripts in a CPU sandbox, then ran them as GPU jobs, recording the author and license of every source photo along the way. It built 6,042 training pairs and a 160-pair test set, where 40 of the test pairs come from 23 object classes kept out of training entirely.</p>
-<p>Before training, it measured the base model on its own and with the Viggle turbo LoRA, and checked that running edits in batches produced identical images, which made the evaluation cheaper. Training ran 2,000 steps in 1 hour 38 minutes on one A100 (~USD 4), and a comparison of the saved checkpoints on 48 test pairs picked step 500.</p>
-<p>Paired with the Viggle turbo LoRA at 6 steps the LoRA performed really well. 67.5% of objects detected where they were drawn, at 4.7 seconds per edit. Objects from the 23 unseen classes landed as reliably as the rest (65.0% versus 64.2%). The project took a little over a day and 59 jobs. Total compute cost, about USD 24.</p>
-<p>Check out: Model · Dataset · Doodle-in App</p>
-<p>Training the 0.8B and 2B students took 12 and 18 minutes on an A10G (USD 0.75 for both). The 0.8B also ships as an 812 MB GGUF file for running on a CPU. The project took about 11 hours and 24 jobs. Total compute cost, about USD 16.</p>
-<p>Check out: Pocket rewriter 0.8B Student · 2B Student · Dataset · Pocket Studio App · Compare the teacher-student in Rewriter Arena</p>
-<p>It took two runs. The first cached 155,000 training images as latents, baked the guidance into the model, then cut the step count in stages from 16 to 8 to 4, all on A100s. The 4-step student beat the teacher run at the same 4 steps on GenEval and FID, after that ML-intern exported it to ONNX for the browser. This run took about 13 hours and USD 22.</p>
-<p>I did a second training run by asking ML-Intern to improve the 4-step student a bit more. It then made 24,000 more image pairs with the teacher at 16 steps and fine-tuned the 4-step student against them for about an hour. GenEval went from 0.509 to 0.536, against the teacher's 0.563 at 50 steps, with just 4 steps (one-fourth the compute). ML-intern re-exported the browser version. The second run took about 8 hours. Total compute cost across both runs, about USD 37.</p>
-<p>Check out: Agate 4-step model · Dataset · Run Agate in your browser · Agate 4-step LIVE</p>
-<p>These are the GPU and CPU job charges reported for each session.</p>
-<p>ML-intern is in HuggingChat. Switch on ML-intern mode and paste a prompt. If you want a starting point, my example prompts are free to copy. Start from a model you wish existed and a dataset you have, or one you can describe. Give it a small budget, ask for a baseline and a smoke test, and read what comes back before you raise the cap.</p>
-<p>If you make something with it, share it on X and tag @Gradio and @HuggingFace. We would love to see the models you make that nobody else would think to build for you.</p>
-<p>Scribble an outline on a photo, name it, it appears</p>
-<p>Small distilled prompt rewriter plus Qwen-Image 2.1</p>
-<p>9B vs 0.8B vs 2B prompt rewriters, rendered side by side</p>
-<p>Rotate the camera around a transparent object</p>
-<p>A new image on every keystroke, 4-step Agate on GPU</p>
-<p>4-step Agate text-to-image in your browser, live as you type</p>
-<p>Diagnose citrus diseases, pests and deficiencies</p>
-<p>Draw new Huggy mascots in the Hugging Face brand style</p>
-<p>Scribble an outline on a photo, name it, it appears</p>
-<p>Small distilled prompt rewriter plus Qwen-Image 2.1</p>
-<p>9B vs 0.8B vs 2B prompt rewriters, rendered side by side</p>
-<p>Rotate the camera around a transparent object</p>
-<p>A new image on every keystroke, 4-step Agate on GPU</p>
-<p>4-step Agate text-to-image in your browser, live as you type</p>
-<p>Diagnose citrus diseases, pests and deficiencies</p>
-<p>Draw new Huggy mascots in the Hugging Face brand style</p>
+                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
+<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
+<p>Get started with one of these featured services or browse all</p>
+<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
+<p>Today we’re announcing AWS Emulator, a local emulator for Amazon Web Services (AWS) that you run on your machine. The AWS Command Line Interface (AWS CLI), the AWS SDKs, and your coding agents speak to it over a local HTTPS endpoint using the same AWS APIs they would use in the cloud, from your laptop. AWS Emulator has no additional service fee. You pay only for AWS resources when you deploy on AWS. Its source is on GitHub. You install it from an RPM or Debian package on Linux, and on macOS and Windows you run it in Docker.</p>
+<p>How it works
+         You install the emulator, start it, and point your tools at the local endpoint. When AWS Emulator starts, it generates its own credentials, a config file, and a certificate, and writes them to ~/.aws/emulator/9297/. You set environment variables so the AWS SDK talks to your laptop instead of AWS, and your application code stays unchanged.</p>
+<p>From there, your existing tests, CLI scripts, and coding agents keep working the way they already do. A unit test that creates an Amazon DynamoDB table, writes an item, and reads it back is the same test, and it runs on your machine without a deployment. A coding agent can create resources, check the result, and iterate again without waiting on a deployment in a Region.</p>
+<p>The emulator is implemented in Rust so that it stays light on CPU and memory on a laptop. It supports the APIs of AWS services that have an API model in the AWS API models repository on GitHub, and because it’s built from those models, the same ones the AWS SDKs use, your requests and the errors you get back have the same shape as on AWS.</p>
+<p>If you are a developer, especially one working with coding agents such as Kiro or Claude Code, you can use that loop to test AWS interactions of real complexity locally.</p>
+<p>Let’s try it out
+         To get started, I installed the package on Amazon Linux 2023. The package adds the aws-emulator command to /usr/bin/, so it’s on the path.</p>
+<p>On macOS and Windows, you build a Docker image from the short Dockerfile in the documentation and run the emulator in a container. We don’t publish a ready-made image.</p>
+<p>I started the emulator with aws-emulator. It serves HTTPS on 127.0.0.1:9297, so only my own computer can reach it, and it writes its log as JSON lines that show the address, the config file, and the certificate file.</p>
+<p>In another terminal, I set the environment variables that point the AWS CLI at the emulator, and unset any variables that could supply real AWS credentials.</p>
+<p>The emulator generates new keys each time it starts. Its access key IDs start with EMULATOR, so you can’t mistake them for real AWS keys, and it rejects requests signed with any other keys. To confirm that my shell was talking to the emulator, I checked the health endpoint and the caller identity. The emulator uses a single account, 000000000000.</p>
+<p>Then I created a bucket, copied in a small object, and listed it.</p>
+<p>With the AWS CLI pointed at my laptop, I had the same commands I already use and a local endpoint that answered them.</p>
+<p>Next I wanted to see it the way I actually work now, so with the emulator still running I opened Kiro and asked it to create an Amazon DynamoDB table, write an item, and read it back, all against AWS Emulator rather than my AWS account.</p>
+<p>To use the same setup with an existing test suite, I would start the emulator, set the same environment variables in the script that runs the tests, and run them as usual.</p>
+<p>Using the emulator in process
+         Running the emulator as a local process gives you an HTTPS endpoint that works with the AWS CLI and the AWS SDKs through environment variables. Some SDKs need an extra setting to trust the emulator certificate, for example a trust store for the AWS SDK for Java. For tests, there is a second option. AWS Emulator ships an embedded mode that you instantiate directly inside your test process and wire into the SDK through its HTTP client, rather than talking to a separate server over the network. Each embedded instance keeps its own state, so tests do not share buckets, tables, or queues, and you can run many of them in parallel. Embedded mode is available for the AWS SDK for Rust. You add the aws-emulator-embedded crate from GitHub to the [dev-dependencies] section of your Cargo.toml file. The following example creates an Amazon DynamoDB table, writes an item, and reads it back, entirely in process.</p>
+<p>When it runs as a local process, the emulator requires every request to be signed with Signature Version 4 (SigV4), the same way AWS does, and it exposes a /__admin/health endpoint on the same port so a script or a container can wait until it is ready before running tests. By default it also sends anonymous usage and error data, and you can turn it off.</p>
+<p>How we measure fidelity
+         An emulator is only useful if a test that passes against it would also pass against AWS, so we measure that directly with fidelity tests. A fidelity test is a short program that uses an AWS SDK to run a workflow, such as storing an object and then reading and deleting it, and asserts how AWS behaves. We verify each fidelity test against real AWS. A fidelity test passes only if the emulator matches AWS on the response to every call, including the status code, the body, and the exact error code and message, and on the resources and data that the workflow creates.</p>
+<p>With each release, we publish how many fidelity tests pass for each service, as k of n. For example, 40 of 50 means that 40 of the service’s 50 fidelity tests pass. The set of fidelity tests is public in the aws-emulator-evaluation-suite repository on GitHub, including the ones that don’t pass yet, so you can see what we verified and run the fidelity tests yourself. Read a score as a snapshot of a product that’s improving. When we add fidelity tests, a score can go down even while the emulator gets better.</p>
+<p>If the emulator doesn’t implement an operation yet, it returns HTTP 501 (Not Implemented), so your tests fail right away. If the emulator acts differently from AWS, you can tell us by opening an issue in the AWS Emulator repository on GitHub.</p>
+<p>How the emulator is built
+         AWS Emulator is built and maintained by agents from the AWS API models using Amazon Bedrock AgentCore Runtime Instances, AWS CodePipeline, and AWS CodeCommit, so it stays current with AWS as those models change.</p>
+<p>One group of agents looks for gaps, both by comparing emulator responses against real AWS and by statically comparing the emulator’s code against the published Smithy models, and files an issue for each gap it finds. Another group picks up an issue, writes tests, implements the behavior, and reviews the change for correctness, performance, and security. When the change is ready, it is pushed to a source repository, and that push triggers an AWS CodePipeline run that runs the fidelity tests before the change is published to the public GitHub repository.</p>
+<p>How we keep it secure
+         Because the code is written by agents, an independent security agent reviews changes adversarially, both while the fix is being made and again in the release pipeline as a final check before anything ships.</p>
+<p>Security of your own use remains a shared responsibility. We build the emulator to run safely on your machine: it listens only on your own computer by default and rejects requests that aren’t signed with its own keys. You decide where it runs, what data you put in it, and how you test before production. Don’t use the emulator to test whether your application is secure. It doesn’t evaluate AWS Identity and Access Management (IAM) policies and resource-based policies the way AWS does, so a request that AWS denies might succeed in the emulator. Keep real credentials out of the environment of your test jobs, and test your security settings and your whole application on AWS before you go to production.</p>
+<p>Now available
+         AWS Emulator is generally available today. It has no additional service fee. You pay only for AWS resources when you deploy on AWS. You can install it from RPM or Debian packages on Linux, run it in Docker on macOS and Windows, or build from source, and it works with the AWS SDKs and the AWS CLI once you set environment variables. At launch, it has some limits. It doesn’t evaluate IAM policies the way AWS does, and each emulator acts as a single account, with no cross-account or cross-Region behavior. How closely it matches AWS varies by service and feature. To see how well the emulator covers the services that you use, check the fidelity scores in the AWS Emulator documentation.</p>
+<p>If you want to check regional availability, visit the AWS Capabilities by Region page in AWS Builder Center. If you want to call APIs, search documentation, find regional availability, and check troubleshooting about this new feature, try using the AWS MCP Server and plugins with your preferred AI tool.</p>
+<p>To get started, visit the AWS Emulator repository on GitHub and see the AWS Emulator documentation.</p>
+<p>Updated on November 12, 2026: Added links to the AWS Emulator repository on GitHub.</p>
+<p>Daniel Abib is a senior specialist solutions architect at AWS, focused on generative AI and Amazon Bedrock — and passionate about serverless. He helps startups and enterprises build AI-powered applications and modernize with cloud-native architectures. A three-time Ironman finisher and four-time re:Invent speaker, he brings the same endurance mindset to building cloud solutions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/building-with-ml-intern" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://aws.amazon.com/blogs/aws/test-your-applications-against-aws-locally-with-aws-emulator/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

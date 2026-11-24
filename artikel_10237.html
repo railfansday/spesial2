@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build Live Video Chat With WebRTC: From First Call to Production Debugging</title>
+    <title>Who gets to decide what ‘bad things’ we should accept about AI?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10237.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,59 +15,64 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Build Live Video Chat With WebRTC: From First Call to Production Debugging</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Who gets to decide what ‘bad things’ we should accept about AI?</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Web_RTC_browser_connection_architecture_702754f98a.png" alt="Build Live Video Chat With WebRTC: From First Call to Production Debugging" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Web_RTC_browser_connection_architecture_702754f98a.png" alt="Build Live Video Chat With WebRTC: From First Call to Production Debugging" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>Adding real-time video to a web app used to mean plugins, proprietary SDKs and a lot of money. Today every modern browser ships with WebRTC, a set of APIs that lets two browsers exchange audio, video and data directly. The catch is that WebRTC gives you building blocks, not a finished feature. This guide walks through those blocks in the order you actually need them, with the exact API calls you need, and then covers the production issues that tutorials usually skip.</p>
-<p>A browser-to-browser call has four moving parts:</p>
-<p>Start with the local preview. Browsers only allow camera access on HTTPS or localhost, so serve your page accordingly.</p>
-<p>1.     Request a stream with navigator.mediaDevices.getUserMedia(), passing video constraints (an ideal width of 1280 and height of 720 is a sensible default) and audio constraints with echoCancellation and noiseSuppression enabled.</p>
-<p>2.     Assign the returned MediaStream to the srcObject property of your local video element.</p>
-<p>3.     Keep a reference to the stream, because you will add its tracks to the peer connection later.</p>
-<p>Set the muted and playsinline attributes on the local video element. Without muted users hear themselves, and without playsinline iOS Safari opens the video full screen.</p>
-<p>The peers need a way to find each other. A tiny Node.js server using the ws package is enough for development. Its whole job is to relay messages between the peers in a room:</p>
-<p>1.     Create a WebSocket server (for example with the ws package) listening on its own port.</p>
-<p>2.     Keep a map of room names to the set of sockets in each room.</p>
-<p>3.     When a client sends a join message, store the room name on the socket and add it to that room's set.</p>
-<p>4.     For every other message type, forward the raw message to the other sockets in the same room, and never echo it back to the sender.</p>
-<p>5.     On disconnect, remove the socket from its room so stale peers do not receive messages.</p>
-<p>In production you would add authentication, limit room size to two for one-to-one calls, and validate message types, but the shape stays the same.</p>
-<p>Both sides create an RTCPeerConnection, add their local tracks and listen for the remote ones:</p>
-<p>1.     Create a new RTCPeerConnection with an iceServers list that contains at least one STUN server.</p>
-<p>2.     Loop over the local stream's tracks and call addTrack() for each one.</p>
-<p>3.     In the ontrack handler, attach the first remote stream to your remote video element.</p>
-<p>4.     In the onicecandidate handler, send every new candidate to the other peer through your signalling channel as a candidate message.</p>
-<p>One peer creates an offer, the other answers, and both apply each other's descriptions. Candidates arrive asynchronously in the background.</p>
-<p>1.     The caller runs createOffer(), applies it with setLocalDescription() and sends the description as an offer message.</p>
-<p>2.     The callee applies the offer with setRemoteDescription(), runs createAnswer(), applies it locally and sends it back as an answer.</p>
-<p>3.     The caller applies the answer with setRemoteDescription().</p>
-<p>4.     Both sides pass every incoming candidate message to addIceCandidate().</p>
-<p>If both peers might start a call at the same time, look up the "perfect negotiation" pattern on MDN. It assigns one side as polite and resolves offer collisions cleanly instead of leaving both peers stuck.</p>
-<p>On a home network, STUN alone often works. On corporate Wi-Fi, mobile carriers and symmetric NATs it frequently does not, and the call silently fails to connect. A TURN server relays media when a direct path is impossible. The open-source coturn server is the usual choice.</p>
-<p>In practice, your iceServers list should contain your own STUN URL plus a TURN URL with a username and credential, so the browser can fall back to the relay automatically when direct connectivity fails.</p>
-<p>Generate short-lived TURN credentials on your backend rather than hard-coding them, and budget for bandwidth: relayed calls pass every frame through your server.</p>
-<p>Users deny camera access, unplug headsets and switch from Wi-Fi to 4G mid-call. Catch NotAllowedError and show a clear explanation, listen for devicechange events, and use RTCRtpSender.replaceTrack() to swap cameras without renegotiating the whole call.</p>
-<p>Listen to pc.onconnectionstatechange. When the state becomes disconnected, wait a few seconds before giving up, because it often recovers. On failed, call pc.restartIce() to try new network paths.</p>
-<p>Use RTCRtpSender.setParameters() to cap the bitrate on weak connections, and read pc.getStats() to monitor packet loss and round-trip time. Showing a small "poor connection" indicator does more for perceived quality than any codec tweak.</p>
-<p>Mesh calls, where every participant connects to every other, work for two or three people. Beyond that, upload bandwidth explodes. Group calls need a Selective Forwarding Unit (SFU) such as mediasoup, LiveKit or Janus, which receives each stream once and forwards it to the others.</p>
-<p>Tutorials end at a working demo, but the fastest way to understand what production WebRTC looks like is to watch a real call from the inside. Chrome ships an internal diagnostics page that shows every peer connection the browser opens, and it works on any site that uses WebRTC.</p>
-<p>1.     Open chrome://webrtc-internals in one tab and keep it open.</p>
-<p>2.     In another tab, start a call on your own demo and find its RTCPeerConnection entry.</p>
-<p>3.     Expand that entry and look at the ICE candidate pairs: you will see whether the call went direct (host or srflx) or through a TURN relay (relay).</p>
-<p>4.     Open the stats graphs for the outbound video stream and watch the bitrate, frame rate and resolution adapt when you throttle the network in DevTools.</p>
-<p>5.     Check the negotiated codec and how quickly the connection recovers when you switch Wi-Fi off and back on.</p>
-<p>Once you can read your own call, repeat the exercise on a production service. Any browser-based product works, whether a meeting tool or a live video chat that pairs two visitors, because webrtc-internals shows the same data for every site. Expect differences from your demo: more candidate pairs, a relay candidate in the list and a bitrate that adapts faster. Seeing them makes the earlier sections concrete, from why TURN matters to how bandwidth estimation reacts to packet loss.</p>
-<p>The one-to-one call above is the core of many products, from telehealth consultations and tutoring to customer support. The engineering challenges grow with the use case: random matching needs queueing and presence on the signalling server, public platforms need moderation and reporting, and global audiences need TURN servers in several regions.</p>
-<p>Start with the minimal version, get it working across Chrome, Firefox and Safari on both desktop and mobile, and add TURN before real users arrive. Once the call is reliable, every other feature becomes a much easier problem.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p><p class="wp-block-paragraph">There has been intense debate about the threat <a href="https://www.fastcompany.com/section/artificial-intelligence" title="AI">AI</a> poses to humanity and what should be done about it. The voices have piled on: a former Anthropic researcher who said AI companies are “<a href="https://x.com/hilbertspaess/status/2097476196791709843?s=20" rel="noreferrer noopener" target="_blank">gambling with our lives</a>,” prominent tech executives including Anthropic’s Dario Amodei <a href="https://www.politico.com/news/2026/09/12/anthropic-ceo-dario-amodei-seeks-immediate-slowdown-artificial-intelligence-01073519" rel="noreferrer noopener" target="_blank">calling for an AI slowdown</a>, politicians refusing to back down from the <a href="https://www.npr.org/2026/09/13/nx-s1-5968078/trump-mike-johnson-ai-slowdown" rel="noreferrer noopener" target="_blank">AI arms race with China</a>, and investors dismissing it all as hysteria standing in the way of “<a href="https://urldefense.proofpoint.com/v2/url?u=https-3A__www.washingtonpost.com_technology_2026_07_11_ais-2Dsoon-2Dto-2Dbe-2Dbillionaires-2Dwant-2Dknow-2Dwhat-2Ddo-2Dwith-2Dall-2Dthat-2Dmoney_&amp;d=DwMF-g&amp;c=euGZstcaTDllvimEN8b7jXrwqOf-v5A_CdpgnVfiiMM&amp;r=MNhptkCYnJRHiFelkhhVR3KRZ_bK4wq23368tWDcn_M&amp;m=7B0ewYKH5iCtK8IukDVqTTKGOOe3buZAQyM7DDepygrdK4CvqF7VX41ymeRllYjb&amp;s=miccQYWmeVxlkIHvdQbyBEuixCFC_AHD4oGm9H9P8Zc&amp;e=" rel="noreferrer noopener" target="_blank">the largest wealth-creation event of our lifetimes</a>.”&nbsp;</p>
+
+
+
+<p class="wp-block-paragraph">Then, Sam Altman <a href="https://www.politico.com/news/2026/10/04/sam-altman-decoded-interview-ai-01106217" rel="noreferrer noopener" target="_blank">said out loud what they&#8217;ve all been dancing around</a>: &#8220;We believe the world should accept some bad things happening for the benefits of this technology.&#8221; </p>
+
+
+
+<p class="wp-block-paragraph">Altman isn’t alone in this belief. The AI industry as a whole wants the world to trust that the benefits will be worth the “bad things” that happen, even as companies pursue trillion-dollar valuations despite their own warnings. Those decisions are being shaped largely by a small, powerful group of men. </p>
+
+
+
+<p class="wp-block-paragraph">Our research shows the problem goes well beyond a few CEOs. Over the past several months, our team at the Shorenstein Center at Harvard Kennedy School studied how AI is used, experienced, and understood by men and women in the U.S. We found that women are underrepresented across many of the critical places where AI is developed, adopted, and discussed.</p>
+
+
+
+<p class="wp-block-paragraph">Start with coverage. In our analysis of more than 78,000 news articles about AI over the past year, men were named in AI headlines 14.6 times as often as women and cited as experts 4.3 times as often. Part of that reflects who leads AI companies, but the gap still holds after we removed executives, founders, officials, and investors from the analysis. The people arguing the loudest about AI and shaping which views get bolstered as credible are a narrow slice of the country, while the rest of us live with the consequences of what they decide.</p>
+
+
+
+<p class="wp-block-paragraph">Women, the ones more likely to be wary about AI, are largely missing from the debate over which risks to accept. Our research finds meaningful differences between women and men in how they use and view it. Our <a href="https://shorensteincenter.org/resource/women-ai/" rel="noreferrer noopener" target="_blank">survey</a> of more than 5,000 U.S. adults finds women consistently report they use AI less, feel less confident using AI, see less value in it, and pay less attention to developments in AI. At work, women are less likely to receive AI training, mentorship, and encouragement, even though each is linked to more use, confidence, and perceived value for both women and men. </p>
+
+
+
+<p class="wp-block-paragraph">Trust in AI is low across genders, and lower among women, who report more worry and anxiety about AI. Men report more curiosity, optimism, and excitement. Both genders say men&#8217;s perspectives and needs are better represented in AI development and in AI-generated content. </p>
+
+
+
+<p class="wp-block-paragraph">Browsing data shows a similar pattern. The share of women and men who have never used AI has nearly <a href="https://www.pewresearch.org/internet/2026/06/17/the-gender-gap-in-ai/" rel="noreferrer noopener" target="_blank">converged</a>, but among people who use AI, men are more likely to use chatbots on a daily basis. If AI companies are building products around their heaviest consumers, AI is being optimized for men. The men using AI may see and reap the benefits, but women will also have to share the risks, whether or not they choose to use the technology. </p>
+
+
+
+<p class="wp-block-paragraph">Many women are already working on these problems, and have been for years. Joy Buolamwini and Timnit Gebru showed in 2018 that commercial facial analysis systems <a href="https://news.mit.edu/2018/study-finds-gender-skin-type-bias-artificial-intelligence-systems-0212" rel="noreferrer noopener" target="_blank">failed far more often on darker-skinned women</a>. Gebru has since argued that the AI <a href="https://www.wired.com/story/one-of-ais-fiercest-critics-says-all-the-doom-talk-is-meant-to-distract-us/" rel="noreferrer noopener" target="_blank">extinction warnings distract from harms</a> AI is already causing. Fei-Fei Li has said she is <a href="https://www.businessinsider.com/fei-fei-li-disappointed-by-extreme-ai-messaging-doomsday-utopia-2025-12" rel="noreferrer noopener" target="_blank">tired of a debate</a> stuck between doomsday and utopia. Mira Murati has <a href="https://www.wired.com/story/mira-murati-humans-in-the-loop-ai-models-thinking-machines/" rel="noreferrer noopener" target="_blank">built her company</a> around the practical question of how to keep humans in the loop instead of automating them out. </p>
+
+
+
+<p class="wp-block-paragraph">Their questions are more specific than whether AI will save or end us, yet the coverage has centered on extinction versus opportunity. Who gets named and quoted may be part of the reason.</p>
+
+
+
+<p class="wp-block-paragraph">History shows who often pays for that trade-off when women are left out of the design and key decisions of new technologies: Crash test dummies modeled on male bodies <a href="https://www.theguardian.com/lifeandstyle/2019/feb/23/truth-world-built-for-men-car-crashes" rel="noreferrer noopener" target="_blank">put women at greater risk for serious injury</a>, and clinical trials focused on men led to <a href="https://www.nytimes.com/2013/01/11/health/fda-requires-cuts-to-dosages-of-ambien-and-other-sleep-drugs.html" rel="noreferrer noopener" target="_blank">unsafe drug dosages for women</a>. AI repeats those gaps because it learns from the same skewed data where women are left out. Amazon had to scrap a <a href="https://www.fastcompany.com/section/hiring" title="Hiring">hiring</a> tool that <a href="https://www.cnbc.com/2018/10/10/amazon-scraps-a-secret-ai-recruiting-tool-that-showed-bias-against-women.html" rel="noreferrer noopener" target="_blank">penalized résumés containing the word <em>women</em></a>, and AI tools for screening liver disease were <a href="https://www.ucl.ac.uk/news/2022/jul/gender-bias-revealed-ai-tools-screening-liver-disease" rel="noreferrer noopener" target="_blank">twice as likely to miss the disease in women</a>. </p>
+
+
+
+<p class="wp-block-paragraph">Altman says the world should accept some “bad things” to reap the benefits of AI. Women—who trust AI less, have paid for its many <a href="https://www.unwomen.org/en/articles/faqs/ai-powered-online-abuse-how-ai-is-amplifying-violence-against-women-and-what-can-stop-it" rel="noreferrer noopener" target="_blank">failures</a>, and have long worked to fix them—may have a different cost-benefit calculation. Nobody is asking them, and it’s time we start. </p>
+
+
+<hr /></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/build-live-video-chat-with-webrtc-from-first-call-to-production-debugging/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.fastcompany.com/91647666/who-gets-to-decide-what-bad-things-we-should-accept-about-ai" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serving a Local LLM to Several Users: Ollama, LM Studio, llama.cpp and vLLM Benchmarked</title>
+    <title>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10189.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,107 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Serving a Local LLM to Several Users: Ollama, LM Studio, llama.cpp and vLLM Benchmarked</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_fb7158b00d.jpg" alt="Serving a Local LLM to Several Users: Ollama, LM Studio, llama.cpp and vLLM Benchmarked" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_fb7158b00d.jpg" alt="Serving a Local LLM to Several Users: Ollama, LM Studio, llama.cpp and vLLM Benchmarked" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>When one person chats with a local model, it barely matters which server you run. On one RTX 3090 with the same model file, Ollama, LM Studio and llama.cpp wrote text within about 10 percent of each other, because all three run llama.cpp underneath. That changes when your app sends several requests at once. With four requests, the best setup produced more than three times as much text as the worst, and the cause was a default setting, not the engine. With 32 requests, vLLM produced 2.5 times as much text as the best llama.cpp setup I tested.</p>
-<p>This article puts those numbers side by side and shows which setting to change for your app.</p>
-<p>I ran every test on one machine. The full write-ups, with every command and the raw results, are on homebrewserver.club.</p>
-<p>Ollama, LM Studio and llama.cpp loaded the exact same GGUF files, checked by SHA-256. vLLM cannot run GGUF files well, so it loaded a 4-bit AWQ file of the same model (9.1 GB). Answer quality was not compared.</p>
-<p>The tests ran between 8 and 16 November 2026, and speeds on this machine varied by a few percent from one day to the next. Treat a gap under about 5% as a tie. All of this is one consumer GPU and one model family, so read the numbers as a guide to how the servers behave, not as a ranking for your hardware.</p>
-<p>This is the short prompt with a 512-token answer.</p>
-<p>Ollama and LM Studio both start llama.cpp's llama-server program for each model they load. Ollama has done this since version 0.30, and a comment in its source code says so. On Linux, LM Studio's CUDA runtime is a folder with llama.cpp libraries and a llama-server binary.</p>
-<p>Ollama logs the command it starts when you set OLLAMA_DEBUG=1. When llama.cpp was started by hand with that exact command, in a run next to Ollama, its speed matched Ollama's within 1%. So Ollama adds no speed cost of its own. LM Studio was 5 to 10% slower in this test. The test did not separate whether that came from its llama.cpp build or its other start options.</p>
-<p>For one user, the gap between Ollama and LM Studio was about 0.4 s on a 512-token answer from the 9B model. You would notice it in long answers, and hardly in a chat window.</p>
-<p>A web app rarely sends one request at a time. A chat page, a background summary job and an agent can all call the same model at the same moment. The next test sent four requests at once, each asking for 256 tokens, and measured the total output per second.</p>
-<p>A slot is one request that the server works on at the same time as others. llama-server sets the number of slots with -np (short for --parallel), and Ollama and LM Studio pass their own setting through to it.</p>
-<p>With one slot, the server answers the four requests one after another, so the total stays at the speed of a single request. That is Ollama's default. With four slots, the server puts the four requests through the model together, and the total rose to more than twice that of one slot. That is the default in LM Studio and llama.cpp. vLLM was the fastest at four requests, but it was tested only with the 9B model. Its lead grows with more requests, as the section after next shows.</p>
-<p>For your app, this means that the fourth user of a default Ollama server waits for the first three answers to finish before their own answer starts.</p>
-<p>The obvious fix is OLLAMA_NUM_PARALLEL=4. It worked for the 9B model, though in one of three rounds Ollama still answered at the speed of a single request. With the 27B model, it made Ollama slower than its default.</p>
-<p>The cause is how each server sizes the context, the memory that holds each request's prompt and answer. Ollama picks the context from the GPU's memory: 32,768 tokens on a 24 GB card, according to its docs. With four slots, it gives each slot its own 32,768 tokens, so it started llama-server with a 131,072-token context. The Ollama FAQ says the memory needed grows with the number of parallel requests multiplied by the context length.</p>
-<p>That context did not fit next to the 27B model in 24 GB. ollama ps showed 16% of the model on the CPU, and the total speed fell to 33.1 tokens per second.</p>
-<p>LM Studio and llama.cpp handle it differently. Their four slots share one pool of context:</p>
-<p>The price of LM Studio's default is a short context. Four requests sharing 8,192 tokens leave little room for long documents or a long chat history. If your app sends long prompts, load the model with a larger context.</p>
-<p>In Ollama, setting a smaller context with OLLAMA_CONTEXT_LENGTH next to OLLAMA_NUM_PARALLEL should avoid the spill to the CPU. The test did not try this, so measure it on your own card.</p>
-<p>The last test went further, from 1 to 32 requests at once, with the 9B model. It compared vLLM, a server built to serve one model to many users, with llama.cpp at its defaults and with more slots. Ollama and LM Studio were tested only up to four requests, so they are not in this table.</p>
-<p>With its defaults, llama-server chose four slots by itself, so it worked on four requests and queued the rest. Its total stayed near 330 tokens per second from 4 requests to 32. Setting -np 16 or -np 32 roughly doubled the total at 16 requests.</p>
-<p>vLLM's lead came from each request running faster inside a large batch. At 32 requests, each vLLM request generated about 61 tokens per second, against about 27 on llama.cpp with 32 slots. vLLM's README names the two techniques behind this: PagedAttention, which stores each request's working memory in small blocks, and continuous batching, which adds new requests to the batch the GPU is already working on.</p>
-<p>Total output tells you how much work the server does. The wait for the first word tells you how the app feels to the user behind the last request:</p>
-<p>For a web app, that is 22.5 seconds of spinner before any text appears. Long prompts make every wait longer, on both servers. With eight requests of about 4,120 tokens each, the last request waited 7.9 s on vLLM and 8.8 s on llama.cpp with 32 slots.</p>
-<p>If you set the slots yourself, the llama-server README lists three options that work together:</p>
-<p>If you run an older llama.cpp, update first. Four requests at once ran 14 to 22% faster on v1.0.0 than on the build from five days earlier, while one request stayed the same. The most likely reason is a new CUDA kernel in v1.0 for steps of 2 to 24 tokens on RTX 30-series and newer cards.</p>
-<p>vLLM's throughput comes with two costs that matter on a shared machine.</p>
-<p>It reserves most of the GPU. By default, vLLM takes 92% of the card's memory before it loads anything, and fills what the model does not need with cache. With a desktop and a browser holding about 2 GiB, vLLM refused to start:</p>
-<p>Setting --gpu-memory-utilization 0.6 alone was not enough with this model, because the default limit of 256 sequences needed more cache than fit. Adding --max-num-seqs 32 fixed it. With both settings, vLLM held 12.7 GiB and kept the same speeds. llama.cpp works the other way: it sizes its cache from -c and -np and never asked for more than 15.1 GiB in this test.</p>
-<p>It starts slowly. llama-server answered requests 2 to 5 s after its container started. vLLM compiles the model before it serves anything. That took 72 s with its compile cache already on disk, and 173 s on the first start without it. Changing a vLLM argument triggered a fresh compile.</p>
-<p>It also needs a different model file. vLLM loads Hugging Face safetensors, so a 4-bit model is a separate AWQ or GPTQ upload. The AWQ file here was 9.1 GB against 5.7 GB for the GGUF, because its recipe leaves some layers unquantized. Check the file size, not only "4-bit", when you size a model for your card.</p>
-<p>All four servers have an OpenAI-compatible API under /v1, so the same client code works with each one. You change the base URL and the model name. These are the ports used in the tests:</p>
-<p>In Node.js with the openai package, that looks like the sketch below. The measurements came from a Python test client, and this snippet was not part of them:</p>
-<p>Qwen3.5 thinks before it answers unless you turn it off. The tests sent "chat_template_kwargs": {"enable_thinking": false} in the request body to vLLM and llama.cpp.</p>
-<p>None of the servers asked for a password in these tests. llama-server also warned at start-up that its CORS rule allowed all origins. Bind the port to 127.0.0.1, as in the table, and set --api-key on llama.cpp or vLLM if anything else on your network can reach it.</p>
-<p>Before you choose, count how many requests your app really sends at the same moment. Log the timestamps for a day, or count the parallel calls your agent makes per user action. If that number is one, any of these servers will do. If it is four or more, the slot setting will change your users' wait more than the choice of engine.</p>
-<p>Not for one request with the same settings. Ollama runs llama.cpp's own server, and the two were within 1% when started with the same command. llama.cpp was faster with four requests at once, because it starts four slots by default and Ollama starts one.</p>
-<p>Ollama gives each parallel request its own full context. With four slots on a 24 GB card, that was 131,072 tokens, which pushed 16% of a 27B model onto the CPU. A smaller context may avoid that, but this test did not measure it.</p>
-<p>When many requests arrive together. At 32 requests, vLLM produced 2.5 times the output of llama.cpp with 32 slots and kept every first-word wait under a second. For one request at a time, llama.cpp was 5% faster and started in seconds instead of more than a minute.</p>
-<p>Usually not. All four serve OpenAI-compatible endpoints under /v1, so you change the base URL and the model name.</p>
+<p>Picture this. A customer writes to your support chatbot: "Hi, I'm Asha, my card ending 4111 was charged twice, call me on 98400 12345." Your Java service wraps that message in a prompt, sends it to a model, and logs the whole thing so you can debug it later. Congratulations, you now have a customer's name, phone number and card details sitting in a plain text log file that half the engineering team can open.</p>
+<p>This happens more often than people admit. Logging AI calls is genuinely useful, but prompts and responses are some of the most personal text your application ever touches. Here's how to keep the usefulness and drop the risk.</p>
+<p>A regular web request is easy to log: URL, status code, time taken. AI calls are messier.</p>
+<p>The output changes from run to run. If a user says "your bot gave me a wrong answer yesterday", the only proof of what happened is what you sent and what came back at that moment. You can't just replay it and expect the same result.</p>
+<p>Prompts are also built, not typed. The final text is usually a template, a few retrieved document chunks, some chat history and the user's message stitched together. When something looks off, the bug could be in any of those pieces, and only the assembled prompt shows you which one.</p>
+<p>Then there's cost. You pay by the token, so without per-call records you can't say which feature is burning money. And quality drifts over time as models get upgraded and templates get edited. Old logs are your only baseline.</p>
+<p>So yes, you need these logs. The real question is what goes into them.</p>
+<p>Before writing any masking code, agree on what counts as sensitive. In most business apps that means:</p>
+<p>Names, emails, phone numbers and home addresses</p>
+<p>Card numbers, bank details and government ID numbers</p>
+<p>Health, legal or job-related details people mention in free text</p>
+<p>Internal material like contract wording, pricing rules or source code</p>
+<p>The first three groups follow patterns, so they're easy to catch. The last two don't, and that's where most teams get caught out. Keep that in mind, because it shapes the design below.</p>
+<p>The safest sensitive value is the one that never reaches the log. So split what you record into two buckets.</p>
+<p>The first is metadata: a request ID, a hashed user or tenant ID, model name, prompt template name and version, token counts, latency, retry count, error type and estimated cost. None of this is personal, and it answers most day-to-day questions.</p>
+<p>The second is content, meaning the actual prompt and response text. You only need this when you're investigating quality, and even then you rarely need all of it. A sensible default is to log metadata for every call and masked content for a small sample, maybe five percent, plus every failed call.</p>
+<p>Here's a mistake that's easy to make: letting the log appender clean things up afterwards. By then the raw text may already be in a buffer, an async queue or a crash dump. Mask first, then log.</p>
+<p>The cleanest way is one small component that every AI log call has to pass through:</p>
+<p>public interface PiiMasker {
+    String mask(String input);
+}</p>
+<p>Nothing else is allowed to write raw prompts. One chokepoint is much easier to review and test than masking sprinkled across fifty classes.</p>
+<p>For structured data like emails, cards and tokens, regular expressions do the job well:</p>
+<p>public class RegexPiiMasker implements PiiMasker {
+
+    private static final Map<Pattern, String> RULES = new LinkedHashMap<>();
+
+    static {
+        RULES.put(Pattern.compile("[A-Za-z0-9.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[EMAIL]");
+        RULES.put(Pattern.compile("\b(?:\d[ -]?){13,19}\b"), "[CARD]");
+        RULES.put(Pattern.compile("\b(?:\+?\d{1,3}[ -]?)?\d{10}\b"), "[PHONE]");
+        RULES.put(Pattern.compile("(?i)bearer\s+[A-Za-z0-9.~+/=-]+"), "Bearer [TOKEN]");
+    }
+
+    @Override
+    public String mask(String input) {
+        if (input == null || input.isBlank()) return input;
+        String result = input;
+        for (var rule : RULES.entrySet()) {
+            result = rule.getKey().matcher(result).replaceAll(rule.getValue());
+        }
+        return result;
+    }
+}</p>
+<p>A few small choices matter here. The patterns are compiled once, not on every call. The order is fixed, because a card number can otherwise get half eaten by the phone rule. And the replacement labels such as [EMAIL] keep the sentence readable, so whoever debugs it later can still follow what the user was asking.</p>
+<p>Regex won't catch a name like "Asha Raman" or an address buried mid-sentence. For those you have a few options, and they work best together.</p>
+<p>You can run a named-entity recognition model that tags people, places and organisations, then mask anything above a confidence threshold. You can do exact replacement of values you already know, such as the customer's name from the current session. Or, best of all, you can mask at the field level while building the prompt. If your code knows that customer.getEmail() is going into the template, swap in a placeholder right there instead of trying to spot it afterwards. Knowing beats guessing every time.</p>
+<p>Plain redaction can remove too much. If the same email shows up five times in a conversation, five identical [EMAIL] tags hide the fact that it was one person.</p>
+<p>The fix is consistent pseudonyms. Turn each real value into a short token using a keyed hash, so the same email always becomes something like EMAIL_7f3a. You can still follow the thread, but nobody can read the original from the log. Use an HMAC with a secret from your secrets manager. A plain unkeyed hash of a phone number can be brute-forced in minutes, because there just aren't that many phone numbers.</p>
+<p>One warning: if you also store a lookup table to reverse the tokens, that table is now sensitive data too. Most teams are better off with one-way tokens.</p>
+<p>Free-text log lines are hard to search and easy to leak through. Write one JSON record per AI call with clearly separate fields:</p>
+<p>log.info("ai_call",
+    kv("requestId", requestId),
+    kv("model", model),
+    kv("promptVersion", "support-reply-v4"),
+    kv("inputTokens", usage.inputTokens()),
+    kv("outputTokens", usage.outputTokens()),
+    kv("latencyMs", elapsed),
+    kv("promptMasked", masker.mask(prompt)),
+    kv("responseMasked", masker.mask(response)));</p>
+<p>Now dashboards for cost and latency never need to touch the text fields at all. You can also keep the two kinds of data for different lengths of time: metadata for a year, masked content for a couple of weeks. Put the request ID into your logging framework's MDC so every line belonging to one call, including retries and tool calls, carries the same ID.</p>
+<p>Streaming trips people up. Tokens arrive in tiny pieces, and a card number can be split across two chunks, which means masking each chunk on its own will miss it. Collect the full response in a buffer, mask it once the stream ends, and log that. If the stream dies halfway, run the partial buffer through the same masker.</p>
+<p>Tool calls are the other trap. When the model calls one of your Java methods, the arguments and return values are often the most sensitive thing in the whole exchange: order details, account balances, addresses. Treat them as part of the prompt and response. Log the tool name, duration and outcome by default, and log arguments only after masking.</p>
+<p>Masking lowers the risk but never removes it, so surround it with some ordinary discipline:</p>
+<p>Give content fields a short retention period. Old prompt archives are liabilities.</p>
+<p>Limit who can read AI logs. Debugging a model doesn't mean someone needs to read customer messages.</p>
+<p>Encrypt log storage and the pipeline that feeds it.</p>
+<p>Log the hashed user ID so you can find and delete one person's records when they ask.</p>
+<p>Allow verbose logging in development with fake data, and enforce strict settings in production through configuration, not through people remembering.</p>
+<p>A masker that quietly stops working is worse than having none, because everyone assumes the logs are clean. Write tests for it:</p>
+<p>@Test
+void masksEmailAndCardNumber() {
+    String raw = "Contact me at asha@example.com, card 4111 1111 1111 1111";
+    String safe = new RegexPiiMasker().mask(raw);
+
+    assertFalse(safe.contains("asha@example.com"));
+    assertFalse(safe.contains("4111"));
+    assertTrue(safe.contains("[EMAIL]"));
+    assertTrue(safe.contains("[CARD]"));
+}</p>
+<p>Build a small set of messy, realistic samples: numbers with odd spacing, mixed languages, addresses inside sentences, text pasted from spreadsheets. Run them in your CI pipeline, and add a new case every time a leak turns up. A scheduled job that scans stored logs for patterns that should never appear makes a good safety net too.</p>
+<p>A few I'd watch for. Logging raw text at debug level and assuming production never enables it; debug flags get switched on during incidents, so mask at every level. Masking only the user's message while forgetting retrieved documents, system prompts and tool results. Letting SDK exceptions carry the full request body into the logs. Leaving wire-level HTTP logging on in production, which bypasses your masker completely. And treating masking as finished once it ships, when every new prompt template can bring new kinds of data.</p>
+<p>Every AI call writes a structured metadata record with a request ID</p>
+<p>All prompt and response text goes through a single masker first</p>
+<p>Streams are masked after assembly, and tool arguments are masked too</p>
+<p>Content logging is sampled, short-lived and access-controlled</p>
+<p>Tests cover the masker, with a regression case for every past leak</p>
+<p>Client libraries aren't dumping raw payloads into the logs</p>
+<p>Good logs turn an AI feature from a black box into something you can actually debug, price and improve. The same logs can also expose the people who trusted you with their details. The way through is fairly plain: record metadata for every call, push all content through one well-tested masker, use pseudonyms when you need to follow a conversation, handle streams and tools carefully, and keep retention short. Set that up before launch, not after the first incident, and you get visibility without regret.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/serving-a-local-llm-to-several-users-ollama-lm-studio-llama-cpp-and-vllm-benchmarked/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/logging-ai-prompts-and-responses-in-java-without-leaking-sensitive-data/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

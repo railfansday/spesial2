@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hugging Face ❤️ TorchTPU: TPUs, Natively</title>
+    <title>Making Knowledge Distillation Cheap Enough to Run at Scale</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9787.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,35 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Hugging Face ❤️ TorchTPU: TPUs, Natively</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Making Knowledge Distillation Cheap Enough to Run at Scale</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/668e37fd9c9aa124a3c867e8/nB5NK4bdfr7AY1IAO14Gh.png" alt="Making Knowledge Distillation Cheap Enough to Run at Scale" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/hf-torchtpu/thumbnail.png" alt="Hugging Face ❤️ TorchTPU: TPUs, Natively" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/668e37fd9c9aa124a3c867e8/nB5NK4bdfr7AY1IAO14Gh.png" alt="Making Knowledge Distillation Cheap Enough to Run at Scale" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>If you ever tried to run PyTorch on a TPU, you probably ported your code to torch_xla, or you ended up having to learn JAX. With TorchTPU, a native PyTorch backend, TPU is now just another device. It opens up native support of TPU in the Hugging Face ecosystem. Transformers, Diffusers and Kernels run natively on TPU. Pick a model from the Hub, send it to "tpu", and you're done.</p>
-<p>TPU stands for Tensor Processing Unit. TPUs are Google's own AI accelerators. They are chips built for one job: the matrix math that neural networks spend most of their time on. Google has been designing them for about ten years, and uses them to train and serve its own models, including Gemini.</p>
-<p>TPUs are available on Google Cloud, from a single chip up to pods of thousands of chips. They shine when you need a lot of compute, for training or for serving at scale.</p>
-<p>The catch has always been software. The TPU stack grew up around TensorFlow and JAX, and PyTorch users had to work harder to get in.</p>
-<p>Until now, running PyTorch on TPUs meant going through PyTorch/XLA (torch_xla). It worked, but it had its quirks. Tensors were lazy (the tensors, not you), so your code didn't always run when you thought it did. Small changes could trigger graph recompilations, and debugging was hard to reason about.</p>
-<p>To make life easier, we built Optimum TPU. It gave Hugging Face models inference and training support on TPUs. Now that TorchTPU brings native support, Optimum TPU is not required anymore to run Hugging Face models with Transformers and Diffusers.</p>
-<p>TorchTPU adds TPU as a new backend to PyTorch. You write regular PyTorch code. It comes with Pallas kernels tuned for TPUs, support for distributed training, and a torch.compile integration for when you want more speed. Installing it on a TPU VM takes one command:</p>
-<p>The extra index gives you the CPU build of torch. Without it, pip pulls the much bigger CUDA build, which you don't need on a TPU.</p>
-<p>Transformers v5 was built around one idea: be the source of truth for model definitions, so they can run anywhere. "Anywhere" now includes TPUs. To load a model on a TPU, pass device_map="tpu". That's it.</p>
-<p>The model runs in eager mode by default. You can also use torch.compile for better performance, or run it in a distributed setup.</p>
-<p>TPU is now a first-class device in Diffusers. For prototyping or debugging, eager mode only needs pipe.to("tpu"). For deployment, compiled mode adds one compile call. Your pipelines and code stay the same, and there's no TPU fork to maintain.</p>
-<p>The first call compiles, and every call after that with the same image size reuses the graph.</p>
-<p>Models too big for one chip? Pass a TensorParallelConfig to from_pretrained and the transformer is sharded across chips as it loads, so the full model never has to fit in one place. Many popular pipelines support it out of the box, and the ones that don't are just a tp_plan away. The Diffusers TPU guide has the full recipe.</p>
-<p>Here are some examples run on a Cloud TPU v6e-4:</p>
-<p>TP=4 (each model split across four chips) · bf16 · batch 1</p>
-<p>The Kernels Hub has ready-to-use TPU kernels. Load one with the Kernels library and give your model a speed boost.</p>
-<p>TPU kernels are written in Pallas, which gives you low-level control over the hardware. You can also bring in kernels from the Tokamax library. Here is a ragged-dot kernel from Tokamax plugged into a Mixture-of-Experts model:</p>
-<p>The bigger the batch, the bigger the win. At batch size 64, decoding is 21.5× faster on Qwen3-30B-A3B and 12.8× faster on Gemma 4 26B-A4B.</p>
-<p>Decode throughput on a TPU v6e-8, Hub kernel vs. the default implementation.</p>
-<p>We're continuously improving TPU support in transformers by running the library test suite. We are working to add a nightly CI on TPU and make the results available in the (transformers dashboard)[https://huggingface.co/spaces/transformers-community/transformers-ci-dashboard].</p>
-<p>The Transformers CI dashboard, with TPU results next to other accelerators. Work in progress!</p>
-<p>It's not all green yet, and we're fine with that. Of the tests that run on TPU, 96.5% pass. Every failure we find becomes a small repro script and an issue on the TorchTPU repo. So far we have reported 34 issues, and 19 are already fixed. Running on TPU also caught a few bugs in Transformers itself, like in StaticCache and the Qwen3 tensor-parallel plans. We fixed those upstream.</p>
-<p>If something breaks on TPU, we want to find out before you do.</p>
-<p>TPUs are no longer a side quest for PyTorch users. Install TorchTPU, grab a model from the Hub, and send it to "tpu".</p>
-<p>We can't wait to see what you build 🤗. If you hit a problem, open an issue and tell us about it.</p>
+                <p>Knowledge distillation, training a smaller student model to match the performance of a larger teacher, is a well-known technique in Machine Learning. With the recent wave of open-source Large Language Models, such as gpt-oss, Qwen, GLM, or Kimi, it has become a mainstream research topic again. Deploying these very large models is expensive: the recent Kimi-K3 model has 2.8 trillion parameters and needs roughly 3TB of VRAM just to load. Compressing them into smaller models and recovering the original capabilities through knowledge distillation has therefore become standard practice, with companies like Nvidia (Nemotron 3 Puzzle 75B) or Multiverse Computing (Hypernova 60B) recently releasing high-quality compressed models.</p>
+<p>The distillation step is what decides most of the final quality, but it's also usually the most expensive part of the pipeline. Keeping both the teacher and student loaded, and producing a probability distribution over the entire vocabulary for every token, requires enormous amounts of VRAM, typically feasible only with hundreds of GPUs and careful tensor-parallelism strategies. Our latest paper, Efficient Knowledge Distillation for LLMs: Offline Top-K Logits and a Fused Chunked KL Loss, tackles this with two systems changes: caching the teacher's top-K logits once so the teacher never has to sit in memory alongside the student, and a new, memory-efficient KL-divergence loss that avoids ever materializing the full vocabulary-size × sequence-length matrix, cutting VRAM use far below what the default implementations in libraries like PyTorch or NVIDIA Megatron-Bridge achieve. Together, these two changes cut training cost enough to make long-context healing possible on a single GPU, and cheap enough to make large-scale experimentation practical.</p>
+<p>The standard setup, online distillation using the Kullback-Leibler divergence loss (KL loss), keeps both the teacher and the student loaded at the same time. At every training step, the teacher runs a full forward pass to produce its output distribution, and the student is trained to match it. This is the most expressive setup, since the full teacher distribution is available, but it is also the most memory- and compute-intensive: two full-vocabulary tensors have to be held per token position, and the teacher has to be recomputed on every single step even though its behavior does not change across a training run.</p>
+<p>As a practical example, gpt-oss-120b has a vocabulary of 201,088 tokens. At a sequence length of 32K and batch size 4, the teacher-probability tensor alone has shape 4 × 201,088 × 32,768; in bfloat16, that's already about 50GB of VRAM for a single tensor. Add gradients, activations, model weights, and optimizer states, and a single training iteration of distillation can peak at roughly 250GB of VRAM, more than even an H200 or B200 GPU can provide. In this post, we show that reformulating the KL loss to process the data in chunks reduces this cost to almost nothing.</p>
+<p>Dense KL spikes to roughly 250GB, above a single H200's 141GB capacity. The fused chunked loss never forms that spike and peaks at about 128GB. Source: paper Figure 1.</p>
+<p>Offline distillation. Instead of recomputing the teacher at every step, we compute its output once, cache the top-100 most likely tokens per position, and train the student against that cache. The teacher never has to sit in memory during training and does not need to be run again once the cache exists, so the same cache can be reused across many ablations.</p>
+<p>A fused, chunked KL loss. To see why the loss itself is expensive, picture what it actually builds: for every token position in a sequence and every word in the vocabulary, the loss needs a number describing how much the student's prediction disagrees with the teacher's. Laid out as a grid, that's one row per vocabulary entry and one column per sequence position, for a vocabulary of 100K+ words and a long sequence, that grid is enormous, and the default way of computing a KL loss builds the whole thing before it can produce a single number.</p>
+<p>We compare three ways of computing this same loss, all mathematically equivalent:</p>
+<p>The GIF below shows the difference between the dense and fused-chunked approaches: one builds the whole comparison grid and holds onto all of it, the other builds and discards one slice at a time, so memory never grows beyond a single chunk.</p>
+<p>We have open-sourced the chunked-loss implementation: github.com/CompactifAI/Full-Chunked-KL-Loss</p>
+<p>The table below puts all four setups head to head: online distillation, and the three offline loss implementations just described. Comparing them on a single H200 GPU with Llama 3.1 8B Instruct as teacher and a 3.2B Llama model as student at an 8K token context, all four reach near-identical training loss, even though the offline runs train against only the cached top-100 logits per token.</p>
+<p>The loss curves overlap almost exactly across all four methods, confirming offline distillation with top-100 cached logits is lossless relative to online distillation. Source: paper Figure 2. At this sequence length, the fused chunked loss is not yet the fastest option, its extra backward-pass projection costs a bit of speed, but its real advantage only shows up as context length grows, which the next section demonstrates.</p>
+<p>To see the scaling pattern more starkly, we ran an isolated benchmark on a toy output-projection network (no transformer body, just the loss kernel). At 32K tokens, peak memory falls from 85.2 GiB with the dense loss to 5.45 GiB with the fully chunked version, a 15.6× reduction, and the dense loss fails outright from 64K tokens onward. At 256K tokens, the fully chunked loss uses 11.6 GiB against 134.2 GiB for the next-best chunked variant, and is about 3.3× faster per iteration at that length.</p>
+<p>Distilling a GPT-OSS 20B model at a 32,768-token context, the memory freed by the fused loss let the setup shrink from four GPU nodes down to one. Step time fell from 57.0 to 12.23 seconds, about 5× faster, and throughput per GPU rose from 74.2 to 345.7 TFLOP/s.</p>
+<p>The efficient offline setup is what made a large-scale distillation campaign affordable in the first place. The resulting compact student, distilled from Llama 3.1 8B Instruct down to about 3.2B parameters, retains most of the teacher's accuracy on BoolQ and HellaSwag, stays within about nine points of it on MMLU, at less than half the parameter count.</p>
+<p>The student retains most of the teacher's short-context accuracy at less than half the size. Source: paper Figure 6.</p>
+<p>This work is part of Multiverse Computing's ongoing research into making distillation and healing practical to run at scale, not just as a one-off recipe, but as something teams can iterate on cheaply. The paper also covers additional ablations, such as how the choice of loss function and sequence packing affect recovery quality.</p>
+<p>Want the full technical details, including the closed-form gradient behind the fused chunked loss and the complete training configuration? Read the full paper, or get in touch with our team to talk about applying this to your own distillation pipelines.</p>
+<p>We have also open-sourced the chunked-loss implementation: github.com/CompactifAI/Full-Chunked-KL-Loss</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/hf-torchtpu" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/MultiverseComputingCAI/efficient-knowledge-distillation" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

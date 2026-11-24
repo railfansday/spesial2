@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lentil Curry</title>
+    <title>1 GB VPS Indie Dev Stack: Gitea, Uptime Kuma, and Miniflux Behind Caddy 2</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9497.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,18 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Lentil Curry</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>1 GB VPS Indie Dev Stack: Gitea, Uptime Kuma, and Miniflux Behind Caddy 2</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fy4ye0e9u5g487xxma3xe.png" alt="1 GB VPS Indie Dev Stack: Gitea, Uptime Kuma, and Miniflux Behind Caddy 2" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fy4ye0e9u5g487xxma3xe.png" alt="1 GB VPS Indie Dev Stack: Gitea, Uptime Kuma, and Miniflux Behind Caddy 2" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>This hearty lentil curry recipe is perfect on a cool day. Featuring tender lentils and plentiful veggies, it&#8217;s nicely spiced with curry powder and cumin. Curious about the spice level? I&#8217;d classify it as mild. The dish is lightly creamy thanks to some coconut milk, but not heavy. Make this curry when you want to&#8230;</p>
-<p>The post <a href="https://cookieandkate.com/lentil-curry/">Lentil Curry</a> appeared first on <a href="https://cookieandkate.com">Cookie and Kate</a>.</p></p>
+                <p>Posted on Nov 24
+•
+Originally published at vpsfolio.com</p>
+<p>Per-container RAM: gitea 196.8 MB · uptime-kuma 181.3 MB · miniflux 34.2 MB · miniflux-db 28.9 MB · caddy 9.9 MB (sandbox verified 2026-11-24)</p>
+<p>View the interactive benchmark plate and full VPS sizing comparison or compare all measured stacks on VPSFolio Benchmarks.</p>
+<p>This stack packs three self-hosted staples onto a single 1 GB VPS: Gitea for private Git hosting, Uptime Kuma for uptime monitoring, and Miniflux for RSS reading. All three sit behind one Caddy 2 reverse proxy that routes by hostname. Backend HTTP ports stay internal; only Caddy publishes a host port (bound to loopback for sandbox safety). Gitea SSH is exposed on a separate loopback port so you can push over SSH without opening the HTTP backends.</p>
+<p>To keep memory in check we use SQLite for Gitea (no separate Postgres for Git) and a dedicated Postgres 16 instance for Miniflux. Uptime Kuma keeps its state in SQLite inside its data volume. The whole 5-container stack idled at 451.1 MB in our sandbox run — well under 550 MB, leaving headroom for spikes and the OS.</p>
+<p>Caddy handles host-based routing with a tiny inline Caddyfile. In sandbox mode we disable automatic HTTPS and serve plain HTTP on port 80 inside the container, published to 127.0.0.1:18080 on the host. That lets you verify with curl -H "Host: git.local" http://127.0.0.1:18080/ without touching DNS or certificates. Production cutover is a small diff: remove auto_https off, switch to real domain names, and publish 80/443.</p>
+<p>Sizing notes: in our disposable sandbox run, the 5-container stack measured 451.1 MB total idle RAM (gitea 196.8 MB, uptime-kuma 181.3 MB, miniflux 34.2 MB, miniflux-db 28.9 MB, caddy 9.9 MB). That matches the 448.2 MB sum of our individual guides closely and leaves over 500 MB of OS/burst headroom on a 1 GB VPS (still add 1–2 GB of swap for Git pushes or monitor spikes).</p>
+<p>Create compose.yml and .env in a clean directory. The compose file uses top-level configs: to inline the Caddyfile, so there are no host bind mounts.</p>
+<p>Generate .env with strong secrets. Replace the placeholder values before starting:</p>
+<p>Generate the random secrets with openssl rand -hex 32 (and openssl rand -hex 52 for the internal token). Then start the stack:</p>
+<p>Because Caddy is published on 127.0.0.1:18080 and routes by Host header, you can verify all three services without DNS changes:</p>
+<p>Expect HTTP 200 or 302 for each. Gitea may redirect to /user/login; Uptime Kuma serves its setup page; Miniflux redirects to /login. If any probe fails, check Caddy logs and backend logs:</p>
+<p>To test Gitea SSH, add a key in the Gitea UI and try ssh -T -p 2222 git@127.0.0.1 (or your server IP).</p>
+<p>When you're ready to expose the stack on the public internet with real domains and TLS, make these changes:</p>
+<p>Also switch GITEA__server__ROOT_URL to https://${GITEA_DOMAIN}/ and BASE_URL on Miniflux to https://${MINIFLUX_DOMAIN}/, and add persistent named volumes (caddy_data:/data and caddy_config:/config) to caddy so Let's Encrypt certificates survive restarts.</p>
+<p>For remote backups, add a cron job or systemd timer that runs docker compose exec -T miniflux-db pg_dump -U miniflux miniflux > /backups/miniflux-$(date +%F).sql and similar for Gitea's SQLite file (copy from the volume) and Uptime Kuma's data directory. Store backups off-box (e.g., rclone to S3-compatible storage).</p>
+<p>Backups. Gitea with SQLite stores everything in the gitea_data volume. Back it up by stopping Gitea briefly and copying /data/gitea/gitea.db and /data/git/repositories. For Miniflux, use pg_dump as above. Uptime Kuma's SQLite database lives in the uptime-kuma volume; copy /app/data/kuma.db. Automate with a small script and test restores periodically.</p>
+<p>Upgrades. Pin image tags (e.g., gitea/gitea:1.22, louislam/uptime-kuma:2, miniflux/miniflux:latest). For Miniflux, latest is convenient but consider pinning a specific version for reproducibility. Upgrade one service at a time: docker compose pull gitea && docker compose up -d gitea. Check logs and health before moving on. Gitea and Miniflux run migrations automatically; back up first.</p>
+<p>Monitoring the monitor. Uptime Kuma can't alert you if the whole VPS is down. Use an external ping service (e.g., Healthchecks.io) to watch Uptime Kuma's /api/status-page/heartbeat endpoint or simply ping the Caddy status host. Keep an eye on docker compose ps and system logs.</p>
+<p>With this stack you get a capable indie dev environment on a 1 GB VPS: private Git, uptime monitoring, and RSS reading, all behind one proxy, with room to grow.</p>
+<p>Measured in our sandbox run: total memory 451.1 MB (sum of per-container peaks over a 30s idle window after startup) across 5 containers; largest container 196.8 MB; published port(s) 2222, 18080; HTTP probe returned 200, 302, 200. The run took 153.5s including the image download. Required secret(s) GITEA_INTERNAL_TOKEN, GITEA_JWT_SECRET, GITEA_SECRET_KEY, MINIFLUX_DB_PASSWORD were generated for the test run, as the tutorial instructs. Container breakdown: gitea 196.8 MB, uptime-kuma 181.3 MB, miniflux 34.2 MB, miniflux-db 28.9 MB, caddy 9.9 MB. Verified routes: Gitea via Caddy (HTTP 200), Uptime Kuma via Caddy (HTTP 302), Miniflux via Caddy (HTTP 200).</p>
+<p>Verification: we ran this docker-compose stack in a disposable Docker environment and recorded the measurements above. They describe that run, not a guarantee for your host.</p>
+<p>Originally published with full interactive benchmark metrics and server sizing notes at https://vpsfolio.com/stacks/1gb-vps-indie-dev-stack-caddy-gitea-uptime-kuma-miniflux/.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://cookieandkate.com/lentil-curry/?adt_ei=*|EMAIL|*" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/gongkang/1-gb-vps-indie-dev-stack-gitea-uptime-kuma-and-miniflux-behind-caddy-2-3bod" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

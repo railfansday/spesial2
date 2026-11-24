@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brussels Sprouts Kale Salad</title>
+    <title>Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9503.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,17 +15,55 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Brussels Sprouts Kale Salad</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-23</p>
+        <h1>Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fioont2647hrdzl5gupuo.png" alt="Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fioont2647hrdzl5gupuo.png" alt="Shared Caddy 2 Reverse Proxy for Multiple Self-Hosted Docker Apps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Kale Brussels Sprouts Salad Ingredients Here are a few notes about the ingredients you’ll need. The full amounts are included&#8230;</p>
+                <p>Posted on Nov 24
+•
+Originally published at vpsfolio.com</p>
+<p>Per-container RAM: vaultwarden 46.9 MB · memos 21.7 MB · caddy 10.9 MB (sandbox verified 2026-11-24)</p>
+<p>View the interactive benchmark plate and full VPS sizing comparison or compare all measured stacks on VPSFolio Benchmarks.</p>
+<p>One public entrypoint, many private backends. Caddy 2 sits on a dedicated bridge network (proxy_net) and is the only container that publishes a host port. Vaultwarden and Memos join the same network but never expose ports: to the host, so their HTTP listeners are reachable only from Caddy. That is the whole pattern: a single TLS terminator, a shared L2 segment, and per-app Compose files that can come and go without touching the proxy.</p>
+<p>Caddy is a good fit here because its config is small, its automatic HTTPS is real (ACME + OCSP stapling + HTTP/3), and it handles WebSocket upgrades in reverse_proxy without extra directives. Vaultwarden needs WebSockets for live sync notifications; Memos is a plain HTTP app. Both work through the same reverse_proxy block.</p>
+<p>The sandbox-safe Compose file below uses auto_https off and binds Caddy to 127.0.0.1:18080 so you can verify routing with curl -H "Host: ..." before any DNS or certificate work. In production you flip two lines and Caddy gets real Let's Encrypt certs on 80/443.</p>
+<p>Create the project directory and write both files. The .env holds secrets; the Compose file holds everything else.</p>
+<p>Now the Compose file. Note the inline configs: block: the Caddyfile is embedded, not bind-mounted.</p>
+<p>You should see three containers running. Only caddy has a published port.</p>
+<p>Add the hostnames to /etc/hosts if you haven't already:</p>
+<p>Probe each backend through Caddy. The Host header is what Caddy matches on, so you don't need DNS for this step.</p>
+<p>Expect 200 OK from both. Vaultwarden returns its web vault HTML; Memos returns its SPA shell. If you get 502, Caddy is up but the backend isn't reachable on proxy_net — check docker compose logs vaultwarden and docker compose logs memos. If you get 404, the Host header didn't match a site block; confirm the Caddyfile content with docker compose exec caddy cat /etc/caddy/Caddyfile.</p>
+<p>Confirm the backends are not reachable from the host:</p>
+<p>Both should fail to connect. That's the point of the pattern.</p>
+<p>Two changes turn this into a real TLS terminator.</p>
+<p>1. Remove auto_https off and switch to real hostnames. Edit the caddyfile config block in compose.yml:</p>
+<p>2. Publish 80 and 443. Replace the sandbox port mapping:</p>
+<p>Also update .env and switch DOMAIN in compose.yml from http://${VAULT_HOST:-vault.local} to https://${VAULT_HOST} so Vaultwarden serves HTTPS URLs (required by Bitwarden clients for WebCrypto):</p>
+<p>Apply with docker compose up -d. Caddy will request certificates on first request to each hostname. Watch the logs:</p>
+<p>You should see certificate obtained successfully for each domain. If ACME fails, the usual causes are: port 80 blocked by the provider firewall, DNS not yet propagated, or a CAA record that doesn't allow Let's Encrypt.</p>
+<p>Splitting Caddy into its own stack. Once you have more than a couple of apps, move the proxy to /opt/proxy/compose.yml and use an external network so app stacks can join and leave without restarting Caddy:</p>
+<p>In /opt/proxy/compose.yml, set networks: proxy: external: true and attach Caddy to it. In each app's Compose file, declare the same external network and add it to the service. Caddy resolves backends by container name on that network, so reverse_proxy vaultwarden:80 keeps working as long as the container is named vaultwarden and joined to proxy.</p>
+<p>Remote backups. The named volumes are the state. Back them up with a one-shot container that mounts the volumes read-only and writes a tarball to a remote target. For example, using rclone against an S3 bucket:</p>
+<p>Schedule that with cron or a systemd timer. Restore is the reverse: download the tarball, stop the stack, extract into the volumes, start again.</p>
+<p>Upgrades. Caddy, Vaultwarden, and Memos all publish rolling tags. Pin versions in .env (MEMOS_TAG=0.22.0, and replace vaultwarden/server:latest with a digest) if you want reproducible deploys. Upgrade one service at a time: docker compose pull vaultwarden && docker compose up -d vaultwarden. Caddy reloads its config on SIGHUP, but docker compose restart caddy is simpler and takes under a second.</p>
+<p>Failure modes. If Caddy is down, every app is down — that's the cost of a single entrypoint. Keep the Caddy container's restart policy at unless-stopped and monitor it. If a backend is down, Caddy returns 502 for that host only; the other sites keep serving. If proxy_net gets recreated (e.g., you delete the network), Caddy's upstream DNS cache goes stale; restart Caddy after network changes.</p>
+<p>Backups. The critical volumes are vw_data (Vaultwarden's SQLite DB and attachments) and memos_data (Memos' SQLite DB). caddy_data holds certificates and ACME account keys; back it up too, or accept a brief re-issuance on restore. Test restores quarterly — an untested backup is a guess.</p>
+<p>Trade-offs. A shared Caddy is simpler than per-app reverse proxies and uses less RAM, but it couples app availability to the proxy. Splitting Caddy into its own stack with an external network decouples lifecycle: you can docker compose down an app without touching the proxy. The cost is one more Compose file and a network that must exist before any stack starts. For a 1 GB VPS running two or three apps, the single-file version in this guide is the right default; split when you outgrow it.</p>
+<p>Security headers. The security_headers snippet sets X-Content-Type-Options, Referrer-Policy, and X-Frame-Options. Vaultwarden's admin panel and web vault work fine with these. If you embed Memos in an iframe elsewhere, drop X-Frame-Options for that site block only.</p>
+<p>WebSockets. Vaultwarden's ENABLE_WEBSOCKET=true and IP_HEADER_TRUSTED_PROXIES=local are set so it trusts Caddy's X-Real-IP and accepts upgrade requests. Caddy's reverse_proxy forwards Upgrade and Connection headers automatically; no extra config needed. If live sync doesn't work, check docker compose logs caddy | grep -i upgrade and confirm the browser is hitting the same hostname Caddy is configured for.</p>
+<p>Measured in our sandbox run: total memory 79.6 MB (sum of per-container peaks over a 30s idle window after startup) across 3 containers; largest container 46.9 MB; published port(s) 18080; HTTP probe returned 200, 200. The run took 102.6s including the image download. Required secret(s) ADMIN_TOKEN, PUSH_INSTALLATION_KEY were generated for the test run, as the tutorial instructs. Container breakdown: vaultwarden 46.9 MB, memos 21.7 MB, caddy 10.9 MB. Verified routes: Vaultwarden via shared Caddy (HTTP 200), Memos via shared Caddy (HTTP 200).</p>
+<p>Verification: we ran this docker-compose stack in a disposable Docker environment and recorded the measurements above. They describe that run, not a guarantee for your host.</p>
+<p>Originally published with full interactive benchmark metrics and server sizing notes at https://vpsfolio.com/stacks/shared-caddy-reverse-proxy-multiple-docker-apps/.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.gimmesomeoven.com/brussels-sprouts-kale-salad/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/gongkang/shared-caddy-2-reverse-proxy-for-multiple-self-hosted-docker-apps-i2a" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
