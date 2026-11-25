@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Does Your Model Run on AWS Trainium? Look It Up</title>
+    <title>Beyls: Wrapping up LLVM&#x27;s relicensing effort</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9739.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,33 +15,106 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Does Your Model Run on AWS Trainium? Look It Up</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>Beyls: Wrapping up LLVM&#x27;s relicensing effort</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/torch-neuronx-model-support/thumbnail.jpg" alt="Does Your Model Run on AWS Trainium? Look It Up" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/torch-neuronx-model-support/thumbnail.jpg" alt="Does Your Model Run on AWS Trainium? Look It Up" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In a previous post, we introduced TorchNeuron, the native PyTorch backend for AWS Trainium (the torch-neuronx package). With it, Transformers runs its own modeling code on Trainium, as it does on any other device, so any Transformers model on the Hub may run. Which ones actually do?</p>
-<p>The torch-neuronx model support Space answers that question for the most popular models on the Hub. It tells you whether a model runs unmodified on Trainium, and gives you the script to run it yourself.</p>
-<p>The Space opens on the Selected view: our own selection of models picked among the top models on the Hub by downloads and by trending score. Each row gives the result, the number of Trainium cores the model is sharded over, the wall time of the run (compilation included) and the peak device memory.</p>
-<p>To look up a given model, switch to the Trending or Downloads view and type part of its name. These views follow the Hub's own rankings, one task at a time, whether a model was tested or not. When a model was left out on purpose, the Space tells you why (most of the time it was not prioritized, sometimes it is truly incompatible). You can also pick the versions of the Neuron compiler (neuronx-cc) and of Transformers to look at.</p>
-<p>At the time of writing, only Transformers models are tested, and our selection is limited to text-generation and image-text-to-text models. We plan to expand to diffusers, sentence transformers, and other transformers tasks.</p>
-<p>Select a model to see how to run it. The Space lists the Neuron stack the model was tested on, the packages to install on top of it, and the run.py script that ran. The script follows the recipe of the TorchNeuron announcement: it loads the model with from_pretrained, sharded when it needs to be, then generates with a static cache and torch.compile(backend="neuron").</p>
-<p>On a Trainium2 (trn2) instance with that stack, for example in the AWS Neuron Deep Learning Container, install the packages, then run:</p>
-<p>No need for torchrun: the script launches its own torch.distributed ranks when the model is sharded.</p>
-<p>A first run starts by compiling the model's graphs. To skip that step, copy the graphs the same compiler built during the test, from the public NEFF cache bucket. The Space gives you the command, with the right compiler version:</p>
-<p>Each test loads the model on a trn2 instance, sharded over the smallest number of Trainium cores that can hold its weights. Most models are sharded with tensor parallelism. Mixture-of-experts models without a tensor-parallel plan use expert parallelism only. The test then generates 32 tokens and checks them. On a single core, the tokens are compared with those of a CPU run of the same checkpoint. When the model is sharded, a small judge model checks that the text is fluent English.</p>
-<p>At the time of writing, only models that fit on 4 Trainium2 devices are tested, which means 16 cores at most. A PASS says nothing about throughput, or about longer generations.</p>
-<p>Everything the Space shows comes from the public aws-neuron/torch-neuronx-model-support dataset, with one Parquet file per pair of neuronx-cc and library versions.</p>
-<p>Each row holds a model's result, the error when it failed, the versions of the whole stack and the run.py that ran. You can query it directly:</p>
-<p>The dataset card gives the exact meaning of each result.</p>
-<p>Next time you wonder whether a model runs on Trainium, look it up.</p>
-<p>Which Hub models run on AWS Trainium with torch-neuronx</p>
-<p>Which Hub models run on AWS Trainium with torch-neuronx</p>
+                <p>Kristof Beyls has published
+a summary to the LLVM discussion forum to announce that the project is
+declaring success and bringing its relicensing
+effort to a close after eight years.</p>
+<p>We've been asking past contributors to relicense their work since 2018. New
+contributions have come in under Apache-2.0 WITH LLVM-exception since January
+19, 2019. Code contributed before that date was under LLVM's earlier licenses
+(UIUC/NCSA, plus MIT for some runtime libraries), so we needed permission from
+its authors to move it over. [...]</p>
+<p>Today, more than 99.5% of all lines of code ever contributed to LLVM are
+either covered by the new license, too small for copyright to apply, or no
+longer in the repository.</p>
+<p>Rather than trying to "chase the last tiny fraction forever" LLVM is
+winding up the effort. Any contributors with code contributed before January 19,
+2019 who have not signed a relicensing agreement and do not want their
+contributions made available under Apache-2.0 with the LLVM-exception can still
+reach out to the project to ensure their code has the appropriate SPDX license
+identifier.</p>
+<p>The LLVM exception to Apache-2
+
+ Posted Nov 21, 2026 13:13 UTC (Sat)
+                               by coriordan (guest, #7544)
+                              [Link] 
+      
+
+
+
+For anyone who doesn't know (like me until 5 minutes ago):
+
+The LLVM exception: https://merlijn.sebrechts.be/blog/what-is-the-apache-2-ll...
+
+It says two things. (Based on my quick read; corrections welcome)
+
+1. That Apache-2 licensed compilers (which insert some compiler code into the executables they create) don't create Apache-2 obligations for the programs they create.
+
+2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>The LLVM exception to Apache-2
+
+ Posted Nov 21, 2026 13:13 UTC (Sat)
+                               by coriordan (guest, #7544)
+                              [Link] 
+      
+
+
+
+For anyone who doesn't know (like me until 5 minutes ago):
+
+The LLVM exception: https://merlijn.sebrechts.be/blog/what-is-the-apache-2-ll...
+
+It says two things. (Based on my quick read; corrections welcome)
+
+1. That Apache-2 licensed compilers (which insert some compiler code into the executables they create) don't create Apache-2 obligations for the programs they create.
+
+2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>Posted Nov 21, 2026 13:13 UTC (Sat)
+                               by coriordan (guest, #7544)
+                              [Link]</p>
+<p>The LLVM exception: https://merlijn.sebrechts.be/blog/what-is-the-apache-2-ll...
+
+It says two things. (Based on my quick read; corrections welcome)
+
+1. That Apache-2 licensed compilers (which insert some compiler code into the executables they create) don't create Apache-2 obligations for the programs they create.
+
+2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>It says two things. (Based on my quick read; corrections welcome)
+
+1. That Apache-2 licensed compilers (which insert some compiler code into the executables they create) don't create Apache-2 obligations for the programs they create.
+
+2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>1. That Apache-2 licensed compilers (which insert some compiler code into the executables they create) don't create Apache-2 obligations for the programs they create.
+
+2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>2. It fixes incompatibility with GPLv2 by saying that, for a combined work of Apache-2 plus GPLv2 code, if an authority decides that any clause of Apache-2 is incompatible with GPLv2 then that clause of Apache-2 doesn't apply.  (Which I guess they decided is fine because the places where there could be conflicts, such as patents, using the GPLv2 version isn't enough of a problem to be worth incompatibility.)
+
+So, the LLVM exception looks like a pretty good instrument.</p>
+<p>So, the LLVM exception looks like a pretty good instrument.</p>
+<p>Copyright © 2026, Eklektix, Inc.
+            
+            Comments and public postings are copyrighted by their creators.
+            Linux  is a registered trademark of Linus Torvalds</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/torch-neuronx-model-support" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://lwn.net/Articles/1108818/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

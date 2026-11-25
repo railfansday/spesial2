@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astrolabio</title>
+    <title>Mapping Pixel Brightness to Lithophane Wall Thickness in JavaScript</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9563.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,36 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Astrolabio</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>Mapping Pixel Brightness to Lithophane Wall Thickness in JavaScript</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdeph2ri1jqp707kgexuj.png" alt="Mapping Pixel Brightness to Lithophane Wall Thickness in JavaScript" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdeph2ri1jqp707kgexuj.png" alt="Mapping Pixel Brightness to Lithophane Wall Thickness in JavaScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Your AIs pick up right where you left off, on your Mac
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/astrolabio?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1327754?app_id=339">Link</a>
-          </p></p>
+                <p>A lithophane is a thin 3D print that shows a photo only when light shines through it. Thick parts block light and look dark; thin parts glow. That makes the core of any photo-to-lithophane tool a single function: take a pixel's brightness and return a wall thickness in millimetres.</p>
+<p>It sounds trivial, and the first version is. The interesting part is why the naive version prints muddy pictures, and what a few lines of extra math fix. This post walks through it with plain JavaScript you can drop into a canvas experiment.</p>
+<p>Start with an image drawn to a <canvas> and read its pixels:</p>
+<p>Averaging R, G and B equally is a common shortcut, but it makes blue skies too bright and green foliage too dark. The weighted version matches what people actually see in the finished print much better.</p>
+<p>Pick a thinnest wall (for the brightest pixels) and a thickest wall (for the darkest). A widely used starting range for white PLA and a 0.4 mm nozzle is 0.8 mm and 3.0 mm, which is also the default on the best lithophane thickness guide I keep open while testing.</p>
+<p>Print that, and the result is usually disappointing: the shadows block up into one dark mass and most of the tonal detail sits in a narrow band of bright areas.</p>
+<p>Light passing through a diffusing plastic does not drop by a fixed amount per millimetre. It drops by a fixed fraction. For white PLA, a rough rule of thumb is that each extra millimetre lets through about a quarter as much light. That is the Beer-Lambert idea in practice:</p>
+<p>If each millimetre keeps roughly 25% of the light, then k is about ln(4), or 1.39 per mm. With that, a 0.8 mm wall passes about 33% of the light and a 3.0 mm wall about 1.6%. That ratio, roughly 20 to 30 to 1 depending on your filament and LED, is the contrast range your print can show.</p>
+<p>A linear thickness map spends equal millimetres on equal steps of brightness, but the light does not respond equally to those millimetres. The first millimetre of extra plastic dims things dramatically; the last one barely changes anything.</p>
+<p>The fix is to decide how much light each pixel should let through, then invert the exponential to find the thickness that delivers it.</p>
+<p>Two things happen here. The gamma step converts the photo's stored values back into linear light, because image files store brightness compressed for screens. Then the inverse log spreads the thickness changes so that equal steps in the photo become roughly equal steps in the glow.</p>
+<p>Real printers have limits. Walls thinner than about 0.6 mm get fragile and can leave pinholes that shine as bright dots, and anything thicker than about 3.5 mm mostly adds print time because the light is already gone. Clamp to your range and add a tiny blur so single noisy pixels do not become spikes in the mesh:</p>
+<p>From here the height map becomes a mesh: one vertex per pixel on the front face, a flat back, and side walls to close the solid so slicers accept it.</p>
+<p>The constant K and the two walls depend on your filament and your light source far more than on your code:</p>
+<p>Print a small step wedge (say 0.6, 0.8, 1.2, 1.6, 2.0, 2.5, 3.0 mm) in your filament, hold it to the light you will actually use, and fit K to what you see. Ten minutes of printing saves hours of failed portraits.</p>
+<p>If you would rather skip the mesh code, Lithophanes does this in the browser with a backlit 3D preview of the actual mesh and a free flat-panel STL download, using the same 0.8 / 3.0 mm defaults. But building the brightness-to-thickness map yourself is a great small project: it touches color science, a little physics and mesh generation, and you get something you can hold up to a lamp at the end.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/astrolabio" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/tieli_liao_33e14817c86328/mapping-pixel-brightness-to-lithophane-wall-thickness-in-javascript-47ib" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

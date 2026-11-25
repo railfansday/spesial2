@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Routing Is Simple. Until It Isn’t.</title>
+    <title>scroll-state()</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9964.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Model Routing Is Simple. Until It Isn’t.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>scroll-state()</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://css-tricks.com/wp-content/uploads/2026/11/css-tricks-gradient-logo-default.webp" alt="scroll-state()" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/642ee6f6ffd6084c6a620985/ibA2XHLJsqDH9VAL-3ou-.png" alt="Model Routing Is Simple. Until It Isn’t." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://css-tricks.com/wp-content/uploads/2026/11/css-tricks-gradient-logo-default.webp" alt="scroll-state()" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Building a router into your agent sounds like an easy win. Send simple requests to cheaper models, reserve expensive ones for harder tasks, or route by specialty — Claude for code, Gemini for multimodal, and so on. A classifier or heuristic makes the call, costs go down, performance stays up. Done.</p>
-<p>Except it’s not. Most routing systems assume that model selection is a classification problem. In our experience building routing into agentic systems, what looks like a model-selection problem quickly becomes a systems optimization problem. Three dimensions made this surprisingly hard for us.</p>
-<p>We expected GPT-4.1 to be cheaper than Claude Sonnet 4.6. It wasn’t.</p>
-<p>Across 417 tasks on the AppWorld Test Challenge using the same CodeAct agent, Sonnet cost $79 total ($0.19/task) while GPT-4.1 cost $155 ($0.37/task) — nearly double. On paper, this makes no sense. GPT-4.1’s token pricing is lower on both input and output, and Sonnet takes roughly three times as many reasoning steps to finish the same tasks. By sticker price alone, GPT-4.1 should win easily.</p>
-<p>The explanation? Caching — something most routing discussions ignore entirely.
-Agent workloads tend to reuse large chunks of context across steps. When cache hit rates are high, effective input costs drop dramatically. Sonnet’s lower cache-read pricing meant it benefited disproportionately from this pattern, enough to overcome both its higher base pricing and its longer trajectories.</p>
-<p>The takeaway: actual cost depends on the interaction between the model, the workload, and the serving infrastructure. A router that only looks at pricing sheets is optimizing against the wrong numbers.</p>
-<p>A common routing strategy is to estimate how hard a task is and send harder tasks to stronger models. Intuitive, but it breaks down in two ways.</p>
-<p>First, difficulty is often invisible at routing time. A request like "summarize this contract" looks simple, but might trigger retrieval, compliance checks, tool use, and multiple rounds of refinement before it’s done. Meanwhile, a highly technical prompt might be handled efficiently by a smaller specialized model. You often don’t know how hard a task actually is until execution is underway.</p>
-<p>Routers aren’t solving one problem. They’re constantly juggling cost, quality, latency, compliance, and reliability all at once.</p>
-<p>It’s tempting to think about latency purely in terms of model size — bigger models are slower, smaller ones are faster. But what the user actually experiences depends on much more than that.</p>
-<p>Routing itself adds overhead. Infrastructure factors — which hardware a model is running on, whether the cache is warm, how busy the endpoint is — often dominate end-to-end response times. A theoretically faster model can still produce a slower experience if the serving conditions aren’t right.</p>
-<p>Then there’s routing granularity. Routing once per task adds minimal overhead. But routing at every step — which gives you more flexibility to adapt mid-execution — means every additional decision point introduces latency and operational complexity.</p>
-<p>A router that ignores the serving system is optimizing against the wrong reality.</p>
-<p>These lessons shaped how we built our router. The key shift: we stopped treating routing as a classification problem and started treating it as an optimization problem. Rather than asking "which model is best for this task?", our algorithm optimizes across cost, quality, and latency simultaneously — while staying lightweight enough to avoid becoming a bottleneck itself.</p>
-<p>The figure below shows the result on the AppWorld Test Challenge with a CodeAct agent. Each blue square is a different configuration of our router, tracing out a cost-accuracy frontier. The important thing isn't any single point — it's that the router gives you a range of operating points to choose from depending on whether you want to prioritize cost, latency, or accuracy. Configuration 1 (latency-optimized) lands at 84% accuracy for $93 and 83s — a 21% cost reduction and 9% latency reduction compared to running Opus alone, with only a 4% accuracy drop. Configuration 2 pushes cost even lower.</p>
-<p>Notice that a standard difficulty-based router (the teal diamond) lands in a similar accuracy range but at higher cost — it doesn't explore the full tradeoff space the way an optimization-based approach can. And because the optimization itself is lightweight (roughly 6 ms and 2 kB of memory per task), the router doesn't become the bottleneck we warned about earlier.</p>
-<p>The lesson we took away from this work is that routing isn’t really about choosing models. It’s about optimizing systems. Models are one variable — an important one, but just one among caching behavior, infrastructure state, compliance constraints, and workload patterns.</p>
-<p>When routing works well, it’s rarely because it found the "best" model for a given task. It’s because it found the best operating point for the entire system. That’s a harder problem than classification, but it’s the one worth solving.</p>
-<p>We’ll be sharing more about the technical details behind our approach in a follow-up post. In the meantime, if you’re building routing into your own agentic systems, we’d love to hear what tradeoffs you’re running into.</p>
-<p>This post was influenced by numerous conversations with colleagues, whose thoughtful questions, feedback, and insights helped refine our thinking.</p>
-<p>So I've always felt that model routing is a false proposition; it should have been part of the harness all along.</p>
-<p>Agreed, routing should disappear into the harness and just be part of the system's execution logic. Our goal is exactly that—making model choice an intrinsic capability rather than a separate concern.</p>
+                <p>The CSS scroll-state() query, surprisingly, has nothing to do with whether you’re doom-scrolling in a state of existential dread. It does, however, allow you to change the CSS used based on scrolling behavior. Far from doom, that’s pretty neat-o speedo. (Okay, you’re right, there’s nothing neat-o about a speedo). You can do lots of things that used to require JavaScript, like revealing the navigation when a user scrolls up or animating in a back to top link once the user scrolls down.</p>
+<p>While scroll-state(), with those slimming parentheses, looks like a function, it’s not technically one. It’s a container query (@container) like style(). Since scroll-state() is a query, the website is basically asking the browser whether a particular feature of a container has a specific value. If it does, the styles within the brackets will apply. If it doesn’t have that feature at all or has the feature, but the value is different, the @container query is false and the styles in the brackets will not apply.</p>
+<p>In the following demo (which we’ll dissect in a bit), a “Back to Top” link slides in from the bottom as you scroll down the page.</p>
+<p>scroll-state() has four possible features and each of those has a variety of possible values.</p>
+<p>Asks if a container has been scrolled in a given direction:</p>
+<p>Asks if a container can be scrolled in a given direction:</p>
+<p>Asks if a sticky-positioned element is stuck:</p>
+<p>Asks if a snap target has been snapped on a particular axis:</p>
+<p>First let’s look at the scrolled feature. This is the demo we saw at the beginning where we animate a back-to-top link when we scroll down:</p>
+<p>When the scroll container is scrolled toward the block-end (downward in this case) the translate applies and the .toplink element animates up into the visible area. Because we’re using a transition, when we scroll a different direction (up and down/block-start and block-end are the only options here), it nicely animates out.</p>
+<p>While the scrolling direction in the demo above is pretty clear, what if this page was translated into a different language? Or we had a hero image that covered the entire viewport? One way we could indicate the scroll direction would be to have an arrow or other signifier animating and pointing in the correct direction. (I’m more a believer in constructing your page such that scroll direction is pretty obvious; however, I can foresee situations where an indicator was the best user experience or where translations/writing-mode changes could obscure what scrolling direction was appropriate.)</p>
+<p>One nice thing about the scrollable feature is that when you scroll to the end of the scrollable area, it shuts off. So when we scroll to the block-end of the page (bottom of the page in this instance) scrollable: block-end is no longer true and our scroll indicator will revert to its default (in this case, display: none).</p>
+<p>You could also combine the scrollable and scrolled features to remove the scroll indicator once the container has been scrolled either in the block-start or block-end direction. (We need both, because if we’re down in the middle of the page and we scroll up, scrolled: block-end will no longer be true and the scroll indicator will appear again.)</p>
+<p>Another way we could enhance our demo is to have our navigation stick at the top while we’re scrolling down and change the look of the navigation once it’s stuck. The stuck feature must be on the element that gets stuck (as opposed to the scroll container, as was the case above). Also, because the container is set on the element that gets stuck, you cannot select the element itself from within the container query. You’ll need to position: sticky a wrapper element and “demote” all styles you want to change to the child.</p>
+<p>The work of setting up the stuck feature happens in that .header-wrapper, but since we can’t apply styles to the container from within the container (not even with :has()). We need most of the styling to be in the <header> element.</p>
+<p>Changing the size of an element in the header that affects the size of the header can lead to conflicting results. i.e. you scroll to a position where the header is stuck, which initiates the size change, but that reduces the size, which pulls it away from the stuck point, which cancels the size change which makes it stuck again, which initiates the size change and round and round we go. Even a small change can make it impossible to even scroll past the stuck point. Adding a transition can help with this and make scrolling work again, but you can still scroll to a place where the resizing happens in a loop. In the following demo, if you scroll down to a pixel or so past where the header touches the top of the viewport, you should see the stutter step.</p>
+<p>There is one weird trick to fix this, though. No, really, there is! (shakes fist at the internet for making “one weird trick” an unbelievable phrase.) The one weird trick is to set a height on the element that’s getting stuck (.header-wrapper in the case above). Ideally, set it smaller than the final size of the header if you’re making the header smaller. This prevents the element from resizing because of a change in its content’s size. This does require the header content to overflow. If that’s a no-go for you, you’ll have to change its size with transformations. The transformed element has a sort of placeholder that stays in the DOM where the transformed element originally lived. This placeholder is what’s used to determine the sticky position and does not change based on what happened in the animation.</p>
+<p>We can also add some styles when scroll snapping has been applied and that scroll has snappity-snapped (technical term). Similar to the stuck feature, snapped should be defined on the element that is snapped, not on the scroll container. If scroll snapping has not been applied to the element, then the snapped feature returns false and the container query does not apply.</p>
+<p>First, we set up our scroll snapping in the scrolled container.</p>
+<p>Note: As with most scrolling CSS (scrolling animations, etc.), if you’re using the document’s default scroll, the <html> element is what’s being scrolled, not the <body>.</p>
+<p>The slide <div>s are what we’re going to snap to the size of the viewport:</p>
+<p>As said above, the container type and name go on the snapped item. And then we modify descendants of the slide once it snaps:</p>
+<p>Again, as with stuck, you cannot apply styles directly to the snapped element/the container, but only to the children of that element/container.</p>
+<p>Andy Clarke shows you how to create designs that people recognize and remember in his brand-new e-book, Standout Designs for the Web. Order it today!</p>
+<p>Join our community of front-end nerds! You'll get into the Discord server and member-only perks and free swag.</p>
+<p>Sign up to get front-end roundups, browser updates, and exclusive content sent to your inbox bi-weekly.</p>
+<p>Get your t-shirts, prints, stickers, and yes, even mousepads at the brand-spankin' new CSS-Tricks store, now open.</p>
+<p>CSS-Tricks is powered by a small team of real-life humans.</p>
+<p>Handwritten. Twice a month. No spam. See past issues →</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/ibm-research/model-routing-is-simple-until-it-isnt" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://css-tricks.com/almanac/functions/s/scroll-state/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

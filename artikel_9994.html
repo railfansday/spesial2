@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Trust Layer: Securing Agentic AI with Docker AI Governance</title>
+    <title>ChatGPT shrunk down to run on a Super Nintendo</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9994.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,57 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>The Trust Layer: Securing Agentic AI with Docker AI Governance</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>ChatGPT shrunk down to run on a Super Nintendo</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://www.docker.com/app/uploads/2025/03/image.jpg" alt="The Trust Layer: Securing Agentic AI with Docker AI Governance" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5311423.jpg?imageId=5311423&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="ChatGPT shrunk down to run on a Super Nintendo" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/2025/03/image.jpg" alt="The Trust Layer: Securing Agentic AI with Docker AI Governance" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5311423.jpg?imageId=5311423&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="ChatGPT shrunk down to run on a Super Nintendo" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The security problem changes once an AI agent can do more than answer a prompt. It can execute code, access files, connect to services, and call external tools. That creates a new security question for enterprises: how do you give an agent enough freedom to be useful without giving it more access than it actually needs?</p>
-<p>A model decision is not automatically an authorized action. That distinction becomes important the moment an agent can turn a model output into an action in a real system.</p>
-<p>The answer can’t rely only on the model. Agent behavior can vary, while security controls need to be clear and enforceable. That means putting controls around the environment where the agent runs, what it can access, which tools it can use, and what happens when a policy allows or blocks an action. For a CISO, this creates a trust gap. Approving the use of AI agents means being able to answer more than whether the model is capable: what access does the agent have, where are those boundaries enforced, and what evidence is available afterward? The goal is to let teams adopt agents without making model behavior itself the security boundary.</p>
-<p>Docker AI Governance approaches this through three areas: Sandbox Policies, MCP Tool Governance, and Audit + Visibility.</p>
-<p>Together, they address three practical questions security teams need answered: Where can the agent operate? What can it do? And can we see what happened?</p>
-<p>In this article, I use “trust layer” as shorthand for the infrastructure between what an agent wants to do and what the organization actually allows it to do.</p>
-<p>There is a related trust question too: what software artifacts are these agentic workflows building and using? Docker Hardened Images address that software supply-chain side of the problem, alongside the runtime controls discussed below.</p>
-<p>Figure 1: The three layers of Docker AI Governance: Sandbox Policies, MCP Tool Governance, and Audit + Visibility.</p>
-<p>An agent needs enough access to get real work done. A coding agent may need to install packages, build containers, edit project files, or connect to external services. The security challenge is deciding where those actions are allowed before the agent starts taking them.</p>
-<p>Docker Sandboxes give each agent an isolated microVM environment a lightweight virtual machine with its own Docker Engine, filesystem, and network. Docker AI Governance adds policy around that environment so security teams can control network and filesystem access centrally.</p>
-<p>Network policies can allow or block specific domains, IP ranges, and ports. Filesystem policies control which host paths can be mounted into a sandbox and whether that access is read-only or read-write. These controls are enforced at the network proxy and filesystem mount layers rather than depending on the agent to follow an instruction.</p>
-<p>For an organization, that means the same boundaries can follow developers across their sandboxes instead of being configured differently on every machine. Teams still get the access they need for their work, but an individual agent cannot simply expand those boundaries on its own.</p>
-<p>A developer can check the effective boundary before starting the agent:</p>
-<p>The important part is that the result comes from the active policy, not from an instruction the agent is expected to follow.</p>
-<p>This answers the first governance question: Where can the agent operate?</p>
-<p>Once an agent has a controlled place to run, the next question is what it should be allowed to do through external tools.</p>
-<p>MCP (Model Context Protocol) gives agents a common way to connect to external tools, services, and capabilities, but that also expands what an agent can act on. For enterprise use, making a tool available should not automatically mean every agent can use it.</p>
-<p>Docker AI Governance puts policy around MCP activity handled through Docker’s MCP Gateway. Administrators can control which MCP servers may be registered and what agents can do through them, including tool calls, resources, prompts, and approval requirements. These organization policies are written in Cedar, a policy language used to express authorization rules. When MCP policy enforcement is active, governed requests are denied unless a matching policy permits them. For example, a policy can permit read-only tool calls for a specific registered MCP server:</p>
-<p>Here, readOnly comes from the MCP tool’s annotations. Those annotations are supplied by the server and are advisory, so this example relies on metadata provided by that server.</p>
-<p>This makes tool access an explicit policy decision rather than something left to each agent or developer to configure independently. A team can be given access to the tools it needs, while other servers or actions remain unavailable. Policies can also require confirmation for specific tool calls when an action needs an additional checkpoint.</p>
-<p>One boundary is worth making clear: MCP policies apply to activity handled by Docker’s MCP Gateway. If an agent connects directly to a remote MCP server from inside a sandbox, that connection falls under the sandbox’s network policy instead.</p>
-<p>With the environment constrained and tool access governed, we can answer the second question: What can the agent do?</p>
-<p>Setting a policy is only part of the job. Security teams also need to know when that policy was applied, what action triggered it, and whether the action was allowed or denied.</p>
-<p>Docker AI Governance records sandbox policy decisions and sandbox session events as structured audit records. Each record captures details such as the principal, action, target, decision, and time. The records contain governance metadata rather than the contents of prompts or agent responses.</p>
-<p>Audit records can be kept locally or delivered to the cloud. With cloud delivery enabled, teams can search the organization-wide record, export it for further analysis, or forward events into existing SIEM (security information and event management) workflows.</p>
-<p>Denied actions are especially useful. A team can see not only that an action failed, but that a governance rule blocked it and why. Allowed decisions matter too: they provide a record of how policy was applied while the agent was working.</p>
-<p>Current audit coverage includes Docker Sandboxes policy decisions and sandbox session events. The same schema can support additional Docker AI sources as they become available.</p>
-<p>That closes the third part of the governance loop: Can we see what happened?</p>
-<p>AI Governance controls access around the agent at runtime. There is a separate question that matters to the workflows those agents participate in: what container images and software artifacts are they building, testing, or deploying?</p>
-<p>Docker Hardened Images provide minimal, secure, and production-ready container images, Helm charts, and system packages maintained by Docker.</p>
-<p>In practical terms, this gives teams evidence about what is inside an image and how that image was produced. Docker Hardened Images include signed SBOMs, VEX information, cryptographic signatures, and SLSA Build Level 3 provenance. Instead of simply trusting where an image came from, teams can inspect what is inside it and verify information about how it was built.</p>
-<p>For organizations with additional compliance requirements, Docker also provides FIPS-enabled and STIG-ready variants through relevant DHI offerings. These capabilities sit alongside the broader DHI security and supply-chain controls rather than making any single standard the foundation by itself.</p>
-<p>AI Governance and Docker Hardened Images solve different parts of the trust problem. Governance controls the authority an agent has while it works; DHI helps establish trust in the container artifacts that the workflow depends on.</p>
-<p>Figure 2: Docker Hardened Images combine minimal container images with signed supply-chain metadata and verifiable build provenance.</p>
-<p>Consider a developer using a coding agent to investigate an issue, update a service, and use an approved internal tool along the way.</p>
-<p>The agent begins inside a Docker Sandbox. It can work with the project and run the commands needed for the task, but its access is still bounded by policy. If it tries to reach a network destination or mount a host path that the organization has not allowed, the applicable sandbox policy can block that access.</p>
-<p>Now suppose the agent needs an MCP tool to look up information from another service. The request goes through Docker’s MCP Gateway, where organization policy determines whether that server and tool are permitted. A routine lookup might be allowed, while a more sensitive tool call could require confirmation or remain unavailable altogether.</p>
-<p>For governance activity currently covered by AI Governance Audit Logs, Docker records the policy decision and relevant session metadata. Security teams can see who initiated the activity, what policy-controlled action was evaluated, and whether it was allowed or denied. Those records can then feed the organization’s existing monitoring and SIEM workflow.</p>
-<p>If that same agent builds or tests a containerized application, the software entering the workflow matters too. Docker Hardened Images provide a more verifiable software foundation for that workflow, while AI Governance controls what the agent is authorized to do at runtime.</p>
-<p>The model is still making decisions about how to complete the task. What changes is the authority around those decisions. The agent can work autonomously inside the boundaries the organization has defined, while access outside those boundaries remains a policy decision.</p>
-<p>That is the practical value of the three layers working together:</p>
-<p>Sandbox Policies define where the agent can operate.</p>
-<p>MCP Tool Governance defines what tools it can use.</p>
-<p>Audit + Visibility shows how governed activity was handled.</p>
-<p>Taken together, the pattern is straightforward: define the boundary, check it before the agent starts working, enforce it while the agent is running, and use the resulting audit trail to understand what happened. If a boundary needs to change, the policy changes, not the expectation that the model will simply behave differently.</p>
-<p>The challenge with agentic AI is not simply that agents can make decisions. It is that those decisions can now lead directly to actions.</p>
-<p>That makes the boundary around the agent just as important as the model itself. Docker AI Governance addresses that boundary through Sandbox Policies, MCP Tool Governance, and Audit + Visibility: controlling where agents can operate, what tools they can use, and how governed activity is recorded.</p>
-<p>Docker Hardened Images address a related supply-chain concern by helping teams work with smaller, verifiable container artifacts.</p>
-<p>The goal is not to remove autonomy from agents. It is to make sure autonomy does not automatically come with unlimited authority.</p>
-<p>As agents take on more real work, that distinction will matter more and more.</p>
-<p>Docker launches a new brand built on trust. Learn why Docker is evolving for AI agents, what stays the same, and how to run agents securely with Docker.</p>
-<p>Docker publishes fixed images for both Java4Shell and the NGINX HTTP/2 in the Docker Hardened Images (DHI) catalog.</p>
-<p>Learn how Docker AI Governance secures agentic AI with sandbox policies, MCP tool governance, and audit visibility to support controlled AI agent workflows.</p>
+                <p>Just don't expect complex, coherent, or always correct answers</p>
+<p>If you’ve ever wondered how small an instance of ChatGPT could get, wonder no longer. Someone has actually rigged up a tiny version of the chatbot to run on a Super Nintendo cartridge.</p>
+<p>Tech journalist and retro tech enthusiast Benj Edwards is responsible for ChatGPT for SNES. He's published it online running in an emulator, complete with SNES-era music and sound effects, and for download as an SNES ROM, too.</p>
+<p>It’s not a big model, mind you, and performance is thus pretty limited: According to the website, it’s a 2.2 million-parameter offshoot of OpenAI’s GPT-OSS-120b, which was used to develop its training conversations – so in that sense it truly is a ChatGPT that runs on an SNES cartridge. Edwards described it to The Register as a distilled version of the aforementioned open-weight model.</p>
+<p>There are two options built into ChatGPT for SNES: One that’s purely the model, with every word generated coming right from its tiny little silicon brain, and another that includes a fact book culled from the opening sentences of around 150,000 simple English Wikipedia articles. If you opt to run both versions and ask it the same questions, you’ll notice a massive difference.</p>
+<p>Given some of the other responses we got while testing, there’s really no good reason to run the base model – memory isn’t really an issue given the basic build is about 4MB and the factbook build is just 19MB.</p>
+<p>Edwards admits that it’s not the most helpful AI model, either – this is just an experiment after all.</p>
+<p>“It is not a useful assistant: the model is millions of times smaller than the models behind ChatGPT, knows about 8,000 words, and often gets things wrong, sometimes confidently,” Edwards noted in his writeup. In that sense, it really is vintage AI on vintage hardware. “The fact book can carry mistakes too.”</p>
+<p>If you have an SNES lying around (lucky you), you can download the ROM from this link. If you want to get it running on an SNES you’ll need a cartridge that allows running of custom ROMs, and that supports Nintendo’s Super FX graphics coprocessor. Cartridges like the FXPak Pro and SD2SNES support it. The factbook version also requires support for the aftermarket Media Streaming Unit 1 (MSU-1), which adds CD-ROM like features to the SNES. MSU-1 is available in both of the flash carts mentioned above.</p>
+<p>If you have some real hardware skills, however, you could technically make your own ChatGPT cartridge.</p>
+<p>“The ‘pure’ version, which generates all responses from the AI language model, could run from a real custom SNES cart,” Edwards told us – it doesn’t even actually need the Super FX chip. “I do have a version of ChatGPT for SNES that can run without the Super FX chip, but without the extra processing power the answers are not as good.”</p>
+<p>That said, Edwards believes its absolutely crazy and nonsensical answers are part of the fun.</p>
+<p>“ChatGPT for SNES can definitely make mistakes too, but it's almost cute when it does it because of its limited knowledge and its playful interface,” Edwards told us.</p>
+<p>While a human may have designed the experiment, the coding work was done by AI, Edwards told us – he’s been interested in it since the 1990s and is pursuing more experiments with tiny AI models using the help of the bigger ones.</p>
+<p>“I've been theorizing about what I call ‘tiny talking machines’ … over the past year,” Edwards told us, and he’s been able to use coding agents to turn those ideas into actual software. ChatGPT for SNES is one example, and he also created an NES ROM called Séance that uses an even smaller AI model able to run on an original Nintendo Entertainment System that simulates talking to a ghost in a haunted game cartridge.</p>
+<p>“I designed the scope of what the software should be, how it should work broadly, what chip it should use, how the interface should look and work, and the sounds it makes when it types responses,” Edwards told us. He added that he sees the project as an AI/human collaboration, which is where he believes AI works best.</p>
+<p>“The AI agents who did the coding for this project currently advise that we've hit the limit of how good the AI model can be on the limited hardware,” Edwards said - he’s not taking their word for it, though. “It's up to human creativity to transcend those assumptions. I have already come up with new ideas that I believe can make a tiny model like ChatGPT for SNES even more coherent, and I'm working on them now.” ®</p>
+<p>Four more critical vulns, including another unauthorized access flaw in vCenter</p>
+<p>Rajiv Ramaswami will stay in the chair until new hire lands, then stick around as advisor</p>
+<p>PARTNER CONTENT: PARTNER CONTENT: Hyperscalers and colos have distinct power strategies, but for both, securing flexible, fast power relies on self-generated solutions</p>
+<p>Still slinging hardware – now with added AI and attendant risks or opportunities</p>
+<p>If a service falls in the forest and nobody hears it...</p>
+<p>‘It’s like the Ottoman Empire banning the printing press for Arabic so they would keep in control of the dogma,’ he says</p>
+<p>Still slinging hardware – now with added AI and attendant risks or opportunities</p>
+<p>‘It’s like the Ottoman Empire banning the printing press for Arabic so they would keep in control of the dogma,’ he says</p>
+<p>Chip boss gets his old job back, but Washington isn't done investigating one of his former flame's businesses</p>
+<p>Britain wants sovereign capability to test whether military AI will work before it gets deployed for real</p>
+<p>If the AI can't explain what it's proven, are we actually any closer to understanding?</p>
+<p>PLUS: US takes down Iranian propaganda sites; Marketing company asks 'Why Do We Have Your Information?' And more!</p>
+<p>PLUS: China upgrades smartphone surveillance tools; Ring eases anti-snooping stance; and more</p>
+<p>Voting village reports have been so successful, says Jeff Moss, that the whole of DEF CON will now be included</p>
+<p>Went at equivalent of $3.5B+ valuation for entire firm, though portion sold not specified</p>
+<p>On the plus side, infosec's a good bet for a long, stable career</p>
+<p>A spatial classic Finder in the style of A/UX</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.docker.com/blog/agentic-ai-security-docker-governance/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/offbeat/2026/11/21/chatgpt-shrunk-down-to-run-on-a-super-nintendo/5311418" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

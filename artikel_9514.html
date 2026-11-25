@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Psychopaths Use Language In A Way Most People Would Never Expect (M)</title>
+    <title>A Failure Taxonomy for Playwright Email Tests</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9514.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Psychopaths Use Language In A Way Most People Would Never Expect (M)</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>A Failure Taxonomy for Playwright Email Tests</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://www.spring.org.uk/images/surprised-1.jpg" alt="Psychopaths Use Language In A Way Most People Would Never Expect (M)" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Faydm1ziotk86vb3tg2bm.png" alt="A Failure Taxonomy for Playwright Email Tests" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.spring.org.uk/images/surprised-1.jpg" alt="Psychopaths Use Language In A Way Most People Would Never Expect (M)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Faydm1ziotk86vb3tg2bm.png" alt="A Failure Taxonomy for Playwright Email Tests" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The way people describe life’s turning points reveals three distinct traits associated with psychopathy.</p>
-<p>The way people describe life's turning points reveals three distinct traits associated with psychopathy.</p>
-<p>• Read members-only articles
-• Adverts removed
-• Cancel at any time
-• 14 day money-back guarantee for new members</p>
-<p>Psychologist, Jeremy Dean, PhD is the founder and author of PsyBlog. He holds a doctorate in psychology from University College London and two other advanced degrees in psychology. He has been writing about scientific research on PsyBlog since 2004.			
-				View all posts by Dr Jeremy Dean</p>
+                <p>An email test that ends with Timeout 30000ms exceeded has reported a symptom, not a diagnosis. The application might not have sent a message, the inbox could be shared with another worker, or the assertion may have found the wrong message. Increasing the timeout treats all three cases as if they were the same.</p>
+<p>In QA automation, a better goal is to classify the failure while the evidence is still available. This makes a Playwright suite easier to repair and keeps retries from turning real defects into green builds. A useful email verification states that explain themselves approach starts with visible state, then adds assertions around that state.</p>
+<p>Consider a signup test that requests a verification email and polls a test inbox. The first clue are usually hidden in the sequence of events:</p>
+<p>If the test records only the final assertion, it cannot tell which event was missing. A short timeout may expose a slow dependency, but a long timeout can make a broken correlation rule take several minutes to notice. The investigation becomes a bit more clear when each transition has a small piece of evidence.</p>
+<p>This matters whether the inbox comes from a temp email generator, a local mail server, or a provider adapter. The inbox technology changes; the failure classes stay mostly the same.</p>
+<p>I use five categories when triaging an email test. They are simple enough for a test report and specific enough to suggest the next check.</p>
+<p>The browser action did not create a verification request. Look for a failed network response, validation message, or an application-side request ID. Do not inspect the inbox first; there is no reason to expect a message yet.</p>
+<p>The application accepted the request, but no message reached the inbox within the allowed window. Capture the enqueue time and the provider response. A delivery failure may be an environment outage, a blocked domain, or a queue that is not running in CI.</p>
+<p>A message arrived, but the test selected a message belonging to another attempt. This is common when workers share an address or when a retry reuses an old inbox. A request ID helps, but remember why a request ID is not an idempotency key: it identifies a request and does not automatically make repeated operations safe.</p>
+<p>The right message was found, but its subject, recipient, link, or token is wrong. Save message ID and received time, plus a sanitized reason for the mismatch. Never put a full verification URL in normal CI logs.</p>
+<p>The assertion passed, but the fixture did not release the inbox or message data. Cleanup failures tend to appear as later correlation failures, so the test that fails is not always the test that caused the contamination. Treat cleanup as a result with its own status.</p>
+<p>The fixture is the best place to collect evidence because every test uses the same boundary. Keep the fields small and safe to print:</p>
+<p>The data make a failure report much more useful without exposing the message body. If a raw body is needed, attach it to a restricted artifact and redact links before storing it. A test account should never contain production mail, even when the failure seems harmless.</p>
+<p>For a shared service, define ownership explicitly. The test that creates an inbox should release it, and the report should say whether release succeeded. It is also worth checking this twice, because small timing bugs can grows into a large pile of leftover fixtures overnight.</p>
+<p>The helper below keeps polling separate from classification. The provider adapter can implement listMessages, while the test report receives a stable result.</p>
+<p>In production test code, add a precondition that the trigger request succeeded and a separate check that rejects a message from an earlier attempt. If the provider returns an error, classify that result before it becomes a generic delivery timeout. The retry count look less important once the report tells you what actually failed.</p>
+<p>When a build reports an email-test failure, follow the same order every time:</p>
+<p>One test report will not solve every flaky email test. It can, however, turn “the email did not arrive” into a bounded question: was the trigger missing, was delivery late, did correlation select the wrong message, was content invalid, or did cleanup leak state? That distinction is the foundation of reliable Playwright automation.</p>
+<p>For reference, a team may also document its chosen temp mail mail fixture policy, including retention and access boundaries. Keep that link contextual and keep real user data out of the test inbox.</p>
+<p>There is a small typo in some internal test notes that says tem email; it should not be copied into a keyword or API name. Consistent naming makes the failure taxonomy easier to search when a CI incident starts.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.spring.org.uk/2026/10/psychopath-language.php" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/silviutech/a-failure-taxonomy-for-playwright-email-tests-b9g" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

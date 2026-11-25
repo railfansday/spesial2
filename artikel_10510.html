@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams</title>
+    <title>Running WireGuard for a Development Team: The Hidden Cost of VPN Maintenance</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10510.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,45 +15,139 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>Running WireGuard for a Development Team: The Hidden Cost of VPN Maintenance</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_42c7784289.png" alt="What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Remote_developer_onboarding_workspace_815c2fd138.png" alt="Running WireGuard for a Development Team: The Hidden Cost of VPN Maintenance" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_42c7784289.png" alt="What Breaks When a Self-Hosted LLM Gateway Hits 1,000 Concurrent Streams" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Remote_developer_onboarding_workspace_815c2fd138.png" alt="Running WireGuard for a Development Team: The Hidden Cost of VPN Maintenance" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>We sent 1,000 streaming calls at the same moment through three self-hosted LLM gateways: the Langfuse AI Gateway, the LiteLLM proxy and AcruxCore. Each gateway was limited to 2 CPUs. As shipped, Langfuse finished 261 of the 1,000 streams and LiteLLM finished 403. Neither failure came from the gateway's own code.</p>
-<p>Langfuse's failures came from Linux's open-file limit, which Docker sets to 1,024 by default. LiteLLM had that problem too, plus a second one: an empty key cache sent hundreds of database lookups at once, and the ones that waited longer than 10 seconds were rejected. This article shows how each failure looked, how we traced it to its cause, and the settings that fixed it.</p>
-<p>This benchmark measured the resource consumption of three LLM gateways under scaling concurrent streaming loads.</p>
-<p>Full latency, memory, and feature results are available in the Langfuse vs LiteLLM vs AcruxCore benchmark.</p>
-<p>First-token times are medians of the streams that succeeded. Up to 250 streams, every gateway succeeded. Then the errors started, and they did not look alike:</p>
-<p>A 502 and a 503 point at different layers, so we expected two different causes. Two of the three turned out to share one cause.</p>
-<p>Linux counts every network connection as an open file, and it caps how many open files one process may hold. The cap has two values. The soft limit is the cap that is in force now. The hard limit is the ceiling: a process may raise its own soft limit up to that value, and no further.</p>
-<p>A streaming gateway holds two connections for each stream: one from the client, and one to the model provider. That makes about 1,000 open files at 500 streams, and about 2,000 at 1,000 streams. A gateway also needs a few more files for its database, its logs and its own libraries.</p>
-<p>Docker on our machine gave every container a soft limit of 1,024 and a hard limit of 524,288. All three gateways received the same two numbers. What differed was how each program treats them when it starts:</p>
-<p>Node.js raises its own soft limit to the hard limit at startup. The Rust and Python services keep 1,024, and neither project's Compose file sets a higher value. So the two gateways ran out of open files near 500 streams, which is the point where the errors started.</p>
-<p>The out-of-files error appeared as a failed connection, not as a clear message. The Langfuse gateway's logs showed failed connections to OpenAI, and also failed connections to Langfuse's own web service, which the gateway asks to check each key. Both come from one cause: a process that cannot open another file cannot open another socket. Its client then receives a 502.</p>
-<p>Read the limit the process actually has, not the one you think Docker gave it. Process 1 is usually the main process in a container:</p>
-<p>If the gateway runs under a supervisor or several workers, check each worker's process ID instead of process 1. To see how close a process is to its limit under load, count its open file descriptors:</p>
-<p>Raise the limit for the gateway service in its Compose file. We used 65,536 for all three gateways:</p>
-<p>The same ulimits block works on the LiteLLM service. On Kubernetes or another platform, check /proc/<pid>/limits inside a running container rather than assuming a value.</p>
-<p>With the open-file limit raised, the Langfuse gateway finished all 1,000 streams. LiteLLM still returned 503 errors. To separate the two causes, we ran LiteLLM with one worker and only the open-file limit raised. All 500 streams succeeded in that ladder, but 595 of 1,000 failed with 503.</p>
-<p>The 503 message names the authentication database, so we read LiteLLM's logs and its source. The log gave the same reason for all 840 failed streams in these runs, 595 in that ladder and 245 in the cold-cache runs below:</p>
-<p>When 500 calls arrive while the key is not in the cache, each call looks the key up in Postgres. All of those lookups queue for 10 connections. The worker was also using its whole CPU allowance at this point, which slows every query it sends and receives. We infer that this CPU load lengthens the queue, but we did not measure it separately. Whatever the share of each, the lookups at the back of the queue miss the 10-second deadline.</p>
-<p>If that explanation is right, the failures should depend on whether the key is already in the cache. So we ran 500 streams four more times. Three runs started after 75 seconds with no calls, which is longer than the 60-second cache. One run started right after a single warm-up call:</p>
-<p>The warm run had no failures. The cold runs failed by different amounts, 161, 84 and 0, because the result depends on how many lookups miss the deadline, and that changes from run to run. This probably explains why the earlier ladder succeeded at 500 and failed at 1,000. A run is a race between the lookup queue and the deadline, so a single ladder does not show where the limit is.</p>
-<p>The warm-up result is the one we measured. Send one call with each virtual key after LiteLLM starts, and avoid quiet periods longer than 60 seconds before a traffic spike. A steady flow of traffic keeps the key in the cache.</p>
-<p>LiteLLM also exposes three settings that act on this path. We did not test them, so treat them as places to look rather than proven fixes:</p>
-<p>We raised the open-file limit to 65,536 for all three gateways and gave LiteLLM 2 workers, one per CPU, as its production guide recommends for a single machine. Then we ran the full ladder again:</p>
-<p>The open-file errors were gone for every gateway, and the Langfuse gateway gave the fastest first token of the three. LiteLLM still returned 120 × 503 at 500. That level started about 60 seconds after the first call of the ladder, so the cached key had probably just expired. All 1,000 succeeded at the next level, which started within 60 seconds of the 500 level.</p>
-<p>Once nothing failed, CPU decided the first-token times. LiteLLM used its whole 2-CPU allowance from 100 streams on, and its median first token took 19.2 seconds at 1,000 streams. AcruxCore also used both CPUs from 100 streams on, and its first token at 1,000 streams was 3.8 s at the median and 9.7 s at p95. The Langfuse gateway peaked at 1.65 CPUs and 168 MiB, with a first token of 1.7 s at the median and 9.6 s at p95.</p>
-<p>Each gateway also needs the rest of its stack, and that stack uses CPU too. While the Langfuse gateway served 500 streams, its whole stack used up to 3.1 CPUs, because the web service checked keys and the worker and ClickHouse stored usage. AcruxCore's whole stack peaked at 4.0 CPUs, because its API writes a trace for every call to Postgres. Size the stack around the gateway, not only the gateway container.</p>
-<p>Talha Anwar is a senior AI and full-stack engineer and writes about building and running AI systems at talhaanwar.com.</p>
+<p>Setting up WireGuard on a small virtual server is a satisfying infrastructure task. Install the package, generate a key pair, open a UDP port, configure a peer, and connect a laptop. Within an afternoon, your staging environment can sit behind a private tunnel, and your internal dashboard can be restricted to traffic from a known address.</p>
+<p>The initial setup is rarely the difficult part.</p>
+<p>The real engineering work starts when the team changes. A developer joins, another leaves, someone replaces a laptop, a server needs patching, or a connection suddenly stops working. Each event creates a small maintenance task. Over time, those tasks become an operational responsibility that somebody must own.</p>
+<p>This article examines what it takes to operate a self-hosted WireGuard VPN for a development team. We'll look at peer configuration, access management, troubleshooting, monitoring tools, and the engineering time involved. We'll also compare self-hosting with managed business VPN services so teams can make a decision based on their infrastructure needs.</p>
+<p>WireGuard is a modern VPN protocol designed to establish encrypted connections between network peers. Its relatively small codebase, modern cryptography, and straightforward configuration make it attractive for developers who want control over their network infrastructure.</p>
+<p>A basic WireGuard deployment typically involves:</p>
+<p>A server with a reachable public IP address.</p>
+<p>A private and public key pair for the server.</p>
+<p>A UDP port through which peers communicate.</p>
+<p>Peer configuration that defines which addresses are allowed through the tunnel.</p>
+<p>A simplified server configuration might look like this:</p>
+<p>The corresponding client configuration contains the client's private key and the server's public key:</p>
+<p>These examples illustrate the basic relationship between a server and a client. A production configuration will also need appropriate firewall rules, routing, DNS settings, and a plan for distributing configuration securely.</p>
+<p>The important distinction is that WireGuard establishes encrypted peer connections. It does not automatically provide a complete employee identity system, onboarding workflow, approval process, or audit dashboard.</p>
+<p>Those responsibilities belong to the team operating the infrastructure.</p>
+<p>Developers interested in using WireGuard on personal development devices can also explore SitePoint's guide to building a hardened mobile development environment with Termux, Docker, and WireGuard.</p>
+<p>A peer is not just an entry in a configuration file. It represents a device that has permission to communicate through your network.</p>
+<p>That makes peer management an access-control responsibility.</p>
+<p>For a small development team, it is tempting to keep a single configuration file and update it manually whenever someone joins or leaves. This can work initially, but it becomes harder to manage as the number of devices increases.</p>
+<p>A useful first step is to maintain a peer inventory:</p>
+<p>The inventory should not contain private keys. Private keys must remain on their respective devices and should never be placed in a shared spreadsheet or source repository.</p>
+<p>The inventory instead helps administrators answer practical questions:</p>
+<p>Which device is associated with this tunnel address?</p>
+<p>Has the peer been removed after the device was lost or replaced?</p>
+<p>This information becomes especially important when a team uses the VPN to reach staging servers, internal dashboards, databases, or other development resources.</p>
+<p>Manual onboarding is manageable when a team has only two or three developers. It becomes unreliable when several people join, leave, or change devices over the year.</p>
+<p>A repeatable onboarding process should cover more than generating a key pair.</p>
+<p>Confirm that the team member is authorized to access the environment.</p>
+<p>Generate a key pair on the user's device.</p>
+<p>Add the public key to the server's peer configuration.</p>
+<p>Apply the appropriate routing and firewall permissions.</p>
+<p>Deliver the client configuration through a secure channel.</p>
+<p>Test access to the specific development resources the person needs.</p>
+<p>Record the peer owner, device, and approval details.</p>
+<p>Offboarding needs an equally clear process:</p>
+<p>Identify every peer associated with the departing team member.</p>
+<p>Remove the relevant public keys from the server.</p>
+<p>Confirm that the configuration change has been applied.</p>
+<p>Review any other credentials or allowlists that granted access.</p>
+<p>An administrator can inspect the currently configured peers with:</p>
+<p>The output helps identify peer public keys, transfer counters, and latest handshake information. It is useful for troubleshooting, but it should not be treated as a complete access audit or proof that a particular person is still authorized.</p>
+<p>The broader lesson is to make access changes part of a documented workflow. A peer should not remain active simply because nobody remembers who created it.</p>
+<p>One common network-design mistake is assuming that connecting to a VPN should give a developer access to every internal service.</p>
+<p>A developer working on a frontend application may need access to a staging web server but not to the production database. A contractor may need access to one test environment without being able to reach internal administration tools.</p>
+<p>WireGuard's peer configuration and the surrounding network controls should be designed around those requirements.</p>
+<p>Separate tunnel address ranges for different groups.</p>
+<p>Firewall rules that restrict traffic to approved services.</p>
+<p>Cloud security groups that limit access to specific ports.</p>
+<p>Application-level authentication for internal dashboards.</p>
+<p>Separate production and staging network boundaries.</p>
+<p>The exact implementation depends on the infrastructure. The key point is that VPN membership and application authorization are different controls.</p>
+<p>A successful VPN handshake should not be treated as permission to access every resource behind the tunnel.</p>
+<p>A VPN can appear simple when it works. Diagnosing it becomes more complicated when a developer is connecting from a home router, a hotel network, or a mobile hotspot.</p>
+<p>Incorrect routing or AllowedIPs settings.</p>
+<p>A server process or host becoming unavailable.</p>
+<p>WireGuard provides useful inspection commands:</p>
+<p>These commands help inspect peer information, check the service state, and review recent service logs. The exact systemd service name can differ depending on how the interface was configured.</p>
+<p>Administrators should also monitor the underlying server. At minimum, that means checking:</p>
+<p>Whether the WireGuard interface is active.</p>
+<p>Whether disk or memory usage is approaching a limit.</p>
+<p>Whether operating-system and package updates are pending.</p>
+<p>A small virtual server may be inexpensive, but it is still infrastructure that needs an owner.</p>
+<p>Teams working with alternative tunnel-based development workflows may find SitePoint's tutorial on setting up Cloudflare Tunnels with Docker Compose for persistent webhook debugging useful. It covers a different tunneling use case, but the operational questions around connectivity, service health, and troubleshooting are closely related.</p>
+<p>A self-hosted VPN does not need to become a collection of manual tasks. A few established tools can make configuration, monitoring, and debugging more repeatable.</p>
+<p>The core tool is, of course, WireGuard. Its command-line utilities allow administrators to inspect peers, manage interfaces, and review connection information. The official documentation is the best starting point for understanding configuration options and platform support.</p>
+<p>Ansible can automate repeatable server administration tasks. A team could use playbooks to deploy configuration files, apply system updates, or standardize firewall settings across several VPN hosts.</p>
+<p>Sensitive values should be handled with an appropriate secrets-management approach. Private keys should not be committed to a Git repository or stored in plaintext playbooks.</p>
+<p>Prometheus is useful for collecting and querying metrics, while Node Exporter exposes Linux host metrics such as CPU, memory, disk, and network statistics.</p>
+<p>These tools do not automatically provide a complete WireGuard security audit. They can, however, help identify resource problems and server-health issues before those problems become user-reported outages.</p>
+<p>Uptime Kuma provides a self-hosted monitoring dashboard with notifications. It can help teams monitor the availability of a VPN host or related services.</p>
+<p>A basic availability check does not prove that every VPN peer can connect successfully. For more meaningful monitoring, combine host checks with an end-to-end test from a separate network.</p>
+<p>Wireshark and tcpdump help developers inspect network traffic when diagnosing connectivity problems.</p>
+<p>For example, tcpdump can capture UDP traffic on the WireGuard port:</p>
+<p>This can help determine whether packets are reaching the server. It does not decrypt WireGuard traffic or replace checks of routing, firewall rules, and peer configuration.</p>
+<p>The right toolset depends on the size of the deployment. A team with one VPN server may only need WireGuard's own commands and basic host monitoring. A larger environment may benefit from automation, centralized metrics, and a documented incident process.</p>
+<p>A self-hosted VPN can cost very little in direct infrastructure charges. However, the server invoice does not include the engineering time required to operate it.</p>
+<p>Consider a hypothetical team with these assumptions:</p>
+<p>Two people join and two leave during the year.</p>
+<p>The team reviews or rotates device keys quarterly.</p>
+<p>Patching and monitoring require about two hours per month.</p>
+<p>Six troubleshooting incidents occur annually.</p>
+<p>The estimated loaded engineering cost is $60 per hour.</p>
+<p>The virtual server costs approximately $6 per month.</p>
+<p>The following estimate illustrates how quickly maintenance time can exceed the infrastructure bill.</p>
+<p>At $60 per hour, 46 hours represent approximately $2,760 in engineering time. The server adds around $72 per year, bringing the estimated total to $2,832.</p>
+<p>These figures are illustrative, not a universal cost benchmark. A team with infrastructure automation and established monitoring may spend considerably less time. A team with frequent staff changes or strict audit requirements may spend more.</p>
+<p>The useful exercise is to measure the work your own team performs. Track onboarding, access reviews, patching, incidents, and recovery time for a few months. That gives you a more realistic comparison than looking at hosting prices alone.</p>
+<p>Self-hosting is not automatically the best option just because a team has developers who can configure servers.</p>
+<p>A managed business VPN may be worth considering when the team needs centralized member management, simpler device administration, or a stable network exit address without maintaining the underlying VPN infrastructure.</p>
+<p>Depending on the provider and plan, managed services may offer:</p>
+<p>A central dashboard for adding and removing users.</p>
+<p>Client applications for common operating systems.</p>
+<p>Multi-factor authentication or identity integrations.</p>
+<p>For example, PureVPN for Teams is one service in this category. Teams evaluating it—or any other provider—should check the current feature set, pricing, logging practices, access controls, and service terms before making a decision.</p>
+<p>A managed service does not remove every security responsibility. The team still needs to decide who receives access, review permissions, protect user accounts, and understand how traffic and metadata are handled.</p>
+<p>It also introduces vendor dependency and a recurring subscription cost. Those trade-offs should be considered alongside the engineering time saved.</p>
+<p>There are situations where running WireGuard yourself is the more practical option.</p>
+<p>You already operate infrastructure. If your team routinely patches servers, manages secrets, monitors services, and responds to incidents, maintaining a VPN may add relatively little work.</p>
+<p>You need custom routing. A deployment that connects several private cloud networks, on-premises environments, or specialized subnets may require network controls that are easier to implement directly.</p>
+<p>You have strict data-control requirements. Some organizations have policies that limit which third parties can handle network traffic or related metadata. Those requirements may favor infrastructure under the organization's own control.</p>
+<p>You have a dedicated platform or security team. If someone is explicitly responsible for access management, monitoring, and incident response, self-hosting can fit naturally into existing operations.</p>
+<p>You can automate the lifecycle. Infrastructure-as-code, configuration management, documented peer inventories, and tested recovery procedures can reduce repetitive work and make a self-hosted deployment easier to maintain.</p>
+<p>The important distinction is between a deliberately operated service and a one-off server that nobody owns.</p>
+<p>Before choosing an approach, ask the following questions:</p>
+<p>Who is responsible for the VPN six or twelve months after deployment?</p>
+<p>How many people and devices are likely to join or leave?</p>
+<p>How are public keys and peer configurations tracked?</p>
+<p>How quickly can access be revoked when a device is lost?</p>
+<p>Which internal services should each developer be able to reach?</p>
+<p>Do you need a fixed egress IP for external allowlists?</p>
+<p>What monitoring and recovery process exists if the server fails?</p>
+<p>Do your customers or internal policies require access logs or formal reviews?</p>
+<p>Does your team have the time and expertise to maintain the infrastructure?</p>
+<p>Would a managed service cost less than the engineering time and operational risk it replaces?</p>
+<p>If your team already has mature infrastructure practices and needs custom network control, self-hosting may be a sensible choice.</p>
+<p>If the team is small, access changes frequently, and nobody has time to own another server, a managed service may be more practical.</p>
+<p>WireGuard is an excellent protocol, and deploying it can be a straightforward engineering task. But operating a VPN for a development team involves more than establishing an encrypted connection.</p>
+<p>Peer management, onboarding, offboarding, network permissions, monitoring, patching, and troubleshooting all require ongoing attention.</p>
+<p>The right choice depends on the team's infrastructure experience, security requirements, size, and available engineering time. Self-hosting offers control and flexibility; a managed service can reduce operational work. Neither option removes the need for sound access-control practices.</p>
+<p>Before deciding, calculate the maintenance effort, identify who will own the service, and make sure the design can be maintained as the team changes.</p>
+<p>The cost example uses illustrative assumptions rather than current vendor pricing. Managed VPN features and prices can change, so verify provider details before purchasing.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-breaks-when-a-self-hosted-llm-gateway-hits-1-000-concurrent-streams/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/running-wireguard-for-a-development-team-the-hidden-cost-of-vpn-maintenance/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

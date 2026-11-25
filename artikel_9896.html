@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Up to 3.2x Faster Inference with LFM2.5-DSpark</title>
+    <title>Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9896.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,36 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Up to 3.2x Faster Inference with LFM2.5-DSpark</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/ZMoThfdqzAz8cbxweVQfO.gif" alt="Up to 3.2x Faster Inference with LFM2.5-DSpark" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/08/07/Image-2-2_1-no-footer-1260x630.png" alt="Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/644249b08443bce4c9890a0f/ZMoThfdqzAz8cbxweVQfO.gif" alt="Up to 3.2x Faster Inference with LFM2.5-DSpark" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2026/08/07/Image-2-2_1-no-footer-1260x630.png" alt="Announcing AWS Well-Architected Agent, an AI-powered intelligence to optimize your cloud environment (preview)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Today, we release DSpark draft model checkpoints for three models from our LFM2.5 family: LFM2.5-1.2B-Instruct, LFM2.5-2.6B, and LFM2.5-8B-A1B. These add a speculative decoding path that trades a minimal memory increase for a large decoding speedup without changing output quality:</p>
-<p>The decode phase in LLM inference is traditionally memory-bound. Most latency comes from streaming weights from DRAM into SRAM, not from intense computation. Speculative decoding addresses this by using a lightweight draft model to produce candidate tokens, then having the target model verify them all in a single forward pass, sharing the cost of loading the weights across all tokens we verify.</p>
-<p>Over the years, multiple approaches of speculation have been proposed, with the most prominent being EAGLE-3, DFlash, and, most recently, DSpark, which combines three components:</p>
-<p>We follow the DSpark recipe with a larger and more diverse data mix covering SFT, chat, code, and function-calling data. Based on our ablations, the first versions of the draft models are simplified attention-only draft models, with 5 layers and a block of 9. For each draft model, we ran 15 epochs on the entire dataset and selected the epoch with the highest acceptance rate rather than the lowest loss.</p>
-<p>The resulting draft models are relatively small, with each around ~300M parameters.</p>
-<p>Under greedy decoding, a draft token is only accepted if it matches the target model’s distribution. On rejection, the target model's own token takes its place. The emitted sequence is therefore identical to baseline greedy by construction, so benchmark accuracy (pass@1 or exact match) is unchanged.</p>
-<p>Our DSpark draft models for LFM2.5 ship with day-one support for llama.cpp (implementation builds on top of the official codebase, which we run with experimental metal kernels) and **SGLang (**implementation builds on the official SGLang implementation of DSpark).</p>
-<p>We measure on-device throughput with llama.cpp and Metal on an M4 Max MacBook Pro using FP16 GGUF weights and up to 256 output tokens. We measure GPU throughput with SGLang on a single H100 80 GB in BF16. Both configurations use a DSpark block size of 9, a batch size of 1, and a temperature of 0. We evaluate them on five benchmark datasets.</p>
-<p>All three drafter models deliver noticeable throughput improvements on both the large-scale accelerator (H100) and the edge deployment (M4 Max MacBook).</p>
-<p>For LFM2.5-2.6B, speedup on the MacBook is especially noticeable, as it pushes the interactivity level a user can enjoy far beyond the throughput offered by most proprietary cloud models (around ~140 tok/s, depending on the dataset).</p>
-<p>Across various multi-tool scenarios, DSpark reduces the latency by 57% on average for LFM2.5-2.6B.</p>
-<p>For LFM2.5-1.2B-Instruct, we see much more variance in dataset acceptance rates, so speedup varies by as much as 52% depending on the underlying text distribution.</p>
-<p>For LFM2.5-8B-A1B, the acceptance rate increases compared to two dense models, yet on-device we get only an 18% improvement on average. This gap is due to the current MoE implementation in llama.cpp's Metal backend, and to the fact that verifying k tokens activates more experts and thus more weight traffic than a single decode step.</p>
-<p>Running the DSpark draft models with SGLang requires an SGLang build with DSpark support for LFM2 targets (PR #31041). Launch the target with the draft attached:</p>
-<p>Then query the OpenAI-compatible endpoint at http://localhost:30000/v1. The block size is read from the draft's config.json; the baseline is the same command without the three --speculative-* flags.</p>
-<p>Running them with llama.cpp requires the respective llama.cpp build (PR#27383).</p>
-<p>The block size is read from the sidecar metadata (n-max is clamped to it). Speculative decoding is exact: the target verifies every proposed token, so greedy output equals the target alone; per-response timings report draft_n / draft_n_accepted.</p>
-<p>The DSpark draft model checkpoints are available on Hugging Face as Safetensors and in GGUF format:</p>
-<p>For citations, please use the following reference or BibTeX:</p>
-<p>Liquid AI, "LFM2.5-DSpark: Up to 3.2x Faster Inference from H100 to MacBook", Liquid AI Blog, Aug 2026.</p>
+                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
+<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
+<p>Get started with one of these featured services or browse all</p>
+<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
+<p>Today, we’re announcing the public preview of AWS Well-Architected Agent, an AI-powered service that analyzes your AWS environment to deliver targeted, contextual recommendations for improving your applications’ cost, security, performance, and resilience. The AWS Well-Architected Agent analyzes your infrastructure, understands unique business goals, and delivers contextual recommendations with ready-to-implement fixes. It delivers context-aware optimization without relying on manual audits or generic checklists.</p>
+<p>The agent evaluates your environment as an experienced cloud architect would. It automatically correlates utilization metrics, resource configurations, and application topology, and analyzes against Well-Architected best practices across 65+ AWS services. It generates recommendations aligned to your declared business goals, delivers implementation packages with every finding, and surfaces cross-pillar trade-offs making it simpler to remediate the findings.</p>
+<p>Here are the three main features of this service:</p>
+<p>AWS Well-Architected Agent in action
+         To get started, create an agent profile to define the scope of what Well-Architected Agent can access and provide recommendations on, complete the IAM role setup to access resources, conduct architecture review, and remediate recommendations.</p>
+<p>Create an agent profile
+         In the AWS Well-Architected console, choose Get started with Well-Architected Agent. You can define an agent profile that specifies which AWS accounts and applications to monitor, which optimization pillars to focus on, and the permissions required.</p>
+<p>You can choose AWS accounts or AWS Regions to monitor and optimization pillars that matter most to your business. You can also set goals for each pillar: cost optimization, performance, resilience, and security.</p>
+<p>To give access to the agent for your AWS environment, provision customer-managed IAM roles the agent uses to read resource configurations, utilization metrics, and application topology. To learn more, visit the IAM prerequisite for AWS Well-Architected Agent.</p>
+<p>When you choose Get Started, the agent creates your agent profile. Resource and application recommendations will be generated within 24 hours after profile creation.</p>
+<p>You can conduct an architecture review on pre-deployment workloads by uploading an IaC project in Terraform, AWS CloudFormation, or AWS Cloud Development Kit (CDK) to be analyzed. Choose Conduct architecture review in the dashboard, upload a.zip file containing IaC project or repository file, and select which Well-Architected lens to use for reviewing your infrastructure.</p>
+<p>You can define your applications to add context which will enhance the relevancy and further contextualize recommendations. Choose Add application context in the dashboard, add your applications with AWS accounts, AWS Regions, AWS services, tags if you want to narrow the scope to specific resources, and the details of applications.</p>
+<p>Review prioritized recommendations and start remediating
+         Now you can see generated prioritized recommendations generated by the agent across your resources and applications, selected pillars, ranked against your declared goals, with automation-ready remediation included.</p>
+<p>When you choose the specific recommendation, you can see the details, insights into why the agent are suggesting the recommendation, impacts and trade-off, and recommended fixes across affected AWS resources.</p>
+<p>Choose Start remediation to address recommended fixes. You can choose the console, updated IaC template, CLI commands to remediate by the resolution type. It provides detailed step-by-step instructions and you can roll out this instruction and verify the result.</p>
+<p>When you choose Using updated IaC template, the agent provides the code changes needed to update your existing IaC templates such as the CDK function shown above which you can copy directly into your codebase.</p>
+<p>You can also configure API access to integrate recommendations directly into your existing development and operations workflows. To interact with the agent programmatically, including calling APIs and searching documentation, try the AWS MCP Server and plugins with your preferred AI coding tool. To learn more, visit the AWS Well-Architected Agent documentation.</p>
+<p>Things to know
+         Here are some things that you should know about the Well-Architected Agent.</p>
+<p>You can still use existing AWS Well-Architected Tool to manually evaluate your cloud architecture with user-defined lenses that measure your workload using your own best practices.</p>
+<p>Join the preview
+         Access to the AWS Well-Architected Agent and its recommendations is available in US East (N. Virginia), US East (Ohio), and US West (Oregon). You can onboard workloads from any AWS commercial Region. AWS Well-Architected Agent is delivered by AWS Support and available to AWS customers with an AWS Support plan.</p>
+<p>Give it a try today in the AWS Well-Architected console and send feedback through your usual AWS Support contacts.</p>
+<p>Channy is a Lead Blogger of AWS News Blog and Principal Developer Advocate for AWS Cloud. As an open web enthusiast and blogger at heart, he loves community-driven learning and sharing of technology.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/LiquidAI/lfm25-dspark" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://aws.amazon.com/blogs/aws/announcing-aws-well-architected-agent-an-ai-powered-intelligence-to-optimize-your-cloud-environment-preview/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

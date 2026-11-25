@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SparrowDesk Phone Calls</title>
+    <title>Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9547.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,62 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>SparrowDesk Phone Calls</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-24</p>
+        <h1>Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdb4hcbqktsruknrkwkt0.jpg" alt="Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdb4hcbqktsruknrkwkt0.jpg" alt="Once Was Easy to Miss: Flutter's Intel Mac Warning Now Prints on Every Command" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Phone support in the same inbox as email, chat & WhatsApp
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/sparrowdesk?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1327242?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 25
+•
+Originally published at ishaqhassan.dev</p>
+<p>Note: this article was originally published on my site: ishaqhassan.dev/blog/flutter-intel-mac-deprecation-warning.html</p>
+<p>A deprecation warning that showed up one time and then went quiet for good. The fix was mostly deleting an if condition. The review found a logging bug that had been hiding under -v.</p>
+<p>Merged, not released yet: PR #194071 merged into Flutter on November 25, 2026 (UTC) and is on the master channel only. Stable 3.50.1 and beta 3.51.0-0.2.pre still have the old behavior: the warning prints once and then never again. I will update this line when a release tag carries it.</p>
+<p>If you build Flutter apps on an Intel Mac, you have probably seen this line exactly once:</p>
+<p>After that first time, the Flutter tool never showed it again on that machine. PR #194071 changes that. It makes the warning print on every command on an Intel Mac, keeps it from failing builds that treat warnings as errors, and deletes the saved state that used to silence it.</p>
+<p>The change to the tool itself is small. The review was the interesting part: a Flutter maintainer found that the verbose logger ignored the non-fatal flag, and fixing it properly needed a second change one layer down. That fix helps more than Intel Macs. This article covers both, plus what the Intel Mac timeline means for your machine and your CI.</p>
+<p>Flutter has a public plan for phasing out Intel Macs: the macOS Intel deprecation strategy, written by Victoria Ashworth on the Flutter team in May 2026. Its first stage is to announce the change, and one step of that is a warning from the Flutter CLI when you build on an Intel machine.</p>
+<p>That warning arrived in PR #188835, merged on July 7, 2026. It ships in stable Flutter 3.47.0 and 3.50.0. The first version was deliberately polite. The tool checked a flag in its persistent state file, printed the warning, and then set the flag under the key displayed-intel-warning-message, so it would not print again:</p>
+<p>On October 2, 2026, the author of the strategy opened issue #193729: print the warning on every command instead of only once.</p>
+<p>The reasoning holds up when you look at how people actually meet this message. It appears in the output of whichever command happens to run first after an upgrade, often flutter pub get or a build in an IDE, mixed in with other output. You read past it once and the tool never mentions it again. Meanwhile the deprecation is not one event. It is a sequence of stages running into 2027, and a one-time notice gives no reminder as those stages arrive.</p>
+<p>A deprecation warning has one job: still be there when you finally have time to read it.</p>
+<p>I opened #194071 on October 9, 2026 (UTC). This is the core of it, as merged:</p>
+<p>The message text and the host check are unchanged. Only the persistent state condition is gone. On an Apple Silicon Mac the tool still prints nothing.</p>
+<p>The Flutter tool has a --fatal-warnings flag. With it, a command exits with an error if any warning was printed. Teams use it in CI to keep warnings from piling up.</p>
+<p>Flutter's own CI uses it too. runFlutterTest in dev/bots/utils.dart passes it by default, and the Mac_x64 builders were still running on beta and stable when I opened the PR. If the warning printed on every command as an ordinary warning, every build, run and test on an Intel host with that flag would fail. Under the old one-time version, only the run that happened to print it was exposed.</p>
+<p>The warning describes the machine, not the project, so it should inform and never fail a command on its own. The tool already had a precedent: the warning about a custom FLUTTER_STORAGE_BASE_URL download source in cache.dart is also printed with fatal: false.</p>
+<p>With the gate gone, shouldShowIntelMacWarning and its displayed-intel-warning-message key in PersistentToolState had no readers and no writers left. Neither did the private _persistentToolState getter and the import in flutter_command.dart. I removed all of it instead of leaving it around as state nobody uses: 19 lines out of persistent_tool_state.dart. _DefaultPersistentToolState is the only implementation of that interface, so nothing else needed to change. If the old key is already in your tool state file, it is simply never read again.</p>
+<p>The first review came within a minute, from gemini-code-assist, the AI reviewer that makes a first pass on Flutter pull requests. It marked .darwin_x64 in my test as a high priority compile error, saying Dart does not support a leading dot shorthand for enum values. That was wrong. Dot shorthands are valid from Dart 3.10, and the human review said so.</p>
+<p>On November 2, bkonyi reviewed it. He asked for two things: use the dot shorthand in the tool code too (_os.hostPlatform == .darwin_x64), and move the Intel Mac tests from testUsingContext to testWithoutContext, passing a FakeToolContext to the test command. Both were good calls. A test that gets its dependencies passed in explicitly is easier to read than one that depends on overrides of a global context. I moved all three Intel Mac tests, including the arm64 one, rebased on master to clear the merge conflicts, and pushed.</p>
+<p>On November 24, cbracken left the comment that turned a small change into a real fix. He had traced what happens in verbose mode, and found that fatal: false would not help there:</p>
+<p>So flutter -v build ... --fatal-warnings would still fail on an Intel Mac, and with my change it would fail on every run instead of only the first. He suggested changing that one line to match the other loggers.</p>
+<p>That line was necessary, but not enough. VerboseLogger is a DelegatingLogger: it wraps another logger, and its hadWarningOutput reads and writes the wrapped logger's value. After it formats a warning, it passes the text on in _emit, which called super.printWarning(...) without fatal. The default is true, so the wrapped StdoutLogger set hadWarningOutput anyway. Fixing only the first line would have moved the bug one layer down, not removed it.</p>
+<p>I pushed both fixes with tests for the -v case and explained the second path in my reply. bkonyi credited the catch to cbracken, said it "definitely wasn't intended behavior" and that the fix looked good, and approved. cbracken approved the same day. The auto-submit bot merged the PR on November 25 at 01:30 UTC, about 47 days after I opened it.</p>
+<p>The verbose logger bug was never about Intel Macs. Before this change, every warning the tool printed with fatal: false still counted toward --fatal-warnings when the tool ran with -v. At the merge commit, flutter_tools has four other printWarning calls marked fatal: false:</p>
+<p>That last one even carries a code comment describing the limitation: "Under -v, VerboseLogger still counts every warning, fatal or not." After #194071, that is no longer true, and verbose mode treats non-fatal warnings the same way the normal logger always did.</p>
+<p>Five tests cover the change, all with testWithoutContext:</p>
+<p>Before the first push, I reverted the two library files and ran the Intel tests again to watch them fail. A test that still passes without the fix is not testing the fix.</p>
+<p>The warning only makes sense next to the plan behind it. This is the strategy document's timeline in short. The dates are the plan's targets, not release promises.</p>
+<p>Apple's side sets the pace. The strategy document and Flutter's supported platforms page note that macOS Tahoe (26) is the last release for Intel Macs, macOS Golden Gate (27) requires Apple Silicon, and Xcode 27 does not support Intel machines. The strategy also says that by April 2027 you will likely no longer be able to develop iOS apps on Intel Macs, because of the App Store's minimum Xcode version, and that Apple is expected to remove Rosetta 2 in macOS 28.</p>
+<p>The document's own numbers explain why this is a phased plan and not a switch. About 3.5% of all Flutter developers, and about 13% of Flutter developers on a Mac, use an Intel machine. When it was written, 127 of the bots in Flutter's main CI pool were Intel and 244 were ARM.</p>
+<p>It prints 1 on Apple Silicon. On an Intel Mac it prints 0 or reports that the key is unknown. This is the same check the Flutter tool runs to decide whether you are on darwin_arm64 or darwin_x64.</p>
+<p>One trap: do not use uname -m for this. Inside a Rosetta terminal it reports the emulated architecture. I checked on my M1 Pro:</p>
+<p>So an Apple Silicon Mac running a Rosetta shell does not get the warning, because Flutter looks at the hardware, not the shell. For CI, put the sysctl line in a step of your macOS job and you will know which hardware your runners give you.</p>
+<p>If you ship a Flutter macOS app and are ready to drop Intel users, stable Flutter has had the switch since 3.47.0:</p>
+<p>With it on, release and profile macOS builds produce Apple Silicon binaries instead of universal ones. You can also set FLUTTER_MACOS_ARM64_ONLY=true in the environment, which applies when no config value is set. It is off by default in 3.50, and the tool's own help text says it will default to on in a future release, before Intel Mac support is discontinued. Check your users' hardware before you flip it: with the setting on, Intel Macs cannot run your release build.</p>
+<p>If you want the longer version of how I pick and land framework changes from Karachi, read my first contribution playbook. For everything of mine that shipped in the current release, see 13 of my commits in Flutter 3.50, and the full record is on my contributions page.</p>
+<p>The full version of this article, with the FAQ, sources and future updates, lives on my site: Once Was Easy to Miss: Flutter's Intel Mac Warning Now Prints on Every Command</p>
+<p>More Flutter deep dives: ishaqhassan.dev/blog</p>
+<p>Originally published at ishaqhassan.dev. I am a Flutter Framework Contributor with 16 technical PRs merged across Flutter and DevTools, listed in the official Flutter AUTHORS file, Engineering Manager at DigitalHire, and creator of the 35-video Urdu Flutter course listed on docs.flutter.dev. Karachi, Pakistan.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/sparrowdesk" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/ishaquehassan/once-was-easy-to-miss-flutters-intel-mac-warning-now-prints-on-every-command-43l4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
