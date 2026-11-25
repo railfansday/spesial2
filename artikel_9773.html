@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From formal verification to bug-finding in CHERIoT</title>
+    <title>October in Servo: video captions and inert content</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9773.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,241 +15,91 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From formal verification to bug-finding in CHERIoT</h1>
+        <h1>October in Servo: video captions and inert content</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
+            <img src="/svg/servo-color-positive.svg" alt="October in Servo: video captions and inert content" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="/svg/servo-color-positive.svg" alt="October in Servo: video captions and inert content" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Nov 24, 2026
-      • June Rousseau (co-written with Jean Pichon-Pharabod and Lars Birkedal)</p>
-<p>The Cerise project1 was started almost 10 years ago at Aarhus University.
-Its goal is to develop formal methods to verify properties of capability machines, in particular involving non-monotonicity,
-and to prove end-to-end results in the presence of unknown code.
-Cerise has been extended to model different aspects of capability machines,
-and has involved work by and collaborations with several other universities,
-including Dominique Devriese’s research group at KU Leuven,
-and the universities of Cambridge and Edinburgh.</p>
-<p>Cerise started as pen-and-paper proofs about idealised machines and focused
-initially on reasoning about control-flow integrity of encapsulation for
-stack-based calling conventions, but over time our research group has scaled up
-the approach along three dimensions. First, we made our proofs foundational:
-Cerise now builds on the Iris separation logic framework inside the Rocq theorem
-prover, which has been critical to ensure correctness despite the growing
-intricacy of our proofs. Second, we have investigated how to reason about a
-wider range of properties, e.g., involving MMIO and attestation. Third, we made
-Cerise work with an instruction set closer to the CHERIoT Sail model, and
-verified programs using those instructions.</p>
-<p>When I started my PhD, CHERIoT had just been announced.
-I seized the opportunity to apply the verification techniques of Cerise
-to the CHERIoT switcher, for example to check that it isolates compartments and enforces no-capture.
-To that end, we started a sub-project of Cerise, which we call Griotte2.</p>
-<p>As part of our verification effort in this Griotte project, we uncovered two
-bugs in the CHERIoT switcher: (1) the ability for a malicious (or buggy)
-scheduler to resuscitate an exited thread in a deprecated state, thereby getting
-access to a capability that it should not be able to have access to anymore, and
-(2) the ability for a malicious caller to leverage the stack high watermark
-register to trigger a fault in the switcher, thereby getting access to the
-callee’s stack frame and thus private data.</p>
-<p>The CHERI/CHERIoT threat model includes interactions with unknown compartments
-containing arbitrary code, which can be buggy or malicious, and which can share 
-objects in memory. Reasoning about arbitrary code is hard, because it
-requires characterising all the possible behaviours of that code. The challenge
-is that when trying to characterise what an unknown compartment can affect, we
-have to account not only for what it is passed directly (if an unknown
-compartment is physically passed a write capability to a region of memory, then
-it is behaviourally passed the ability to overwrite that region of memory), but
-also what it is passed indirectly—and this involves not only recursive
-access (if an unknown compartment is physically passed a read capability to a
-region of memory, then it is behaviourally passed the ability to acquire
-whatever ability is given by the capabilities in that region of memory), but
-also access through non-monotonic domain transitions (if an unknown compartment
-is physically passed a sealed entry point capability to a “counter”
-compartment’s incr function, then it is behaviourally passed the ability to
-affect the counter—but only by incrementing it). A unique feature of 
-Cerise is the ability to reason also about the latter part of the challenge.</p>
-<p>What makes it difficult to design such a characterisation is that it should at
-the same time be precise enough, and simple enough to verify the programs that
-we care about. At a very high level, Griotte defines a language to succinctly
-describe what is affected—and to state that something is not affected. The
-kind of properties that we want to describe are not only memory safety
-properties (if I share a buffer to the caller, then I have the guarantee that it
-cannot access the global data that I never shared), but also no-capture
-properties (if I share a buffer to the caller with its global permission
-stripped, then I have the guarantee that it cannot preserve a copy across
-calls), and many others (including secrecy, etc.).</p>
-<p>Technically, we developed a reasoning system in two parts.
-First, we defined (and proved sound) a separation logic that allows us to verify known code line by line,
-showing that it satisfies expected pre- and post-conditions,
-and that it preserves the expected invariants.
-We used this both on the code of the switcher,
-and on the code of specific compartments of interest, for example a key-value store3.
-We designed this separation logic so it is reusable,
-and we expect that other such compartments of interest could be verified with it.</p>
-<p>Second, we defined a logical relation in separation logic,
-which is effectively an over-approximation of the effect of unknown code
-that can be used by the separation logic
-to reason about a jump to unknown code (through the switcher) in one single step.
-As such, it works like a universal contract4 for CHERIoT.
-Crucially, the frame rule of separation logic
-tells us that if we can establish that the resources (both in an informal sense, and in the technical sense of separation logic) of the caller
-are disjoint from those of the logical relation,
-then they will be preserved by the call.</p>
-<p>For example, if calling unknown code with a capability to a shared buffer,
-while keeping some private data,
-the logical relation requires that the unknown code is only passed capabilities that are safe to share
-in a technical sense.</p>
-<p>We then define a universal contract, stating that if an adversary has only access to
-safe to share capabilities, it can then execute safely and only produce other safe to share capabilities.</p>
-<p>We started by developing a simplified model of CHERIoT
-and a mini version of the CHERIoT-RTOS.
-In particular, we modelled the compartmentalisation mechanisms and 
-the cross-compartment call path of the switcher. 
-Our simplified model mirrors the main features of the CHERIoT hardware (including the new deep
-locality and deep immutability permissions).
-While our mini switcher doesn’t follow CHERIoT’s switcher instruction-by-instruction, 
-it implements the same steps.</p>
-<p>In this model, we proved on a range of small examples that 
-the CHERIoT hardware-software co-design
-implements the expected memory-safety properties,
-and that the switcher’s overall design enforces both compartmentalisation and stack safety.</p>
-<p>Our “end-to-end” results about concrete examples
-assume that the machine starts in a state that corresponds
-to the firmware image having been properly loaded.
-We have not verified the loader itself, and so it is part of our TCB.
-Technically, we consider executions only starting from a “loader-final” state.
-The loader is deterministic and so it is relatively easy to dump the contents of memory from a
-device (or simulator) after the loader has run and verify that a specific execution of the loader meets the
-properties required by our “loader-final” state.</p>
-<p>We expect that it should be possible to prove the loader correct,
-but this is future work for now.</p>
-<p>Our initial model was a simplification of CHERIoT:
-it didn’t support exceptions or concurrency/context switching,
-and some optimisations of the switcher (such as the stack high watermark)
-were left out.</p>
-<p>The CHERIoT team has been dedicated to making CHERIoT trustworthy,
-and has been very supportive of our verification effort.
-To that end, they included, in the switcher’s source, detailed comments about the expected 
-invariants and behaviour of the switcher, in the form of pre- and post-conditions
-for the execution blocks.
-They pointed out that the complicated control flow in the switcher’s exception path 
-was a likely source of errors.</p>
-<p>Our efforts showed that the cross-compartments call (and return) path that we verified 
-was straightforward
-(although stating no-capture and stack safety at the separation logic level is not trivial!),
-but a good starting point.
-However, as pointed out by the CHERIoT team,
-the features that we initially left out are more prone to mistakes:
-the switcher’s exception handler (responsible for context switching and error handling)
-has a more fiddly and convoluted execution path,
-and the stack high watermark creates a new point of trust.</p>
-<p>By pursuing our verification effort to include the features missing from our initial model,
-some of the examples that we proved in the simplified setup
-did not work anymore, which actually uncovered bugs in the switcher.</p>
-<p>The first bug that we uncovered comes from an interaction between the exception handler
-and the stack high watermark.</p>
-<p>In the presence of an exception handler,
-any instruction must either ensure that it cannot fault,
-or that the exception handler can safely execute (either by force-unwinding to the caller, or by
-giving control to the error handler of the faulting compartment).
-In our proof, this manifests as each instruction coming with a proof obligation
-that even when the instruction can fault, all invariants of the system are maintained.</p>
-<p>On the other hand, the stack high watermark (SHWM) is an optimisation allowing the switcher
-to clear only the stack frame used during the call.
-Specifically, the SHWM tracks, in hardware, the highest address of the stack that has been written to,
-and the switcher only clears up to this address, instead of the whole shared stack region.
-The code of the switcher relied on an invariant for the SHWM:
-it should always be in between the bounds of the stack capability at the point of a cross-compartment call.
-To that end, the switcher always re-sets it in the bounds of the stack capability at
-cross-compartment calls and returns.
-This invariant was very dynamic by nature,
-because the bounds of the stack change in between cross-compartment calls.</p>
-<p>However, it turns out that this invariant did not hold:
-a malicious caller could craft a stack pointer with restricted bounds, 
-together with a stack object outside of this restricted stack to be used 
-later by a callee.
-This scenario can lead to a fault in the switcher return path of the callee,
-before it has cleared the callee stack frame,
-which then allows a malicious caller to recover the entire callee’s private state.</p>
-<p>We identified this problem when we tried to adapt our proof
-from a simplified switcher (without the SHWM),
-to a more faithful switcher (with the SHWM).
-The proof got stuck when we had to show that an adversary
-could not move the SHWM outside of the bounds of the stack.
-After a bit of investigation, we realised that it was not because we had failed to correctly capture the informal invariant,
-but because that invariant was not preserved.
-More specifically, it seemed to be possible for an attacker to move SHWM below the base of the stack capability.</p>
-<p>We first tried to relax this (expected) invariant and allow SHWM to move below the base of the stack capability,
-but this condition was guarding a fault in the cross-compartment return-path.
-With the relaxed invariant, we had to prove that the fault was safe,
-which turned out to be impossible to prove, due to the callee’s stack frame being preserved.
-That’s how we realised that it was possible to mount an attack,
-with a subtle construction to move the SHWM below the base of the stack capability
-and exploiting the fault in the switcher’s return path to recover the uncleared callee’s stack frame.</p>
-<p>The fix (merged in PR #799)
-ended up being pretty simple:
-by forbidding malicious callers from changing the base of the stack,
-it ensures that malicious callers cannot craft a stack object outside of the stack that would
-move the SHWM outside of the stack bounds.
-This does not prevent the caller from calling the callee with less than the maximum possible
-amount of stack space,
-but does require that the shared stack region is truncated in the same direction as normal stack allocation.</p>
-<p>We could validate the fix in our setup, by completing the proof, before the merge.</p>
-<p>While verifying the context switching path in our simplified switcher,
-and in particular the path that an exited thread takes,
-we needed to define “what it means for a thread to exit”,
-and what is the authority that an exited thread still holds.
-We first looked at the scheduler’s code, in which exited threads are never meant to be scheduled anymore.
-Intuitively, we would think that an exited thread has no continuation.</p>
-<p>However, the scheduler is not trusted for confidentiality or integrity 
-(which are the properties we are verifying!), which means that in our model,
-we consider the scheduler as any other adversary compartment
-(and therefore, from our perspective, it contains arbitrary code).
-In particular, a malicious (or buggy) scheduler could schedule an exited thread,
-in which case the switcher re-instated that thread’s last context (as stored in the context switching save area),
-independently from whether that thread had exited.
-Because the thread exit path of the switcher never cleared the save area,
-an exited thread’s last context turned out to be whatever was left after the last preemption (or fault), 
-which means that it could contain local capabilities that should not have been captured—clearly violating no-capture.</p>
-<p>We caught this bug because our formal verification method—focused on integrity and confidentiality—captures the threat model of CHERIoT,
-where the scheduler is no different from other adversaries with respect to those properties.
-The way the problem manifested in our proof is that we had to define what the authority of the continuation of an exited thread is,
-to account for what would happen if the thread were scheduled in a stale state.
-However, this looked fishy, and so we started questioning whether we should even have to consider such a situation.</p>
-<p>There are two disjoint sub-problems:
-(1) having access to an old register file (potentially breaking no-capture guarantees),
-and (2) an exited thread being re-scheduled.
-Sub-problem (1) is dangerous for integrity and confidentiality.
-Sub-problem (2) is a design question—what should happen if the scheduler reschedules an exited thread.</p>
-<p>The fix (merged in PR #769)
-then fixed those problems:
-(1) the register file is cleared in the exit thread path (preventing an exited thread from using stale values)
-and (2) an exited thread becomes an idle thread looping in a wfi (wait-for-interrupt) loop.
-This fix was one of several possible fixes considered but was chosen because the scheduler always has the ability to run the idle thread (which loops in a wfi instruction).
-This meant that the ability to schedule an exited thread could be trivially shown to not increase the power of the scheduler.</p>
-<p>With the fixed bugs, we have verified our Griotte switcher on top of our Griotte ISA,
-assuming that the loader initialises the machine properly.</p>
-<p>That gave us confidence to scale our verification to be based on
-the whole authoritative cheriot-sail ISA, 
-using the sail-to-rocq extraction, and our proofs of that are now complete.
-It means that we are quite confident that 
-the current upstream 
-switcher, together with the hardware, implement thread and compartments isolation, as well as no-capture.</p>
-<p>In the future we would also like to verify the loader, and we also hope that our
-logical machinery can be used to verify correctness and security of applications
-running atop CHERIoT.</p>
-<p>The focus of Cerise and Griotte has been advanced properties of capability machines,
-in particular involving non-monotonic domain transitions.
-As such, it is complementary to other formal verification work:</p>
-<p>Protecting data in memory from attackers continues to be a concern in computing systems. CHERI is a promising approach to achieve such protection, by providing and enforcing fine-grained memory protection directly in the hardware. Creating trust for the entire system stack, however, requires a gap-free verification of CHERI’s hardware-based protection mechanisms. Existing verification methods for CHERI target the abstract ISA model rather than the underlying hardware implementation. Fully ensuring the CHERI security guarantees for a concrete RTL implementation is a challenge in previous flows and demands high manual efforts. This paper presents VeriCHERI, a novel approach to security verification. It is conceptionally different from previous works in that it does not require any ISA specification. Instead of checking compliance with a golden ISA model, we check against well-established global security objectives of confidentiality and integrity. Fully covering these objectives, VeriCHERI uses as few as four unbounded properties to exhaustively prove or disprove any vulnerability. We demonstrate the effectiveness and scalability of VeriCHERI on a RISC-V based processor implementing a CHERI variant.</p>
-<p>Cerise being the French word for “cherry”. ↩</p>
-<p>Griotte being the French word for “sour cherry”. ↩</p>
-<p>Based on the key-value store design of Murali Vijayaraghavan. ↩</p>
-<p>Welcome to the CHERIoT Platform, a hardware-software co-design project that provides game-changing security for embedded devices.</p>
+                <p>Plus WebAudio nodes, image inputs, and more!</p>
+<p>Servo 0.8.0 contains all of the changes we landed in October, spanning 588 commits (a new record)!</p>
+<p>Servo now renders subtitles and captions over <video> elements (@TimvdLippe, #48809)!</p>
+<p>Flutter web content no longer hangs now that we fixed a serious performance problem with typed arrays (@jdm, #48640). Example</p>
+<p>We’re interested to hear how well your favourite websites run in Servo! Report successes in this Zulip thread or this Github discussion, and failures in our GitHub issues.</p>
+<p>With respect to accessibility in Servo, we report many more ARIA roles for DOM elements (@alice, @mrobinson, #48839).
+These can be inspected with the Get Computed Role WebDriver command (@lolaodelola, #47339).
+Accessibility integration can be turned on with the accessibility_enabled preference.</p>
+<p>WebGL2 support received lots of attention this month, with fixes to getParameter(), drawBuffers(), readBuffers(), vertexAttribIPointer(), DEPTH_STENCIL_ATTACHMENT, getUniformLocation(), vertexAttrib4x(), pixelStorei(), texStorage2D(), texStorage3D(), texImage3D(), getInternalformatParameter(), blitFramebuffer(), and texSubImage2D() (@mxmgorin, #48651, #48620, #48678, #48689, #48751, #48681, #48911, #48972, #48590, #49201, #49289, #48560, #48571).
+The feature remains gated behind the dom_webgl2_enabled preference.</p>
+<p>Reading and writing mapped WebGPU buffers got a significant speed increase (@sagudev, @jdm, #48372).
+WebGPU can be enabled with the dom_webgpu_enabled preference.</p>
+<p>JS script compilation can now occur off the main thread when the dom_script_asynch preference is enabled (@Gae24, #45687).
+Right now this only applies to non-module scripts.</p>
+<p>Initial support for the backdrop-filter property has merged (@shubhamg13, #48829).
+This can be enabled with the layout_css_backdrop_filter_enabled preference.</p>
+<p>ServiceWorkers now fire the statechange event when changing states during initialization (@gterzian, #48749).
+ServiceWorkerContainer can listen for message and messageerror events (@gterzian, #48680).
+Service Workers remain gated behind the dom_serviceworker_enabled preference.</p>
+<p>The Geolocation API has been implemented (@webbeef, #48406).
+No platform-specific backends to provide the device geolocation data have merged yet, so it remains disabled behind the dom_geolocation_enabled preference.</p>
+<p>DOM interfaces for MathML elements now exist, gated behind the mathml_core_enabled preference (@tannal, #48631).
+There is no MathML-specific layout implemented yet.</p>
+<p>A new, native SVG implementation is in progress (@mu-mostafa98, @jdm, #48467).
+This work is still in the early stages, but is intended to replace Servo’s dependency on the resvg crate to better integrate with page styling and animations.</p>
+<p>IndexedDB cursors now support the update() and delete() methods (@kuntal-devrat, #48402).
+The feature can be enabled with the dom_indexeddb_enabled preference.</p>
+<p>Support for LargestContentfulPaint performance timing improved, with image URLs (@shubhamg13, #48668), the loadTime value (@shubhamg13, #48676), ignoring non-paintable elements (@shubhamg13, #48856, #48898), video URLs (@shubhamg13, #48931), and following containing blocks (@shubhamg13, #48551).
+This work is behind the largest_contentful_paint_enabled preference.</p>
+<p>We added support for a new performance timing metric: ContainerTiming (@jasonwilliams, #46966).
+This can be enabled with the container_timing_enabled preference.</p>
+<p>Our support for adoptedStylesheets improved along with a new implementation of the ObservableArray specification concept (@jerensl, @arihant2math, #48506).
+This is currently hidden behind the dom_adoptedstylesheet_enabled preference.</p>
+<p>The Android Compose migration is complete, and embedders now only need to interact with the Servo library component (@veyndan, #48592, #48601, #48595, #48574, #48609, #48778, #48780, #49266).
+Embedders no longer need to trigger the soft keyboard display; this is controlled by a parameter to the Servo component (@veyndan, #48757).</p>
+<p>There’s a new API method to report the network status of the embedder: NetworkManager::set_online_state (@xbwwj, #47568).
+This data is exposed via the onLine property of the Navigator interface in web content.</p>
+<p>Embedders can now disable all support for developer tools, which can reduce the size of the final binary (@janeoa, #47255).
+This is controlled by the devtools feature and enabled by default; it is also part of the new default_tooling feature.</p>
+<p>Users of the C API can set preferences that accept f64 and f64 array parameters (@fran6co, #49325), as well as the HiDPI scale factor for each WebView (@fran6co, #49327).
+WebViews can also be resized via the C API (@fran6co, #49326).</p>
+<p>The layout_grid_enabled preference has been removed, since CSS Grid now defaults to enabled (@Loirooriol, #48718).
+Several preferences were renamed (@nicoburns, #48915):</p>
+<p>Double and triple clicking on selected text will extend the selection to the current word and line, respectively (@mrobinson, @SimonSapin, #48767).</p>
+<p>Clicking a link with the middle mouse button now opens up the link in a new WebView (@SteveSharonSam, @mrobinson, #46000)</p>
+<p>Range inputs can be dragged with the mouse (@webbeef, #48342).</p>
+<p>Command+delete on macOS will delete the preceding line in a text control (@dzfrias, #48781).</p>
+<p>We improved exception error messages related to the XMLHttpRequest, History, Range, Selection, Element, CharacterData, and DOMTokenList interfaces, and namespaces and attributes (@gabrielecabrini, #49146, #49145, #48786, #49102).</p>
+<p>Media elements that start playing outside of a document will no longer be garbage collected until playback finishes (@sabbCodes, @jdm, #49367, #48979).</p>
+<p>Pinch zoom operations no longer have to rebuild a full display list, making zooming complex pages much smoother (@stevennovaryo, @mrobinson, #43561).</p>
+<p>We improved performance in many small and focused ways by doing less work during restyling and layout (@SimonSapin, @webbeef, @nicoburns, @mrobinson, #49137, #49100, #48485, #48968), reducing GC interactions (@mrobinson, @jschwe, #48984, #49140, #49195, #49425), and delaying work on disconnected trees (@SimonSapin, #49098).
+We also fixed instances of quadratic layout with deep nesting (@nicoburns, #49148) and missing caching (@mrobinson, @Loirooriol, #49164, #49073).</p>
+<p>We fixed some intermittent GC panics when notifying ResizeObservers (@mrobinson, #49189), introspecting keyframes (@MohamedAli00949, #48546), setting timers (@jdm, #48548), using writable streams (@jdm, #48656), and scrolling iframes after removing them (@mrobinson, #49230).</p>
+<p>We also fixed numerous other panics and crashes in scrollable and incremental layout (@mrobinson, #49230, #49283), moving nodes around (@mrobinson, #49226), using WebGPU from opaque origins (@gabrielecabrini, #49207), stringifying some WebIDL types (@mrobinson, #49374), using readable streams (@Narfinger, @mrobinson, #49311), clicking disabled file controls (@mrobinson, #49379), rendering giant SVGs (@sabbCodes, #49264), unminifying JS (@jdm, #48567), measuring text (@mxmgorin, #48621), rendering text tracks (@TimvdLippe, @mrobinson, #48827), preparing dialogs (@lukewarlow, #49431), and running delayed tasks in destroyed documents (@mrobinson, @jdm, #49399, #48714).</p>
+<p>Many small-to-medium improvements to reduce allocations were merged (@yezhizhen, @Narfinger, @Taym95, @mrobinson, @Loirooriol, @CynthiaOketch, @sabbCodes, @mxmgorin, #48549, #48558, #48568, #48598, #48615, #48565, #48646, #48654, #48569, #48562, #48588, #48650, #48702, #48675, #48589, #48720, #48721, #47720, #48745, #48703, #48750, #48770, #48789, #48754, #48828, #48838, #48836, #48841, #48843, #48867, #48882, #48842, #48881, #48840, #48899, #48924, #48904, #48949, #48953, #48980, #49028, #48885, #49035, #49038, #49084, #49131, #49125, #48951, #49154, #49160, #49198, #49202, #49194, #49219, #49258, #49275, #49295, #49298, #49300, #49320, #49323, #49313, #49373, #49380, #48969, #48991).
+We also reduced memory usage by shrinking some types (@Narfinger, @webbeef, #48954, #48082, #48906).</p>
+<p>Memory leaks received a lot of attention this month, covering everything from network requests, to JS modules, to timer tasks, and more (@mrobinson, @SimonSapin, @jschwe, #48952, #48957, #49032, #49049, #49092, #49134, #49139, #49132, #48747, #48752).</p>
+<p>We continue to work towards preventing certain sources of memory leaks with static analysis and the Rust type system (@Gae24, @Narfinger, @jdm, #48147, #48360, #48832, #48887, #48913, #48903, #48965, #48905, #48834, #48855, #49083, #49082, #49081, #49096, #49135, #49130).</p>
+<p>We fixed bugs related to the CORS preflight cache (@sabbCodes, #49055, #49252), fetch metadata (@TimvdLippe, @mrobinson, #48793), HTTP cache revalidation (@mrobinson, @jdm, #48927), image load timing (@mrobinson, @TimvdLippe, #48902, #48790, #48599), touch events (@yezhizhen, #48671, #48699, #48701), cloning and moving input elements (@skyz1, @mrobinson, #48845, #48069), the :indeterminate pseudoclass (@skyz1, #48070), stylesheet introspection (@mrobinson, #48935), mutating ranges (@gabrielecabrini, #49072), blob URLs (@rogerkorantenng, #49074, #48989, #49206), form controls (@mrobinson, @lukewarlow, @jdm, #49163, #49225, #48513), the mapping property of Gamepad (@msub2, #49381), beforeinput events (@dzfrias, #48825), image dimensions (@TimvdLippe, #49085), table appearance attributes (@Loirooriol, #49120, #49108, #49156, #49150), IME events (@dzfrias, #48690), reconnecting IntersectionObserver (@shubhamg13, #48581), and root elements (@TimvdLippe, #48514).</p>
+<p>We also addressed layout issues related to soft wrap line breaks (@mrobinson, @Loirooriol, #48564), grid and flex layouts with indefinite dimensions (@RichardTjokroutomo, @rayguo17, @nicoburns, #48670, #48644, #49232), hanging whitespace (@mrobinson, @Loirooriol, #48591, #48753), preserve-3d (@mrobinson, #47933), inline block splits (@Loirooriol, #46445), video controls (@rayguo17, #44956), display: contents (@Loirooriol, #48784, #48785), justify-contents (@yezhizhen, #48746, #48988), absolute positioning (@mrobinson, @Loirooriol, #48846), <progress> (@Loirooriol, #49143), text-transform: capitalize (@jschwe, #48901), incremental table layout (@Loirooriol, #49176), width: stretch (@Loirooriol, #49239, #49237), backface visibility (@mrobinson, #49196), flex gaps (@yezhizhen, #49335), perspective (@mrobinson, #49174), quirks mode (@Loirooriol, #48942, #39869, #48978, #49211), SVG viewboxes (@leowatts, #48556), ISO-8859-8 documents (@TTyChud, #48444), and table borders (@adoublebarrel, @mrobinson, #47684).</p>
+<p>A special thanks to the following people for landing their first patch in Servo:</p>
+<p>Interested in helping build a web browser?
+Take a look at our curated list of issues that are good for new contributors!</p>
+<p>Thanks again for your generous support!
+We are now receiving 8057 USD/month (-2% from September) in recurring donations.
+This helps us cover the cost of our speedy CI and benchmarking servers, one of our latest Outreachy interns, and funding maintainer work that helps more people contribute to Servo, as well as feature development.</p>
+<p>Servo is also on thanks.dev, and already 37 GitHub users (+0 from September) that depend on Servo are sponsoring us there.
+If you use Servo libraries like url, html5ever, selectors, or cssparser, signing up for thanks.dev could be a good way for you (or your employer) to give back to the community.</p>
+<p>We now have sponsorship tiers that allow you or your organisation to donate to the Servo project with public acknowlegement of your support.
+If you’re interested in this kind of sponsorship, please contact us at [email protected].</p>
+<p>Use of donations is decided transparently via the Technical Steering Committee’s public funding request process, and active proposals are tracked in servo/project#187.
+For more details, head to our Sponsorship page.</p>
+<p>Copyright © Servo is a project of Linux Foundation Europe.</p>
+<p>For website terms of use, trademark policy and other project policies please see https://lfprojects.org.</p>
+<p>The source code for this website can be found at https://github.com/servo/servo.org.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://cheriot.org/verification/2026/11/24/griotte-verification-effort.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://servo.org/blog/2026/11/25/october-in-servo/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

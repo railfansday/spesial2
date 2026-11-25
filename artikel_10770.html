@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-tuning Florence-2 - Microsoft&#x27;s Cutting-edge Vision Language Models</title>
+    <title>Top 6 AI YouTube Transcript Generators: Features, Accuracy, and Limits</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10770.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,46 +15,47 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fine-tuning Florence-2 - Microsoft&#x27;s Cutting-edge Vision Language Models</h1>
+        <h1>Top 6 AI YouTube Transcript Generators: Features, Accuracy, and Limits</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/182_finetune-florence/thumbnail.png" alt="Fine-tuning Florence-2 - Microsoft&#x27;s Cutting-edge Vision Language Models" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_yttrans_cover2_fdf3e6c607.png" alt="Top 6 AI YouTube Transcript Generators: Features, Accuracy, and Limits" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/182_finetune-florence/thumbnail.png" alt="Fine-tuning Florence-2 - Microsoft's Cutting-edge Vision Language Models" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_yttrans_cover2_fdf3e6c607.png" alt="Top 6 AI YouTube Transcript Generators: Features, Accuracy, and Limits" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Florence-2, released by Microsoft in June 2024, is a foundation vision-language model. This model is very attractive because of its small size (0.2B and 0.7B) and strong performance on a variety of computer vision and vision-language tasks.</p>
-<p>Florence supports many tasks out of the box: captioning, object detection, OCR, and more. However, your task or domain might not be supported, or you may want to better control the model's output for your task. That's when you will need to fine-tune.</p>
-<p>In this post, we show an example on fine-tuning Florence on DocVQA. The authors report that Florence 2 can perform visual question answering (VQA), but the released models don't include VQA capability. Let's see what we can do!</p>
-<p>Regardless of the computer vision task being performed, Florence-2 formulates the problem as a sequence-to-sequence task. Florence-2 takes an image and text as inputs, and generates text as output.
-The model has a simple structure. It uses a DaViT vision encoder to convert images into visual embeddings, and BERT to convert text prompts into text and location embeddings. The resulting embeddings are then processed by a standard encoder-decoder transformer architecture, generating text and location tokens.
-Florence-2's strength doesn't stem from its architecture, but from the massive dataset it was pre-trained on. The authors noted that leading computer vision datasets typically contain limited information - WIT only includes image/caption pairs, SA-1B only contains images and associated segmentation masks. Therefore, they decided to build a new FLD-5B dataset containing a wide range of information about each image - boxes, masks, captions, and grounding.
-The dataset creation process was largely automated. The authors used off-the-shelf task-specific models and a set of heuristics and quality checks to clean the obtained results. The result was a new dataset containing over 5 billion annotations for 126 million images, which was used to pre-train the Florence-2 model.</p>
-<p>We experimented with various methods to adapt the model for VQA (Visual Question Answering) responses. The most effective approach we found was region-to-description prompting, though it doesn't fully align with VQA tasks. Captioning provides descriptive information about the image but doesn't allow for direct question input.
-We also tested several "unsupported" prompts such as " <VQA>", "<vqa>", and "<Visual question answering>". Unfortunately, these attempts yielded unusable results.</p>
-<p>We measure performance using the Levenshtein's similarity, the standard metric for the DocVQA dataset. Before fine-tuning, the similarity between the model's predictions and the ground truth on the validation dataset was 0, as the outputs were not close to the ground truth. After fine-tuning with the training set for seven epochs, the similarity score on the validation set improved to 57.0.
-We created a 🤗 space to demo the fine-tuned model. While the model performs well for DocVQA, there is room for improvement in general document understanding. However, it successfully completes the tasks, showcasing Florence-2's potential for fine-tuning on downstream tasks. To develop an exceptional VQA model, we recommend further fine-tuning Florence-2 usingThe Cauldron. We have already provided the necessary code on our GitHub page.</p>
-<p>To give a solid example, below we provide two inference results before and after fine-tuning. You can also try the model here.</p>
-<p>For pre-training, the authors used a batch size of 2048 for the base model and 3072 for the large one. They also describe a performance improvement when fine-tuning with an unfrozen image encoder, compared with freezing it.</p>
-<p>We conducted our experiments with a much lower resource setup, to explore what the model would be capable of in more constrained fine-tuning environments. We froze the vision encoder and used a batch size of 6 on a single A100 GPU in Colab, or a batch size of 1 with a T4.
-In parallel, we conducted an experiment with more resources, fine-tuning the entire model with a batch size of 64. This training process took 70 minutes on a cluster equipped with 8 H100 GPUs.
-This trained model can be found here.</p>
-<p>In every case, we found a small learning rate of 1e-6 to be beneficial for training. With larger learning rates the model will quickly overfit the training set.</p>
-<p>If you want to follow along, you can find our Colab fine-tuning notebook here checkpoint on the DocVQA dataset.
-Let's start by installing the dependencies.</p>
-<p>Load the DocVQA dataset from the Hugging Face Hub.</p>
-<p>We can load the model and processor using the AutoModelForCausalLM and AutoProcessor classes from the transformers library. We need to pass trust_remote_code=True because the model uses custom code – it has not been natively integrated into transformers yet. We will also freeze the vision encoder to make fine-tuning less expensive.</p>
-<p>Let's now fine-tune the model! We'll build a training PyTorch Dataset in which we'll prepend a <DocVQA> prefix to each question from the dataset.</p>
-<p>We'll now build the data collator that builds training batches from the dataset samples, and start training. In A100 with 40GB memory, we can fit in 6 examples. If you're training on T4, you can use a batch size of 1.</p>
-<p>You can save the model and processor by calling save_pretrained() on both objects. The fully fine-tuned model is here  and the demo is here.</p>
-<p>In this post, we showed that Florence-2 can be effectively fine-tuned to a custom dataset, achieving impressive performance on a completely new task in a short amount of time. This capability is particularly valuable for those looking to deploy this small model on devices or use it cost-effectively in production environments. We encourage the open-source community to leverage this fine-tuning tutorial and explore the remarkable potential of Florence-2 for a wide range of new tasks! We can't wait to see your models on the 🤗 Hub!</p>
-<p>We would like to thank Pedro Cuenca for his reviews on this blog post.</p>
-<p>Answer questions about images using text prompts</p>
-<p>Generate captions, detections, and OCR from an image</p>
-<p>Answer questions about images using text prompts</p>
-<p>Generate captions, detections, and OCR from an image</p>
+                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
+<p>A one-hour YouTube talk contains roughly nine thousand words, and finding the one point you need can take longer than watching the whole thing. A transcript solves that. With text in hand you can search for a phrase, quote an expert accurately, turn a webinar into a blog post, create subtitles or feed a summary tool.</p>
+<p>Plenty of tools now promise instant YouTube transcripts, but they work in different ways. Some read the captions YouTube already has. Others listen to the audio themselves and produce a fresh transcript. That difference affects accuracy, speed and cost more than any feature list does. This guide compares six options, explains how each works and points out where each one falls short. Plans and limits change often, so confirm current details on each vendor's site.</p>
+<p>Caption extraction. The tool pulls the captions attached to a video, either written by the creator or generated automatically by YouTube. It is fast and usually free, but it is only as good as those captions. YouTube notes that its automatic captions come from machine learning, so quality may vary, and accents, background noise and overlapping speakers can cause errors. Captions may also be missing entirely for some videos.</p>
+<p>Fresh speech recognition. The tool takes the audio and runs its own speech-to-text model. This can be more accurate on difficult recordings and works when no captions exist, but it takes longer and often costs money.</p>
+<p>Lynote is built for exactly this job. Paste a YouTube link, search by keyword or add a playlist, and it returns a timestamped transcript with an AI summary. Batch mode accepts up to 10 videos at once. The tool lists transcription in more than 100 languages, translation into 25, auto-chapters, one-click copy and TXT download, with SRT export also mentioned. The page says transcripts are free, with no sign-up required.</p>
+<p>Best for: Students, researchers and marketers who want a quick, readable transcript or summary from a public video without installing anything.</p>
+<p>Limitations: It extracts YouTube captions, so videos without captions cannot be processed. If the original captions are poor, the transcript will be too. For critical accuracy, review the text or use a service with human verification.</p>
+<p>Before you install anything, check what YouTube already gives you. Many videos show a transcript option in the description area, and creators can review and edit automatic captions in YouTube Studio under Subtitles. YouTube offers automatic captions in dozens of languages for long-form videos and Shorts.</p>
+<p>Best for: Quick lookups on videos that already have decent captions.</p>
+<p>Limitations: Captions may not generate for videos with poor sound, long silences, overlapping speakers, mixed languages or unsupported languages. Export options are minimal, and there is no summary or cleanup.</p>
+<p>Notta transcribes uploaded audio and video files and also accepts YouTube links. It lists support for 58 languages, real-time and bilingual transcription, and AI Notes that produce summaries and action items. A free plan includes 120 transcription minutes per month at the time of writing.</p>
+<p>Best for: Professionals who handle a mix of recordings, meetings and YouTube videos in one place.</p>
+<p>Limitations: The free minutes disappear quickly if you process long videos, and the strongest features sit behind paid plans.</p>
+<p>Descript is an audio and video editor built around text. It transcribes recordings automatically, and deleting a word in the transcript removes the matching footage. You can import video, audio or a Zoom recording, and there is a free tier that does not require a credit card.</p>
+<p>Best for: Creators who want to clean up their own videos and podcasts, not just read a transcript.</p>
+<p>Limitations: It is an editor first, so it is more than you need for a quick YouTube lookup. It works with files you own, so you need the source media rather than a public link.</p>
+<p>Rev offers both AI and human transcription. It advertises AI transcripts at 96 percent or better accuracy in minutes, and human transcripts at 99 percent or better, guaranteed within 12 hours. AI transcription covers 37 or more languages, while human transcription is English only. Pay-as-you-go rates start at $0.25 per minute for AI, and human transcription is listed at $1.99 per minute.</p>
+<p>Best for: Legal, research and media work where mistakes are costly and a human check is worth paying for.</p>
+<p>Limitations: The cost climbs for long videos, and the human option is slower than instant AI tools. Those accuracy figures are the vendor's own claims, so test your own audio.</p>
+<p>Whisper is OpenAI's open-source speech recognition model, released under the MIT license. It handles multilingual transcription, translation into English and language identification. You install it with pip and need ffmpeg, and it comes in several model sizes from tiny to large, so you can trade speed against accuracy and hardware demands.</p>
+<p>Best for: Developers building their own pipeline and teams with sensitive audio they prefer to keep on their own machines.</p>
+<p>Limitations: You supply the audio, which means downloading it yourself and respecting the video owner's rights and YouTube's terms. Larger models need a capable GPU, and there is no built-in interface for non-technical users.</p>
+<p>Start with the source. If the video already has good captions, a link-based tool is the fastest route. If the audio is difficult or the stakes are high, pick a tool that runs its own recognition or offers human review. If you are processing hundreds of videos or handling private recordings, look at Whisper or a paid platform with bulk features.</p>
+<p>Whatever you choose, treat the transcript as a first draft. Check names, numbers and technical terms against the video before you publish or quote anything, and credit the original creator.</p>
+<p>There is no single best transcript generator. Caption-based tools are quick and free, recognition-based tools are better when captions fall short, and human-verified services make sense when accuracy matters most. Try two or three on a video you know well, compare the results and keep a human in the loop for anything you publish.</p>
+<p>Can I get a transcript if a video has no captions? Caption-extraction tools cannot. You need a tool that runs its own speech recognition on the audio, such as the options above that transcribe files.</p>
+<p>Are AI transcripts accurate enough to publish? Often they are close, but not perfect. Accents, noise and technical terms cause mistakes, so review before publishing.</p>
+<p>Is it legal to transcribe someone else's YouTube video? Transcribing for personal research or accessibility is common, but republishing the text may infringe copyright. Check the video's license and YouTube's terms, and get permission when in doubt.</p>
+<p>What is the difference between a transcript and subtitles? A transcript is the full text, while subtitles are timed text shown on screen. Many tools can export both, often as SRT files.</p>
+<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/finetune-florence2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/top-6-ai-youtube-transcript-generators-features-accuracy-and-limits/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Decision Models in Hugging Face</title>
+    <title>Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9625.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,125 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Decision Models in Hugging Face</h1>
+        <h1>Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/decision/thumbnail.png" alt="Decision Models in Hugging Face" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt525c0b544f1eeec1/6afe238519e68185a02d38c2/GettyImages-1428094247.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/decision/thumbnail.png" alt="Decision Models in Hugging Face" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt525c0b544f1eeec1/6afe238519e68185a02d38c2/GettyImages-1428094247.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Behind the Alias: How One Researcher Unmasked a Decade of Ransomware Actors" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Large Language Models (LLMs) are exceptionally good at generating text. We use them to answer questions, write code, reason about problems, and so much more. But not every problem requires generating text.</p>
-<p>Consider a customer support system receiving the following message:</p>
-<p>"I was charged twice for my subscription. I need a refund today."</p>
-<p>The system needs to determine which team should handle the request, how urgent it is, and whether the customer is requesting a refund.</p>
-<p>We could ask an LLM to return a JSON object containing these answers.</p>
-<p>But what if the model could directly evaluate the available options and return a probability distribution over them, without generating any text?</p>
-<p>This is the key idea behind decision models.</p>
-<p>A decision model takes some input context (state), evaluates a question with a set of predefined possible answers (primitives), and returns a structured decision along with probabilities. Instead of asking a model to generate an answer token by token, we ask it to assign probabilities to the answers that our application already understands.</p>
-<p>TypeSafe AI introduced Jev, describing it as a System One model. The name draws inspiration from the distinction between fast, intuitive thinking (System 1) and slower, deliberative thinking (System 2).</p>
-<p>The community has converged to the term decision model, because it describes the model's computational role rather than invoking a particular theory of cognition. In the rest of the post we will refer to the models as "decision models" instead of "system one models". (A poll on twitter deciding what we should be calling such models)</p>
-<p>For a decision model, the fundamental interface is:</p>
-<p>We could simply prompt an LLM to return a JSON object containing our decisions. In fact, this is how many applications already use language models for classification, routing, and other structured tasks.</p>
-<p>However, there are a few problems with this approach.</p>
-<p>Before understanding the interface of a decision model, it is useful to revisit two closely related approaches namely traditional classification and zero-shot classification.</p>
-<p>Suppose we train a classifier that routes customer-support requests to three departments:</p>
-<p>A conventional classification model learns a mapping from an input to a predefined set of labels. During training, the model learns to predict these labels from examples. A classification head typically produces one logit per class, and softmax turns those logits into a probability distribution.</p>
-<p>The limitation here is that the output classes are baked into the model's classification head.</p>
-<p>If we introduce a fourth department, such as Legal, the existing classifier does not automatically acquire a corresponding output class. We may need to modify the head, collect training data, and retrain or adapt the model.</p>
-<p>Zero-shot classification addresses an important part of this limitation. Instead of requiring the classifier to be trained specifically on every output category, we supply the candidate labels at inference time.</p>
-<p>Unlike a conventional fixed-label classifier, the categories can change from one request to another. Let’s add another department, such as “Legal”, and see the model outputs.</p>
-<p>One common implementation uses a model trained for natural language inference (NLI). Each candidate label is converted into a hypothesis, and the model measures how strongly the input entails that hypothesis.</p>
-<p>This already sounds quite similar to a decision model. And in many ways, it is.</p>
-<p>Decision models extend this idea beyond simply assigning an input to a category. A decision model can accept several named questions about the same state, with different answer types. The types can be choosing between alternatives (choice), scoring an ordered scale (score), or estimating the probability that a statement is true (noul).</p>
-<p>More importantly, its interface is designed around the probability distribution over possible decisions.</p>
-<p>The advantage of decision models is not that they invented runtime-defined labels or probabilistic classification. It is that they organize these capabilities into a consistent interface, potentially backed by architectures and training procedures optimized specifically for decisions.</p>
-<p>A decision model request has the following two components:</p>
-<p>The state is the information the model should evaluate. It may be a string, a structured JSON object, or, other modalities for supported omni-modal models.</p>
-<p>Questions describe what we want to know about the state. In the decision models interface, three fundamental primitives represent different forms of decisions:</p>
-<p>Choice is the most intuitive primitive and the closest to traditional classification.</p>
-<p>Which department should handle this customer request?</p>
-<p>The available options are Billing, Technical support, and Sales.</p>
-<p>The model assigns a logit to each option. For logits z1,…,zKz_1,\ldots,z_Kz1​,…,zK​, (with KKK classes) we can obtain the probabilities using softmax:</p>
-<p>pi=exp⁡(zi)∑j=1Kexp⁡(zj)
-p_i=\frac{\exp(z_i)}{\sum_{j=1}^{K}\exp(z_j)}
-pi​=∑j=1K​exp(zj​)exp(zi​)​</p>
-<p>∑i=1Kpi=1.
-\sum_{i=1}^{K}p_i=1.
-i=1∑K​pi​=1.</p>
-<p>The model chooses the option with the largest probability:</p>
-<p>y^=arg⁡max⁡ipi
-\hat y=\arg\max_i p_i
-y^​=argimax​pi​</p>
-<p>In this case, the choice is Billing, with the probability of 0.998, but the remaining probabilities are useful too. They tell us how the model distributes its belief among the alternatives.</p>
-<p>Choice works when there are several distinct alternatives. But what if we want to measure something on an ordered scale?</p>
-<p>The model again produces a probability distribution:</p>
-<p>Rather than returning only the most likely level, the Score primitive computes the expected value of the level index.</p>
-<p>For a random variable XXX representing the level, the expectation is:</p>
-<p>E[X]=∑i=0K−1ipi
-\mathbb{E}[X]=\sum_{i=0}^{K-1}ip_i
-E[X]=i=0∑K−1​ipi​</p>
-<p>E[X]=0(0.01)+1(0.26)+2(0.72)=1.7
-\mathbb{E}[X] = 0(0.01)+1(0.26)+2(0.72)=1.7
-E[X]=0(0.01)+1(0.26)+2(0.72)=1.7</p>
-<p>This does not mean that the model selected a fictional level halfway between medium and high. It means that the expectation of its probability distribution is 1.7.</p>
-<p>The third primitive is Noul, which represents a binary question.</p>
-<p>Rather than defining a list of choices, we ask the model to return the probability that the answer is true. We can understand this using the Bernoulli distribution (noul comes from Bernoulli).</p>
-<p>Y∼Bernoulli⁡(p)
-Y\sim\operatorname{Bernoulli}(p)
-Y∼Bernoulli(p)</p>
-<p>P(Y=1)=p,P(Y=0)=1−p.
-P(Y=1)=p,\qquad P(Y=0)=1-p.
-P(Y=1)=p,P(Y=0)=1−p.</p>
-<p>it assigns a probability of 0.92 to Yes and 0.08 to No.</p>
-<p>The model is not randomly sampling a binary answer here. It returns the probability parameter itself, leaving the application to decide how to act on it.</p>
-<p>So far, we have obtained probability distributions from the model. But the decision model interface also returns a field called confidence for Choice and Score.</p>
-<p>The full distribution might contain several possible answers, and it is useful to summarize how concentrated the model's belief is. With confidence we achieve just that.</p>
-<p>For a Choice with KKK options, the confidence is:</p>
-<p>pmax⁡−1K1−1K
-\frac{p_{\max}-\frac{1}{K}}{1-\frac{1}{K}}
-1−K1​pmax​−K1​​</p>
-<p>where pmax⁡p_{\max}pmax​ is the largest predicted probability.</p>
-<p>In our previous three-choice example, Billing had probability 0.998:</p>
-<p>C=3(0.998)−12=0.997
-C=\frac{3(0.998)-1}{2}=0.997
-C=23(0.998)−1​=0.997</p>
-<p>Notice that the winning probability is 0.998, but the reported confidence is 0.997. The confidence normalizes the largest probability relative to the number of available options. In contrast, the ordered Score example only had a confidence of 0.558.</p>
-<p>Decision models are a young and fast-moving space. Each one makes decisions differently under the hood (heads that score the whole schema jointly, separate readouts on top of LLM backbones, edge-sized and multimodal variants, etc). This variety is healthy, but it comes at a cost. If every model exposes its own interface, every tool around it needs model-specific adaptations.</p>
-<p>Our goal at Hugging Face is to agree on a common interface without forcing a common implementation. A decision model should be free to work however it likes internally, as long as it accepts the same state and questions and returns the same typed decisions. Once that contract exists, the rest of the ecosystem can build on it once:</p>
-<p>The rest of this section walks through each of these pieces.</p>
-<p>Transformers now supports the DecisionPipeline, AutoModelForDecision, and the DecisionConfig classes. These follow the same overall structure of the pipeline and model classes in transformers but are tailor made for decision models.</p>
-<p>One can also inspect the configuration and the model like so:</p>
-<p>Transformers also supports the /v1/systemone endpoint.</p>
-<p>We can start a local server using the serving dependencies:</p>
-<p>Using a compatible version of Transformers, we can then send a decision request:</p>
-<p>The response contains three named answers with the corresponding typed results and probabilities.</p>
-<p>An interesting detail is that the above APIs works with compatible autoregressive language models too. Transformers constructs the decision prompts, evaluates the answer label logits in a batched forward pass, and applies softmax without generating response text. This means we can experiment with the decision interface without necessarily training a new model.</p>
-<p>llama.cpp also supports decision models using the same /v1/systemone API.</p>
-<p>For example, we can launch a GGUF decision model from the Hub:</p>
-<p>We can then send a request containing the same state and questions, using http://localhost:9931/v1/systemone. With the model selected by the server, we can omit the model field from the request.</p>
-<p>The useful property is interface compatibility.</p>
-<p>Hugging Face introduced a dedicated decision-model tag for discovering compatible models. This is useful because decision models do not have to share a single backbone or architecture.</p>
-<p>For example, the ecosystem includes models based on encoder architectures such as ModernBERT, as well as models derived from larger generative language-model backbones.</p>
-<p>Once we understand inference, the next question is whether we can adapt a decision model. Since decision models are integrated in transformers, we can fine-tune them with the Trainer API.</p>
-<p>Below is a toy example that fine-tunes JEV-9B to route support requests. It is intentionally small, but it shows the parts that matter:</p>
-<p>First-class support for training decision models is also coming to TRL (huggingface/trl#8040), so we won't have to write this plumbing by hand. At the time of writing, the PR is still open.</p>
-<p>If we want to go further and turn a generative LLM into a decision model, Unsloth provides a recipe that fine-tunes models such as Qwen with LoRA and a decision-scoring head.</p>
-<p>Decision models are interesting not because classification is new, but because they make decisions and probabilities first-class outputs for software.</p>
-<p>Traditional classifiers already produce probabilities, and zero-shot classifiers already allow runtime-defined categories. Decision models bring these ideas into a typed interface with multiple question primitives, non-generative scoring, and the possibility of specialized training for reliable, calibrated decisions.</p>
-<p>Great write-up. The step the post leaves to the application, turning noul: 0.83 into an action, is where things get hard in production. It's usually a threshold (if p > 0.9), and it quietly goes stale: raw probabilities are rarely calibrated, the right cut-off depends on what a mistake costs, and the outcome that says whether the decision was right (a chargeback, a reassigned ticket) arrives days or months later.</p>
-<p>I'm building an open-source, self-hosted tool for that loop: trimset. It sits in front of any /v1/systemone server (so transformers serve or llama.cpp) with a one-line URL change. It logs every decision and joins the real outcome when it arrives. It calibrates per question and model, then compiles thresholds and an escalation band with a stated guarantee ("false passes ≤ 2% with 95% confidence"), which your app applies locally. It's pre-alpha; drift and silent-upgrade alerts come next.</p>
-<p>Live demo on recorded data, threshold simulator included: https://demo.trimset.dev/#/questions/refund_fraud/simulator</p>
-<p>For anyone running decision models in production: how do you pick your cut-offs today?</p>
-<p>"Not because x, but because y" is very AI-sloppy language.</p>
-<p>The advantage of decision models is not that they invented runtime-defined labels or probabilistic classification. It is that they organize these capabilities into a consistent interface.</p>
-<p>Nobody thinks that, literally. What I mean by that is, nothing capable of thinking would have written this sentence down because no thinking entity would suspect that decision models originated probabilistic classification. Only a non-thinking source of language, such as an LLM, might generate this sentence.</p>
-<p>Decision models are interesting not because classification is new, but because they make decisions and probabilities first-class outputs for software.</p>
-<p>Again, nobody thinks that, meaning only an LLM might generate this sentence.</p>
-<p>The state + questions interface carries over to hosted decision models too. meraGPT Decider 1.1 takes the same shape through an API (model decider-1.1) rather than as open weights: up to 255 options per choice question, images in the state, and if you offer an "I don't know" option it takes it when the state doesn't support an answer. Against TypeSafe Jev 1.14 on the same items it's ahead on typed decisions, calibration and large label sets. Input is $0.04 per million tokens and output is free.</p>
-<p>Release notes: https://meragpt.com/blog/introducing-decider-1-1?utm_source=huggingface&utm_medium=social&utm_campaign=hf_decision_blog</p>
+                <p>Cybersecurity In-Depth: Feature articles on security strategy, latest trends, and people to know.</p>
+<p>Ransomware isn't slowing down. A new framework gives security teams the edge to trace attackers back to their source.</p>
+<p>It's a now-familiar scenario: "Warning" abruptly displays on the computer screen as the system locks down. A ransom note follows, threatening data extortion and continued disruptions if a demand is not met. Although it may seem sudden at the moment, the attack was actually the final step in what may have been years of planning, all carried out by a sprawling, interconnected network of underground actors.</p>
+<p>But a new framework based on an identity graph analysis, developed by Flare threat researcher Assaf Morag, aims to help defenders and law enforcement take a more proactive approach to ransomware risk by better understanding who they're up against. When applied during research, the framework can uncover the inner workings of these operations, including indicators of compromise (IoCs) that are critical to incident-response investigations. Researchers can also use it to find connections among various threat actors and groups, which is increasingly important as new groups emerge each year.</p>
+<p>Related:As Test Takers Turn to AI, Exam Security Plays Catch-Up</p>
+<p>Mapping and understanding the connections among the various ransomware gangs is also vital when it comes to documenting the tactics, techniques, and procedures (TTPs) that ransomware groups use against organizations daily. Threat actors are highly adaptable, developing, buying, or renting new tools all the time to bypass endpoint detection and response (EDR) and to craft more convincing phishing emails. So the more available data about their operations, the more predictable their behaviors become for defenders.</p>
+<p>Morag plans to debut his repeatable investigative methodology for mapping criminal organizations in a briefing at Black Hat Europe 2026. He will walk through the framework step by step; anyone can use it to reproduce the research or apply the same process to a new investigation.</p>
+<p>Building a framework wasn't Morag's original goal. He first set out to study how initial access brokers (IABs) operate on Dark Web forums. But he realized the interconnected web of threat actors was too vast to dissect using available resources. His efforts to connect gang operators and affiliates to IABs actually took two long months of manual work, which wasn't a useful process for such a swiftly moving threat landscape. That's when Morag decided to develop a framework to help graph the activity. Once it was ready, the same research took only three hours.</p>
+<p>To build the framework, Morag went into detective mode, gathering clues from forums and chat posts and sorting them into various buckets for "hard evidence" versus "soft evidence." The first included factors like specific messaging IDs, emails, or chat handles, while writing styles, typos, and reused phrases fell into the latter. Once he was able to verify a clue, he could use it to search for other connections. Eventually, the confirmations expanded into a massive map of connected identities with 21 personae, active over 17 years, with 5,437 posts.</p>
+<p>Related:NIST: Solo Shouldn't Mean Less Secure</p>
+<p>Morag's findings support how ransomware attacks are rarely conducted by a single group from start to finish, and how operations often mirror legitimate businesses with everyone playing their role. That makes it hard to parse out exactly who's who.</p>
+<p>That became obvious when Morag came across a notification posted to a Dark Web forum, translated from Russian, that read, "We are the oldest international Russian ransomware affiliate program." The group claimed to be a private program that emerged in 2018. But based on underground forum discussions, he noticed that some members had been active since 2010.</p>
+<p>Tracking Tox IDs was the primary way Morag traced the connections, unveiling the true identity behind the fake personae and generic aliases threat actors use, like "John" or "Michael." Ransomware ecosystems commonly use communication platforms like Tox, Discord, Telegram, and Jabber to conduct payment negotiations with organizations or to recruit new affiliates, among other actions.</p>
+<p>Related:Incidents Move Too Fast for Pen & Paper</p>
+<p>When communicating with someone through a specific Tox address, Morag knew he was reaching one consistent endpoint, whether cloud-based or someone's personal computer. Either way, it's the same device every time, which matters because threat actors often operate under multiple aliases.</p>
+<p>"He can change his name, but if I can take these identifiers and connect them together, that could be a way to look beyond the persona's name, which is usually fake, and that's exactly what I did," Morag tells Dark Reading.</p>
+<p>During the course of investigation, Morag discovered six layers of operational roles across the business flow:</p>
+<p>The homemade ransom layer: Useful for defenders to study, these are the people who develop ransomware strains, loader malware that bypasses antivirus and EDR, and infostealer payloads.</p>
+<p>The ransom deployment layer: The gang operators and their affiliates who select the ransomware/malware, deploy it, and extort the victims.</p>
+<p>Pen-testers: Folks who probe for weaknesses to find ways into organizations.</p>
+<p>The dealers: IABs that buy and sell that initial access, like a sales department for cybercrime. (Morag was able to pinpoint seven individuals active for over nine years, spanning 50 forums and a whopping 1,300 events.)</p>
+<p>Fraud recovery: Organizations that perform diagnostics, negotiate with attackers, and arrange settlements with victims.</p>
+<p>Crypto draining: Those that process stolen seed phrases and private keys at scale and cross-sell crypto services to ransomware victims to compromise and drain wallets.</p>
+<p>While piecing it together, one link particularly surprised Morag: a tie between supposed good-guy fraud-recovery firms and the ransomware deployers. Companies claim to help ransomware victims but secretly defraud them, he notes, and victim organizations have no clue.</p>
+<p>Up until the fraud recovery layer in the business flow, everything was done in Russian. After that, Morag noticed an intentional switch to the English language. Once the ransomware locked an organization's system down, the ransomware deployers swooped in, posing as legitimate businesses looking to provide recovery services. They installed tools on victims' systems, ran diagnostics, offered data recovery, and legal compliance services, Morag says.</p>
+<p>"This is not new, and we've also seen a few cases in the past month in the US. These kinds of organizations that help other organizations fight against ransomware were actually defrauding them," Morag explains. "I haven't seen anyone make the connection between those who do the recovery fraud and those that actually deploy the ransom, which is really amazing."</p>
+<p>While deep in the underground forums, it also became clear to Morag how much threat actors value their reputations. For instance, on Exploit, "a reputable Russian market" where attackers pay $100 to $150 and undergo a test to get in, Morag observed infighting as threat actors accused one another of not being legitimate. The forum is a place where "you don’t want to lose your reputation" or your access, he stresses, because it's where threat actors discuss sensitive dealings, such as zero-day and known vulnerability exploits, and forge new ransomware-as-a-service partnerships. Looking into these disputes offered critical intelligence about how operations run because threat actors will throw each other under the bus by revealing what tools they use, how they move money, or what access they are trading.</p>
+<p>Exploit, Morag says, is "a real gold mine because it explains how they work, what they're doing, the level of leadership, and who reports to who."</p>
+<p>Exploit was one of more than 40 underground forums he visited that, when analyzed together with the framework, revealed the inner workings of cybercrime gangs. Unmasking the players provides more evidence for organizations to fight back against ransomware as the threat disrupts everything, from Coca-Cola production to Japanese frozen food.</p>
+<p>The framework can't directly help organizations push back against ransomware, but it does provide much-needed contextual data for the private and public sectors as problems persist. Morag is applying the framework to help with attacks against financial systems — an obviously huge target for threat actors — for example. He also applied it to investigate another ransomware group more recently and says it yielded helpful results.</p>
+<p>Real insight into a large operation like the one Morag discovered, knowing it included a fake fraud recovery layer, may also make organizations think twice about negotiating. They never know who's on the other line.</p>
+<p>"It's [about] knowing your enemy," Morag says.</p>
+<p>Black Hat Europe returns to the Excel in London with a four-day program this December. The event will open with two-and four-day options of specialized cybersecurity Trainings, with courses of all skill levels. The two-day main conference boasts Briefings featuring the latest in research, developments, and trends in cybersecurity, along with dozens of open-source tool demos in Arsenal, a robust Business Hall, networking, and social events, and much more. Use the code: DARKREADING and get 10% off your pass.</p>
+<p>Arielle spent the last decade working as a reporter, transitioning from human interest stories to covering all things cybersecurity related in 2020. Now, as a features writer for Dark Reading, she delves into the security problems enterprises face daily, providing context and actionable steps. She looks for stories that go past the initial news to understand where the industry is going. Her coverage areas include identity and access management, cyber risk and operations, industrial control systems, operational technology, and ransomware trends.</p>
+<p>She previously lived in Florida where she wrote for the Tampa Bay Times before returning to Boston where her cybersecurity career took off at TechTarget SearchSecurity. When she's not writing about cybersecurity, she pursues personal projects that include a mystery novel and poetry collection.</p>
+<p>It's a Bot World. We're Just Living in It</p>
+<p>What We Missed: Nvidia CEO Scandal Rocks AI Industry</p>
+<p>Navigating Vulnerability Hysteria in the AI Era</p>
+<p>As Test Takers Turn to AI, Exam Security Plays Catch-Up</p>
+<p>Black Hat Asia | Marina Bay Sands, Singapore</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/decision" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cybersecurity-operations/alias-researcher-unmasked-ransomware-actors" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

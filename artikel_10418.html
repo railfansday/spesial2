@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What is Model Routing in AI?</title>
+    <title>AI uncovers hidden Ozempic side effects across 400,000 Reddit posts</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10418.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,66 +15,69 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>What is Model Routing in AI?</h1>
+        <h1>AI uncovers hidden Ozempic side effects across 400,000 Reddit posts</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_what_is_model_routing_d65e267a6a.png" alt="What is Model Routing in AI?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.sciencedaily.com/images/1920/woman-face-close-up-surprise-worry-fear.webp" alt="AI uncovers hidden Ozempic side effects across 400,000 Reddit posts" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_what_is_model_routing_d65e267a6a.png" alt="What is Model Routing in AI?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.sciencedaily.com/images/1920/woman-face-close-up-surprise-worry-fear.webp" alt="AI uncovers hidden Ozempic side effects across 400,000 Reddit posts" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>"Do you know the closest ATM?" and "I was charged twice, the refund never arrived, and now my card is blocked" are both customer messages. Most AI apps send both to the same large model and pay large-model prices for each one.</p>
-<p>Model routing fixes that. A router looks at each request and sends it to the cheapest model that can handle it, and keeps the expensive model for the requests that need it.</p>
-<p>In this guide we'll cover what model routing is, how routers decide, and what it saves. Then we'll build a small router in about 60 lines of JavaScript and run it over 200 customer messages. At one setting it matched a large model's accuracy for about a third of the cost. At another it came within a point and a half for 89% less.</p>
-<p>Model routing in AI is the practice of sending each request to the model best suited to it, instead of sending every request to one model. A router sits between your app and a pool of models, reads each request, and picks a model based on what you care about: cost, speed, or quality.</p>
-<p>You'll also see it called AI model routing, LLM routing, or LLM model routing. They all mean the same thing. The pool might be a small and a large model from one provider, or models from several providers behind one API.</p>
-<p>The idea rests on one observation: most requests are easy. A small model answers them as well as a large one, in a fraction of the time and for a fraction of the price. The router's whole job is finding the hard ones.</p>
-<p>The diagram below shows a typical AI model routing architecture.</p>
-<p>Model routing works in three steps: the router reads the request, decides which model should answer it, and forwards the request to that model. The middle step is where routers differ. Routing tools decide which model to use in one of four ways.</p>
-<p>Rule-based routing uses rules you write by hand. Requests from free-plan users go to a small model. Anything tagged as code goes to a coding model. Prompts over a certain length go to a model with a bigger context window. It's simple, predictable, and free to run, but the rules only know what you thought of in advance.</p>
-<p>Intelligent model routing uses a model to make the decision. A small, fast classifier reads each request and predicts which model in the pool will answer it well. You'll also see it called smart or dynamic model routing.</p>
-<p>Two more terms come up here. Task-aware routing picks a model by the kind of job, like summarising, coding, or answering a support question. Context-aware routing also looks at what surrounds the request, like the conversation so far, the user, or the tools available.</p>
-<p>The big platforms work this way. Microsoft describes its Foundry model router as "a trained language model" that picks a model for each prompt in real time. Google says Gemini Notebook uses its new Decisions API as a real-time router, serving everyday queries with up to 40% lower latency. I've tested the Google Decisions API against Jev on the same messages we'll use below.</p>
-<p>Cascade routing tries the cheapest model first and only moves up when the answer isn't good enough. The usual test is confidence: if the cheap model is sure, keep its answer. If it isn't, send the request to a stronger model. It's also called confidence-based routing, and it's what we'll build below.</p>
-<p>A cascade needs no separate classifier, because the first model's own confidence does the routing. The trade-off is that escalated requests pay for two models and wait for both.</p>
-<p>Fallback routing is about staying up, not saving money. If a model times out, hits a rate limit, or its provider has an outage, the router sends the request to the next model on a list. Most production routers combine fallbacks with one of the three methods above.</p>
-<p>The main benefits of model routing in AI systems are lower cost, faster responses, and fewer outages, without giving up quality on the hard requests.</p>
-<p>We'll build a cascade router for a job every support tool has: sorting customer messages. Each message gets one of ten labels, like atm support or request refund.</p>
-<p>The test set is 200 messages from Banking77, a public set of banking support messages: ten labels, 20 messages each. They're the same 200 messages from my zero shot classification test, which is where the single-model numbers below come from.</p>
-<p>Put both keys in a .env file and run the examples with node --env-file=.env. It's the same setup as in my guide to getting a YouTube API key.</p>
-<p>Create router.mjs. The first function sends the message to Jev with one multiple-choice question, and returns the label Jev picked along with its confidence:</p>
-<p>Confidence runs from 0 to 1. When nearly all the probability sits on one label, it's close to 1. When Jev is torn between two labels, it drops.</p>
-<p>The second function asks Claude Opus 5.5 the same question. The output_config block limits the answer to one of our labels, so there's no free text to parse. SitePoint's guide to LLM structured output with JSON Schema explains how that works.</p>
-<p>The router itself is about a dozen lines:</p>
-<p>If Jev is at least 80% confident, its answer goes straight back. If not, Claude answers instead. And if Claude fails, the router falls back to Jev's answer, because a shaky answer beats an error page.</p>
-<p>Try it on an easy message and a harder one:</p>
-<p>Jev was sure about the lost card. On the ATM question it leaned towards card acceptance with a confidence of 0.64, so the router asked Claude, which got it right.</p>
-<p>Because cheap, strong, and threshold are options, the same function routes between any two models.</p>
-<p>Model routing reduces AI costs by keeping easy requests on a cheap model and paying for the expensive one only when it's needed. Here's what that looked like on our 200 messages, starting with each model on its own:</p>
-<p>Opus gets six more messages right out of 200, and costs more than 120 times as much.</p>
-<p>Now the router, at four confidence thresholds:</p>
-<p>Speed improved too. At the 0.8 threshold, the messages Jev kept came back in a median of 227 ms. The ones that escalated took about 2.1 seconds, because they waited for both models.</p>
-<p>A note on method: I ran every message through both models once and saved the answers, then replayed the router over them at each threshold. That's how you compare thresholds without paying for the same test four times.</p>
-<p>Then I ran the router live to check. At 0.95 it scored the same 95.0% and sent 61 messages to Opus. At 0.8 it scored 93.5% and sent 20, a point under the replay. Two answers moved: one of Jev's confidence scores landed at 0.82 instead of 0.78, just over the line, and Opus changed its answer on one message. Scores near the threshold shift a little between runs, so leave yourself a margin.</p>
-<p>The choice of cheap model matters less than you'd think. With Google's Gemini Decision 1 in first place instead of Jev, a 0.7 threshold reached the same 95% for US$0.28 per 1,000 messages.</p>
-<p>Model routing can cost a little quality, and the threshold decides how much. In our test the gap to Opus ranged from nothing at 0.95 to two points at 0.7.</p>
-<p>The loss comes from one place: answers the cheap model got wrong while feeling sure. At the 0.8 threshold, Jev kept five wrong answers because its confidence was above the line. Opus got four of those five wrong as well, so only one was a real loss: "Do all ATMs take this card?", which Jev filed under card acceptance with a confidence of 0.91.</p>
-<p>Escalating isn't risk-free either. On one message, Jev had the right label with a confidence of 0.44, and Opus overruled it with the wrong one.</p>
-<p>To optimize costs using AI model routing, measure first, route second, and keep measuring. These six steps cover LLM model routing cost optimization for any pair of models:</p>
-<p>The return is easy to estimate once you know the split. If nine in ten requests stay on a model that costs 1% as much, the bill drops by about 89%, which is what we measured.</p>
-<p>Several inference providers have multi-model routing built in, and most AI gateway platforms support model routing too, so you don't have to write your own. As of November 2026, these are the top model routing solutions for AI apps. Each name links to the tool's model routing docs:</p>
-<p>Hosted model routing platforms for large language models decide for you, which is the fastest way to start. A hand-built router like ours takes more work, but you choose the signal and you can see why every request went where it did.</p>
-<p>An LLM router is the component that does model routing for large language models. It can be a function in your own code, like the one in this guide, a hosted model such as Microsoft Foundry's model router, or a feature of an AI gateway.</p>
-<p>Smart model routing is another name for intelligent model routing: a model, not a hand-written rule, decides where each request goes. Dynamic model routing means the same thing.</p>
-<p>The ROI of AI model routing depends on how much of your traffic a cheaper model can handle. In our test, a 0.8 threshold kept 89.5% of messages on the cheap model and cut the cost per 1,000 messages from US$1.96 to US$0.22, for about a point of accuracy. The build was about 60 lines of code.</p>
-<p>OpenRouter's auto model routing works through its Auto Router. You set the model to openrouter/auto, and a decision model picks a model and a reasoning effort for each request. You pay the standard rate of whichever model it selects, with no extra fee.</p>
-<p>OpenClaw model routing is a primary model plus an ordered list of fallbacks. In the OpenClaw model routing configuration you set agents.defaults.model.primary and agents.defaults.model.fallbacks, and an agent can override the fallback list. When a model fails, OpenClaw first rotates auth profiles on the same provider, then moves to the next model on the list, as its model failover docs describe. That makes it fallback routing, not cost-based routing.</p>
-<p>An AI gateway simplifies model routing by putting every model behind one API, one set of keys, and one place for logs. Your app calls the gateway, and the routing rules live in config instead of code, so changing a model doesn't need a deploy.</p>
-<p>Mid-stream failover is when a router switches models after a streamed response has already started, because the first model failed partway through. It's the hardest kind of failover, because the user has already seen part of an answer. Many routers only fail over before the first token arrives and return an error after that, so check what your gateway does.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>Artificial intelligence is giving researchers a new way to listen to what patients are saying about popular GLP-1 drugs. After analyzing more than 400,000 Reddit posts, a University of Pennsylvania team identified several symptoms reported by people using semaglutide (Ozempic, Wegovy, and Rybelsus) and tirzepatide (Mounjaro and Zepbound) that may not be fully represented in clinical trials or official regulatory information.</p>
+<p>The study, published recently in Nature Health, examined more than five years of posts from nearly 70,000 Reddit users. Two categories stood out as particularly deserving of further investigation: reproductive symptoms, including changes in menstrual cycles, and problems involving body temperature, such as chills and hot flashes.</p>
+<p>The findings do not establish that the medications caused these symptoms. Instead, researchers say the massive collection of spontaneous patient reports may reveal signals worth examining more closely.</p>
+<p>"Some of the side effects we found, like nausea, are well known, and that shows that the method is picking up a real signal," says Sharath Chandra Guntuku, Research Associate Professor in Computer and Information Science (CIS) at Penn Engineering and the study's senior author. "The underreported symptoms are leads that came from patients themselves, unprompted, and clinicians could potentially pay attention to them."</p>
+<p>What Patients Report Outside Clinical Trials</p>
+<p>Clinical trials are designed to determine whether treatments work and to identify important safety problems, but they cannot necessarily capture every symptom that matters to patients once a medication is being used by a much larger population.</p>
+<p>"Clinical trials generally identify the most dangerous side effects of drugs," adds Lyle Ungar, Professor in CIS and a co-author on the study. "But they can fail to find what symptoms patients are most concerned about; even though social media is not necessarily representative, a large collection of posts may reflect additional concerns."</p>
+<p>The distinction is important. The study found associations in what people discussed online, not proof that GLP-1 drugs were responsible for those experiences.</p>
+<p>"We can't say that GLP-1s are actually causing these symptoms," notes Neil Sehgal, the study's first author and a doctoral student in CIS advised by Guntuku and Ungar. "But nearly 4% of the Reddit users in our sample reported menstrual irregularities, which would be even higher in a female-only sample. We think that's a signal worth investigating."</p>
+<p>Using Social Media as an Early Health Signal</p>
+<p>The idea of mining online conversations for clues about drug safety predates today's AI boom. In 2011, Ungar participated in one of the earliest efforts to use material created by internet users to identify possible adverse effects from medications.</p>
+<p>Social media can capture experiences that patients discuss with one another but may never formally report to a doctor, drug manufacturer, or regulator.</p>
+<p>"Online patient communities work a lot like a neighborhood grapevine," says Ungar. "People who are living with these medications are swapping notes with each other in real time, sharing experiences that rarely make it into a doctor's office visit or an official report."</p>
+<p>Since then, online patient communities have expanded enormously. That has made social media a potentially valuable source for studying how medications affect people in everyday life, although gaining access to platform data has become more difficult.</p>
+<p>Traditional clinical research remains essential, the researchers emphasize, but online conversations can provide information far more quickly when millions of people begin using a drug.</p>
+<p>"Clinical trials are the gold standard, but by design, they are slow," says Guntuku. "This is not a replacement for trials, but it can move much faster, and that speed matters when a drug goes from niche to mainstream almost overnight."</p>
+<p>AI Makes Massive Social Media Analysis Possible</p>
+<p>One of the biggest obstacles has always been scale.</p>
+<p>Guntuku describes the approach as "computational social listening," which uses computational methods to identify patterns in large collections of online conversations about health.</p>
+<p>Patients, however, rarely describe symptoms using standardized medical terminology. One person might describe feeling unusually cold, another might mention constant chills, while a clinician could categorize those experiences using a specific medical term.</p>
+<p>Researchers therefore need a way to translate everyday language into standardized categories. One important reference is the Medical Dictionary for Regulatory Activities (MedDRA), which provides terminology widely used to classify medical conditions, symptoms, and adverse events.</p>
+<p>Previously, connecting huge numbers of informal social media posts with standardized medical terminology required enormous amounts of work, limiting how much data researchers could realistically analyze.</p>
+<p>Large language models such as GPT and Gemini are changing that equation by allowing researchers to process and categorize vast amounts of text more consistently and quickly.</p>
+<p>"Large language models have made it possible to do this kind of analysis much faster with a level of standardization that could be difficult to achieve before," says Sehgal.</p>
+<p>Unexpected Symptoms Emerge From 400,000 Posts</p>
+<p>The researchers stress that Reddit users do not represent the overall population of people taking GLP-1 drugs. Reddit users tend to be younger, are more likely to be male, and are disproportionately located in the United States.</p>
+<p>Even with that limitation, the analysis produced a reassuring sign that the approach was detecting genuine patterns. Many of the symptoms discussed by Reddit users closely matched already known effects of semaglutide and tirzepatide.</p>
+<p>About 44% of users included in the study described at least one side effect. Gastrointestinal problems were the most common, consistent with the nausea and other digestive issues already associated with these medications.</p>
+<p>More intriguing were symptoms that appeared frequently enough to attract the researchers' attention but may not be as well represented in current drug labels or conventional adverse event reports.</p>
+<p>Nearly 4% of users who reported side effects described reproductive symptoms. These included changes in menstruation such as bleeding between periods, heavy bleeding, and irregular menstrual cycles.</p>
+<p>Users also described changes involving body temperature, including chills, feeling unusually cold, hot flashes, and symptoms resembling a fever.</p>
+<p>Fatigue was another notable finding. It was the second most frequently reported complaint in the Reddit data, even though relatively few clinical trials reported fatigue often enough for it to reach established reporting thresholds.</p>
+<p>Why Menstrual and Temperature Changes Are Interesting</p>
+<p>One possible reason these reports caught researchers' attention involves the hypothalamus, a small but extremely important region of the brain. Among its many jobs, the hypothalamus helps regulate hunger, hormones, reproduction and body temperature.</p>
+<p>"These drugs are thought to work by engaging part of the brain called the hypothalamus, which helps regulate a wide variety of hormones," says Jena Shaw Tronieri, Senior Research Investigator at Penn's Center for Weight and Eating Disorders and a co-author of the study. "That doesn't mean the medications are necessarily causing these symptoms, but it could suggest that reports of menstrual changes and body temperature fluctuations are worth studying more systematically."</p>
+<p>The researchers are not proposing that this biological connection proves GLP-1 drugs are responsible. Instead, it offers another reason to test the patient-reported patterns more carefully through controlled research.</p>
+<p>Turning Online Conversations Into Research Leads</p>
+<p>For now, the team hopes the results encourage scientists and clinicians to pay closer attention to symptoms that patients repeatedly discuss online.</p>
+<p>"They're clearly on patients' minds, and that's worth paying attention to," says Sehgal.</p>
+<p>The researchers also want to broaden their analysis beyond Reddit and beyond English-language communities. Doing so could help determine whether the same patterns emerge among different groups of people and on different social media platforms.</p>
+<p>"We don't really know yet whether what we're seeing on Reddit reflects the experience of GLP-1 users globally, or whether it's particular to the kind of person who posts on Reddit in the United States," Ungar says.</p>
+<p>In the longer term, rapid AI analysis of online patient conversations could potentially become an early detection system for emerging health concerns involving drugs, supplements and wellness products.</p>
+<p>That could be particularly valuable for substances that become popular online faster than conventional research can keep up. Loosely regulated or unregulated products, including injectable peptides, can spread quickly through communities on Reddit, TikTok and other platforms. Discussions among users may therefore provide some of the earliest indications of unexpected effects.</p>
+<p>"The whole point of this kind of approach is that it can move quickly, and that's exactly when it's most valuable," says Guntuku.</p>
+<p>This study was conducted at the University of Pennsylvania School of Engineering and Applied Science. The authors report no outside funding. Tronieri reports receiving an investigator-initiated grant, on behalf of the University of Pennsylvania, from Novo Nordisk and receiving consulting fees from Currax Pharmaceuticals, LLC. The other authors report no conflicts of interest.</p>
+<p>Materials provided by University of Pennsylvania School of Engineering and Applied Science. Note: Content may be edited for style and length.</p>
+<p>Researchers Just Sent an Unblockable Message Through a Solid Wall Using Gravity</p>
+<p>Your Personality May Be Partly Written in Your DNA, Massive Study of 1 Million People Reveals</p>
+<p>A Tiny Region of the Brain Could Hold the Key to Understanding Early Alzheimerâs Symptoms</p>
+<p>Two Overlooked âForever Chemicalsâ Linked To More Than Double the Risk of Liver Cancer</p>
+<p>Stay informed with ScienceDaily's free email newsletter, updated daily and weekly. Or view our many newsfeeds in your RSS reader:</p>
+<p>Keep up to date with the latest news from ScienceDaily via social networks:</p>
+<p>Tell us what you think of ScienceDaily -- we welcome both positive and negative comments. Have any problems using the site? Questions?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/what-is-model-routing-in-ai/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sciencedaily.com/releases/2026/09/260912222856.htm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

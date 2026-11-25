@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command</title>
+    <title>What happens to a long-running LangChain agent after hour 6 (measured on five stacks)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9547.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command</h1>
+        <h1>What happens to a long-running LangChain agent after hour 6 (measured on five stacks)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdb4hcbqktsruknrkwkt0.jpg" alt="Once Was Easy to Miss: Flutter&#x27;s Intel Mac Warning Now Prints on Every Command" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F9zap8a4oqzh6gn1f7j37.png" alt="What happens to a long-running LangChain agent after hour 6 (measured on five stacks)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdb4hcbqktsruknrkwkt0.jpg" alt="Once Was Easy to Miss: Flutter's Intel Mac Warning Now Prints on Every Command" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F9zap8a4oqzh6gn1f7j37.png" alt="What happens to a long-running LangChain agent after hour 6 (measured on five stacks)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Posted on Nov 25
 •
-Originally published at ishaqhassan.dev</p>
-<p>Note: this article was originally published on my site: ishaqhassan.dev/blog/flutter-intel-mac-deprecation-warning.html</p>
-<p>A deprecation warning that showed up one time and then went quiet for good. The fix was mostly deleting an if condition. The review found a logging bug that had been hiding under -v.</p>
-<p>Merged, not released yet: PR #194071 merged into Flutter on November 25, 2026 (UTC) and is on the master channel only. Stable 3.50.1 and beta 3.51.0-0.2.pre still have the old behavior: the warning prints once and then never again. I will update this line when a release tag carries it.</p>
-<p>If you build Flutter apps on an Intel Mac, you have probably seen this line exactly once:</p>
-<p>After that first time, the Flutter tool never showed it again on that machine. PR #194071 changes that. It makes the warning print on every command on an Intel Mac, keeps it from failing builds that treat warnings as errors, and deletes the saved state that used to silence it.</p>
-<p>The change to the tool itself is small. The review was the interesting part: a Flutter maintainer found that the verbose logger ignored the non-fatal flag, and fixing it properly needed a second change one layer down. That fix helps more than Intel Macs. This article covers both, plus what the Intel Mac timeline means for your machine and your CI.</p>
-<p>Flutter has a public plan for phasing out Intel Macs: the macOS Intel deprecation strategy, written by Victoria Ashworth on the Flutter team in May 2026. Its first stage is to announce the change, and one step of that is a warning from the Flutter CLI when you build on an Intel machine.</p>
-<p>That warning arrived in PR #188835, merged on July 7, 2026. It ships in stable Flutter 3.47.0 and 3.50.0. The first version was deliberately polite. The tool checked a flag in its persistent state file, printed the warning, and then set the flag under the key displayed-intel-warning-message, so it would not print again:</p>
-<p>On October 2, 2026, the author of the strategy opened issue #193729: print the warning on every command instead of only once.</p>
-<p>The reasoning holds up when you look at how people actually meet this message. It appears in the output of whichever command happens to run first after an upgrade, often flutter pub get or a build in an IDE, mixed in with other output. You read past it once and the tool never mentions it again. Meanwhile the deprecation is not one event. It is a sequence of stages running into 2027, and a one-time notice gives no reminder as those stages arrive.</p>
-<p>A deprecation warning has one job: still be there when you finally have time to read it.</p>
-<p>I opened #194071 on October 9, 2026 (UTC). This is the core of it, as merged:</p>
-<p>The message text and the host check are unchanged. Only the persistent state condition is gone. On an Apple Silicon Mac the tool still prints nothing.</p>
-<p>The Flutter tool has a --fatal-warnings flag. With it, a command exits with an error if any warning was printed. Teams use it in CI to keep warnings from piling up.</p>
-<p>Flutter's own CI uses it too. runFlutterTest in dev/bots/utils.dart passes it by default, and the Mac_x64 builders were still running on beta and stable when I opened the PR. If the warning printed on every command as an ordinary warning, every build, run and test on an Intel host with that flag would fail. Under the old one-time version, only the run that happened to print it was exposed.</p>
-<p>The warning describes the machine, not the project, so it should inform and never fail a command on its own. The tool already had a precedent: the warning about a custom FLUTTER_STORAGE_BASE_URL download source in cache.dart is also printed with fatal: false.</p>
-<p>With the gate gone, shouldShowIntelMacWarning and its displayed-intel-warning-message key in PersistentToolState had no readers and no writers left. Neither did the private _persistentToolState getter and the import in flutter_command.dart. I removed all of it instead of leaving it around as state nobody uses: 19 lines out of persistent_tool_state.dart. _DefaultPersistentToolState is the only implementation of that interface, so nothing else needed to change. If the old key is already in your tool state file, it is simply never read again.</p>
-<p>The first review came within a minute, from gemini-code-assist, the AI reviewer that makes a first pass on Flutter pull requests. It marked .darwin_x64 in my test as a high priority compile error, saying Dart does not support a leading dot shorthand for enum values. That was wrong. Dot shorthands are valid from Dart 3.10, and the human review said so.</p>
-<p>On November 2, bkonyi reviewed it. He asked for two things: use the dot shorthand in the tool code too (_os.hostPlatform == .darwin_x64), and move the Intel Mac tests from testUsingContext to testWithoutContext, passing a FakeToolContext to the test command. Both were good calls. A test that gets its dependencies passed in explicitly is easier to read than one that depends on overrides of a global context. I moved all three Intel Mac tests, including the arm64 one, rebased on master to clear the merge conflicts, and pushed.</p>
-<p>On November 24, cbracken left the comment that turned a small change into a real fix. He had traced what happens in verbose mode, and found that fatal: false would not help there:</p>
-<p>So flutter -v build ... --fatal-warnings would still fail on an Intel Mac, and with my change it would fail on every run instead of only the first. He suggested changing that one line to match the other loggers.</p>
-<p>That line was necessary, but not enough. VerboseLogger is a DelegatingLogger: it wraps another logger, and its hadWarningOutput reads and writes the wrapped logger's value. After it formats a warning, it passes the text on in _emit, which called super.printWarning(...) without fatal. The default is true, so the wrapped StdoutLogger set hadWarningOutput anyway. Fixing only the first line would have moved the bug one layer down, not removed it.</p>
-<p>I pushed both fixes with tests for the -v case and explained the second path in my reply. bkonyi credited the catch to cbracken, said it "definitely wasn't intended behavior" and that the fix looked good, and approved. cbracken approved the same day. The auto-submit bot merged the PR on November 25 at 01:30 UTC, about 47 days after I opened it.</p>
-<p>The verbose logger bug was never about Intel Macs. Before this change, every warning the tool printed with fatal: false still counted toward --fatal-warnings when the tool ran with -v. At the merge commit, flutter_tools has four other printWarning calls marked fatal: false:</p>
-<p>That last one even carries a code comment describing the limitation: "Under -v, VerboseLogger still counts every warning, fatal or not." After #194071, that is no longer true, and verbose mode treats non-fatal warnings the same way the normal logger always did.</p>
-<p>Five tests cover the change, all with testWithoutContext:</p>
-<p>Before the first push, I reverted the two library files and ran the Intel tests again to watch them fail. A test that still passes without the fix is not testing the fix.</p>
-<p>The warning only makes sense next to the plan behind it. This is the strategy document's timeline in short. The dates are the plan's targets, not release promises.</p>
-<p>Apple's side sets the pace. The strategy document and Flutter's supported platforms page note that macOS Tahoe (26) is the last release for Intel Macs, macOS Golden Gate (27) requires Apple Silicon, and Xcode 27 does not support Intel machines. The strategy also says that by April 2027 you will likely no longer be able to develop iOS apps on Intel Macs, because of the App Store's minimum Xcode version, and that Apple is expected to remove Rosetta 2 in macOS 28.</p>
-<p>The document's own numbers explain why this is a phased plan and not a switch. About 3.5% of all Flutter developers, and about 13% of Flutter developers on a Mac, use an Intel machine. When it was written, 127 of the bots in Flutter's main CI pool were Intel and 244 were ARM.</p>
-<p>It prints 1 on Apple Silicon. On an Intel Mac it prints 0 or reports that the key is unknown. This is the same check the Flutter tool runs to decide whether you are on darwin_arm64 or darwin_x64.</p>
-<p>One trap: do not use uname -m for this. Inside a Rosetta terminal it reports the emulated architecture. I checked on my M1 Pro:</p>
-<p>So an Apple Silicon Mac running a Rosetta shell does not get the warning, because Flutter looks at the hardware, not the shell. For CI, put the sysctl line in a step of your macOS job and you will know which hardware your runners give you.</p>
-<p>If you ship a Flutter macOS app and are ready to drop Intel users, stable Flutter has had the switch since 3.47.0:</p>
-<p>With it on, release and profile macOS builds produce Apple Silicon binaries instead of universal ones. You can also set FLUTTER_MACOS_ARM64_ONLY=true in the environment, which applies when no config value is set. It is off by default in 3.50, and the tool's own help text says it will default to on in a future release, before Intel Mac support is discontinued. Check your users' hardware before you flip it: with the setting on, Intel Macs cannot run your release build.</p>
-<p>If you want the longer version of how I pick and land framework changes from Karachi, read my first contribution playbook. For everything of mine that shipped in the current release, see 13 of my commits in Flutter 3.50, and the full record is on my contributions page.</p>
-<p>The full version of this article, with the FAQ, sources and future updates, lives on my site: Once Was Easy to Miss: Flutter's Intel Mac Warning Now Prints on Every Command</p>
-<p>More Flutter deep dives: ishaqhassan.dev/blog</p>
-<p>Originally published at ishaqhassan.dev. I am a Flutter Framework Contributor with 16 technical PRs merged across Flutter and DevTools, listed in the official Flutter AUTHORS file, Engineering Manager at DigitalHire, and creator of the 35-video Urdu Flutter course listed on docs.flutter.dev. Karachi, Pakistan.</p>
+Edited on Nov 25
+•
+
+
+
+
+Fully Autonomous</p>
+<p>If you run a LangChain or LangGraph agent for hours, the first thing that changes around hour 6 is probably the size of its prompt. I wanted to see what that does to the bill and to the answers, so I ran one simulated 12-hour shift through five stacks and logged every model call.</p>
+<p>I build Argentic, an engine that keeps AI agents right for hours while prompt size is bounded. It is one of the five stacks, and it did not win on score. The numbers are below, with versions and dates.</p>
+<p>The shift is a bakery's operations desk. Over 12 simulated hours it has about 1,400 events: orders, price changes, stock counts, owner messages, standing instructions that get amended or revoked, and updates that contradict earlier ones. A fixed program with no model in the loop grades 663 questions about it. Every stack got the same seed, the same questions, the same grader and Claude Haiku 5.5, and each run had a spend cap.</p>
+<p>I ran the JavaScript packages, on 25 November 2026. Nothing was tuned. I haven't measured the Python versions.</p>
+<p>Haiku 5.5 bills a request at roughly five times the normal rate once its prompt passes 100K tokens. A loop that re-sends its history gets there eventually, and every call after that costs more.</p>
+<p>Deep Agents shows it cleanly. It finished all 12 hours, and over hours 1 to 5 it spent $0.29 in total, because prompt caching is on by default and the prompt stayed under 100K. From hour 6 on it spent between $1.10 and $1.60 an hour. Its prompt grew from 5.7K tokens to 279K, and 925 of its 1,450 calls went over 100K. The whole run cost $9.46.</p>
+<p>It never summarised anything. Deep Agents triggers summarisation at 85% of the model's context window, and the profile LangChain gives Haiku 5.5 says that window is 1M tokens, so the trigger sits at 850K. This run never reached it. If your model has a window that large, that default means your agent keeps its whole history for a very long time, and you pay for that in the tier.</p>
+<p>The plain LangChain loop hit its $5 cap in hour 6, at $5.09. It has no score over hours 1 to 8 because it was stopped.</p>
+<p>Spend is token usage at list prices, not an invoice. Over hours 1 to 8, which is 403 questions, the Agent SDK and Deep Agents scored higher than Argentic's whole range, by about 4.6 points over its mean. Letta sits at the top edge of that range, so I can't separate it from Argentic on these hours. The rivals ran once each, so their scores carry noise I haven't measured.</p>
+<p>So on this shift, Deep Agents kept its answers right by keeping everything in the prompt, and it cost about 12.6 times what Argentic did. Argentic cost less and scored lower. Which of those matters more depends on your agent and your budget.</p>
+<p>Argentic was also worse on one kind of question: running counts, 0.86 against 0.96 for the Agent SDK. The misses I traced came down to one question about open support tickets. The agent only keeps a tally for counts that the task prompt names, and mine named stock levels but not tickets. When I resent those requests, one sentence in the task prompt fixed it: "Keep a running count of open tickets with tally: +1 when one opens, -1 when it is resolved and closed." That was a resend test, not a full run, and I didn't archive its outputs, so treat it as something to repeat.</p>
+<p>You need the prompt size of every call. LangChain puts it on the response message as usage_metadata. This callback writes it to a file, one line per call:</p>
+<p>Pass it with config={"callbacks": [UsageLog()]} on your agent's invoke call. Check one call by hand to confirm that input_tokens includes cached tokens for your provider. Then summarise the file with jq:</p>
+<p>first_over is the call number where you first crossed 100K, and 0 means you never did. Other models price long prompts differently, so check your model's price page for a step like this before you trust any estimate.</p>
+<p>There are three common ways to do it. You can cap how much history you send, which is simple but forgets whatever you cut. You can add a summarising step, which keeps the gist but rewrites history, and details can degrade each time it runs. I didn't measure that loss here, because Deep Agents never reached its trigger. Or you can move long-lived facts out of the transcript and look them up when the agent needs them.</p>
+<p>Argentic takes the third route. It builds each prompt from a record of the run, under a size cap, so the prompt stays small without throwing the record away. Its largest prompt in this shift was 55K tokens, its median 37K, and none of its 1,487 calls passed 100K.</p>
+<p>It's one seed, and the benchmark's guide asks for at least three. Only Argentic has a range, from four runs. The rivals ran once each, and three of them were stopped by spend caps before the shift ended. The rivals ran on the Anthropic API and Argentic on a local copy of the hosted engine with Haiku 5.5 through AWS Bedrock. The rivals were a few patch releases behind the newest npm versions that day.</p>
+<p>The raw files for every run are on the page with a SHA-256 for each: the settings, the summary, every graded question, the log of every action the agent took, and every model call. https://getargentic.com/research/head-to-head/</p>
+<p>Argentic's own engine files, meaning its prompts and internal logs, aren't published. The benchmark publishes what the shift looked like from the outside.</p>
+<p>The benchmark, the scorer, a validator that reproduces each grade from its log, and the commands to rerun every arm are at https://github.com/open-haul/open-haul-bench (start with REPRODUCE.md). If you run it with your own setup and get different numbers, open an issue there. I'd like to see them.</p>
 <p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
 <p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
 <p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
 <p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/ishaquehassan/once-was-easy-to-miss-flutters-intel-mac-warning-now-prints-on-every-command-43l4" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/neilluo/what-happens-to-a-long-running-langchain-agent-after-hour-6-measured-on-five-stacks-2p9j" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

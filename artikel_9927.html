@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Where should your code live in a Docker Sandbox?</title>
+    <title>Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9927.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,43 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Where should your code live in a Docker Sandbox?</h1>
+        <h1>Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Where should your code live in a Docker Sandbox?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Where should your code live in a Docker Sandbox?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Giving an agent a sandbox also means deciding which files it will work on. You can share a checkout from your host, give it a separate working directory for a task, or keep the repository entirely inside the sandbox. Each arrangement changes how you, the human, participate in the work.</p>
-<p>You might want to watch the diff in your local editor and make changes alongside the agent, or give it room to manage several tasks while you review the results. sbx supports both. The way you organize the checkout can change as you ask the agent to take on more of the work.</p>
-<p>Sharing a checkout puts the agent in the working tree you already use. Run sbx run from your project directory, and it mounts that directory at the same absolute path inside the sandbox:</p>
-<p>Open a file in your local editor while the agent works on it, and you’ll see changes as they happen. Git works from either side, so you choose whether you want to let the agent make commits or you do it yourself. Development servers on your host can pick up the edits through hot reload, using the runtime and dependencies installed on your host.</p>
-<p>This fits close collaboration on one task. The coordination cost comes from sharing that working tree: switching branches changes the files the agent sees, and your edits become part of its ongoing work. If you want to switch to something unrelated while the agent continues, you’ll need another checkout.</p>
-<p>NOTE: Dependencies written into the shared checkout are shared too. Packages with native binaries, such as esbuild, may work in the Linux sandbox and fail on a macOS or Windows host. Reinstalling on the host can reverse the problem. Keep separate dependency installations, or run the app consistently in one environment.</p>
-<p>Git worktrees give each task a directory and branch. You can mount each worktree in its own sandbox, while your original checkout remains available for other work. The agent’s edits appear in the worktree. You can inspect either with your local editor and development tools. Each task also gets its own running environment, with tools to prepare and a sandbox and worktree to clean up afterward.</p>
-<p>There is a Git limitation with mounting only a linked worktree. Its .git file points to metadata outside the mount, which the agent can’t reach. It can edit files, but checking status, branching, and committing have to happen on the host. The future of software development still needs you to run git status.</p>
-<p>sbx supports a clone mode that gives the agent a separate checkout with Git available inside the sandbox. You keep your local project, but sbx mounts the host source as read-only and creates an independent clone for the agent. Its branch changes and dependency installations stay in its checkout.</p>
-<p>Bringing the result back becomes a handoff. While the sandbox is running, you can fetch committed branches through the Git remote sbx adds on your host. Or the agent can push to the repository’s remote and you can retrieve the branch through your usual Git workflow. Your local editor and development server see the changes after you bring them into your checkout.</p>
-<p>A mountless sandbox has no host workspace directory attached. Clone the repository inside it, and the sandbox holds the checkout and its development environment. Your host copy of the project shares no connection with the sandbox checkout.</p>
-<p>This workflow resembles working on a remote development machine. Agents connect to the project environment, and you can open a shell with sbx exec or connect an editor to the sandbox over SSH. Changes and dependency installations stay separate from your host. To bring work back, you push a branch to the Git remote.</p>
-<p>One sandbox per project can be a useful mental model here. The project and its tools persist across agent sessions and sandbox restarts. An agent can create worktrees per feature it’s working on, push branches, and create pull requests for review. Starting another task doesn’t require you to prepare another host worktree and sandbox, and the agent has Git access in each working directory. Clone mode supports this internal-worktree approach too.</p>
-<p>Those tasks share tools and services, so running servers or changing the environment still needs coordination. Separate sandboxes are useful when tasks need independent environments as well as separate files. Branches alone don’t isolate simultaneous edits in one working directory.</p>
-<p>That independence adds some distance when you want to try the result. Your usual local editor isn’t looking at these files, and a development server running inside the sandbox needs a published port to reach it from your browser.</p>
-<p>Start the development server on port 8080, bound to 0.0.0.0.</p>
-<p>Then publish the port from another terminal on the host:</p>
-<p>Open http://localhost:8080 in your browser. It’s possible to work interactively this way, but there’s more ceremony than opening a project already on your filesystem.</p>
-<p>An environment file can make setup repeatable, selecting tools and cloning the repository at creation with something like the community github-clone kit. Recreating the sandbox then gives you a fresh environment. Push or copy out work you want to retain first: removing a sandbox deletes files held only there.</p>
-<p>An API change might need a corresponding frontend change, or another repository might provide useful reference material. You can mount several directories into one sandbox, with read-only access for reference repositories. Local editing and previews remain available, but each writable checkout needs branch and change coordination. Task-specific checkouts also leave directories to clean up afterward.</p>
-<p>A workspace manager such as jganoff/wsp can assemble selected repositories for a task. Mounting that workspace gives the agent the projects it needs together. These are standard clones with their own Git metadata, so the agent retains Git access, unlike a mounted linked worktree.</p>
-<p>The same scope fits inside a mountless sandbox: clone the repositories needed there and keep the whole workspace in the sandbox. The number of repositories and where their files live are separate choices.</p>
-<p>The checkout’s location, the sandbox’s lifetime, and the repositories it contains are choices you can combine. You can keep a project sandbox around for many tasks, or mount a workspace assembled for one job. What suits you may change when you want to work more closely with the agent, or give it more room to manage the work itself.</p>
-<p>The Git workflows documentation covers the mechanics of direct mounts, clone mode, and host worktrees.</p>
+                <p>A coding agent in Docker Sandboxes runs inside an isolated VM, the sandbox controls which hosts it can reach, and credentials stay on the host behind a proxy. The same controls keep the agent from opening a docs page, reading a changelog, or looking up an API that shipped after its training cutoff, so it writes code against the version it remembers. The usual fix is to widen the allowlist until the agent can fetch anything, which hands back most of what the sandbox took away.</p>
+<p>The Firecrawl kit gives the agent web search, page scraping, and site crawling through one added host, api.firecrawl.dev, and every page comes back as clean markdown.</p>
+<p>The Firecrawl kit is a mixin (kind: mixin): it extends whichever workload you already run rather than defining a new sandbox. Its descriptor, firecrawl/firecrawl.yaml, declares four typed capabilities:</p>
+<p>The kit adds to the sandbox’s allowlist and does not narrow it, so everything else is set by your global sbx policy. Docker’s balanced preset allows package registries, GitHub, and a curated list of vendor domains, and returns a 403 for general websites, including most documentation sites, so Firecrawl is the agent’s route to those. Under deny-all, it is the agent’s only web host.</p>
+<p>Kits are experimental and in Early Access, so the kit format and sbx commands may change. The steps below are current for October 2026; the repository README carries the latest.</p>
+<p>Kit: docker.io/firecrawl/sbx-kit-firecrawl:1.0.0 on Docker Hub, for linux/amd64 and linux/arm64. Source: github.com/firecrawl/firecrawl-docker-sandbox.</p>
+<p>1. Store the key once on the host. The command prompts for the key. Service secrets are global by default, so every sandbox that requests the firecrawl service can use it once you approve. The kit never sees the value; the proxy injects it at request time.</p>
+<p>2. Start a sandbox with the kit. The kit is an ordinary OCI image with its descriptor in the manifest, so a version tag is all you need. Each --kit adds a mixin to the workload, and the trailing . mounts your project directory.</p>
+<p>On the first run, sbx asks you to approve sending the firecrawl credential to api.firecrawl.dev. Accept the defaults. The credential is required: with no secret stored, sbx refuses to create the sandbox instead of letting the agent hit a 401 mid-task. A detached or CI run cannot answer the approval prompt, so approve interactively once or write the binding to ~/.config/sbx/credentials.yaml first.</p>
+<p>3. Give the agent a task that needs the live web. Documentation sites are blocked under balanced, so this one has to go through Firecrawl.</p>
+<p>The kit’s instructions tell the agent to scrape blocked hosts through Firecrawl, so it calls fc.scrape(...) unprompted. Its response, trimmed:</p>
+<p>4. Verify each layer. In the same session, ! runs shell commands inside the sandbox.</p>
+<p>Expected: FIRECRAWL_API_KEY=proxy-managed. A real fc-... value here means the key came from somewhere other than the kit.</p>
+<p>Expected: the page as markdown, starting with # Changelog and the latest version heading. The same URL returns a 403 to curl from inside the sandbox, so output here proves the SDK, the credential, and the network rule at once.</p>
+<p>The kit also describes itself inside the sandbox. This prints the published descriptor, and the agent instructions sit next to it as firecrawl-context.md:</p>
+<p>Running from source. To review or modify the kit before you run it, clone the repository and point --kit at the firecrawl/ directory; sbx builds source kits on demand:</p>
+<p>With the kit installed, the agent can look things up on the web while it works. The sandbox only needs to talk to one new address, api.firecrawl.dev, and Firecrawl fetches the pages for it. This matters because the default balanced policy blocks most documentation sites. Without the kit, you’d have to allow each site one by one, and every new site you allow makes the sandbox a little less locked down.</p>
+<p>Without the kit, you had a choice to make. The default balanced policy blocks most documentation sites, so you could either leave the agent working from what it remembered, or allow sites one by one and loosen the sandbox a little each time. The kit avoids that choice. Your Firecrawl API key stays on your machine, behind the proxy, and the agent still reads the web as it is today.</p>
+<p>The result is fewer made-up APIs, fewer failed upgrades, and less time spent correcting an agent that was confidently out of date.</p>
+<p>The kit is published under the firecrawl organization on Docker Hub as firecrawl/sbx-kit-firecrawl, with source, changelog, and CI on GitHub under Apache-2.0. The SDK pin is verified against PyPI’s package hashes at install time, and every release passes Docker’s kit-tck conformance suite in CI. Review the descriptor and allowlist before running it, as with any kit.</p>
+<p>Pull the kit from Docker Hub: hub.docker.com/r/firecrawl/sbx-kit-firecrawl. Issues and feature requests go to the GitHub repository.</p>
 <p>Docker launches a new brand built on trust. Learn why Docker is evolving for AI agents, what stays the same, and how to run agents securely with Docker.</p>
 <p>Docker publishes fixed images for both Java4Shell and the NGINX HTTP/2 in the Docker Hardened Images (DHI) catalog.</p>
 <p>Learn how Docker AI Governance secures agentic AI with sandbox policies, MCP tool governance, and audit visibility to support controlled AI agent workflows.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.docker.com/blog/docker-sandbox-code-checkout-workflows/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.docker.com/blog/docker-sandboxes-firecrawl-web-access/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

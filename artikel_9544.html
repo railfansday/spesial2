@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notely</title>
+    <title>Q4_K_M vs Q5_K_M vs Q8_0: which GGUF quant should you use?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9544.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,61 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Notely</h1>
+        <h1>Q4_K_M vs Q5_K_M vs Q8_0: which GGUF quant should you use?</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F3xgd7axwqxzm0ki9zvyy.png" alt="Q4_K_M vs Q5_K_M vs Q8_0: which GGUF quant should you use?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F3xgd7axwqxzm0ki9zvyy.png" alt="Q4_K_M vs Q5_K_M vs Q8_0: which GGUF quant should you use?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Notion-grade power & BYOK AI, stored locally in SQLite
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/notely-8?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1329844?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 25
+•
+Originally published at nodus-compute.ai</p>
+<p>Use Q4_K_M unless your memory budget clearly fits something bigger: llama.cpp's published figures put it at 4.89 bits per weight on Llama 3.1 8B and +0.1754 perplexity on Llama-3-8B, against +0.0569 for Q5_K_M and +0.0026 for Q8_0. On Nodus you can test the quant on the GPU you plan to serve it on, with an RTX 4090 listed at $0.29/hr and an A100 80 GB at $1.09/hr on the Nodus pricing page. Step up to Q5_K_M or Q6_K when the file plus your context still fits, and treat Q3 and Q2 quants as a last resort.</p>
+<p>The number is the bit width of most weights, the letter after it is the quantization family, and the suffix is the mix. Q8_0 and Q4_0 are the older "legacy" formats. The Hugging Face GGUF docs describe them as round-to-nearest quantization in blocks of 32 weights, each block with one scale, and note they are "not used widely as of today".</p>
+<p>The _K types are k-quants, added to llama.cpp in pull request #1684. They group weights into super-blocks of 256 and store a small scale (and for some types a minimum) per sub-block. Per the Hugging Face table, that gives the base Q4_K type 4.5 bits per weight, Q5_K 5.5, Q6_K 6.5625 and Q2_K 2.625. Q8_0 is still the common 8-bit choice because at 8 bits the simple scheme is already close to lossless.</p>
+<p>A file named Q4_K_M is never 4.5 bits everywhere. It is a recipe that keeps some tensors at higher precision, which is why the llama.cpp quantize README measures Q4_K_M at 4.8944 bits per weight on Llama 3.1 8B.</p>
+<p>_S, _M and _L mean small, medium and large: how many sensitive tensors get promoted to a higher-bit type. The rules live in src/llama-quant.cpp, and they are short enough to summarize.</p>
+<p>In Q4_K_M, the attention value (attn_v) and feed-forward down projection (ffn_down) tensors are stored as Q6_K in roughly half the layers: the first eighth, the last eighth and every third layer in between. Everything else stays Q4_K.</p>
+<p>Q4_K_S only promotes ffn_down to Q5_K in the first eighth of layers and attn_v in the first four. Q5_K_M follows the same pattern as Q4_K_M, with Q6_K on top of a Q5_K base. _L exists only for Q3 (Q3_K_L), where it pushes those tensors to Q5_K.</p>
+<p>The cost of _M over _S is small. On Llama 3.1 8B the README lists Q4_K_S at 4.36 GiB and Q4_K_M at 4.58 GiB, about 5% more. The quantize tool's own table lists the perplexity increase falling from +0.2689 to +0.1754 for that step. If you can afford the extra 0.22 GiB, take the _M.</p>
+<p>Less than most people expect down to 4 bits, and a lot below 3. The table combines the two figures llama.cpp publishes: bits per weight and file size from the README benchmark on Llama 3.1 8B, and the perplexity change listed in quantize.cpp, measured on Llama-3-8B. Perplexity is how surprised the model is by held-out text, so a bigger increase means more damage.</p>
+<p>Sources: llama.cpp quantize README and quantize.cpp, checked November 25, 2026.</p>
+<p>Damage grows slowly down to Q4_K_M, then jumps: Q2_K adds 20 times the perplexity of Q4_K_M.</p>
+<p>Two things stand out. Q4_0 is nearly the same size as Q4_K_S but adds 0.4685 to perplexity instead of 0.2689, so there is little reason to pick it for a new file. And the curve is not linear: going from Q4_K_M to Q3_K_M saves under 0.9 bits per weight and almost quadruples the loss.</p>
+<p>Perplexity is one number on one model. It does not tell you how a quant handles your tool calls or your language. Treat these figures as the ranking and your own eval as the verdict.</p>
+<p>File size is parameters times bits per weight divided by 8. The README gives the inputs: Llama 3.1 8B is 32.1 GB at F32 (4 bytes per weight), so 32.1 / 4 = 8.03 billion weights. Llama 3.1 70B is 280.9 GB at F32, so 280.9 / 4 = 70.2 billion.</p>
+<p>For the 8B at Q4_K_M: 8.03B x 4.8944 / 8 = 4.91 GB. The README's 4.58 GiB is 4.92 GB, so the formula holds. For the 70B at Q4_K_M: 70.2B x 4.8944 / 8 = 42.9 GB, against 43.1 GB in the README's own memory table. The 70B mix differs slightly from the 8B one, so treat the other 70B rows as close estimates.</p>
+<p>A 70B at Q4_K_M is 42.9 GB, under a third of the 140.4 GB F16 file.</p>
+<p>The same arithmetic for the 70B gives 27.7 GB at Q2_K, 35.1 GB at Q3_K_M, 41.0 GB at Q4_K_S, 50.0 GB at Q5_K_M, 57.6 GB at Q6_K, 74.6 GB at Q8_0 and 140.4 GB at F16. For the 8B: 3.17, 4.01, 4.68, 5.72, 6.59, 8.53 and 16.06 GB.</p>
+<p>The file is not the whole bill, because the KV cache grows with context.</p>
+<p>Both Llama configs use 8 KV heads of 128 dimensions, with 32 layers in the 8B and 80 in the 70B. At 16 bits that is 2 x 32 x 8 x 128 x 2 = 131,072 bytes per token for the 8B and 2 x 80 x 8 x 128 x 2 = 327,680 bytes for the 70B. An 8,192-token context adds 1.07 GB and 2.68 GB respectively.</p>
+<p>Our rule: take the largest quant whose file plus the KV cache for your real context fits, with room left for compute buffers. If two quants fit, take the larger one. The table applies that rule at an 8,192-token context using the numbers above.</p>
+<p>Longer contexts shift every row down. At 32,768 tokens the 70B cache alone is 10.7 GB, which pushes a 48 GB card from Q4_K_M to Q3_K_M. For which models fit on common consumer cards, see which LLMs fit in 8, 16 or 24 GB, and for the 70B case in detail, how much VRAM a 70B model needs.</p>
+<p>Q4_K_M wins as the default for chat and agents on a fixed memory budget. It is under a third of F16 and the curve is still flat at that point.</p>
+<p>Q5_K_M and Q6_K win when the larger file fits with your context. They cut the perplexity increase to +0.0569 and +0.0217, a cheap upgrade if you have 1 to 2 GB to spare on an 8B.</p>
+<p>Q8_0 wins as the reference copy. At +0.0026 it is effectively the original model, so when a fine-tune behaves badly, compare against Q8_0 first to learn whether training or quantization caused it.</p>
+<p>F16 or BF16 wins as the master file you quantize from. The README warns that requantizing an already-quantized file "can severely reduce quality". Keep the 16-bit GGUF and make every other quant from it.</p>
+<p>Speed is a smaller factor than people assume. In the README benchmark on Llama 3.1 8B, text generation ran at 71.93 tokens per second on Q4_K_M, 67.23 on Q5_K_M, 58.67 on Q6_K, 50.93 on Q8_0 and 29.17 on F16. The README does not say which machine produced these, so read them as relative.</p>
+<p>Smaller files usually generate faster, because generating each token means reading the weights from memory.</p>
+<p>Almost always. Q2_K adds +3.5199 perplexity on Llama-3-8B, 20 times Q4_K_M, to save about 1.7 GB on an 8B. If a model only fits at Q2_K, a smaller model at Q4_K_M or Q5_K_M is usually the better trade. Q3_K_M is defensible when it is the only way a 70B fits and you have tested it on your task.</p>
+<p>Below 4 bits, use an importance matrix. The README says accuracy loss "can be minimized by using a suitable imatrix file", which llama-quantize takes through --imatrix.</p>
+<p>Convert once to a 16-bit GGUF, then quantize that file as many times as you like. These commands are copied from the llama.cpp quantize README:</p>
+<p>Swap the last argument for Q5_K_M, Q6_K or Q8_0 to get the other files. Plan for memory and disk: the README says the input is loaded fully into memory and gives 280.9 GB for an F32 70B. If you do not want to install anything, the README also points to the GGUF-my-repo space on Hugging Face.</p>
+<p>Quantizing is not where the GPU money goes. When we wrote our guide to fine-tuning a model for Ollama, llama.cpp conversion and quantization of our small test model ran on CPU only. That post covers the full export path, so we will not repeat it here.</p>
+<p>The GPU time is in two places: training the model and checking the quant. Nodus runs fine-tunes as TrainingJobs on the cheapest capacity that will finish them, with checkpoints and recovery if a machine is lost.</p>
+<p>When a Job names a 7B or 8B model, the Nodus Jobs guide sets a default memory floor of 24Gi, enough for a LoRA or QLoRA run. Checking the quant is a short Job on the hardware you will serve on: an hour on an RTX 4090 is listed at $0.29 on the Nodus pricing page, and an A100 80 GB, enough for a 70B at Q6_K with room for context, at $1.09. If the model will serve many users rather than one, compare llama.cpp with a server built for batching in vLLM vs Ollama.</p>
+<p>For many models it is the common default, and llama.cpp's figures show only +0.1754 perplexity on Llama-3-8B. Code and tool calling punish small errors, so if you have the memory, run your own coding eval on Q4_K_M and Q6_K and keep the smaller one only if it scores the same.</p>
+<p>No. Q8_0 is a GGUF format for llama.cpp with one scale per 32 weights, while FP8 or bitsandbytes 8-bit are different formats for different runtimes. A Q8_0 file only loads in GGUF-compatible tools such as llama.cpp and Ollama.</p>
+<p>IQ types such as IQ4_XS (4.4597 bits per weight in the README) use an importance matrix, per the Hugging Face GGUF docs, and the family reaches down to about 2 bits. They make most sense below 4 bits. At 4 bits and above, the K-quants are the simpler default.</p>
+<p>Yes. Run the fine-tune as a TrainingJob on Nodus, download the weights it writes, merge any adapter, then convert and quantize with llama.cpp as shown above. Our Ollama export guide walks through that path.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/notely-8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/viswaretas_kotra/q4km-vs-q5km-vs-q80-which-gguf-quant-should-you-use-49k6" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

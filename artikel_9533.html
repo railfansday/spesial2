@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CocoaPods freezes on December 2. Here&#x27;s the SwiftPM migration checklist I&#x27;d run first.</title>
+    <title>Beyond the Pilot: Making AI Deliver Real Business Value</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9533.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,62 +15,89 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>CocoaPods freezes on December 2. Here&#x27;s the SwiftPM migration checklist I&#x27;d run first.</h1>
+        <h1>Beyond the Pilot: Making AI Deliver Real Business Value</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fa7tvuus4d0msdbopqz5t.png" alt="CocoaPods freezes on December 2. Here&#x27;s the SwiftPM migration checklist I&#x27;d run first." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://hackernoon.imgix.net/images/qSbkT3XxLTXUoDSpldEaf68llNl1-0f83vy9.jpeg" alt="Beyond the Pilot: Making AI Deliver Real Business Value" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fa7tvuus4d0msdbopqz5t.png" alt="CocoaPods freezes on December 2. Here's the SwiftPM migration checklist I'd run first." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/qSbkT3XxLTXUoDSpldEaf68llNl1-0f83vy9.jpeg" alt="Beyond the Pilot: Making AI Deliver Real Business Value" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 25
-•
-Originally published at Medium</p>
-<p>Trunk goes read-only on 2 December 2026. Existing builds keep working, but the pods behind them stop getting updates. Here is how to list yours and plan the move to Swift Package Manager, for native iOS, Flutter and React Native.</p>
-<p>Run this in the folder that holds your Podfile.lock. The shell blocks in this post are written for bash.</p>
-<p>Every name it prints is a pod your app pulls from CocoaPods trunk. From Wednesday 2 December 2026, trunk stops accepting new pods and new versions. Your builds won't break that day, but those names are the dependencies that stop getting updates, so this CocoaPods to SwiftPM checklist starts with that list.</p>
-<p>It covers native iOS, Flutter and React Native, and it says where each one stands today. Every date and command traces to an official page listed at the end. This is a plan built from those pages, and I haven't run it on a real migration.</p>
-<p>The CocoaPods team's read-only plan puts the permanent switch on 2 December 2026 and says any new podspec will be denied at the server level. It also planned a test run of the same behavior for 2 to 6 November.</p>
-<p>CocoaPods itself is in maintenance mode too. The team's support plan aims for at least two releases a year to keep up with Xcode, and says there is no plan for new features.</p>
-<p>My read is that 2 December starts a clock. The first real problem is a pod that needs a fix for a new Xcode or a security issue and has no way to ship it. The CocoaPods post does say the dates aren't set in stone, but Swift.org and the Flutter docs both quote 2 December, so plan for that date.</p>
-<p>The command at the top lists trunk pods. If it prints nothing, open Podfile.lock and look under SPEC REPOS. This command only reads the entry named trunk. Pods installed with :git, :path or :podspec show up under EXTERNAL SOURCES in the same file. They don't depend on trunk, but they do depend on CocoaPods, so write them down too.</p>
-<p>Next, find out which of those already work with SwiftPM. Swift.org's post says most maintained pods are already SwiftPM compatible, and that the easiest check is the Swift Package Index, since every package in it is a SwiftPM package. Search each name there. To script a first pass, this reads each pod's source repository from its podspec and asks GitHub whether a Package.swift sits in the repository root.</p>
-<p>A 200 means the default branch has a manifest, which tells you nothing about releases. Pods hosted outside GitHub, or with a name pod spec cat can't match as a regex, are listed under 'check by hand'. SwiftPM's docs expect a Package.swift in the root of the repository and a tag that is a full semantic version with major, minor and patch numbers, and they warn that a tag like 1.0 isn't recognized, so tag releases as 1.0.0.</p>
-<p>Put the result in a file in your repo with one row per pod and a yes or no for Package.swift. For the pods that say no, add a note on whether a SwiftPM alternative exists. The pods with neither are what the last section is for.</p>
-<p>I haven't run the Xcode or iOS build steps in this post on a Mac. The menu names, flags and commands come from the official docs, starting with Apple's here, and Flutter's and React Native's later on.</p>
-<p>Flutter's docs say that as of the 3.44 release, Flutter uses Swift Package Manager for iOS and macOS native dependencies, that CocoaPods stays supported in maintenance mode, and that the CocoaPods registry becomes read-only on 2 December 2026.</p>
-<p>Upgrading and running your app adds the SwiftPM integration for you. Flutter falls back to CocoaPods for any dependency that doesn't support SwiftPM yet. To confirm the integration in Xcode, run the app and check that the Run Prepare Flutter Framework Script pre-action ran and that FlutterGeneratedPluginSwiftPackage is a target dependency.</p>
-<p>The Flutter tool decides per plugin by looking for a manifest at ios/<plugin_name>/Package.swift (or the macOS or darwin equivalent), which is the layout the plugin docs describe. This lists which of your plugins have one:</p>
-<p>Don't remove CocoaPods until every plugin in your app reports SwiftPM. The docs say Flutter falls back to CocoaPods if any dependency lacks SwiftPM support, and that edits you made to the Podfile beyond Flutter plugins have to be removed by hand. When you're ready, the docs give these steps:</p>
-<p>If a plugin needs a higher iOS version than your app, Xcode reports a Target Integrity error. Raise your Minimum Deployments, then run flutter build ios --config-only to regenerate the configuration.</p>
-<p>To turn SwiftPM off, which Flutter says not to do in general, use one of these two. The docs add that disabling it won't be allowed in the future, and that SwiftPM stays integrated in your project when you do.</p>
-<p>To undo the first one, run flutter config --enable-swift-package-manager. Flutter prints a warning each time it runs with SwiftPM off: "Enabling Swift Package Manager will be required in a future version of Flutter."</p>
-<p>If you maintain a plugin, the plugin author guide has the full steps. In short, add ios/<plugin_name>/Package.swift with a dependency on FlutterFramework, move your sources under Sources/<plugin_name>, set the pubspec to sdk: ^3.11.0 and flutter: ">=3.41.0", and point the podspec at the new paths. Flutter asks plugins to support both SwiftPM and CocoaPods until further notice, because as of 3.44 a plugin that drops CocoaPods can't be used by projects that haven't migrated.</p>
-<p>React Native 0.87, announced on 11 August 2026, added experimental SwiftPM support for iOS. The post says it is opt-in and additive, that CocoaPods remains the default and supported path, and that the commands, flags and generated layout may change. Its last known-limitations line reads "Do not use it in production yet."</p>
-<p>React Native 0.88, announced on 19 October 2026, says SwiftPM support remains experimental and opt-in while CocoaPods remains fully supported. It also states the plan: 0.89 targets SwiftPM as the default with an opt-out for apps that are still blocked, and a later release removes CocoaPods support. No date is given for that removal. The open RFC says existing apps should not need to migrate immediately.</p>
-<p>So here is what is and isn't true today. The official environment setup page still lists CocoaPods as a requirement, and the existing-app guide still installs React Native with bundle exec pod install. SwiftPM is available behind a command, and React Native itself says not to ship it yet.</p>
-<p>In August 2024 the CocoaPods maintainer wrote that for React Native a read-only trunk could be fine as it is, because most of its libraries come through npm and not trunk. React Native's own rn-tester app fits that picture: its Podfile.lock lists two pods under trunk, OCMock and SocketRocket. Your app's lock file settles it for you, so run the command at the top of this post.</p>
-<p>The 0.87 post says a community library must ship a Package.swift, and tells you to generate one from the podspec if it doesn't. The RFC adds that a library with its own manifest, in its root or in ios/, is detected automatically. This lists your libraries that have a podspec but no manifest:</p>
-<p>The react-native package itself will appear in the list. Ignore it: the core is handled by React Native's own SwiftPM path.</p>
-<p>If you want to try the SwiftPM path, do it on a branch. These are the commands from the 0.87 post. Run them from ios/, one at a time, depending on what you need.</p>
-<p>To move an app off CocoaPods (removes CocoaPods from the project and injects Swift package references):</p>
-<p>To reverse the injection, run npx react-native spm deinit. For a library that only has a podspec, run npx react-native spm scaffold from the app root or from ios/. The file is written into the library's folder in node_modules, so keep it with patch-package until the library ships its own. That command can fail: on async-storage 3.1.1 it stopped with an error that the library mixes Swift and Objective-C, which Swift Package Manager cannot compile in a single target. After a fresh clone and in CI, run npx react-native spm, the analog of pod install.</p>
-<p>The 0.87 post says the command injects package references into your existing .xcodeproj and leaves signing, capabilities and build phases alone. To go back to CocoaPods after --deintegrate, the RFC says to restore the Podfile from git and run pod install. One breaking change to check for: React Native headers imported without a namespace need one, so #import <RCTAppDelegate.h> becomes #import <React/RCTAppDelegate.h>.</p>
-<p>My position is that most React Native teams should run the inventory this week, try the SwiftPM path on a branch, and keep shipping on CocoaPods until React Native's own docs stop recommending it. Pods already published to trunk keep installing, so nothing forces your hand on 2 December.</p>
-<p>Some of the names from step 1 will have no Package.swift and no sign of getting one. You have five options, and I'd go in this order.</p>
-<p>Replace it. Swift.org suggests searching for an alternative so you don't end up with an unmaintained dependency. If the pod is abandoned anyway, this is the cheapest fix.</p>
-<p>Keep it on CocoaPods at the version you have. Podfile.lock pins the exact version, and the CocoaPods guide says pod install keeps installing that version unless you update it. If you need the pod to stop depending on trunk, point the Podfile at a Git tag or a local path. The podspec has to sit in that repository's root or folder.</p>
-<p>Fork it and add a Package.swift. Put the manifest in the root of your fork and tag a release with a full three-number version, then add the fork's URL in Xcode like any other package. SwiftPM's docs say that is what it expects. A Swift-only pod can be this small. For C or Objective-C sources, SwiftPM's docs say public headers go in a directory commonly named include.</p>
-<p>Use a binary target. If the vendor ships an XCFramework, or you can build one, wrap it in a package. Apple's docs say a binary target has to match the artifact's module name, a hosted one needs a ZIP with the XCFramework in its root plus a checksum, and binary targets only work on Apple platforms.</p>
-<p>In your own manifest, use the value compute-checksum printed for the ZIP you host. For a framework that lives in your own repository, .binaryTarget(name:path:) takes the path to the XCFramework and needs no checksum.</p>
-<p>Vendor it into a local package. Copy the source into a local Swift package in your repo, add a manifest, and add the package to your target. Apple's local packages guide shows File > New > Package, then adding the library product under Frameworks, Libraries, and Embedded Content. Check the license before you copy anything.</p>
-<p>If you only have time for one thing before 2 December, run the first command and commit the list with a Package.swift yes or no beside each name.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>Senior Architect with 16+ years in cloud, AI, trading systems.</p>
+<p>Senior Architect with 16+ years in cloud, AI, trading systems.</p>
+<p>Senior Architect with 16+ years in cloud, AI, trading systems.</p>
+<p>For the last two years, every boardroom conversation has sounded the same: What’s our AI strategy?</p>
+<p>I’ve sat in those meetings. I’ve watched leadership teams proudly showcase chatbot demos, predictive dashboards, and “AI-powered” workflows during quarterly reviews. I’ve also watched many of those same projects quietly disappear six months later—stuck in endless proof-of-concept mode, disconnected from operations, or producing results nobody trusted enough to use.</p>
+<p>That’s the uncomfortable reality of enterprise AI right now.</p>
+<p>Most companies are no longer asking whether AI matters. They already know it does. The real challenge is figuring out how to move beyond experimentation and make AI generate measurable business value consistently, responsibly, and at scale.</p>
+<p>And from what I’ve seen working with IT leaders, operations teams, and digital transformation initiatives, the gap between “AI excitement” and “AI impact” usually comes down to one thing:</p>
+<p>The organizations winning with AI today are not necessarily the ones with the biggest budgets or the flashiest demos. They are the ones treating AI like an operational capability instead of a side experiment.</p>
+<p>The modern enterprise is full of AI pilots.</p>
+<p>A customer support assistant gets tested in one region. A predictive maintenance model runs inside one factory. HR experiments with AI-generated job descriptions. Finance automates invoice classification for a small business unit.</p>
+<p>At first, these projects look successful. Productivity improves. Teams get excited. Leadership announces innovation milestones.</p>
+<p>Scaling becomes harder than expected because the underlying systems were never designed for AI-driven operations. Data is inconsistent. Security teams push back. Governance policies are unclear. Employees stop trusting outputs after a few bad recommendations. Suddenly, the “transformational” initiative becomes another isolated tool nobody fully adopts.</p>
+<p>I’ve seen enterprises with dozens of AI pilots and almost no enterprise-wide value creation.</p>
+<p>The problem isn’t ambition. It’s architecture.</p>
+<p>AI doesn’t magically fix operational complexity. In many cases, it exposes how fragmented organizations already are.</p>
+<p>Despite the hype cycles, AI is producing real business outcomes today. But the most successful use cases are surprisingly practical.</p>
+<p>They aren’t futuristic humanoid robots replacing entire departments overnight.</p>
+<p>They are focused, operational improvements tied directly to measurable business metrics.</p>
+<p>The strongest AI implementations usually start with repetitive workflows.</p>
+<p>IT service management is a good example. AI-driven ticket classification, incident summarization, and knowledge retrieval are reducing response times dramatically. Teams spend less time routing requests manually and more time solving complex issues.</p>
+<p>The same pattern exists across finance, HR, procurement, and customer operations.</p>
+<p>None of these use cases sound revolutionary individually. But collectively, they create something far more important: operational efficiency at scale.</p>
+<p>One trend I didn’t fully appreciate until recently is how AI is shifting from automation into decision augmentation. This is where the technology becomes genuinely transformative. Instead of simply executing tasks faster, AI helps organizations make better decisions under uncertainty.</p>
+<p>Retail companies are using AI models to optimize inventory forecasting. Healthcare systems are prioritizing patient interventions using predictive risk analysis. Logistics organizations are rerouting supply chains dynamically based on disruptions, weather conditions, and demand signals.</p>
+<p>The important distinction here is subtle but critical:</p>
+<p>It’s improving the quality and speed of decisions humans make.</p>
+<p>That distinction matters because the most effective organizations are designing collaborative systems where human expertise and machine intelligence complement each other.</p>
+<p>One of the clearest indicators that AI is moving beyond experimentation is how deeply it’s embedding itself into customer experience operations. Customers increasingly expect personalization, instant responses, and contextual interactions as baseline capabilities. AI-powered recommendation engines, conversational support systems, and intent analysis tools are now central to digital engagement strategies.</p>
+<p>But here’s the nuance many organizations miss:</p>
+<p>Customers do not care whether an interaction uses AI. They care whether it feels useful, fast, and accurate. I’ve seen companies overinvest in “human-like AI experiences” while ignoring fundamental workflow issues causing customer frustration. Meanwhile, competitors using simpler automation strategically achieve far better outcomes.</p>
+<p>AI succeeds when it improves experiences invisibly.</p>
+<p>Every successful AI initiative eventually runs into the same wall: data quality.</p>
+<p>This remains the single biggest blocker to enterprise-scale AI adoption.</p>
+<p>Organizations often underestimate how fragmented their data ecosystems really are until AI systems begin depending on them. Different departments maintain inconsistent definitions. Legacy systems store incomplete records. Critical information exists inside PDFs, emails, spreadsheets, and disconnected applications.</p>
+<p>AI magnifies these inconsistencies quickly. A chatbot trained on outdated policies becomes unreliable. Predictive models fail because operational data lacks standardization. Recommendation systems generate irrelevant outputs because customer profiles are incomplete. This is why mature organizations are investing heavily in data governance before aggressively scaling AI initiatives.</p>
+<p>The reality is that AI maturity is increasingly inseparable from data maturity.</p>
+<p>Companies that spent years modernizing cloud infrastructure, standardizing data pipelines, and building governance frameworks are now moving faster than competitors trying to “bolt AI on” afterward.</p>
+<p>There’s another challenge IT leaders rarely discuss publicly: most enterprise infrastructure still isn’t designed for AI workloads.</p>
+<p>Many organizations operate hybrid environments stitched together over decades. Critical business logic lives inside aging ERP systems. Data moves through brittle integrations. Security policies vary across environments.</p>
+<p>Introducing AI into that ecosystem creates enormous complexity.</p>
+<p>And unlike traditional software deployments, AI systems evolve continuously. Models drift. Data changes. Outputs require validation.</p>
+<p>That’s why infrastructure modernization is becoming tightly linked to AI strategy. Cloud-native architectures, unified data platforms, and scalable integration frameworks are no longer “future improvements.” They are prerequisites for sustainable AI deployment.</p>
+<p>Another issue surfacing everywhere is the AI talent shortage. And contrary to popular belief, the biggest shortage isn’t necessarily data scientists. It’s people who understand both business operations and AI implementation realities.</p>
+<p>Technical teams often build models without understanding operational workflows. Business leaders push AI initiatives without understanding technical limitations. The organizations making real progress are building cross-functional AI teams where IT, operations, compliance, and business stakeholders collaborate continuously.</p>
+<p>That operational integration matters more than pure technical sophistication.</p>
+<p>In fact, some of the most successful AI programs I’ve seen rely less on cutting-edge algorithms and more on disciplined change management, employee training, and process redesign. Because AI transformation is ultimately organizational transformation.</p>
+<p>Early AI experimentation allowed organizations to move fast with limited oversight.</p>
+<p>As AI systems become embedded into customer interactions, hiring workflows, financial operations, and decision-making processes, governance is becoming a board-level concern.</p>
+<p>The speed of AI adoption has outpaced governance maturity in many organizations. Teams rushed into implementation before defining accountability structures or risk management frameworks. The smartest IT leaders I know are approaching governance not as a restriction, but as an enabler of scale.</p>
+<p>Because responsible AI creates confidence, and confidence enables adoption.</p>
+<p>Without governance, every AI deployment becomes a political battle between innovation teams, legal departments, compliance officers, and executives.</p>
+<p>With governance, organizations can move faster because the rules are already defined.</p>
+<p>After watching countless AI initiatives succeed or fail, a few patterns stand out consistently.</p>
+<p>The organizations creating real value are focusing on five priorities.</p>
+<p>Successful AI programs begin with operational pain points tied to measurable outcomes.</p>
+<p>Not executive pressure to “do something with AI.”</p>
+<p>AI systems are only as reliable as the data feeding them.</p>
+<p>Modernizing data architecture, governance, and interoperability may feel slower than launching flashy pilots, but it creates long-term scalability.</p>
+<p>The most effective AI systems support employees instead of attempting to replace them immediately.</p>
+<p>Trust grows when AI improves human performance consistently.</p>
+<p>Governance frameworks should evolve alongside deployment strategies—not after problems emerge.</p>
+<p>Responsible AI is rapidly becoming a competitive differentiator.</p>
+<p>Too many organizations optimize for innovation theater instead of operational integration.</p>
+<p>Real value appears when AI becomes embedded into daily workflows, metrics, and business processes.</p>
+<p>That requires discipline, not just experimentation.</p>
+<p>We are entering a more mature phase of enterprise AI adoption.</p>
+<p>The conversation is shifting away from speculative disruption and toward operational accountability.</p>
+<p>That pressure is forcing organizations to confront an important truth:</p>
+<p>AI success is not determined by how advanced the models are. It’s determined by how effectively organizations integrate technology, data, governance, infrastructure, and people into a coherent operating strategy. The companies that understand this are already moving beyond pilots.</p>
+<p>And over the next few years, that difference will define who actually captures business value from AI—and who gets left behind in permanent experimentation mode.</p>
+<p>Why Modern Data Centers Must Be Redesigned for AI-First Workloads</p>
+<p>Senior Architect with 16+ years in cloud, AI, trading systems.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/prikshit/cocoapods-freezes-on-december-2-heres-the-swiftpm-migration-checklist-id-run-first-2kfm" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/beyond-the-pilot-making-ai-deliver-real-business-value?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

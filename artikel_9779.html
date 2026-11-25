@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lua for data representation</title>
+    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9779.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,77 +15,44 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Lua for data representation</h1>
+        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
+            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>my major advocacy is that lua is a very good general purpose language. this is not an opinion shared by all. lua’s major design goal was extending and embedding into existing programs. I think the simplicity and flexibility in design persued towards the end of that goal extends to make lua a very good language in general. that said, it does its job quite well as an embedding language, and one of its more interesting use cases (and actually, one of its oldest use cases) is as a data or configuration format.</p>
-<p>lua’s syntax provides many niceties. for instance, lua has an infinite family of multiline strings: the most basic one starts with [[ and ends with ]]. however, any amount of equal signs can be put between the two square brackets: print([======[hello, world]======]). the only way to close a [===[ is with an accompanying ]===], not with a ]] or a ]==], or a ]====].</p>
-<p>here is a function that for any string, creates the correct multiline string to represent it:</p>
-<p>local function stringize(str)
-    local equal_signs = ""
-    for e in str:gmatch("](=*)]") do
-        if #e >= #equal_signs then
-            equal_signs = e .. "="
-        end
-    end
-    return ("[%s[%s]%s]"):format(equal_signs, str, equal_signs)
-end
-
-of course, you can just use string.format with %q, but multiline strings usually provide nicer looking and more compact results. these strings are very good for representing lua code as strings in other lua code.</p>
-<p>anyway, download this file. if you want to consume massive amounts of memory and possibly crash your computer, run it in cpython. if you want to see “hello, world” printed 5 million times, run it in lua. lua’s parser is designed to handle massive files with stride, which is fairly unique and quite necessary if lua is to be used for this purpose.</p>
-<p>design and implementation choices like these come together to suit lua for this purpose. I’ve seen 3 main styles of using lua code to represent data or configuration. I think lua manages to accomodate each of them well, and each have their appropriate use.</p>
-<p>chunks are much like function bodies. they have return values. so, one thing that one can do is just return a big table from a lua program.</p>
-<p>return {
-    foo = "bar",
-    list = {1, 2, 3},
-    rule_of_thirds = true,
-}
-
-if you’re using this style, you can omit the return and then prepend it when you load the lua files. this makes any trailing statements syntactically invalid because the return statement must be the last statement in the block. keep in mind, though, that this does not prevent arbitrary code because function literals can be used instead.</p>
-<p>return (function() arbitrary_code() end)()
-
-trying to strip out function literals to make this technique safer is fraught and defeats the general elegance of this technique. one can fairly readily use JSON instead.</p>
-<p>what is often missed about lua is that it’s subtly full of metaprogrammability. for instance, lua globals are just stored in a table, and which table is used can be controlled by the code itself. this table is known as the “environment”. an environment may be passed to load as an argument. the way this can be used is that you can load a chunk with an empty environment and then capture the values it sets as globals.</p>
-<p>-- config.lua
-foo = "bar"
-list = {1, 2, 3}
-rule_of_thirds = true
-
-then, you can get a table with all the configuration as simply as this:</p>
-<p>local config = {}
-assert(loadfile("config.lua", "t", config))()</p>
-<p>lua has a bit of sugar that allows you to shed the parenthesis on function calls to make them look cleaner. an imperative style is a very suitable means to represent data in lua, and it’s very powerful.</p>
-<p>path "/path/to/things"
-
-config {
-    foo = "bar",
-    list = {1, 2, 3},
-    rule_of_thirds = true,
-}
-
-lipsum [[
-    Voluptatibus laudantium et omnis ut debitis. Similique omnis molestias
-    consequuntur. Praesentium corporis omnis nihil et quidem dolore. Veritatis
-    fugiat eaque corporis eligendi officiis praesentium. Libero quo vero
-    temporibus impedit sit inventore assumenda
-]]
-
-programming in lua provides a real world example of this.</p>
-<p>the major problem with using an entire programming language to represent data is that untrusted data can be readily crafted to be malicious. indeed, I would not use this technique for untrusted data. with that in mind, it is possible to solve or mitigate the potential vulnerabilities.</p>
-<p>the main technique for sandboxing lua is controlling the environment. when using lua for data representation, an empty enivronment is the most appropriate (or, an environment that only exposes data constructors). this prevents any I/O or access to the larger program’s state. preventing access to all standard library functions is safest. there are a few standard library functions that have consequences you might not expect.</p>
-<p>another concern is denial of service. this is trickier to prevent. it’s fairly trivial to construct a lua chunk which does not return (while true do end). debug.sethook can mitigate this somewhat. even so, it’s probably possible to construct something that uses excessive amounts of memory. that said, denial of service is significantly less problematic than the vulnerabilities that are completely avoided by depriving the untrusted code of any standard library functions.</p>
-<p>finally, make sure to reject lua bytecode. untrusted lua bytecode is not safe and may cause arbitrary nasal demons in the lua interpreter. load can accept both bytecode and lua source by default. however, passing "t" for the mode parameter prevents this.</p>
-<p>clearly, it’s silly to bring in the entire lua interpreter where you would just use JSON or INI. where this use case of lua shines is when you’re already using lua for a project (and then you already have this powerful data description language), or when you need something with a lot of power or flexibility.</p>
-<p>these mini languages can be extended to arbitrary complexity and nuance. unlike JSON, you can add arbitrary type constructors, or anything at all. you can build any kind of language you want, and that’s how lua is designed to be used, and it’s actually approximately the story of how it was invented.</p>
-<p>if you’re anything like me, this will sound a little familiar. indeed, many have said similar things about lisp and forth. both of those languages have very different approaches but reach the same conclusion of “inventing your own language”. I believe lua belongs in their pantheon.</p>
-<p>python? js? ruby? what the hell are those? all I care about is LUA.</p>
+                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
+<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
+<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
+<p>This guide has two halves that run in different places:</p>
+<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
+<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
+<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
+<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
+<p>Then we start the base-model server with the following command:</p>
+<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
+<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
+<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
+<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
+<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
+<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
+<p>This trains ~6M parameters, about 1.66% of the model.</p>
+<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
+<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
+<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
+<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
+<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
+<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
+<p>Then we serve the merged model with the following command:</p>
+<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
+<p>Comparing the two runs on the identical serving stack:</p>
+<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
+<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
+<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://citrons.xyz/journal/2025-07-23" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

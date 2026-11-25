@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abolish Lock Poisoning</title>
+    <title>&#x27;TheMailer&#x27; Phishing Kit Puts AI in the Driver&#x27;s Seat</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9699.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,157 +15,38 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Abolish Lock Poisoning</h1>
+        <h1>&#x27;TheMailer&#x27; Phishing Kit Puts AI in the Driver&#x27;s Seat</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://lucumr.pocoo.org/social/2026-11-25-poisoning-social.png" alt="Abolish Lock Poisoning" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt6f7643977746699c/6afcac2049ae9b70b9695c91/red_mailbox_white_brick_wall-Liudmila_Chernetska-GettyImages-1477282383.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="&#x27;TheMailer&#x27; Phishing Kit Puts AI in the Driver&#x27;s Seat" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://lucumr.pocoo.org/social/2026-11-25-poisoning-social.png" alt="Abolish Lock Poisoning" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt6f7643977746699c/6afcac2049ae9b70b9695c91/red_mailbox_white_brick_wall-Liudmila_Chernetska-GettyImages-1477282383.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="'TheMailer' Phishing Kit Puts AI in the Driver's Seat" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Rust has a curious feature that I don’t think the language would land today,
-if it was not there for a long time: mutex poisoning.  When some Rust code
-panics while holding a std::sync::Mutex, the mutex is poisoned.  That means
-that any further call to lock() returns a PoisonError.  The motivation for
-this feature is that an object might have some internal invariants that need to
-be upheld and panicking in the wrong moment might invalidate reasonable at and leave an
-object behind in a broken state.</p>
-<p>Personally I absolutely hate this feature as it has bitten me so many times and
-I cannot once remember it helping me.  The libs team is
-discussing making the
-non-poisoning locks the default in the next edition but entirely expectedly it
-has caused quite a few people to jump to the defence of the feature.</p>
-<p>In this post I want to make my personal case why poisoned locks should either
-be entirely removed or be made the exception.</p>
-<p>Primarily this is because I have yet to come across code in the wild that
-handles a poisoned lock correctly.  On the other hand I have come across enough
-code that mishandles it and as a result behaves worse than a
-parking_lot lock would which does not support
-poisoning.</p>
-<p>Josh Triplett put it quite
-strongly in a hackernews comment: “In the entire history of the standard
-library, we have never once seen a single report of anyone attempting to recover
-from poison.”</p>
-<p>When a panic happens with a lock held, there are two reasonable reactions: shut
-the process down, or carry on and ignore the flag.  With panic = "abort" you
-get the former and poisoning never comes up.  From all the evidence I have seen,
-with unwinding, the idiomatic lock().unwrap() picks the worst option of all.</p>
-<p>That’s because it neither stops the process nor lets it continue as it will turn
-every further lock into a panic with sometimes disastrous effects.  But that
-is not the only issue with the system today.  So here I want to share some of
-the issues and with some references to real world code of how people got bitten.</p>
-<p>One subtle aspect to the poisoning is that the PoisonError needs to hold the guard.
-That’s because in order to ignore the poison flag, you need to fetch the guard
-from the error object.  Holding on to the error means holding on to the lock!</p>
-<p>That can cause common code that does error wrapping / error conversions into a
-deadlock hazard.  The innocent looking m.lock()? in a function returning
-Box<dyn Error> or similar keeps the mutex locked for as long as the error
-lives (#159930).</p>
-<p>This can also happen with if let.  For instance in
-cc-switch
-you can see that they had a test hung because a if let Ok(..) = lock() { .. } else { .. } fallback locked the same mutex again while the unnamed
-PoisonError from the condition still owned the guard.
-PC-AI had the same bug
-in a match arm.  Another case can be found in
-ox-embed-server.</p>
-<p>Deviously poisoning does not fail fast and done wrong, it fails forever.  The
-original panic happens once, on one thread, often somewhere unrelated from future
-failures.  Every later lock().unwrap() on that lock now however panics as
-well, and because so much Rust code survives panics (thread pools, request
-handlers, tokio tasks, FFI boundaries), the process stays up and becomes
-useless:</p>
-<p>While not live services, test suites show the same general issue.  One failing
-test poisons a shared static and every test after it fails with PoisonError.
-This problem showed up for
-cargo,
-deno,
-polars and
-rustc
-itself.</p>
-<p>If you recover with into_inner(), the flag stays set and every later access
-takes the recovery path again.  And remember that for the first nine years of
-Rust after the poisoning feature landed, you could not even clear it as
-clear_poison arrived only in 1.77.  Not clearing the flag means that potentially
-expensive side effects will happen from that point onwards:</p>
-<p>goose-in-a-pond
-rebuilt its decoder state on every transcription after a single panic,
-librefang
-logged the same warning on every access, and a
-pool threw its
-model away on every return.</p>
-<p>So who is handling poisonings?  I’m really not sure, definitely not the standard library.
-Every place where the standard library’s own code ignores it.  Standard I/O has done so since March
-2015, two months before
-1.0, because “any poison must have been the result of user code which the lock
-isn’t protecting”.  A common issue with a lot of poisoning errors that never
-had anything to do with the mutex that was held.</p>
-<p>Same with the panic output
-capture, the backtrace
-lock and the WASI
-environment lock.  They
-all do the same and unsurprisingly there is an open
-PR to move std’s internal
-mutexes to nonpoison.</p>
-<p>And I would argue the ecosystem has largely come to the same conclusion.  Tokio’s own locks don’t poison.
-Internally it wraps the std one in an adapter that removes poison.  When it landed Carl Lerche remarked “I rather pretend lock poisoning isn’t a
-thing.”  In
-one case Eliza Weisman needed
-into_inner
-to unlink a waiter during drop, or “we’ll leave the list with a potentially
-dangling pointer”.  I want to point to this in particular because this is a case where poisoning stood in the way of memory safety which is commonly argued as a reason you want poisoning.</p>
-<p>Another aspect here is why this is done on Mutex but not on RefCell.  Surely
-if the case for poisoning is that some code temporarily breaks an invariant, panics, and
-someone else observes the broken state, then this should apply to more cases.</p>
-<p>Take the usual example that argues in favor of poisoning and replace Mutex
-with RefCell, and you have exactly the same
-problem.
-Threads are not needed at all and this is not hypothetical either as tokio
-catches every task panic.  Paired with a LocalSet the panic comes back as a
-JoinError, the next borrow() succeeds and reads a null
-pointer
-exactly like the mutex example from the issue.</p>
-<p>Given how much panic catching goes on in async code, much of which is !Send
-for performance reasons, I’m not even convinced that panics get caught more
-often in multi-threaded code yet nobody asks for RefCell to poison.</p>
-<p>The standard library isn’t consistent with itself either as LazyLock poisons
-for good, OnceLock never poisons, Mutex poisons but lets you recover.</p>
-<p>Also remember that poisoning only tracks panics and a more common early return
-has the same issue.  The ? operator (as well as the try! macro before) that
-returns early from the middle of a critical section leaves the same broken
-invariant behind an unpoisoned lock.</p>
-<p>Note also that the coupling of poisoning of mutexes is
-historical
-and an explicit Poison<T> type would allow you to opt into this for any
-interior mutability wrapper.</p>
-<p>Personally I hope the rust team stabilizes std::sync::nonpoison, have
-std::sync::Mutex resolve to it by
-default.  If someone wants
-poisoning add that separate Poison<T> wrapper then anyone who believes they
-need and can handle it, can opt into it for any type including RefCell or
-tokio threads.</p>
-<p>What I think would be the worst of all outcomes is the counter-proposal is to
-keep poisoning but have lock() panic instead of returning a Result.  That
-would only fix the held guard lock semantics, and to a smaller degree the
-ergonomics, but it makes the slow outage the only option.  That is what every
-lock().unwrap() does today, and the issues above should be plenty of evidence
-of this being a problematic behavior in light of the existence of catch_unwind.</p>
-<p>The post In defense of lock
-poisoning is the best argument for
-the other side and worth reading but I believe the evidence all points the other
-way, and most of what Oxide ships aborts on panic anyway which is also a
-reasonable behavior.</p>
-<p>This entry was tagged
-    
-      rust and 
-      thoughts
-
-copy as / view markdown</p>
-<p>Color scheme:
-           auto,
-           light,
-           dark.</p>
+                <p>The commercial kit uses attacker-supplied AI models to personalize lures, evade spam filters, and scale campaigns to tens of thousands of targets.</p>
+<p>A new phishing kit is capable of orchestrating most elements of the attack through AI functionality, including tailoring email lures specifically to bypass content filters.</p>
+<p>That's according to new Varonis research detailing "TheMailer," a phishing kit that leverages large language models (LLM) to a degree hardly seen in the cybercriminal ecosystem. Phishing kits and phishing-as-a-service (PhaaS) platforms have gained significant popularity in recent years, and AI has only made them more capable. To date, phishing kit AI functionality focuses mostly on generating lures, coding realistic phishing websites, conducting reconnaissance, and automating simple repetitive tasks.</p>
+<p>TheMailer distinguishes itself in two primary ways. One, it automates much of the phishing process from end to end using the attacker's chosen AI model. Two, as Varonis senior security researcher Daniel Kelley wrote in the blog post, the kit can tailor lures to each mail provider and "rewrite them until they bypass spam filters."</p>
+<p>Related:Webworm APT Slithers Into Networks With Customized SoftEther VPN</p>
+<p>The attacker's "customer journey" begins by buying a lifetime license for between $3,000 and $6,000 in cryptocurrency (depending on the deal and which AI functions are included). The customer operator then plugs in their API key, selects an AI model (Claude, ChatGPT, DeepSeek, Grok, Gemini, and Mistral are included), and then they're more or less ready to start conducting campaigns. Kelley noted that customers only need to bring SMTP servers, proxies, and target email lists.</p>
+<p>TheMailer can generate lures from a short prompt or a real brand email, personalize the emails for each recipient (including email address, body, and subject line), remove AI writing patterns, and adjust content for spam filters.</p>
+<p>Kelley tells Dark Reading the kit is built to scale against targets.</p>
+<p>"The seller's screenshots show a single campaign of nearly 25,000 emails and a list of more than 145,000 targets being sorted by mail provider. What's different is that every recipient gets their own version of the email, subject line, and attachment, so a bulk campaign no longer looks like one," he says. "I wouldn't call it a spear-phishing tool. The personalization we saw is at the level of a name on an invoice, and we didn't see features for researching individual targets. It's opportunistic phishing with the polish of something targeted."</p>
+<p>It's unclear how successful the kit is — attacker LLM tools are historically capable of undertaking tasks at scale, but the success rates of these tasks vary — though Varonis assesses TheMailer to have a large customer base. Moreover, the kit may be a sign of things to come.</p>
+<p>Related:Anthropic Finds Ingredients for Future AI Worms</p>
+<p>"I'd expect more kits to follow," Kelley says, "because once one seller offers this, buyers start asking for it elsewhere."</p>
+<p>For defenders, Varonis offered a few main recommendations. Because TheMailer is built specifically to get past content filters, organizations should consider email authentication practices like SPF, DKIM, and DMARC enforcement; monitoring for lookalike and new domains; and checking links through full redirect chains at the time of the click.</p>
+<p>And when conducting phishing training, Varonis recommends making it reflect how emails look in a post-AI world.</p>
+<p>"Bad grammar isn't a reliable sign anymore, so teach users to be wary of urgency, unexpected requests, and login prompts, especially 'unusual activity' or account statement alerts," the blog post read. Finally, "Least-privilege access and data monitoring limit the damage if someone clicks anyway."</p>
+<p>Alex is an award-winning writer, journalist, and podcast host based in Boston. After cutting his teeth writing for independent gaming publications as a teenager, he graduated from Emerson College in 2016 with a Bachelor of Science in journalism. He has previously been published on VentureFizz, Search Security, Nintendo World Report, and elsewhere.</p>
+<p>At Dark Reading, he covers a variety of cybersecurity topics, including the cybercrime ecosystem, open source security, and the intersection between AI and threat actors. In his spare time, Alex hosts the weekly Nintendo podcast, "Talk Nintendo Podcast," and works on personal writing projects, including two previously self-published science fiction novels.</p>
+<p>He has received numerous awards, including TechTarget's Writer of the Year in 2022 as well as more than 10 Azbee awards for his reporting between 2022 and today.</p>
+<p>Check out the Black Hat USA 2026 Conference Guide for coverage and intel from — and about — the show!</p>
+<p>Couldn’t make it to Las Vegas for Black Hat USA? We tracked the developments that matter most.</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lucumr.pocoo.org/2026/11/25/poisoning/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/perimeter/themailer-phishing-kit-ai-drivers-seat" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

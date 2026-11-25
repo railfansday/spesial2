@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</title>
+    <title>Those Five Tons of Bomb-Making Chemicals in Iowa Will Be Detonated Wednesday Morning</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9791.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,44 +15,71 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps</h1>
+        <h1>Those Five Tons of Bomb-Making Chemicals in Iowa Will Be Detonated Wednesday Morning</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/usa_64.png" alt="Those Five Tons of Bomb-Making Chemicals in Iowa Will Be Detonated Wednesday Morning" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/grpo-with-trl-ifstruct/thumbnail.png" alt="Fine-tuning a 350M Model for Better Structured Outputs in 100 GRPO Steps" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/usa_64.png" alt="Those Five Tons of Bomb-Making Chemicals in Iowa Will Be Detonated Wednesday Morning" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>This guide is a fully public, inexpensive recipe for making a small model substantially better at structured-output compliance. We fine-tune LFM2.5-350M with Group Relative Policy Optimization (GRPO) using the TRL library and evaluate it on the IFStruct benchmark. The full run takes around 500 samples and 100 training steps, small enough for a free-tier Colab or Kaggle GPU, and is available on GitHub. The results show that even a light fine-tuning procedure improves performance from 22.6% to 29.7% on the IFStruct benchmark.</p>
-<p>Structured output is one of the most common real-world tasks for LLMs, yet most benchmarks fold it into broader reasoning or extraction scores rather than measuring it on its own. Whether a model reliably returns valid, parseable output in the requested format and shape — schema compliance — is often what decides whether it can be wired into a downstream system at all.</p>
-<p>Note that the training pipeline described here is not the one used to train the RL model described in the IFStruct blog. This notebook doesn't aim to recreate the IFStruct benchmark score, but to show how task-specific fine-tuning of smaller models can improve performance and match that of far larger models.</p>
-<p>This guide has two halves that run in different places:</p>
-<p>We will need uv for the Python tooling and llama.cpp for serving. Following the Liquid AI llama.cpp deployment docs, install llama.cpp with Homebrew and verify that llama-server is available:</p>
-<p>Before we begin, let's evaluate LFM2.5-350M on the IFStruct benchmark and see whether we can reproduce the reported score of 21.1%.</p>
-<p>IFStruct is a benchmark for testing the validity of LLM outputs and schema adherence. The benchmark is open-source in Liquid4All/ifstruct, with the public benchmark dataset available on Hugging Face at LiquidAI/ifstruct-v1.0.</p>
-<p>For the eval comparison, we serve the model locally on the MacBook with llama.cpp. We will use the BF16 GGUF (LiquidAI/LFM2.5-350M-GGUF).</p>
-<p>Then we start the base-model server with the following command:</p>
-<p>Once the server is running, we can run the full benchmark with 2000 samples:</p>
-<p>The IFStruct release blog reports 21.1% for LFM2.5-350M. Our local llama.cpp/BF16 setup measures 22.6%, close to the 21.1% reported in the IFStruct blog. We use this local result as the baseline for the same serving stack comparison.</p>
-<p>The full, runnable pipeline lives in the accompanying notebook. We will cover only the relevant pieces in this section.</p>
-<p>We use nvidia/Nemotron-RL-instruction_following-structured_outputs, which pairs each prompt with a target JSON Schema and an expected field count. We use about 500 samples for training.</p>
-<p>Because the Nemotron data distribution differs from the IFStruct evaluation, we augment the prompts to close two gaps between them:</p>
-<p>We load LiquidAI/LFM2.5-350M and attach a LoRA adapter. Because LFM2.5 uses a hybrid attention/convolution architecture, we target the LFM-specific module names:</p>
-<p>This trains ~6M parameters, about 1.66% of the model.</p>
-<p>Then we define three reward functions, each on a [0, 1] scale, which score every completion on whether the extracted structure is correct:</p>
-<p>We combine the three as a weighted sum with reward_weights=[1.0, 0.5, 2.0].</p>
-<p>We train for 100 steps with 8 generations per prompt group, sized for a free-tier 16 GB GPU:</p>
-<p>As you can see in the notebook, over the run, all three reward components climb, the KL from the reference model lifts off zero after warmup, and the truncated-completion fraction stays near zero.</p>
-<p>Finally, we merge the LoRA adapter back into the base weights and save it as a single self-contained checkpoint, ready to convert to GGUF for serving:</p>
-<p>After GRPO fine-tuning, we rerun the IFStruct evaluation. For this, we need to convert the merged model checkpoint into a BF16 GGUF. The converter script ships with the llama.cpp source, so we clone the repo once and install the converter's gguf package.</p>
-<p>Then we serve the merged model with the following command:</p>
-<p>Then, we will run the full IFStruct evaluation again with the fine-tuned model:</p>
-<p>Comparing the two runs on the identical serving stack:</p>
-<p>The gains land exactly where the training aimed: the JSON pass rate rises by nearly 14 points (18.0% → 31.9%), while YAML stays mostly the same. While this is still below the Qwen3.5-2B score of 33.15%, it shows that even light task-specific fine-tuning can bring a small model close to a larger one.</p>
-<p>A short GRPO run with about 500 samples and 100 steps can lift a small 350M parameter model from 22.6% to 29.7% on IFStruct. The takeaway is that a cheap, task-specific reward signal can make a small model substantially more reliable about form, closing much of the gap to models several times its size.</p>
-<p>To reproduce or extend this work, see the original IFStruct v1.0 blog post, the Liquid4All/ifstruct benchmark repo, and the LiquidAI/ifstruct-v1.0 dataset.</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>"Where's the kaboom? There was supposed to be an Earth-shattering kaboom!"</p>
+<p>According to the news reports I've heard, the detonation was a success. The EPA has detected zero lead dispersed in the atmosphere. So far. Things could change as time passes. But it seems they got the outcome they were hoping for.</p>
+<p>I guess all the people with fallout plume predictions can save them for the next time we need to terrorize our population.</p>
+<p>"The EPA has detected zero lead dispersed in the atmosphere"</p>
+<p>Oh sure, it just disappeared. Good thing Trump's EPA is so credible! Are you really trying to spin this as if those saying it is a problem are the ones "terrorizing" the public?</p>
+<p>Oh sure, it just disappeared.It did no such thing. The lead is right there where they were aiming to put it, in the ground at the detonation site.Like watch the video, there's fuck all of anything in the air.</p>
+<p>It did no such thing. The lead is right there where they were aiming to put it, in the ground at the detonation site.</p>
+<p>Like watch the video, there's fuck all of anything in the air.</p>
+<p>Aliens saved the planet and picked it up?</p>
+<p>It's concentrated in the soil at the site which will now have to cleaned up in a long and expensive process of time.</p>
+<p>Yes, because this EPA is super trustworthy after being neutered and DOGE'd while still being answerable to a man who tolerates zero bad news.</p>
+<p>I don't know about the validity of this, but there's a meme around saying that there *were* people who were supposed to watch the drums, which would have prevented them from drying out.</p>
+<p>Now about the results: people have gone far, far over the moon about the danger. For one, lead compounds have, you know, lead in them. They'll fall to the ground sooner rather than later. And... 67 drums. I assume those are std. 55 gal drums. Exactly how much area could you cover with paint.</p>
+<p>This is a manifestation of the bureaucratic  study it forever but never do anything about it problem.</p>
+<p>"What six grazing horses tell us about England's housing crisis"</p>
+<p>https://www.bbc.com/news/artic... [bbc.com]</p>
+<p>This is a manifestation of the bureaucratic study it forever but never do anything about it problem.Well, that's the thing, isn't it? If they fix one problem, they have to create and study another one to keep their jobs.</p>
+<p>This is a manifestation of the bureaucratic study it forever but never do anything about it problem.</p>
+<p>Well, that's the thing, isn't it? If they fix one problem, they have to create and study another one to keep their jobs.</p>
+<p>Not disposing of them has been going on but has letting them dry out?</p>
+<p>The stockpile is 40 years old and was starting to degrade decades ago. Pinning this on solely on DOGE firings ignores decades of incompetence spread across many adminstrations.</p>
+<p>Undoubtedly there were some question decisions in the end, but relying on memes to give a nuanced view of history is pretty silly.</p>
+<p>From many previous detonations, something like 85% of the lead remains in the crater where it was blown up. It's basically lead and nitrogen. The nitrogen and lead rapidly breaking apart will leave about 7000 lbs of elemental lead, and the nitrogen will be gas. The idea is to keep the explosion plume as small and low as possible so as not to distribute all that elemental lead over Iowa. The lead content in the area (Iowa) is about 20 mg/kilo, so there's already quite a bit of lead in the soil. If you raised</p>
+<p>Lead azide is a functionally superior primer. Military ammunition has to work in conditions where the vast majority of civilian users would never experience.</p>
+<p>Right, but it's the concentrated locality in over cropland that's the issue. Being contained to gun ranges or war zones is a little different than causing a cloud over farmland and cities then having no plan for figuring out the effects of the contamination.</p>
+<p>And for anyone who's familiar with the chemistry, the real problem wasn't use of the lead azide but letting it sit until it crystalized. The lab that I worked in that had azides (granted not lead), they were the nastiest chemicals in the place with a ver</p>
+<p>Apparently there are now copper-based alternatives:https://www.army.mil/article/2... [army.mil]</p>
+<p>At the same time, I keep running into people who live several states away, sharring terrifying AI-generated maps about fallout plumes.</p>
+<p>To put it into context, this is 2,6 days of avgas lead emissions from US prop airplanes.  Or 8,5 minutes of combined US lead emissions in 1970.</p>
+<p>If you're in the immediate area, yes, this is not good news. If you're not, this doesn't directly affect you.</p>
+<p>To put it into context, this is 2,6 days of avgas lead emissions from US prop airplanes. Or 8,5 minutes of combined US lead emissions in 1970.While the freakout is irrational you didn't add context, you added completely irrational comments in the opposite direction. Concentration matters. If 2.6days worth of avgas were pumped on your neighbourhood in one swoop you'd probably be dead. Spreading it across 3.8 million square miles makes it a different story.Also we recognised the actual problem of lead emissions being concentrated near population centres which is precisely why we banned its use in fuel. Your context as silly as it was says the amoun</p>
+<p>To put it into context, this is 2,6 days of avgas lead emissions from US prop airplanes. Or 8,5 minutes of combined US lead emissions in 1970.</p>
+<p>While the freakout is irrational you didn't add context, you added completely irrational comments in the opposite direction. Concentration matters. If 2.6days worth of avgas were pumped on your neighbourhood in one swoop you'd probably be dead. Spreading it across 3.8 million square miles makes it a different story.</p>
+<p>Also we recognised the actual problem of lead emissions being concentrated near population centres which is precisely why we banned its use in fuel. Your context as silly as it was says the amoun</p>
+<p>Dr. Valentine Nzengung is a globally recognized environmental scientist, inventor, and entrepreneur renowned for advancing safer, chemical-based solutions for explosives and hazardous waste remediation. Originally from the former British Southern Cameroons (Ambazonia), he earned advanced degrees in Environmental Geochemistry and Engineering from the Georgia Institute of Technology and has served as a professor at the University of Georgia since 1995. As the founder and CEO of MuniRemÂ® Environmental, Dr. Nzengung leads high-impact remediation and demilitarization projects worldwide, championing environmentally sustainable and safety-focused solutions that safeguard both human lives and the planet. A Fellow of the National Academy of Inventors, his patented innovationsâ"including the MuniRemÂ® reagent and the Munitions and Ordnance Remediation Blanketâ"have received recognition from the U.S. Department of Defense, the U.S. EPA, and other institutions for their environmental and humanitarian contributions.So yup, would not put it past the white supremacist to not use a safer method to dispose of this stuff because it would help a black guy, especially since what he does is environmentally sustainable and helps safeguard the planet. Why do that when you can have a big kaboom.</p>
+<p>Dr. Valentine Nzengung is a globally recognized environmental scientist, inventor, and entrepreneur renowned for advancing safer, chemical-based solutions for explosives and hazardous waste remediation. Originally from the former British Southern Cameroons (Ambazonia), he earned advanced degrees in Environmental Geochemistry and Engineering from the Georgia Institute of Technology and has served as a professor at the University of Georgia since 1995. As the founder and CEO of MuniRemÂ® Environmental, Dr. Nzengung leads high-impact remediation and demilitarization projects worldwide, championing environmentally sustainable and safety-focused solutions that safeguard both human lives and the planet. A Fellow of the National Academy of Inventors, his patented innovationsâ"including the MuniRemÂ® reagent and the Munitions and Ordnance Remediation Blanketâ"have received recognition from the U.S. Department of Defense, the U.S. EPA, and other institutions for their environmental and humanitarian contributions.</p>
+<p>So yup, would not put it past the white supremacist to not use a safer method to dispose of this stuff because it would help a black guy, especially since what he does is environmentally sustainable and helps safeguard the planet. Why do that when you can have a big kaboom.</p>
+<p>Surely an explosive is just a chemical. There should be a non-violent way to break it down into energy-innert components.</p>
+<p>Or is it just the army meathead attitude, trying to blow everything up?</p>
+<p>They thought of using a chemical process, but there wasn't a safe way to access the drums' contents.The lead azide was stored in large drums having sealed lids adjacent to each other in bunkers.Accidently setting off one would set off all of the lead azide.They can't be moved, duh.Opening the lids would probably set them off.It is believed that cold temperatures would eventually set them off, or more to the point, the contents had become so unstable that eventually an uncontrolled explosion was inevitable.</p>
+<p>We've been over this a dozen times in the original story. The SOP for very small amounts of lead azide in lab is to make it inert chemically. When you have a few tons of the stuff sealed in steel drums, that's not practical. It will rapidly make itself inert if given even a gentle nudge.</p>
+<p>It's the day before Thanksgiving....pretty fucking insensitive.</p>
+<p>This exactly. These have been sitting for decades but HAD to be blown up TODAY? Fuck that.</p>
+<p>It's the day before Thanksgiving....pretty fucking insensitive.Ruined in what way? It ended up being precisely the nothingburger it was planned to be. And if you're looking for outrage you'll always find it somehow. By the way the day before thanksgiving is not a holiday, it's personal time off.So tomorrow, be thankful that people know what they are doing and that precautions were taken to minimise risk while experts were doing their work, despite the fact you think they should have stopped because you intended to celebrate something on some other day.</p>
+<p>It's the day before Thanksgiving....pretty fucking insensitive.</p>
+<p>Ruined in what way? It ended up being precisely the nothingburger it was planned to be. And if you're looking for outrage you'll always find it somehow. By the way the day before thanksgiving is not a holiday, it's personal time off.</p>
+<p>So tomorrow, be thankful that people know what they are doing and that precautions were taken to minimise risk while experts were doing their work, despite the fact you think they should have stopped because you intended to celebrate something on some other day.</p>
+<p>Good job, you useless Army fucks. Now let's see if you actually learn anything going forward.</p>
+<p>https://x.com/nmjameswilson/st... [x.com]</p>
+<p>The chicken littles made people think it was going to be another Chernobyl.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Huawei Is Guilty of Conspiracy To Steal Trade Secrets, a US Jury Finds</p>
+<p>Google Wants To Make a 24/7 AI TV Channel. You'll Be the Main Character.</p>
+<p>To save a single life is better than to build a seven story pagoda.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/grpo-with-trl-ifstruct" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://news.slashdot.org/story/26/11/25/0524224/those-five-tons-of-bomb-making-chemicals-in-iowa-will-be-detonated-wednesday-morning?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
