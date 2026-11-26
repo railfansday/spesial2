@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</title>
+    <title>An AI coding agent, a browser, and a Mac tool found a financial firm&#x27;s access key in under 6 minutes</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9817.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,69 +15,60 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
+        <h1>An AI coding agent, a browser, and a Mac tool found a financial firm&#x27;s access key in under 6 minutes</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://image.theregister.com/5311939.jpg?imageId=5311939&amp;x=0&amp;y=0&amp;cropw=100&amp;croph=100&amp;panox=0&amp;panoy=0&amp;panow=100&amp;panoh=100&amp;width=1200&amp;height=683" alt="An AI coding agent, a browser, and a Mac tool found a financial firm&#x27;s access key in under 6 minutes" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/pwc-search/thumbnail.png" alt="How Hugging Face Inference Endpoints, Jobs, and Buckets Power Search on Papers with Code" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://image.theregister.com/5311939.jpg?imageId=5311939&x=0&y=0&cropw=100&croph=100&panox=0&panoy=0&panow=100&panoh=100&width=1200&height=683" alt="An AI coding agent, a browser, and a Mac tool found a financial firm's access key in under 6 minutes" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>3 months ago, we started a revival of Papers with Code (see also the announcement tweet). Its goal is to make open AI research accessible and digestible, so that people can easily find the artifacts related to a paper, find state-of-the-art (SOTA) across the various domains of AI, share interesting research and build on top of each other's work. In other words, its goal is to power the wave of research that leads to the next Transformer.</p>
-<p>Of course, making AI research accessible requires a powerful search engine, so that humans and agents can quickly find relevant and related work, either through the website or the pwc search CLI command, which agents can use via the Skill.</p>
-<p>It's important to note that searching for research is not quite the same as searching for regular text. A useful paper search engine should find an exact title or arXiv identifier, but it should also understand a query such as “small language models for code generation” even when those words do not appear together in a paper. It needs to recognize that “the original BERT paper” is a navigational request, tolerate an incomplete title or typos, and still respond quickly when a model service is cold or temporarily unavailable.</p>
-<p>For Papers with Code, we built this as a hybrid search system. This is also based on our prior experience at ML6, where we developed RAG-based systems for clients. It turned out that hybrid search typically outperforms keyword- and vector-based search systems, as it combines the best of both worlds (see also this blog for more info). Keyword search finds exact mentions, whereas vector search finds more fuzzy, semantically similar terms. Note that rerankers (also called cross-encoders) can further improve the results, although they also come with additional overhead and latency.</p>
-<p>Papers with Code relies on a PostgreSQL database, hence its full-text search capabilities provide a fast lexical baseline. For dense embeddings, pgvector is used to add semantic recall, and the reciprocal rank fusion (RRF) algorithm combines the two. Three Hugging Face services are used for the dense embeddings:</p>
-<p>Today, the system maintains embeddings for more than 110,000 current papers sourced from arXiv and Daily Papers. This post explains the architecture, the design decisions behind it, and the lessons we learned while taking it to production.</p>
-<p>We deliberately split search into an offline corpus build and an online search service:</p>
-<p>The expensive, throughput-oriented work runs as Jobs. Durable artifacts live in a Bucket. Only the small query-embedding step sits on the request path, behind a protected Inference Endpoint, to power the online search. If that endpoint is cold, busy, or unhealthy, search immediately falls back to full-text retrieval. This separation makes the system both powerful and fast.</p>
-<p>Embedding pipelines often fail in subtle ways: a model revision changes, query and document prompts are mixed up, vectors are truncated differently, or an updated abstract no longer matches its stored vector.</p>
-<p>We avoid this by treating the embedding format as a versioned API. Every paper is encoded as:</p>
-<p>Our production generation uses Qwen/Qwen3-Embedding-0.6B, pinned to an exact revision, with 256-dimensional L2-normalized vectors. We selected the model with help from the MTEB leaderboard, the go-to benchmark for comparing embedding models. Note that newer embedding models like Qwen3 allow for 2 new features:</p>
-<p>This contract follows an embedding from export, through GPU inference, into PostgreSQL, and finally into online retrieval.</p>
-<p>Full-corpus embedding is a classic batch workload. It needs a GPU for a relatively short period, benefits from high throughput, and should not consume resources between runs. Hugging Face Jobs fits that shape well: a Job is defined by a command, a hardware flavor, and optionally a Docker image, and can run uv scripts with their dependencies declared inline.</p>
-<p>Our corpus build starts by exporting the latest version of every paper from a repeatable-read PostgreSQL snapshot. The exporter streams rows rather than loading the catalog into memory, writes bounded JSONL shards, and creates a manifest containing row counts and SHA-256 checksums.</p>
-<p>We sync that immutable run directory to a private Storage Bucket and mount the Bucket directly (using hf-mount) into an l4x1 Job (an NVIDIA L4 GPU, which has 24GB of VRAM). From the worker's perspective it is simply a filesystem:</p>
-<p>Each completed shard has its own marker, so a restarted Job can skip verified work. This is useful for a large corpus: retrying should just resume work rather than overwriting existing embeddings.</p>
-<p>In our 5,000-paper pilot, the Qwen Job encoded about 75 papers per second at 1024 dimensions on an L4 GPU. The same pass could be deterministically materialized at 512 and 256 dimensions, so we could compare the storage and retrieval trade-offs without paying for more inference.</p>
-<p>Storage Buckets are mutable, S3-like object storage on the Hub, optimized for AI workloads. They can be accessed through hf://buckets/... paths and mounted read-write in Jobs without building a separate storage integration.</p>
-<p>For us, the Bucket is more than a place to put vectors. It is the boundary between three systems with different lifecycles:</p>
-<p>We organize artifacts under immutable run prefixes:</p>
-<p>Buckets themselves are intentionally mutable, so immutability is an application-level rule: a run ID is never overwritten, and every artifact is covered by a manifest and checksum.</p>
-<p>Only after the importer rechecks schemas, checksums, dimensions, normalization, unique paper IDs, and current content hashes do we load the vectors into PostgreSQL. We then build a separate HNSW index for the new generation and atomically mark it active only when every eligible current paper is covered (HNSW is the graph-based algorithm that enables fast vector search).</p>
-<p>Batch embeddings solve the document side of retrieval. A user query still needs to be embedded at request time using the same model contract.</p>
-<p>We deploy the pinned model as an authenticated Inference Endpoint backed by Text Embeddings Inference (TEI). The endpoint accepts the query text and returns a normalized 256-dimensional vector using the model's query prompt. Note that one could also leverage vLLM or SGLang here.</p>
-<p>The API then performs a cosine-distance search over the active pgvector generation:</p>
-<p>The HNSW index keeps this lookup fast. On our 5,000-paper pilot, the 256-dimensional Qwen index achieved 0.9955 Recall@20 against exact search, with 1.31 ms p50 and 2.21 ms p95 HNSW lookup latency. Its table and index used about 27% of the storage of the 1024-dimensional version while retaining essentially the same ANN recall in that test.</p>
-<p>The Endpoint is configured with a maximum of one replica and can scale to zero when idle. That is a useful cost lever, as this means you're not paying when there's no usage. However, this also means cold starts must be part of the application design rather than treated as an exceptional event, as it takes some time for the endpoint to spin up and serve traffic.</p>
-<p>Our query client therefore has deliberately strict behavior:</p>
-<p>If the endpoint is scaling up, times out, returns a malformed vector, or has no concurrency available, we skip the semantic branch immediately. Users still receive lexical results instead of waiting for an unreliable dependency.</p>
-<p>Inference Endpoints works really reliably, and includes a nice dashboard so you can quickly see key analytics.</p>
-<p>For every query, the lexical branch retrieves up to 50 candidates using weighted PostgreSQL full-text search. The semantic branch retrieves up to 50 candidates from pgvector.</p>
-<p>We combine their ranks using weighted reciprocal rank fusion (RRF):</p>
-<p>score(d)=∑r ∈ {lexical, semantic}wrk+rankr(d)
-\text{score}(d) = \sum_{r \,\in\, \{\text{lexical},\, \text{semantic}\}} \frac{w_r}{k + \text{rank}_r(d)}
-score(d)=r∈{lexical,semantic}∑​k+rankr​(d)wr​​</p>
-<p>RRF is simple and robust, because it combines ranks rather than scores from two systems with different scales. Basically, if a paper is ranked high both by the lexical branch and the semantic branch, it has a higher chance of being ranked high by the hybrid search. We currently use equal branch weights and (k=60) (k is the "rank constant", a hyperparameter of the RRF algorithm).</p>
-<p>Dense retrieval improves recall for conceptual queries. Full-text retrieval remains excellent for exact terminology, identifiers, and rare names. We also preserve deterministic identity behavior on top of the fused ranking:</p>
-<p>Note: hybrid search isn't always the best option, it is recommended to start with keyword search as a cheap and fast baseline, and only adding semantic and/or hybrid search when it turns out those give a reasonable boost in retrieval quality. One could further improve the search by adding a reranker after keyword/semantic/hybrid retrieval, using a model like Qwen3-Reranker.</p>
-<p>The large initial corpus is embedded with Jobs, but Papers with Code changes continuously. New papers arrive, abstracts are corrected, and new arXiv versions become current.</p>
-<p>Launching a GPU Job for a handful of changed rows would add unnecessary startup and orchestration overhead. Instead, an hourly incremental process selects missing or content-changed papers and sends a bounded delta to the same TEI Endpoint, this time with the document prompt.</p>
-<p>Each run processes at most 500 papers in batches of 16. Before an embedding is written, the source row is locked and its content hash is checked again. If a paper changed during inference, that vector is discarded and picked up by the next run.</p>
-<p>This gives us a useful division of labor:</p>
-<p>The hourly path keeps the active index close to the live catalog without turning an online endpoint into an unbounded batch processor.</p>
-<p>The same document embeddings also power related-paper recommendations on each paper page.</p>
-<p>Because the source paper already has a stored vector, related-paper retrieval requires no model call at request time. It is a single nearest-neighbor query over the active generation. If a vector is temporarily missing, the application can use a previous arXiv version or fill results from the existing task- and citation-based fallback. We fetch citation data through the Semantic Scholar API and also built s2-cli, a command-line interface for querying its citation graph. The latter is used by the agent at https://paperswithcode.co/chat.</p>
-<p>Corpus embedding and query embedding use the same model, but they are different infrastructure problems. Jobs optimize for throughput and bounded cost; Inference Endpoints optimize for availability and request latency.</p>
-<p>Buckets provide an explicit handoff between compute and production. Checksummed artifacts create a reviewable boundary before data enters the production index.</p>
-<p>The revision, dimension, prompt, normalization, and input formatter all affect retrieval. Store them together and validate them everywhere.</p>
-<p>Scale-to-zero is valuable when traffic is intermittent, but only if the product has a fast fallback. Hybrid search gave us that fallback naturally: lexical search is always useful on its own.</p>
-<p>Matryoshka embeddings let us evaluate quality, memory, index size, and latency as one trade-off. In our pilot, 256 dimensions preserved ANN recall while materially shrinking storage compared with 1024 dimensions.</p>
-<p>New generations are imported beside the current one, indexed independently, checked for complete and current coverage, and then activated atomically. Rollback is a configuration change, not an emergency recomputation.</p>
-<p>Feel free to try out the search at https://paperswithcode.co or the chat interface at https://paperswithcode.co/chat, and let us know any feedback!</p>
-<p>The lexical fallback for scale-to-zero and the separate index activation boundary are useful production details. One question for the hybrid setup: do you measure relevance and latency separately when dense search is cold versus warm, so fallback quality is visible rather than hidden in an overall average? We examined lexical-first retrieval and semantic reranking on a smaller workload here: https://huggingface.co/blog/ironbcc/bm25-seb-rag-retrieval (I'm an author). That benchmark doesn't establish behavior on a paper-scale corpus.</p>
+                <p>No sophisticated malware or attack framework required</p>
+<p>A Romanian hacker, armed with only an open source coding agent, a Chrome browser, and a Mac, tried multiple ways to break into a financial services firm, ultimately found an access key - luckily, it was a decoy - and carried out an entire (almost) attack in under six minutes.</p>
+<p>It’s a stark reminder that miscreants don’t need sophisticated malware - as in the Binance heist - or AI pen-testing tools like ARTEX to carry out intrusions into critical networks. Open source coding agents, and specifically OpenCode in this case, also work just fine.</p>
+<p>“What surprised me most was how little it took and the toolkit: a free coding agent, the curl that comes with every Mac and an ordinary Chrome, all from one laptop,” Jesta co-founder and CTO Lior Finkelshtein told The Register. “Until now I thought that we had more time until tools like OpenCode are used in offensive operations. This incident shows us that it's already in use in the field, and we will probably see more of that in the future.”</p>
+<p>Jesta is a Tel Aviv-based security startup that builds defensive tools to detect and stop autonomous AI attacks. In a report shared exclusively with The Register, Finkelshtein documented an attempted intrusion targeting a major financial services company that’s also a Jesta customer - the security shop declined to say which one.</p>
+<p>Jesta’s investigation into the incident determined that someone in Bucharest downloaded a free AI coding agent called OpenCode and pointed it at the financial services customer on November 16 at 4:24:57 a.m. ET.</p>
+<p>OpenCode is an open source coding agent that lets users connect to more than 200 model providers or local models, including Anthropic’s Claude models, OpenAI’s GPTs, Google’s Gemini, DeepSeek, and Z.ai’s GLM. Jesta doesn’t know which model the attacker used, as there was nothing in the traffic that named the model. OpenCode's web fetch tool, however, did name itself, so Jesta knows the attacker used this coding agent - not a scanner - to do the dirty work.</p>
+<p>“Nothing in OpenCode was built for hacking,” Finkelshtein said in a Tuesday report about the agent-led attack. But, he added, nothing in the coding agent “stops you from pointing it at someone else's website either. When you do, the agent goes through the site the same way it goes through code. It reads, tries something, reads the result and tries the next thing, for as long as you let it run.”</p>
+<p>That’s what it did in this operation, which took less than six minutes and cost the human operator nothing.</p>
+<p>The first call came from a Chrome browser on a Mac, requesting the front page of one of the financial firm’s systems. The site refused it, and six seconds later, the same IPv6 address in Bucharest, on an ordinary DIGI Romania business line, tried again. It used the same Chrome version, but said it was an Android Pixel 10 phone (it wasn’t) to see if the site would let a phone in (it didn’t).</p>
+<p>After failing to gain access through the front page, the agent asked the system for its API definition, which was also refused. Five seconds later, it tried a different address - this one was a decoy set up by Jesta - and it answered the agent, providing the readable file defining how the API works.</p>
+<p>The agent read the document, and 13 seconds later followed a link it contained. At 4:26:01 a.m. ET, Jesta’s defenses marked the website visitor as an AI agent, opened a case, and from here on out, everything the agent accessed was contained inside a fake environment designed to trick intruders. This included a phony key, which the attacker then used to attempt to break into the company’s systems.</p>
+<p>“It worked like a developer,” Finkelshtein said about the coding agent. “It read the API docs and did what they said. It found a key and used it. It checked whether the lock was real, then made up a key of its own and tried that. None of the threat feeds the customer has knew the address, so a blocklist would never have stopped it. The bar for doing this is now installing an app. Think about how many people can do that.”</p>
+<p>In addition to OpenCode, the attacker used only Chrome 157, both in desktop and mobile modes, and curl/8.7.1, a command-line tool that has shipped with every Mac since macOS 15. The agent passed information between the three tools. It included the planted key in a command-line request and then tested three scenarios – using the decoy key, no key, and a fabricated key – to determine whether what it found in the API documentation was legit.</p>
+<p>It also tried multiple URLs using the browser. While it ultimately identified a valid endpoint, it attempted to read from one that accepts only data submissions, so its request was blocked again. Five minutes and 44 seconds after the first request, it gave up, and the logs haven’t detected any activity from this same intruder since then.</p>
+<p>The security shop and its customer disclosed the activity to law enforcement and told us it’s “being handled.”</p>
+<p>While the attacker wasn’t able to steal anything in this attempt, security teams still need to take note, according to Finkelshtein.</p>
+<p>“No blocklist would have helped” detect the malicious traffic, he explained. “Most security tools still decide by asking whether an address is known to be bad, and for this one the answer was no. If that key had been real, it would have been in.”</p>
+<p>Instead of blocklists, Finkelshtein suggests paying attention to what the visitor does. In this case, several of its actions gave it away - including following a link that only existed inside an API doc, using a desktop browser and a fake phone, then curl, all from the same address within minutes, and trying multiple keys - including one with a made up name and then no key - within seconds.</p>
+<p>“Open source lets anyone build software without a big team,” Finkelshtein wrote in the Tuesday blog. “AI is doing the same for hacking. The skill is in the model, the model is a setting, and the person giving the instructions doesn't need to know how any of it works.” ®</p>
+<p>Approval for ‘Starmind’ granted but it’s a long way from the launchpad, or making sense</p>
+<p>And intruders don't always need to exploit bugs to break in</p>
+<p>PARTNER CONTENT: PARTNER CONTENT: Hyperscalers and colos have distinct power strategies, but for both, securing flexible, fast power relies on self-generated solutions</p>
+<p>Chip design software leans heavily into 3D packaging and multi-node assemblies</p>
+<p>If a service falls in the forest and nobody hears it...</p>
+<p>Next step is to move in for a closer look at the carnage</p>
+<p>Chip design software leans heavily into 3D packaging and multi-node assemblies</p>
+<p>Still slinging hardware – now with added AI and attendant risks or opportunities</p>
+<p>‘It’s like the Ottoman Empire banning the printing press for Arabic so they would keep in control of the dogma,’ he says</p>
+<p>Chip boss gets his old job back, but Washington isn't done investigating one of his former flame's businesses</p>
+<p>Britain wants sovereign capability to test whether military AI will work before it gets deployed for real</p>
+<p>And intruders don't always need to exploit bugs to break in</p>
+<p>It's not our fault if you've implemented it wrong</p>
+<p>FinCEN takes systems offline and extends filing deadlines while investigating 'unauthorized access'</p>
+<p>AutoPay login and vehicle records affected, alongside limited payment information and customer service emails</p>
+<p>Four more critical vulns, including another unauthorized access flaw in vCenter</p>
+<p>A spatial classic Finder in the style of A/UX</p>
+<p>Canonical's stretch goal is to make the immutable OS standard in 30.04 – without retiring the traditional distro</p>
+<p>Cheap tiny e-readers and the perils of LLM-generated drive-by pull requests – plus much more</p>
+<p>Devuan-based distro swaps Wayland for XLibre and i3, with Xfce waiting if the tiling gets tiresome</p>
+<p>Version 4.0 of Redmond’s cloudy OS is free to use in its cloud. Repeat. Free to use</p>
+<p>You can probably guess what he blames for the excessive workload</p>
+<p>Contact usAdvertise with usWho we areNewsletter</p>
+<p>The Next PlatformDevClassBlocks and FilesSituation Publishing</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/pwc-search" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.theregister.com/security/2026/11/24/an-ai-coding-agent-a-browser-and-a-mac-tool-found-a-financial-firms-access-key-in-under-6-minutes/5311922" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

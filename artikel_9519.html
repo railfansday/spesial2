@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>npm audit Found 69 Vulnerabilities in My Two SaaS Apps. Most of the Work Was Sorting Them.</title>
+    <title>How long can butter sit out?: For the best baking success, here&#x27;s the deal on saving softened butter for later.</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9519.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,79 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>npm audit Found 69 Vulnerabilities in My Two SaaS Apps. Most of the Work Was Sorting Them.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
+        <h1>How long can butter sit out?: For the best baking success, here&#x27;s the deal on saving softened butter for later.</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F9iup8ry937x2gi9ask1h.png" alt="npm audit Found 69 Vulnerabilities in My Two SaaS Apps. Most of the Work Was Sorting Them." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.kingarthurbaking.com/sites/default/files/2023-10/Soften-Butter_1837.jpg" alt="How long can butter sit out?: For the best baking success, here&#x27;s the deal on saving softened butter for later." style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F9iup8ry937x2gi9ask1h.png" alt="npm audit Found 69 Vulnerabilities in My Two SaaS Apps. Most of the Work Was Sorting Them." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.kingarthurbaking.com/sites/default/files/2023-10/Soften-Butter_1837.jpg" alt="How long can butter sit out?: For the best baking success, here's the deal on saving softened butter for later." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Posted on Nov 25
-•
-Originally published at nullstud.io</p>
-<p>At Null Studio I write maintenance guides for clients. One of them, on what software costs after launch, splits upkeep into four kinds: corrective, adaptive, preventive and security. It ends with seven questions to settle before launch. The first one is "Who receives deprecation and security notices from each platform and service we use?"</p>
-<p>I had never asked that about my own products. So this week I ran npm audit against the production branches of the two SaaS apps I run myself: VoiceDash (white-label client portals for Retell voice agents, Next.js + Prisma + Postgres) and Upwork Scout (AI-matched Upwork job alerts, Next.js + Firestore).</p>
-<p>69 advisories across two apps. Here is how I sorted them, what the tool got wrong, and the boring answer to the "who gets notified" question.</p>
-<p>My local VoiceDash checkout was 37 commits behind main, so auditing it would have told me about code nobody runs. I pulled the deployed package.json and package-lock.json straight from the branch into a scratch folder and audited the lockfile alone, with no install:</p>
-<p>--package-lock-only is the useful flag here. It audits the exact tree Vercel installs, it is fast, and it does not run anyone's postinstall script on my machine.</p>
-<p>The obvious next move is --omit=dev, because a vulnerable ESLint plugin is not reachable from an HTTP request.</p>
-<p>That looked like progress until I mapped every remaining advisory back to the direct dependency that pulls it in. I wrote a small script that walks packages in the lockfile from each entry in dependencies and records which roots reach each vulnerable package. For VoiceDash:</p>
-<p>Fifteen of the 27 "production" advisories come through the Prisma CLI: hono, @hono/node-server, mysql2, chevrotain, lodash, effect and friends. My app does not serve requests with Hono and does not talk to MySQL. Those packages are there because the CLI ships a local dev server and schema tooling.</p>
-<p>So why did --omit=dev keep them? Because prisma sits in dependencies, not devDependencies, in my own package.json. The scripts are "postinstall": "prisma generate" and "build": "prisma generate && next build", so the CLI has to be installed at build time, and at some point I put it in the production list. Vercel installs dev dependencies during the build anyway, so it could move. The audit filter trusts my package.json, and my package.json was wrong.</p>
-<p>That does not make those 15 advisories irrelevant. Build tooling runs on a machine that holds my environment variables. It does mean they are a different risk from a bug in the request path, and they should not be ranked by npm's severity label alone.</p>
-<p>Upwork Scout split cleanly by comparison: 11 of its 18 come through firebase-admin (gRPC, Google Cloud clients, fast-xml-parser, @fastify/busboy), 6 through next, and 1, zod, arrives only through the Anthropic SDK. The app itself does not import zod.</p>
-<p>npm audit attaches a proposed fix to each advisory. Two of them would have hurt.</p>
-<p>The firebase-admin "fix" is a downgrade. Upwork Scout runs firebase-admin 13.10.0. The advisory range is 11.0.0 - 14.3.0, and npm's suggested fix was:</p>
-<p>12.1.0 was published in April 2024. The current release is 14.5.1, which sits outside the vulnerable range. npm audit fix --force would have moved my app back two years and across a major boundary in the wrong direction. The real fix is a forward major upgrade that I need to test against my Firestore code, which is exactly the kind of adaptive work the client guide says to budget for.</p>
-<p>prisma@latest is a release candidate. VoiceDash runs Prisma 7.5.0. The vulnerable range ends at 7.10.0, and 7.10.1 is the newest stable 7.x. But the latest dist-tag on npm currently points to 8.0.0-rc.35. If I had typed npm i prisma@latest to clear the warning, I would have shipped a release candidate of my ORM to production. The fix I want is prisma@7.10.1 and @prisma/client@7.10.1, pinned together.</p>
-<p>The other two big ones were simpler. Both apps pin next to an exact version, which is the create-next-app default, so npm update never touches it. The patched release is in the same major. The auth library in VoiceDash is a beta release, and the patched build is a later beta of the same line. Those are the first two bumps, because they sit in front of every request.</p>
-<p>I have not shipped any of this yet. This post is the audit, not the victory lap.</p>
-<p>Nobody. I checked both repos with the GitHub API:</p>
-<p>Same response for Upwork Scout. Neither repo has a dependabot.yml or a Renovate config, and neither has a CI workflow that runs an audit. VoiceDash's only workflow pings Supabase so the free tier does not pause, and Upwork Scout's only workflow pings the scan endpoint every 15 minutes.</p>
-<p>The git history tells the same story. Upwork Scout's package-lock.json last changed on July 7, two days after the first commit. VoiceDash's last changed on October 5, when I added a feature that needed it. Every dependency change in either repo happened because I was building something, never because I was maintaining something. In the guide's terms, I have been doing corrective work and zero preventive or security work, and the only reason I know is that I finally ran the command.</p>
-<p>That pattern is familiar. I already wrote about a cron job that returns 200 when every fetch fails and about a model setting nobody re-checks. A missing notification channel is the same bug in a different place: the system is quiet, so it looks healthy.</p>
-<p>npm audit is a good smoke detector and a bad triage nurse. The raw count told me almost nothing. The useful information came from three questions the tool does not ask: does this package run in the request path, does the fix move me forward or backward, and who would have found out if I never ran the command?</p>
-<p>How do you handle this on small products? Do you let Dependabot or Renovate open PRs automatically, or do you batch dependency work into a regular maintenance day?</p>
-<p>This post is adapted from the client guide Software Maintenance After Launch on the Null Studio blog, held up against my own two apps.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p>The bakers of King Arthur are here to solve the kitchen conundrums you share with us, whether it’s on the phone, computer, or by the good old postal service. In Ask the Baker’s Hotline, Annabelle will pick the brains of the talented King Arthur Baker’s Hotline team to tackle some of your most-asked questions.</p>
+<p>Ryan from our Baker’s Hotline is here with the answer.</p>
+<p>You sure can! It will still work the next time you want to bake. But remember, as with any dairy product, there are always precautions to take.</p>
+<p>The USDA recommends keeping butter at room temperature for no more than two days to prevent spoilage. Salt is a preservative and can lengthen the shelf life, but for the sake of this article, we’re talking about unsalted butter. (It’s more appropriate for baking and is the type called for in most King Arthur recipes.)</p>
+<p>“If the butter has only been on the counter at room temperature for a few hours or overnight and has maintained a temperature below 70°F, it should be just fine to place back in the fridge,” says Ryan. “You may not notice a difference in the performance of the butter when you eventually use it, other than the wrapper being a bit wet or soft. Food safety-wise, it’s still good to use.”</p>
+<p>“If the butter became very soft or started to melt during its time on the counter (or in the microwave if you were speeding up the process), you can put it back in the fridge, but it may not be the best to use in your recipe,” Ryan suggests. “You may notice when it solidifies that it’s separated or grainy. The water, fats, and solids in butter are an emulsion, which can break when melted and re-solidified.” If your recipe depends on butter to create air or structure, like a cake that calls for creaming butter and sugar, you’ll want to start over with new butter.</p>
+<p>“If you used that butter in a recipe requiring creaming, the air you incorporate wouldn’t be as stable since the structure of the butter has changed,” Ryan says. “Your baked goods may not rise properly, and frostings may be soft and loose. Is it still safe to use? Food safety-wise, yes. But structure-wise, perhaps not.”</p>
+<p>That butter can still be used for other things though! Extra-softened or even melted and re-solidified butter will still work perfectly to spread on toast or pancakes, to be made into brown butter, or to remelt and use in recipes calling for melted butter like a Graham Cracker Crust.</p>
+<p>If your butter has been unrefrigerated for more than two days, you run the risk of it going rancid. As Ryan says, “There is no coming back from rancid butter.” It has a distinctly unpleasant flavor and a noticeable rancid smell that carries over into baked goods. It’s best to dispose of the butter if this happens.</p>
+<p>But what if you want to keep your butter at room temperature for days at a time to slather on your morning toast? Ryan recommends storing your butter in a butter keeper if you want to leave it on the counter. “The water in the base of the jar creates an airtight seal, helping prevent the butter from spoiling. So long as it is stored away from direct heat and light, the butter in a container like this will be fine for a few days. Be sure to replace the water often and clean the container before filling again.”</p>
+<p>“When working with butter in a recipe, I like to bring out and soften only the amount that is needed for what I am working on. That way, I don’t end up with extra butter that won’t be used right away,” he says. “Repeatedly moving butter from the fridge to the counter and then back invites spoilage and poor performance.”</p>
+<p>In a rush? To soften your butter more quickly, Ryan advises, “Cut your butter into pats and place them on a plate in a single layer at room temperature. More surface area means that the butter will soften a bit faster!”</p>
+<p>Photography by Rick Holbrook; food styling by Kaitlin Wayne.</p>
+<p>See our complete collection of Tips and Techniques posts.</p>
+<p>Because we're all wondering what to do with our apple and pumpkin pies.</p>
+<p>It can be trickier than you think — here’s what to look for.</p>
+<p>Here’s how to make scones moist, every time.</p>
+<p>Facebook
+
+
+
+TikTok
+
+
+
+Instagram
+
+
+
+Threads
+
+
+
+Pinterest
+
+
+
+LinkedIn
+
+
+
+YouTube
+
+
+
+
+
+
+
+
+
+
+Reddit
+
+
+
+
+
+
+
+
+
+Substack</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/nabeelbaghoor/npm-audit-found-69-vulnerabilities-in-my-two-saas-apps-most-of-the-work-was-sorting-them-eef" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.kingarthurbaking.com/blog/2026/10/01/how-long-can-butter-sit-out" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

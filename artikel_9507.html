@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugar Plum Thumbprint Cookies</title>
+    <title>Flank, flip, or pass: how I coded Reversi in 124 lines for a multiplayer browser game</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9507.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,19 +15,42 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Sugar Plum Thumbprint Cookies</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
+        <h1>Flank, flip, or pass: how I coded Reversi in 124 lines for a multiplayer browser game</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://hips.hearstapps.com/hmg-prod/images/bec35211-8463-441d-a5f2-e4eac125b5d8.jpg?crop=0.667xw:1xh;0.163xw,0xh&amp;resize=1200:*" alt="Sugar Plum Thumbprint Cookies" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fwnb9y1uzxy06i2ve20fo.png" alt="Flank, flip, or pass: how I coded Reversi in 124 lines for a multiplayer browser game" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hips.hearstapps.com/hmg-prod/images/bec35211-8463-441d-a5f2-e4eac125b5d8.jpg?crop=0.667xw:1xh;0.163xw,0xh&resize=1200:*" alt="Sugar Plum Thumbprint Cookies" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fwnb9y1uzxy06i2ve20fo.png" alt="Flank, flip, or pass: how I coded Reversi in 124 lines for a multiplayer browser game" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The sugar plums:Here, we’ve used walnuts, prunes, apricots, and dates, but feel free to switch it up as you like! Hazelnuts and dried cherries or pecans, almonds, and raisins would be lovely in the mix. The filling comes together in minutes in a mini food processor, but if you don’t have one, simply chop the mixture as finely as possible. (Use a little oil on your knife to make chopping a little easier.) It’s uncooked, but a little time in the oven gives the spices a chance to warm up and lets the flavor meld. To toast the walnuts, set them on a rimmed baking sheet and bake at 350° until fragrant and golden brown, about 8 minutes.</p>
-<p>Made this recipe? Rate and review it below!</p>
-<p>We may earn commission from links on this page, but we only recommend products we back.</p>
+                <p>Reversi is one of those games you can explain in a sentence and still lose to for years. Place a disc so that it traps a straight line of your opponent's discs between it and another of yours, and every trapped disc flips to your colour. Whoever owns the most discs when nobody can move wins.</p>
+<p>On mympgames, my free arcade of 60+ multiplayer browser games, the whole Reversi rule engine is a single 124-line server module. This post walks through it: how the board starts, how a move is checked, the rule about passing that trips up a lot of implementations, and how the client gets just enough information to draw hint dots without doing any rule work itself.</p>
+<p>Every game on the site exports the same four things: meta, createState, onAction and publicState. The room server owns the sockets and the turn clock; the game module owns the rules. Reversi's meta is tiny:</p>
+<p>Players are just indexes, 0 and 1. An empty square is null. That choice keeps the rest of the code very small, because "the opponent" is always 1 - player.</p>
+<p>Reversi starts with four discs in the middle, placed diagonally:</p>
+<p>One small trap here: Array(SIZE).fill([]) style shortcuts share a single row object across the whole board. Building each row inside Array.from gives eight independent rows, so flipping one square never mysteriously flips a whole column.</p>
+<p>The heart of the game is a function that answers one question: if this player put a disc here, which discs would flip? If the answer is "none", the move is illegal. That means legality checking and move execution share exactly the same code, so they can never disagree.</p>
+<p>For each of the eight directions it walks outward collecting opponent discs. The line only counts if two things are true when the walk stops: it collected at least one disc, and the square it stopped on is still on the board and belongs to the mover. Ran into an empty square or the edge? That direction contributes nothing.</p>
+<p>The line.length check matters more than it looks. Without it, placing a disc right next to one of your own would count as a "capture" of zero discs in that direction, and a buggy version could accept a move that flips nothing at all.</p>
+<p>Listing legal moves is then just "every square where flipsFor returns something":</p>
+<p>That's 64 squares times up to 8 rays, at most a few hundred cheap array reads. I thought about caching or using bitboards, and decided it wasn't worth it: on an 8×8 board, the simple scan runs in well under a millisecond, and readable code is easier to trust in a multiplayer game where the server is the referee.</p>
+<p>Clients never tell the server "I flipped these discs". They send { type: 'place', r, c } and the server works out the rest:</p>
+<p>The order of the guards is deliberate: cheap checks first (game over, wrong turn, wrong action type, out of bounds), the actual rule check last. A modified client can send whatever it likes; the worst it can get back is an error string.</p>
+<p>Here is where a lot of quick Reversi clones go wrong. If the next player has no legal move, they don't lose and the game doesn't end. They pass, and the same player moves again. The game only ends when neither player can move, which happens on a full board but can also happen earlier, for example when one colour has been wiped out.</p>
+<p>I like that passing isn't an action at all here. There's no "Pass" button for a player to press at the wrong moment and no way to pass when you actually have a move. The server simply notices that a player is stuck and skips them. The tradeoff is that the skip can surprise people: the turn indicator just stays on your opponent. A small toast in the UI explaining "no legal moves, turn passes" would help, and it's on my list.</p>
+<p>Scoring at the end is a plain count, with -1 standing for a draw:</p>
+<p>Reversi has no hidden information, so publicState is mostly a copy of the state. The interesting addition is legal: the server sends the list of legal squares for whoever's turn it is.</p>
+<p>The Vue component turns that into a Set of "r,c" keys. It uses it to disable buttons on illegal squares and, when the room has hints turned on, to draw a small dot on each playable square. The client never runs flipsFor. One rules implementation, on the server, means the hint dots and the referee always agree.</p>
+<p>Copying the rows (map((r) => [...r])) instead of handing out the live board is a habit from the other games: whatever the transport layer does with the object, it can't mutate the real game state.</p>
+<p>When you start a room alone, a bot can sit in the other seat. Reversi's bot is deliberately basic right now: it takes the legal list from the public state (or recomputes it from the board if it's missing) and picks a random legal move.</p>
+<p>That's simplified from the real file, but the behaviour is the same. Because the bot sends its move through the same onAction as a human, it can't cheat even by accident. A random Reversi bot is easy to beat once you learn that corners can never be flipped back, which is honestly not a bad way for a beginner to discover that rule. A stronger bot that weights corners and edges and avoids the squares next to empty corners would be a natural next step.</p>
+<p>If you want to see it in action, you can play Reversi against a friend or the bot at mympgames.com/play/reversi, and browse the other 60+ free multiplayer games at mympgames.com. No downloads, no sign-up wall.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.delish.com/cooking/holiday-recipes/christmas/a74443198/sugar-plum-thumbprint-cookies-recipe/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/mympgames/flank-flip-or-pass-how-i-coded-reversi-in-124-lines-for-a-multiplayer-browser-game-3ec8" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I checked Clojure&#x27;s core with Lean and found 17 unreported bugs</title>
+    <title>NVIDIA Cosmos-H-Dreams: Bringing Real-Time Generative Simulation to Surgical Robotics</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9795.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,99 +15,49 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>I checked Clojure&#x27;s core with Lean and found 17 unreported bugs</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
+        <h1>NVIDIA Cosmos-H-Dreams: Bringing Real-Time Generative Simulation to Surgical Robotics</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://s.conao3.com/og/blog/2026/e4f733.png" alt="I checked Clojure&#x27;s core with Lean and found 17 unreported bugs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://cdn-uploads.huggingface.co/production/uploads/68c1279544f671330c604f4c/Cj0RZwvOSUhFGFEFKgyDw.png" alt="NVIDIA Cosmos-H-Dreams: Bringing Real-Time Generative Simulation to Surgical Robotics" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://s.conao3.com/og/blog/2026/e4f733.png" alt="I checked Clojure's core with Lean and found 17 unreported bugs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/68c1279544f671330c604f4c/Cj0RZwvOSUhFGFEFKgyDw.png" alt="NVIDIA Cosmos-H-Dreams: Bringing Real-Time Generative Simulation to Surgical Robotics" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I read Koukyosyumei's article "èåãªRustè£½OSSãLean 4ã§å½¢å¼æ¤è¨¼ãã¦ã¿ããããã¡ããã¡ããã°ãè¦ã¤ãã£ãè©±" (in Japanese; the title means "I formally verified well-known Rust OSS with Lean 4 and found a lot of bugs").
-The author ported well-known Rust projects into a form they could prove in Lean 4, and where a proof failed, they found a bug in the original code.</p>
-<p>Many people have used Clojure's persistent data structures since around 1.0, so I expected no bugs to remain.
-Still, I wanted to see whether Lean would find something there too.</p>
-<p>hirosassa/lean-verify describes a procedure for modeling a small function in Lean 4 and checking it for all inputs, so I applied it to the part of Clojure's core written in Java.</p>
-<p>I modeled integer and bit arithmetic in Lean and searched for counterexamples.
-I checked the collections with differential testing against the java.util collections, and for Java interop I compared the same call with and without a type hint.</p>
-<p>I found 17 bugs that I could not find in Clojure's JIRA or on ask.clojure.org.
-They include reduce on vector-of, the hash collision node of the HAMT, and calls to functional interfaces without a type hint.</p>
-<p>The HAMT itself showed no mismatch in 3 million operations of differential testing, and the vector tree showed none around its boundaries.
-The bugs sat in separate code outside the trees, and in places where two mechanisms meet, such as = and hashing.</p>
-<p>I used Clojure 1.12.7, released on 2026-11-18, and JDK 21.
-The links to the source point to the clojure-1.12.7 tag.</p>
-<p>The lean-verify procedure picks one function and models it as a Lean definition.
-You write a property that compares it with a naive specification computed at a wider width, and bv_decide searches for a counterexample.</p>
-<p>If you model Java's long and int as BitVec 64 and BitVec 32, the wraparound of addition and multiplication maps onto BitVec operations.
-So do the rounding of / toward zero and the sign of %.</p>
-<p>When Lean found a counterexample, I turned the value into a Clojure input and reproduced it in the original code.
-I then modeled the fixed code in Lean and proved the same property.
-Lean can only take small functions that reduce to integer and bit arithmetic, so I checked the large persistent data structures with differential testing.</p>
-<p>Each test applies the same random sequence of operations to PersistentHashMap and to java.util.HashMap and compares the results.
-For the HAMT, the keys mix partial collisions at each 5-bit level with fully identical hashes, and I ran 1,500 operations for each of 2,000 seeds.</p>
-<p>For vectors, I compared against ArrayList around 32, 1056, 32800, and 1048608, where the tree gains a level.
-The operations were conj, pop, assoc, and their transient versions.</p>
-<p>I checked whether anyone had reported each bug before.
-I searched Clojure's JIRA through its REST API and ask.clojure.org through web search and the site's own search, and found no matching report.</p>
-<p>vector-of is a vector that stores its values in primitive arrays.
-Clojure implements it in gvec.clj, written in Clojure and separate from PersistentVector.
-If you drop from one and then reduce it, the call never returns once the vector has 65505 or more elements.</p>
-<p>The cause is line 79 of gvec.clj, where the seq's reduce computes the start of the next 32-element chunk.</p>
-<p>The code uses 0xffe0 to clear the low 5 bits and round down to a multiple of 32, but the mask also clears bit 16 and everything above it.
-With 65505 elements, the last chunk starts at index 65504.
-After that chunk, the start of the next one should be 65536, but the mask turns it into 0, so reduce goes back to the start and reads the vector again and again.</p>
-<p>The 0xffe0 mask has stayed in place since the 2010 commit that added internal-reduce.
-In Lean, I wrote the property that from a position a that is a multiple of 32, the next chunk starts at a + 32.</p>
-<p>impl_ok fails with the counterexample a = 1073741792, and #eval stepImpl 65504 returns 0 as well.
-fix_ok uses (bit-not 0x1f) as the mask, and its proof goes through under the assumption that a is a multiple of 32 below 0x7fffffe0.</p>
-<p>Clojure's hash-map is a HAMT: it splits the key's hash into 5-bit pieces and uses them to walk down the tree.
-Keys whose 32-bit hashes are identical share a HashCollisionNode at the bottom of the tree, and the node finds a key among them with =.</p>
-<p>HashCollisionNode.without builds the new node with one key removed.
-It should give the new node its own hash, this.hash, but it passes the parameter hash instead.</p>
-<p>The parameter hash is the hash of the key you pass to dissoc.
-If you dissoc with a key that is = to the stored key but has a different hash, the node records the wrong hash.</p>
-<p>In Clojure, a vector is = to a Java ArrayList with the same elements, but the two hash differently.
-CLJ-1372 tracks this mismatch.</p>
-<p>In the example below, I chose a and b so that both ArrayList keys hash to 1003.</p>
-<p>When you print m3, you can see the key b, but (get m3 b) returns nil.
-After the dissoc, the node records 1867155179, the hash of [0 42].
-The next assoc then concludes that a, with hash 1003, does not collide with the node, and splits the two into separate branches.</p>
-<p>A lookup of b follows the branch for 1003 and finds only a there, so it never reaches b.
-In this example the collision node sits on the first level of the tree, so the key passed to dissoc needs the same low 5 bits as 1003, and 1867155179 has them.</p>
-<p>disj on a hash-set has the same bug, while the path through the transient dissoc! does not.</p>
-<p>I changed that line in the 1.12.7 PersistentHashMap.java to this.hash and compiled it.
-With the patched class ahead of the jar on the classpath, the same example returned :B for (get m3 b).</p>
-<p>Since Clojure 1.12, you can pass a Clojure function directly where a Java method takes a functional interface.
-CLJ-2864 removed the logic that read the function's return value as a Clojure truthy value.</p>
-<p>In prior alphas, the FI adapter returns inserted Clojure truthy return logic when adapting a Clojure function to an FI with boolean return.</p>
-<p>The compiler follows this for calls where it knows the type.
-A call without a type hint goes through reflection and uses Reflector.coerceAdapterReturn.
-That method still applies RT.booleanCast to a boolean return value, so the same .removeIf call gives a different result depending on the type hint.</p>
-<p>Wrapping the list in identity hides the type of l, so the call goes through reflection.</p>
-<p>A set used as a function returns the element itself.
-In the call with a known type, the adapter cannot turn the Long into a Boolean and throws.
-The reflective call reads the return value as true and removes the elements.</p>
-<p>Clojure 1.12 added IDrop implementations that make drop faster.
-The ones for string seqs and vector seqs add the current position and n as ints and then compare the sum with the length.
-StringSeq.drop for string seqs is one of them.</p>
-<p>The Lean model gave the counterexample i = 2147483646 and n = 2147483647.
-I changed the check to compare n with the remaining length s.length() - i.
-Under the assumptions 0 < i < s.length()= and 0 < n, Lean proved that the fixed check matches the naive specification for every 32-bit input.</p>
-<p>For assoc on the result of subvec, SubVector.assocN does not reject a negative index.</p>
-<p>The call overwrites an element of the underlying vector outside the subvec, and returns a subvec that looks unchanged.
-CLJ-962 fixed the same bug in nth, but assoc still has it.</p>
-<p>The other 12 bugs have a smaller impact, and I reproduced each of them on Clojure 1.12.7.</p>
-<p>PersistentHashMap and PersistentHashSet matched java.util.HashMap over 3 million operations that mixed persistent and transient updates.
-The tests also covered maps before an update staying unchanged, ArrayNode splits and merges, and collision nodes down to depth 7.</p>
-<p>PersistentTreeMap matched java.util.TreeMap and kept the red-black tree invariants.
-Vectors matched ArrayList around every tree boundary I tested.</p>
-<p>On the numeric side, Lean proved for 64 bits that the check Numbers uses to pick the fast path for addition and subtraction agrees with the overflow check.</p>
-<p>For multiplication, bv_decide timed out at 16 bits, so I checked 8 and 10 bits.
-I proved up to 32 bits that clojure.core/mod matches the floored remainder.</p>
-<p>Every property I proved in Lean holds for the model shown in this article.
-I checked that each model means the same thing as the Java code by comparing it with the source and with the reproduced behavior.</p>
+                <p>Surgical robotics is moving quickly from teleoperation toward increasingly capable vision-language-action policies. But evaluating and training these systems remains difficult. Physical robotic platforms are expensive to operate, experiments are slow to reproduce, and failures can damage instruments or biological material. Conventional simulators provide a safer alternative, but surgical scenes are exceptionally difficult to model: deformable tissue, fine instrument interactions, specular surfaces, sutures, needles, smoke, and occlusions all matter.</p>
+<p>World foundation models offer a different path. Instead of manually authoring every object and physical interaction, they learn visual dynamics directly from synchronized video and robot kinematics. NVIDIA's Cosmos-H-Surgical-Simulator demonstrated this approach by generating future surgical video from an initial scene and a sequence of robot actions. It enabled faster-than-physical evaluation and synthetic data generation across the Open-H-Embodiment ecosystem.</p>
+<p>Today, we are introducing the next step: Cosmos-H-Dreams, a real-time, action-conditioned generative simulator for surgical robotics. Cosmos-H-Dreams distills the capabilities of Cosmos-H-Surgical-Simulator into a causal, few-step student model and serves it through FlashDreams, NVIDIA's accelerated streaming-inference library. Running on a single NVIDIA RTX PRO 6000 GPU, the result is an interactive environment that a person or a learned policy can control in a closed loop.</p>
+<p>Cosmos-H-Surgical-Simulator is an action-conditioned world foundation model built on NVIDIA Cosmos-Predict2.5-2B and post-trained on the Open-H-Embodiment dataset. Given a surgical context frame and a future robot trajectory, it generates video showing the likely visual consequences of those actions. This makes it useful for offline policy evaluation and synthetic data generation. A recorded or policy-generated trajectory can be sent to the model, the corresponding rollout can be generated, and the result can be inspected or scored without repeatedly executing the motion on a physical robot.</p>
+<p>Cosmos-H-Dreams moves the model into the real-time regime. Starting from the multi-embodiment surgical priors learned by Cosmos-H-Surgical-Simulator, we specialize the model for da Vinci Research Kit (dVRK) tabletop suturing and distill it into a causal student that generates the scene autoregressively. The released model receives an initial RGB frame and a live stream of robot kinematics, then produces the next chunk of frames before continuing with the following action block.</p>
+<p>We have also demonstrated the versatility of Cosmos-H-Dreams by collaborating with CMR Surgical and Cambridge Consultants to integrate it with the Versius surgeon controller, enabling real-time operation on the Versius platform.</p>
+<p>The key challenge is preserving useful surgical dynamics while reducing the cost of generation. Cosmos-H-Dreams uses a teacher-to-student training pipeline designed for long, autoregressive rollouts.</p>
+<p>The bidirectional teacher begins from the Cosmos-H-Surgical-Simulator Open-H checkpoint, which uses a unified 44-dimensional action representation. For the released dVRK tabletop model, the dual-arm dVRK action content, consisting of relative end-effector translation, rotation, and gripper state, is mapped into this common representation.</p>
+<p>The teacher is then fine-tuned on the JHU dVRK tabletop mixture, including successful demonstrations as well as failure and out-of-distribution episodes such as needle drops, missed throws, and unsuccessful knot ties. These failures are important: a simulator intended to evaluate policies must reproduce the consequences of poor actions, not only ideal demonstrations.</p>
+<p>To improve stability during long rollouts, the training process progressively increases the teacher's temporal horizon. We start training on a 12-frame horizon and progressively increase this number until 72 frames. At each horizon bump, we initialize the warmed-up model with pretrained weights.</p>
+<p>The teacher's denoising trajectories are first precomputed and cached. A causal student is initialized from the teacher and trained to imitate these cached trajectories. This warmup stage teaches the student to operate with causal attention and a streaming key/value cache before it begins learning from its own generated history.</p>
+<p>Autoregressive models face a familiar problem: during training they may see clean, ground-truth context, while during deployment they must condition on their own imperfect outputs. Small errors can therefore compound over time.</p>
+<p>Cosmos-H-Dreams addresses this mismatch with self-forcing distillation. During training, the student rolls forward using its own generated context. Distribution-matching supervision from the frozen teacher then guides those self-generated rollouts toward realistic surgical video. This prepares the student for the same conditions it will encounter during interactive inference.</p>
+<p>The resulting model supports few-step diffusion, with as few as two denoising steps per latent frame, rather than the many-step process used by the full teacher. It combines the teacher's surgical priors with the causal structure needed for streaming.</p>
+<p>Model distillation is only part of the real-time story. Cosmos-H-Dreams is served through FlashDreams, an accelerated inference library for autoregressive world and video models.</p>
+<p>FlashDreams turns the distilled student into a low-latency streaming system through several complementary optimizations, such as streaming KV cache, CUDA Graph capturing, or model compilation.</p>
+<p>Together, these techniques bring the distilled surgical world model fine-tune from the roughly ten-frames-per-second regime of standard Cosmos-H-Surgical-Simulator inference to interactive operation (~160 frames per second) on a single NVIDIA RTX PRO 6000.</p>
+<p>Cosmos-H-Dreams also provides the human-machine interfaces that turn generation into interaction. A browser client can send keyboard commands and receive generated frames over WebRTC. A Meta Quest client can map tracked controller motion into robot actions and display the synthesized scene through WebXR. The same model can also be connected to a learned surgical policy, with generated observations and predicted actions exchanged inside a closed loop.</p>
+<p>While Cosmos-H-Dreams includes a pre-trained checkpoint for tabletop suturing, the system is designed to be extensible to your specific embodiment. To train a real-time student model for your own dataset, we provide a complete recipe for teacher fine-tuning and self-forcing distillation in our step-by-step guide.</p>
+<p>Cosmos-H-Dreams opens a new frontier for surgical simulation: environments learned from real robot data that are responsive enough to be inhabited.</p>
+<p>The immediate next step is to evaluate more than visual quality. A useful surgical simulator must respond correctly to actions, preserve instrument and scene structure over long rollouts, and support conclusions that transfer to the physical robot. This motivates a new family of closed-loop benchmarks: tool-tip reach and pose accuracy, gripper-cycle fidelity, idle stability, counterfactual action diversity, long-horizon drift, and agreement between simulated and real policy outcomes.</p>
+<p>Real-time world models can also become active partners in surgical policy development. They can generate rare failures on demand, provide scalable environments for reinforcement or imitation learning, and enable rapid evaluation of new policies without tying every experiment to scarce robotic hardware.</p>
+<p>Further ahead, real-time simulation enables a series of downstream applications such as latency-aware telesurgery, where the world model helps maintain a more stable display; or interactive surgical rehearsal, procedure planning, and intraoperative decision support. Cosmos-H-Dreams is a research and development platform, not a diagnostic system, a replacement for intraoperative imaging, or a controller for a physical surgical robot. Yet it provides a foundation for exploring these possibilities safely.</p>
+<p>As model fidelity, temporal stability, and hardware efficiency continue to improve, real-time generative simulation can help connect surgeon education, synthetic data generation, policy training, and policy evaluation within one shared Physical AI environment.</p>
+<p>Explore the models, data, and runtime behind Cosmos-H-Dreams:</p>
+<p>Cosmos-H-Dreams brings action-conditioned surgical world modeling into the real-time loop, creating a new environment for people and policies to practice, explore, generate data, and evaluate what happens next.</p>
+<p>This is a fascinating leap for surgical robotics. Real-time generative simulation could greatly reduce risks in training and planning. The concept of distilling a large model into a causal student model is clever. If you're also exploring video generation from images, check out the Seedance 2.5 image-to-video tool for creative applications.</p>
+<p>Assessing more than just visual quality is the immediate next step. A practical surgical simulator must enable findings that translate to the real robot, maintain instrument and scene organization during extended rollouts, and react appropriately to actions. Tool-tip reach and pose accuracy, gripper-cycle fidelity, idle stability, counterfactual action variety, long-horizon drift, and agreement between simulated and actual policy outcomes are some of the new closed-loop benchmarks that are motivated by this.</p>
+<p>The progress in surgical robotics is genuinely exciting! 🏥🤖 Being able to train and test advanced vision-language-action systems in realistic simulations without risking expensive equipment or delicate procedures could make development much faster and safer. The level of detail needed for tissues, instruments, smoke, and lighting really shows how challenging this field is. 👏</p>
+<p>It’s impressive to see technology moving beyond simple teleoperation and towards smarter, more capable robotic assistance. 🚀 Better simulation environments can help researchers refine these systems before they ever reach an operating room, which is a win for both surgeons and patients. 😊📱</p>
+<p>Looking forward to seeing how projects like NVIDIA Cosmos-H-Dreams shape the future of healthcare. 🌍💙 If these simulations continue becoming more realistic, they could play a huge role in improving surgical training, reducing costs, and ultimately delivering better patient outcomes. Amazing work and an exciting glimpse into what's ahead! 🙌✨</p>
+<p>includes a pre-trained checkpoint for tabletop suturing</p>
+<p>Awesome article. Was clearly in the works over the past 12 months as evident from the NeurIPS collab with Axel Krieger and others along with the Open-H dataset release earlier this year. The tricky part is how one collects their own dataset of the right size for the complexity of the task. More complex tasks will require larger datasets. Training stability and patterns need to be figured out.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://s.conao3.com/blog/2026/e4f733" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://huggingface.co/blog/nvidia/cosmos-h-dreams" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

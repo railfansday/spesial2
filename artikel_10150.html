@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency</title>
+    <title>From Script to Screen: A Developer&#x27;s Workflow for Long-Form AI Video</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10150.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,58 +15,74 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-25</p>
+        <h1>From Script to Screen: A Developer&#x27;s Workflow for Long-Form AI Video</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183005_7d7eb59768.png" alt="Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183705_8f814d86d0.png" alt="From Script to Screen: A Developer&#x27;s Workflow for Long-Form AI Video" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183005_7d7eb59768.png" alt="Sizing GPU Memory for a RAG Service: KV Cache, Context and Concurrency" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_Screenshot_2026_11_18_183705_8f814d86d0.png" alt="From Script to Screen: A Developer's Workflow for Long-Form AI Video" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>A retrieval-augmented generation (RAG) app is usually drawn as a language model plus a vector database. When it goes live, the part that fails first is rarely the retrieval. It is GPU memory on the generation model, because a model that loads fine for one request can run out of memory when several users send long questions at once.</p>
-<p>This article shows how to estimate that limit before you deploy, with a short script you can run, and then covers what else in the pipeline can slow responses down.</p>
-<p>Serving a model takes more than its weights. The GPU also holds:</p>
-<p>the key-value (KV) cache, which grows with the length of every active request</p>
-<p>memory used by the inference runtime itself</p>
-<p>SitePoint's guide to running a local LLM on 10GB of VRAM makes the same point for a single desktop GPU: the usable budget is the total VRAM minus overhead, and the KV cache grows with the context window, so the real model budget is smaller than the number on the box.</p>
-<p>For a RAG service, the KV cache matters even more. Retrieved passages are pasted into the prompt, so every request carries a long context, and every concurrent request holds its own cache.</p>
-<p>The cache size per token depends on the model's architecture: two tensors (keys and values) for every layer, for every KV head. This script turns those numbers into a rough limit on concurrent requests:</p>
-<p>def kv_bytes_per_token(layers, kv_heads, head_dim, dtype_bytes=2):</p>
-<p># Keys and values, for every layer, for one token.</p>
-<p>return 2 *layers *kv_heads *head_dim *dtype_bytes</p>
-<p>def max_concurrent(vram_gb, weights_gb, ctx_tokens, per_token, reserve_gb=2.0):</p>
-<p>budget = (vram_gb - weights_gb - reserve_gb) * GIB</p>
-<p>return int(budget // (ctx_tokens * per_token))</p>
-<p>per_token = kv_bytes_per_token(32, 8, 128)</p>
-<p>print(per_token // 1024, "KiB per token")</p>
-<p>n = max_concurrent(24, 16, ctx, per_token)</p>
-<p>print(ctx, "tokens ->", n, "concurrent requests")</p>
-<p>For a 24 GB GPU holding about 16 GB of fp16 weights with 2 GB kept in reserve, it prints:</p>
-<p>The numbers are estimates. Real runtimes add their own overhead, and the architecture values come from the model's configuration file, so read them from the model you actually use. The pattern is what matters: doubling the context length halves the number of requests that fit. A RAG prompt that stuffs in ten retrieved chunks costs real capacity.</p>
-<p>Serving runtimes do not simply crash when the cache is full. The vLLM documentation on optimization and tuning explains that when KV cache space is insufficient for all batched requests, the engine preempts some of them and recomputes them later, which can hurt end-to-end latency. Its suggested remedies include giving the cache more memory, reducing the number of concurrent sequences or batched tokens, or sharding the model across GPUs.</p>
-<p>So the symptom of undersizing is often not an error. It is slow, uneven responses under load. Test with realistic prompt lengths and several simultaneous users, not a single request.</p>
-<p>Embedding and ingestion have a different profile from generation. Embedding is often lighter than serving a large language model, and some teams run it on CPU. Document parsing, chunking and tokenization also run on CPU, so a fast GPU cannot make up for a slow CPU upstream. SitePoint's tutorial on a local RAG system for private documents walks through chunking, embeddings, vector storage and reranking, and is a good map of which stages run where.</p>
-<p>RAM: vector indexes, document loaders and caches all live in system memory, so large collections need more of it.</p>
-<p>Storage: model files, indexes, logs and backups add up. Fast storage shortens model loading and re-indexing.</p>
-<p>Network: if the vector database, application server and model server sit in different places, latency adds to every request.</p>
-<p>Two layouts are common. A single instance runs everything and is simplest for prototypes and internal tools. Separated services put ingestion and retrieval on smaller machines and keep the GPU for generation, which scales better as traffic grows.</p>
-<p>Memory estimates only hold if the GPU memory is really yours. On a shared or time-sliced GPU, other workloads can take memory and compute away from your service, which makes capacity hard to plan. Hosting providers describe this in different terms, such as passthrough, vGPU, MIG and time-slicing. For a view of how one GPU hosting provider explains those allocation methods, GPU Mart's GPU virtualization guide compares them. It is a hosting company's page, so confirm any provider's claims about isolation and performance with your own load test.</p>
-<p>Whatever provider you choose, ask these questions:</p>
-<p>Is the physical GPU assigned to you exclusively, or partitioned or time-sliced?</p>
-<p>Do you have root access to install your own drivers, CUDA libraries and containers?</p>
-<p>Which minimum commitments, regions and support terms apply?</p>
-<p>A small stack can run as a handful of containers: an API service for request handling and prompt assembly, an ingestion worker, a vector database and a model server. Keeping them separate lets you monitor each one's memory and CPU use and move the heavy one to bigger hardware without rewriting the rest.</p>
-<p>For a service that stays up all month, a fixed monthly term is easier to forecast than hourly capacity. Hourly capacity suits testing quantization settings or processing a one-off document batch.</p>
-<p>Is GPU memory always the bottleneck for RAG?</p>
-<p>Not always. Generation usually hits memory first, but slow parsing, a small CPU or a distant vector database can dominate response time.</p>
-<p>Does quantization solve the memory problem?</p>
-<p>It shrinks the weights, but the KV cache still grows with context length and concurrency. Test with your real prompt sizes.</p>
-<p>It depends on volume. Small workloads can run on CPU, while a large ingestion job may benefit from a GPU for a limited time.</p>
-<p>Size a RAG service for the worst realistic moment, not the single-request demo. Estimate the KV cache from the model's architecture, remember that long retrieved contexts reduce how many requests fit, watch for preemption under load, keep CPU, RAM, storage and network in the plan, and find out whether the GPU is exclusive or shared. The script above is small, but it turns a vague worry about memory into numbers you can check.</p>
+<p>Generating a single AI video clip is easy now. You send a prompt and get a few seconds of footage back. The trouble starts when the goal is three, five, or ten minutes of video where the same character looks the same in every scene, the style does not drift, and the captions line up with the picture.</p>
+<p>Most guides stop at the clip. This one covers the part after it, treating a video as a small build pipeline: a storyboard that is data, prompts generated from that data, clips normalised and stitched with ffmpeg, and captions derived from the same source. If you want to wire a generation model into your own application first, SitePoint's guide to integrating generative video APIs into web applications covers the request and webhook side. If the finished video is headed to a YouTube channel, how to get a YouTube API key and use the Data API is a good starting point for the publishing side. Everything between those two is below.</p>
+<p>Long-form AI video fails at the seams between clips, not inside them. Plan for continuity before you generate anything.</p>
+<p>A storyboard stored as JSON can be validated, versioned, diffed, and turned into prompts by code, which a pile of loose prompts cannot.</p>
+<p>Repeat the full character description in every prompt. Models do not remember the previous clip.</p>
+<p>Clips from different generations rarely share resolution, frame rate, or codec settings. Normalise them before joining.</p>
+<p>Captions are cheapest when generated from the script and measured clip durations, not transcribed afterwards.</p>
+<p>Current video models generate short clips, commonly a handful of seconds each. A longer video is therefore many clips, and every clip is an independent generation. The model has no memory of what the character wore in the previous one.</p>
+<p>That produces three kinds of failure. The character drifts, so hair, clothing, or proportions change between scenes. The style drifts, so lighting and colour grade shift from cut to cut. And the technical specs drift, so one clip is 24 frames per second at one resolution and the next is something else. Each of these is fixable, but only if the project is organised so the fixes can be applied consistently.</p>
+<p>Start with a structured storyboard instead of a document full of prompts. One file holds the style, a "character bible", and an ordered list of scenes.</p>
+<p>"style": "soft watercolor picture book illustration, warm evening light, 16:9",</p>
+<p>"mira": "a nine year old girl with short curly black hair, a yellow raincoat and red rubber boots",</p>
+<p>"lantern": "a small round paper lantern with a gentle orange glow and a tiny smiling face"</p>
+<p>"setting": "a narrow cobblestone street in light rain",</p>
+<p>"action": "walks slowly past closed shops, looking up at the sky",</p>
+<p>"camera": "slow push in from a medium shot",</p>
+<p>"narration": "It had rained all afternoon, and the street was quiet."</p>
+<p>"action": "finds the lantern glowing on a wooden crate and kneels beside it",</p>
+<p>"narration": "Then she noticed something glowing under the awning."</p>
+<p>Because it is data, a script can check it before you spend any generation credits. Two checks pay for themselves quickly: every character named in a scene must exist in the bible, and no scene may be longer than the clip limit of the model you use.</p>
+<p>const known = new Set(Object.keys(board.characters));</p>
+<p>errors.push${scene.id}: unknown character "${name}");</p>
+<p>${scene.id}: ${scene.duration}s is over the ${MAX_CLIP_SECONDS}s clip limit, split it into shots</p>
+<p>Treat MAX_CLIP_SECONDS as a setting. Limits differ between models and change over time, so check the one you are using rather than trusting the number in this example.</p>
+<p>Never write the per-scene prompt by hand. Generate it, so the style line and the character descriptions are identical every time.</p>
+<p>The character description appears word for word in every scene that includes that character. This is the single most effective consistency tactic that needs no special tooling. Changing a detail, say the colour of the boots, becomes one edit in the bible instead of a search through twenty prompts, and the diff shows exactly what changed between versions.</p>
+<p>Put the style line first and keep it identical across all scenes.</p>
+<p>Describe one action per clip. Two sequential actions in one prompt often produce a blend of both.</p>
+<p>Keep camera directions simple. A single move per clip is more reliable than a combination.</p>
+<p>Avoid naming real people, brands, or existing characters in prompts. Beyond the rights issue, it makes results harder to reproduce.</p>
+<p>Clips from separate generations often disagree on resolution, frame rate, pixel format, or codec parameters. Joining them directly can produce stutters, green frames, or an outright error. Convert every clip to one agreed format first.</p>
+<p>-vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=24,format=yuv420p" \</p>
+<p>-an -c:v libx264 -crf 18 "norm/$(basename "$f")"</p>
+<p>The filter scales each clip to fit a 1280 by 720 frame, adds padding if the aspect ratio differs, sets 24 frames per second, and forces a widely compatible pixel format. The -an flag drops any audio the model generated, since narration will be added as one track later. Name clips with zero padded numbers such as s01.mp4 and s02.mp4, so a shell glob sorts them in story order.</p>
+<p>Once every file shares the same parameters, the concat demuxer can join them without re-encoding:</p>
+<p>for f in norm/*.mp4; do echo "file '$PWD/$f'"; done > list.txt</p>
+<p>ffmpeg -y -f concat -safe 0 -i list.txt -c copy stitched.mp4</p>
+<p>Hard cuts are the safe default. Crossfades are possible with ffmpeg's xfade filter, but they require careful offset arithmetic and a re-encode, so add them only when a cut genuinely looks wrong.</p>
+<p>Captions are easiest when they come from the script, not from a speech recognition pass over the finished video. The storyboard already holds the narration text and each scene's length, so an SRT file is a few lines of code. Use measured durations rather than planned ones, because a generated clip is often a little shorter or longer than requested.</p>
+<p>const { execFileSync } = require('node:child_process');</p>
+<p>const ms = Math.round(totalSeconds * 1000);</p>
+<p>const h = String(Math.floor(ms / 3600000)).padStart(2, '0');</p>
+<p>const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');</p>
+<p>const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');</p>
+<p>const rest = String(ms % 1000).padStart(3, '0');</p>
+<p>const end = cursor + scene.duration; // set from measureSeconds() after generation</p>
+<p>${blocks.length + 1}\n${toTimestamp(start)} --> ${toTimestamp(end)}\n${scene.narration}\n</p>
+<p>Update each scene's duration from measureSeconds on the normalised clip before calling buildSrt. If a narration line is long, split it across two caption blocks so it stays readable. Then combine picture, voiceover, and captions in one final step:</p>
+<p>ffmpeg -y -i stitched.mp4 -i narration.mp3 -i captions.srt \</p>
+<p>-c:v copy -c:a aac -c:s mov_text -shortest final.mp4</p>
+<p>Soft captions like these can be switched off by the viewer and read by assistive technology, which is better than burning text into the picture. Keep the .srt file as well, since most platforms accept it as a separate upload.</p>
+<p>Everything above is a good fit when you need repeatability: many videos from templates, versioned storyboards, automated publishing, or tight control over the model. The price is that you own the glue code, the ffmpeg settings, and the failures.</p>
+<p>For one off projects, or when the people making the video are not developers, a managed platform is often the more sensible choice. Tools such as magiclight.ai bundle story to video generation, character handling, voice, and an editor in one interface, and advertise videos of up to 50 minutes. Check the specifics yourself, because claims like that are marketing, and results depend on your content. One point matters for developers in particular: if you need to automate generation from your own code, confirm that the platform you pick offers an API or export route before you build a workflow around it. A tool with a good editor and no programmatic access suits a different job than the pipeline in this article.</p>
+<p>A short manual pass catches what automation does not. Watch the whole video once at normal speed, looking only at continuity. Read the captions against the audio. Check that no real person's likeness, brand mark, or protected character slipped into the footage. Finally, check the disclosure rules of the platform you publish on, since many now ask creators to label realistic synthetic media, and the rules change.</p>
+<p>The model is only one component of a long-form AI video. The reliability comes from the structure around it: a validated storyboard, prompts generated from it, clips forced into one format, and captions derived from measured data. Each of those is ordinary software engineering, and none of it depends on which generation model you choose, so the pipeline survives when the model changes.</p>
+<p>Start with a two minute video and four or five scenes. Fix the seams there before scaling up, because every continuity problem you find at that size is one you will not have to hunt for in a ten minute project.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/sizing-gpu-memory-for-a-rag-service-kv-cache-context-and-concurrency/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/from-script-to-screen-a-developer-s-workflow-for-long-form-ai-video/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
