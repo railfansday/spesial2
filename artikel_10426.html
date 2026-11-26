@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preventing API Contract Drift in TypeScript Applications</title>
+    <title>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10426.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,122 +15,107 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Preventing API Contract Drift in TypeScript Applications</h1>
+        <h1>Logging AI Prompts and Responses in Java Without Leaking Sensitive Data</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_java_ai_logging_cover_d6521dce3f.png" alt="Logging AI Prompts and Responses in Java Without Leaking Sensitive Data" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>A frontend application can compile successfully and still fail when it communicates with the backend.</p>
-<p>Imagine a backend developer changes an API response from:</p>
-<p>The backend works correctly. The frontend also builds without errors. However, a component expecting user.name now receives undefined.</p>
-<p>This is an example of API contract drift: the frontend and backend no longer agree on the structure or behavior of an API.</p>
-<p>The problem becomes more difficult when several developers or teams work on different parts of an application. A change made by one team may affect another team's assumptions without producing an obvious error during development.</p>
-<p>TypeScript helps catch many programming mistakes, but its types do not automatically validate data received over HTTP. A type declaration can describe what the application expects without proving that the server actually returns it.</p>
-<p>In this tutorial, we'll look at a practical way to make API contracts more reliable.</p>
-<p>Consider a typical frontend API function:</p>
-<p>The function promises to return a User, so TypeScript allows the application to access properties such as name and email.</p>
-<p>The return value of response.json() is not automatically checked against the User interface. The interface only provides compile-time information; it does not validate the actual JSON received from the server.</p>
-<p>the frontend may still treat the response as a User even though the data has a different structure.</p>
-<p>This is particularly important when working with:</p>
-<p>Independently deployed frontend and backend applications.</p>
-<p>APIs maintained by different engineering teams.</p>
-<p>The solution is to validate data at the boundary where it enters the application.</p>
-<p>Zod is a TypeScript-first schema validation library. It allows developers to describe expected data structures and validate actual values against those definitions.</p>
-<p>Now create a schema for the user response:</p>
-<p>First, UserSchema describes the structure that the application expects at runtime.</p>
-<p>Second, z.infer generates the corresponding TypeScript type from the schema.</p>
-<p>This means developers do not need to maintain a separate interface and validation definition for the same data structure.</p>
-<p>The response is initially treated as unknown, which prevents the application from assuming that untrusted data already has the expected structure.</p>
-<p>UserSchema.parse() validates the actual response.</p>
-<p>If the backend returns an unexpected property type or misses a required field, Zod throws a validation error instead of allowing invalid data to move silently through the application.</p>
-<p>You can also use safeParse() when you prefer to handle validation errors without exceptions:</p>
-<p>This approach is useful when API responses are external or when a frontend must provide more controlled error handling.</p>
-<p>One common mistake is placing API validation logic directly inside React components.</p>
-<p>For a small application, this may seem convenient. As the project grows, however, it becomes difficult to reuse validation rules and identify where data transformations happen.</p>
-<p>A better approach is to separate API schemas, service functions, and UI components.</p>
-<p>The responsibilities are straightforward:</p>
-<p>schemas/user.ts defines the expected user data.</p>
-<p>api/client.ts handles common HTTP configuration.</p>
-<p>api/users.ts contains user-related API requests.</p>
-<p>hooks/useUser.ts manages data fetching for React.</p>
-<p>components/UserProfile.tsx displays the validated data.</p>
-<p>This structure makes it easier to change an API implementation without rewriting the UI.</p>
-<p>It also makes testing more manageable because validation logic can be tested independently of React rendering.</p>
-<p>For more ideas on organizing application code, see SitePoint's guide to modern JavaScript modules.</p>
-<p>Runtime validation protects an application when data arrives. However, teams also need a shared description of what an API is supposed to accept and return.</p>
-<p>OpenAPI provides a standard format for describing HTTP APIs, including:</p>
-<p>For example, an endpoint can be described using an OpenAPI document:</p>
-<p>This document describes what the endpoint should return.</p>
-<p>Both frontend and backend developers can refer to the same contract instead of relying on separate assumptions or outdated documentation.</p>
-<p>Swagger Editor helps developers write and validate OpenAPI documents. It also provides a convenient way to inspect API definitions.</p>
-<p>Swagger UI turns an OpenAPI document into interactive API documentation, allowing developers to explore endpoints and test requests.</p>
-<p>Redoc provides another way to generate readable API documentation from an OpenAPI specification.</p>
-<p>These tools are particularly useful when APIs are maintained by multiple developers or consumed by several applications.</p>
-<p>Maintaining API types manually across frontend and backend repositories creates opportunities for inconsistencies.</p>
-<p>For example, a backend developer might add a new optional property while the frontend continues using an older interface.</p>
-<p>One way to reduce this duplication is to generate TypeScript definitions and API clients from an OpenAPI specification.</p>
-<p>Orval is a useful tool for this workflow.</p>
-<p>It can generate TypeScript clients and types from an OpenAPI document, helping frontend developers work with consistent endpoint definitions.</p>
-<p>A typical configuration might look like this:</p>
-<p>The exact configuration depends on the Orval version and the structure of the OpenAPI document.</p>
-<p>Once configured, the client can be regenerated when the API specification changes.</p>
-<p>This reduces the amount of repetitive code developers need to maintain manually.</p>
-<p>However, generated types should not be confused with runtime validation. They improve consistency during development, but an application may still need to validate responses received from external systems or services that cannot be fully trusted.</p>
-<p>Frontend developers often need to build or test features before the corresponding backend endpoint is ready.</p>
-<p>Waiting for a complete backend implementation can slow down development, particularly when multiple teams work independently.</p>
-<p>Mock Service Worker (MSW) helps solve this problem by intercepting network requests and returning controlled responses.</p>
-<p>You can define a mock handler for the user endpoint:</p>
-<p>The frontend can now make normal HTTP requests while MSW supplies predictable responses during development or testing.</p>
-<p>You can also simulate an invalid response:</p>
-<p>This makes it possible to check whether the application's validation and error-handling logic behave as expected.</p>
-<p>MSW is particularly valuable because it allows frontend tests to run without requiring a live backend environment.</p>
-<p>Runtime validation and generated clients improve reliability, but they do not automatically guarantee that independently developed services remain compatible.</p>
-<p>For systems with multiple services, contract testing can provide another layer of protection.</p>
-<p>Pact is a contract-testing tool that allows consumers and providers to verify their expectations about API interactions.</p>
-<p>Consider a frontend application that expects the user endpoint to return:</p>
-<p>The consumer defines the expected interaction.</p>
-<p>The backend provider can then run verification against that contract to check whether its actual response satisfies the consumer's expectations.</p>
-<p>This helps identify breaking changes before they reach production.</p>
-<p>These tools solve different problems. A project does not necessarily need all of them, but larger applications can benefit from combining the approaches that match their architecture.</p>
-<p>A contract is only useful if developers consistently check it when making changes.</p>
-<p>A practical approach is to run validation and tests automatically whenever someone opens a pull request.</p>
-<p>For example, a GitHub Actions workflow might look like this:</p>
-<p>The api:validate script should be configured to validate the project's OpenAPI document or run the relevant contract checks.</p>
-<p>The test command should execute the application's automated tests.</p>
-<p>For a production project, you may also want to include:</p>
-<p>The objective is to detect incompatible changes before they are merged.</p>
-<p>A failed pipeline gives developers an opportunity to investigate the change while the context is still fresh.</p>
-<p>API contracts become harder to maintain when several teams contribute to the same system.</p>
-<p>For example, a company might have separate teams responsible for:</p>
-<p>If nobody owns an API contract, small changes can create unexpected problems for other teams.</p>
-<p>Assigning clear ownership helps establish who reviews changes, maintains documentation, and coordinates breaking updates.</p>
-<p>This becomes particularly important when an organization expands its engineering capacity across locations or adds several specialized teams. Companies planning that kind of growth may also need to consider enterprise IT recruitment as part of their wider engineering workforce strategy.</p>
-<p>Regardless of how a team is assembled, its development process should establish clear responsibilities for API design, versioning, testing, and release coordination.</p>
-<p>A few practical conventions can make a significant difference:</p>
-<p>Assign an owner to every important API or service.</p>
-<p>Document breaking changes before implementation.</p>
-<p>Require contract-related tests in pull requests.</p>
-<p>Keep generated clients synchronized with the API specification.</p>
-<p>Communicate deprecations before removing existing fields.</p>
-<p>Monitor production errors after deploying API changes.</p>
-<p>These practices help prevent a growing engineering organization from becoming a collection of disconnected services.</p>
-<p>API contract drift is not simply a TypeScript problem. It is a coordination problem that becomes visible when applications and services develop different expectations about the same data.</p>
-<p>TypeScript provides useful compile-time checks, but it cannot guarantee that an HTTP response matches a declared interface.</p>
-<p>A more reliable approach combines several techniques:</p>
-<p>Use OpenAPI to document API expectations.</p>
-<p>Generate TypeScript clients with tools such as Orval.</p>
-<p>Use MSW to test frontend behavior without a live backend.</p>
-<p>Use Pact when consumer-provider contract verification is appropriate.</p>
-<p>Run validation and tests automatically in CI/CD.</p>
-<p>You do not need to introduce every tool at once. Start by validating external API responses, document important endpoints, and gradually automate contract checks as the application grows.</p>
-<p>The result is a codebase where developers can make changes with greater confidence and where frontend and backend teams have a shared understanding of how their systems communicate.</p>
+<p>Picture this. A customer writes to your support chatbot: "Hi, I'm Asha, my card ending 4111 was charged twice, call me on 98400 12345." Your Java service wraps that message in a prompt, sends it to a model, and logs the whole thing so you can debug it later. Congratulations, you now have a customer's name, phone number and card details sitting in a plain text log file that half the engineering team can open.</p>
+<p>This happens more often than people admit. Logging AI calls is genuinely useful, but prompts and responses are some of the most personal text your application ever touches. Here's how to keep the usefulness and drop the risk.</p>
+<p>A regular web request is easy to log: URL, status code, time taken. AI calls are messier.</p>
+<p>The output changes from run to run. If a user says "your bot gave me a wrong answer yesterday", the only proof of what happened is what you sent and what came back at that moment. You can't just replay it and expect the same result.</p>
+<p>Prompts are also built, not typed. The final text is usually a template, a few retrieved document chunks, some chat history and the user's message stitched together. When something looks off, the bug could be in any of those pieces, and only the assembled prompt shows you which one.</p>
+<p>Then there's cost. You pay by the token, so without per-call records you can't say which feature is burning money. And quality drifts over time as models get upgraded and templates get edited. Old logs are your only baseline.</p>
+<p>So yes, you need these logs. The real question is what goes into them.</p>
+<p>Before writing any masking code, agree on what counts as sensitive. In most business apps that means:</p>
+<p>Names, emails, phone numbers and home addresses</p>
+<p>Card numbers, bank details and government ID numbers</p>
+<p>Health, legal or job-related details people mention in free text</p>
+<p>Internal material like contract wording, pricing rules or source code</p>
+<p>The first three groups follow patterns, so they're easy to catch. The last two don't, and that's where most teams get caught out. Keep that in mind, because it shapes the design below.</p>
+<p>The safest sensitive value is the one that never reaches the log. So split what you record into two buckets.</p>
+<p>The first is metadata: a request ID, a hashed user or tenant ID, model name, prompt template name and version, token counts, latency, retry count, error type and estimated cost. None of this is personal, and it answers most day-to-day questions.</p>
+<p>The second is content, meaning the actual prompt and response text. You only need this when you're investigating quality, and even then you rarely need all of it. A sensible default is to log metadata for every call and masked content for a small sample, maybe five percent, plus every failed call.</p>
+<p>Here's a mistake that's easy to make: letting the log appender clean things up afterwards. By then the raw text may already be in a buffer, an async queue or a crash dump. Mask first, then log.</p>
+<p>The cleanest way is one small component that every AI log call has to pass through:</p>
+<p>public interface PiiMasker {
+    String mask(String input);
+}</p>
+<p>Nothing else is allowed to write raw prompts. One chokepoint is much easier to review and test than masking sprinkled across fifty classes.</p>
+<p>For structured data like emails, cards and tokens, regular expressions do the job well:</p>
+<p>public class RegexPiiMasker implements PiiMasker {
+
+    private static final Map<Pattern, String> RULES = new LinkedHashMap<>();
+
+    static {
+        RULES.put(Pattern.compile("[A-Za-z0-9.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[EMAIL]");
+        RULES.put(Pattern.compile("\b(?:\d[ -]?){13,19}\b"), "[CARD]");
+        RULES.put(Pattern.compile("\b(?:\+?\d{1,3}[ -]?)?\d{10}\b"), "[PHONE]");
+        RULES.put(Pattern.compile("(?i)bearer\s+[A-Za-z0-9.~+/=-]+"), "Bearer [TOKEN]");
+    }
+
+    @Override
+    public String mask(String input) {
+        if (input == null || input.isBlank()) return input;
+        String result = input;
+        for (var rule : RULES.entrySet()) {
+            result = rule.getKey().matcher(result).replaceAll(rule.getValue());
+        }
+        return result;
+    }
+}</p>
+<p>A few small choices matter here. The patterns are compiled once, not on every call. The order is fixed, because a card number can otherwise get half eaten by the phone rule. And the replacement labels such as [EMAIL] keep the sentence readable, so whoever debugs it later can still follow what the user was asking.</p>
+<p>Regex won't catch a name like "Asha Raman" or an address buried mid-sentence. For those you have a few options, and they work best together.</p>
+<p>You can run a named-entity recognition model that tags people, places and organisations, then mask anything above a confidence threshold. You can do exact replacement of values you already know, such as the customer's name from the current session. Or, best of all, you can mask at the field level while building the prompt. If your code knows that customer.getEmail() is going into the template, swap in a placeholder right there instead of trying to spot it afterwards. Knowing beats guessing every time.</p>
+<p>Plain redaction can remove too much. If the same email shows up five times in a conversation, five identical [EMAIL] tags hide the fact that it was one person.</p>
+<p>The fix is consistent pseudonyms. Turn each real value into a short token using a keyed hash, so the same email always becomes something like EMAIL_7f3a. You can still follow the thread, but nobody can read the original from the log. Use an HMAC with a secret from your secrets manager. A plain unkeyed hash of a phone number can be brute-forced in minutes, because there just aren't that many phone numbers.</p>
+<p>One warning: if you also store a lookup table to reverse the tokens, that table is now sensitive data too. Most teams are better off with one-way tokens.</p>
+<p>Free-text log lines are hard to search and easy to leak through. Write one JSON record per AI call with clearly separate fields:</p>
+<p>log.info("ai_call",
+    kv("requestId", requestId),
+    kv("model", model),
+    kv("promptVersion", "support-reply-v4"),
+    kv("inputTokens", usage.inputTokens()),
+    kv("outputTokens", usage.outputTokens()),
+    kv("latencyMs", elapsed),
+    kv("promptMasked", masker.mask(prompt)),
+    kv("responseMasked", masker.mask(response)));</p>
+<p>Now dashboards for cost and latency never need to touch the text fields at all. You can also keep the two kinds of data for different lengths of time: metadata for a year, masked content for a couple of weeks. Put the request ID into your logging framework's MDC so every line belonging to one call, including retries and tool calls, carries the same ID.</p>
+<p>Streaming trips people up. Tokens arrive in tiny pieces, and a card number can be split across two chunks, which means masking each chunk on its own will miss it. Collect the full response in a buffer, mask it once the stream ends, and log that. If the stream dies halfway, run the partial buffer through the same masker.</p>
+<p>Tool calls are the other trap. When the model calls one of your Java methods, the arguments and return values are often the most sensitive thing in the whole exchange: order details, account balances, addresses. Treat them as part of the prompt and response. Log the tool name, duration and outcome by default, and log arguments only after masking.</p>
+<p>Masking lowers the risk but never removes it, so surround it with some ordinary discipline:</p>
+<p>Give content fields a short retention period. Old prompt archives are liabilities.</p>
+<p>Limit who can read AI logs. Debugging a model doesn't mean someone needs to read customer messages.</p>
+<p>Encrypt log storage and the pipeline that feeds it.</p>
+<p>Log the hashed user ID so you can find and delete one person's records when they ask.</p>
+<p>Allow verbose logging in development with fake data, and enforce strict settings in production through configuration, not through people remembering.</p>
+<p>A masker that quietly stops working is worse than having none, because everyone assumes the logs are clean. Write tests for it:</p>
+<p>@Test
+void masksEmailAndCardNumber() {
+    String raw = "Contact me at asha@example.com, card 4111 1111 1111 1111";
+    String safe = new RegexPiiMasker().mask(raw);
+
+    assertFalse(safe.contains("asha@example.com"));
+    assertFalse(safe.contains("4111"));
+    assertTrue(safe.contains("[EMAIL]"));
+    assertTrue(safe.contains("[CARD]"));
+}</p>
+<p>Build a small set of messy, realistic samples: numbers with odd spacing, mixed languages, addresses inside sentences, text pasted from spreadsheets. Run them in your CI pipeline, and add a new case every time a leak turns up. A scheduled job that scans stored logs for patterns that should never appear makes a good safety net too.</p>
+<p>A few I'd watch for. Logging raw text at debug level and assuming production never enables it; debug flags get switched on during incidents, so mask at every level. Masking only the user's message while forgetting retrieved documents, system prompts and tool results. Letting SDK exceptions carry the full request body into the logs. Leaving wire-level HTTP logging on in production, which bypasses your masker completely. And treating masking as finished once it ships, when every new prompt template can bring new kinds of data.</p>
+<p>Every AI call writes a structured metadata record with a request ID</p>
+<p>All prompt and response text goes through a single masker first</p>
+<p>Streams are masked after assembly, and tool arguments are masked too</p>
+<p>Content logging is sampled, short-lived and access-controlled</p>
+<p>Tests cover the masker, with a regression case for every past leak</p>
+<p>Client libraries aren't dumping raw payloads into the logs</p>
+<p>Good logs turn an AI feature from a black box into something you can actually debug, price and improve. The same logs can also expose the people who trusted you with their details. The way through is fairly plain: record metadata for every call, push all content through one well-tested masker, use pseudonyms when you need to follow a conversation, handle streams and tools carefully, and keep retention short. Set that up before launch, not after the first incident, and you get visibility without regret.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/preventing-api-contract-drift-in-typescript-applications/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/logging-ai-prompts-and-responses-in-java-without-leaking-sensitive-data/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

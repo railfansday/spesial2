@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How WinHelp files work</title>
+    <title>Latin America Sees Cyberattacks on Ports, Pipelines &amp;amp; Manufacturing</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9722.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,39 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>How WinHelp files work</h1>
+        <h1>Latin America Sees Cyberattacks on Ports, Pipelines &amp;amp; Manufacturing</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
+            <img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt436e3cfa4b9fe8b4/6b05fbef3e73ec0ee2851fe9/port-santos-brazil-ByDroneVideos-shutterstock.jpg?disable=upscale&amp;width=1200&amp;height=630&amp;fit=crop" alt="Latin America Sees Cyberattacks on Ports, Pipelines &amp;amp; Manufacturing" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://eu-images.contentstack.com/v3/assets/blt6d90778a997de1cd/blt436e3cfa4b9fe8b4/6b05fbef3e73ec0ee2851fe9/port-santos-brazil-ByDroneVideos-shutterstock.jpg?disable=upscale&width=1200&height=630&fit=crop" alt="Latin America Sees Cyberattacks on Ports, Pipelines &amp; Manufacturing" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>I wanted Paperback to be able to open some old WinHelp .hlp files I had laying around, so I wrote libhlp, a pure-Rust reader for them. I had my wisdom teeth out on a Friday morning, spent the rest of that day completely out of it, and then woke up Saturday and did this instead of resting like a normal person. Recovering patients make great decisions.</p>
-<p>Microsoft never documented the format, but Manfred Winterhoff did, in helpfile.txt, which ships alongside his decompiler, helpdeco. Between those and poking at real files, I worked out the format, and Claude wrote a lot of the actual Rust.</p>
-<p>A .hlp file starts with the magic number 3F 5F 03 00, followed by the position of its internal directory. A help file is really an archive, and that directory lists the files inside it. Most of them have names starting with a pipe: |SYSTEM holds the title and settings, |TOPIC holds the text, |FONT holds the fonts, |CONTEXT holds the topic names, and pictures live in files like |bm0.</p>
-<p>The directory is a B+ tree, and so is every other index in the file, all with the same page layout.</p>
-<p>All the text lives in |TOPIC, which is cut into fixed-size blocks. Each block can be LZ77 compressed, and positions in the file count bytes of the decompressed text, not of the file itself. Every block also takes up the same amount of that address space whether it fills it or not. In a typical file, each block gets 16 KB of space and only decompresses to about 4 KB, so reading has to skip the gap to the next block.</p>
-<p>Inside the blocks, the text is a linked list of records. Some records start a new topic, and the rest hold its paragraphs, each with a formatting part and a text part. The text part can be compressed a second time, which is where it gets fun.</p>
-<p>WinHelp's LZ77 is about as simple as compression gets. The data comes in groups: one flag byte, then up to eight items. Each bit of the flag byte, lowest first, says whether its item is a literal byte or a back-reference. A back-reference is two bytes, with 12 bits of distance and 4 bits of length:</p>
-<p>The length is stored minus 3, since anything shorter isn't worth a back-reference. A distance of 0 means "repeat the byte I just wrote", and since the copy can read bytes it's still writing, x followed by a back-reference of length 5 becomes xxxxxx.</p>
-<p>One fun quirk: some real files have back-references that reach behind the start of the data, where there's nothing to copy yet. helpdeco keeps its 4 KB window in a buffer that starts out full of zeroes, so those references just copy zeroes, and the files come out right that way. libhlp starts its window out zeroed too, instead of treating it as an error or reading off the front of the buffer.</p>
-<p>On top of LZ77, a help file can swap its most common phrases for short codes, and there are two versions of this.</p>
-<p>WinHelp 3.1 keeps the table in |Phrases. In the text, any byte from 1 to 15 starts a two-byte code, and every other byte is just itself:</p>
-<p>The lowest bit of the code says whether a space follows the phrase. Phrases usually end at a word, so that saves a byte most of the time.</p>
-<p>The Windows 95 help compiler added a fancier scheme, called Hall compression, with the phrases split across |PhrIndex and |PhrImage. Here, the lowest bits of each byte say what kind of byte it is. If the lowest bit is clear, the rest of the byte picks one of the first 128 phrases, so the most common ones fit in a single byte. Ending in 01 starts a two-byte code for the rest of the table, 011 starts a run of literal bytes, 0111 means a run of spaces, and 1111 means a run of zero bytes. For the runs, the upper bits hold the length minus one, since a run of nothing would be a wasted byte.</p>
-<p>|PhrIndex doesn't store where each phrase starts. It stores how long each one is, packed into as few bits as it can get away with. Each length is a unary count in steps of some power of two, followed by the remaining low bits to add on top. The step size is set once for the whole file.</p>
-<p>My first version always read at least one remainder bit. That works until a file uses a step of one, where there's no remainder to store. Then every length reads one bit too many, and everything after the first phrase is garbage. The fix was a single bits > 0 check.</p>
-<p>When a help author wrote a topic, they gave it a context string, a name like SaveFile. You'd expect a link to store the position of the topic it points to, but it actually stores a hash of the target's name. To follow a link, you hash its target name the way WinHelp does and look the result up in |CONTEXT, which maps hashes to positions.</p>
-<p>Each byte goes through a lookup table that gives uppercase and lowercase letters the same values, so links are case insensitive. The table's entries are signed, so anything at or above 0x80 subtracts instead of adding. Get that wrong and almost every hash still comes out right, so it's really easy to miss. Oh, and an empty name hashes to 1, not 0, because that's what WinHelp does.</p>
-<p>Text doesn't store its own formatting. A paragraph says "switch to font 4", and |FONT says font 4 is the bold one. Links are drawn the same way. WinHelp underlines a link by switching to an underlined font, so libhlp has to tell that underline apart from underlining the author actually asked for.</p>
-<p>WinHelp is older than Unicode, so text is stored in whatever Windows code page the author used, which might be a double-byte one for East Asian languages. Sometimes the file's language ID says which one. When it doesn't and the text is mostly non-ASCII, libhlp guesses the code page from the text itself.</p>
-<p>Then there's WinHelp 3.0, the version from Windows 3.0, which is different enough to almost be its own format. Its topic blocks are 2 KB and never compressed, its records give the distance to the next record instead of its position, its topic headers are 12 bytes instead of 28, and its links point at topic numbers instead of hashes. libhlp reads it, but it took its own commit.</p>
-<p>And then there are the files that only share the extension. Borland's help compiler and MS-DOS QuickHelp both made .hlp files that have nothing else in common with WinHelp, so libhlp just turns those away.</p>
-<p>It reads the text, titles, tables, emphasis, links and pictures of every WinHelp version I know of, from 3.0 to the Windows 95 compiler, and it bounds checks everything. Paperback uses it to open .hlp files, so if you've got an old one sitting around, now you can read it.</p>
-<p>Posts are licensed CC BY 4.0. The site's code is MIT licensed.</p>
+                <p>Breaking cybersecurity news, news analysis, commentary, and other content from around the world, with an initial focus on the Middle East & Africa, the Asia Pacific, Europe, and Latin America.</p>
+<p>From the Port of Santos in Brazil to a pipeline in Argentina, cyberattacks are increasingly affecting industrial systems throughout the region.</p>
+<p>On Nov. 6, a cyberattack encrypted data at the Port of Santos in Brazil, the largest port in South America. Around the same time, the data center serving the port suffered a power outage. The connection between the outage and cyberattack is still under investigation, but in combination, they affected the Santos Port Authority (APS) website, internal systems, and online services used by port customers.</p>
+<p>The incident affected the APS enterprise resource planning (ERP) systems and services for customers on the website, which the organization just restored on Nov. 24, Paulo Silveira, a spokesman for the Port Authority, tells Dark Reading.</p>
+<p>The incident was a ransomware attack, but the perpetrators remain unidentified, he says.</p>
+<p>"The intruder was already in the systems and likely gained entry via a malicious email or by improperly accessing an infected website," he says. "The cyber-attack is under investigation, and the method of intrusion and the party responsible are still being traced."</p>
+<p>Related:Cyprus Becomes Espionage Target for Iranian Hackers</p>
+<p>The ransomware attack is the latest incident in a surge hitting industrial sectors in Latin America. In the third quarter, operations at several industrial facilities were disrupted by ransomware attacks, according to data published by cybersecurity vendor Dragos. While none of the attacks appeared to compromise an actual operational technology (OT) system — considered to be Stage 2 on the ICS Cyber Kill Chain — IT disruptions often cascade into operational problems, says Abdul Alamri, a principal threat intelligence analyst at Dragos.</p>
+<p>"Often, ransomware groups do not need to reach OT to stop operations," he says. "When ransomware disrupts operations, it is usually through the enterprise IT, ERP and virtualization systems that operations depend on, or because the company shuts down production as a precaution."</p>
+<p>Overall, cyber activity is ramping up in the southern hemisphere. While African nations have retaken the dubious honor of suffering the highest frequency of cyberattacks, Latin America is not far behind, with organizations in the region seeing an average of 3,483 per week, compared to Africa's 3,834 per week. The attacks are not just cybercriminals looking for opportunistic ransoms, but also nation-state threat actors aiming to compromise government and the private sector to gain intelligence on the politics in the region.</p>
+<p>Many of the malicious incidents are ransomware. In the third quarter, industrial organizations in South America suffered at least 82 claimed ransomware incidents, up from 64 in the second quarter — the largest percentage increase of any major region, according to Dragos. Brazil topped the targeted nations with 22 incidents, while Peru and Argentina tallied 16 apiece, and Colombia saw 11 incidents, according to Dragos' Industrial Ransomware Analysis for Q3 2026 report.</p>
+<p>Related:Nok et norsk energiselskap har blitt utsatt for et datainnbrudd på to dager</p>
+<p>While Dragos tallies the number of victims claimed on ransomware groups' leak sites, Alamri considers the numbers to be conservative.</p>
+<p>"We exclude victims we cannot identify or classify, and we remove victims that were already counted in an earlier quarter," he says. "Organizations that pay before they are posted never show up in the data."</p>
+<p>Overall, organizations in Brazil, Mexico, and Argentina made up nearly two-thirds of ransomware victims, according to a second report, State of Cyber Threats 2026, published by Chilean telecommunications firm Entel Digital, which counts more than just industrial sectors.</p>
+<p>In the Port of Santos incident, the cyberattack did not disrupt operations, mainly because the Santo Port Authority switched to alternate processes, says APS's Silveira. "The APS teams were working hard to attend to all the port users, assisted by e-mail, personal cellphones, and third-party systems," he says.</p>
+<p>Related:Second Norwegian Energy Company Breached in 2 Days</p>
+<p>While the Port Authority managed to recover all their backups, they did suffer some loss of data after Oct. 31. APS is recovering that data from other records, Silveira says.</p>
+<p>Similarly, an Argentinian pipeline company, Oldelval, suffered a cybersecurity incident that affected administrative systems, based on filings with the National Securities Commission (CNV), according to media reports. The attack did not hamper the movement of oil or crude, the company reportedly said.</p>
+<p>While critical infrastructure is increasingly under attack, most global attacks on industrial firms target manufacturing, which also held true for South America this year; Dragos' Alamri says 57% of cyberattacks on industrial firms targeting the manufacturing sector.</p>
+<p>Often, while OT systems are not compromised by a strict definition, they are still impacted. In past cases, incidents classified as IT-only cases actually affected engineering workstations and human-machine interface (HMI) hardware, which were classified as IT because they run Windows, he says.</p>
+<p>"A statement that only administrative systems were affected can be accurate, and Oldelval reported that crude transport continued," he says. "However, these statements should be read with caution."</p>
+<p>Rob is an award-winning, veteran technology journalist of more than 30 years, reporting on global cybersecurity issues, the latest offensive and defensive technologies, malware incidents, cyber conflict, and AI's impact on software and cybersecurity.</p>
+<p>A former research engineer, Rob has written for more than two dozen publications, including CNET News.com, Dark Reading, MIT's Technology Review, Popular Science, and Wired News. He has received five awards for journalism, including Best Deadline Journalism (Online) in 2003 for his coverage of the Blaster worm. Rob also analyzes data on various trends using Python and R for both his reporting and his clients. Recent reports include analyses of the shortage in cybersecurity workers, annual vulnerability trends, and annual threat reports.</p>
+<p>Rob holds degrees from Cornell University in Electrical Engineering and Computer Science (double major).</p>
+<p>Cyprus Becomes Espionage Target for Iranian Hackers</p>
+<p>'God Mode' Flaws Could Wreak Border-Control Havoc</p>
+<p>Nok et norsk energiselskap har blitt utsatt for et datainnbrudd på to dager</p>
+<p>Second Norwegian Energy Company Breached in 2 Days</p>
+<p>Africa Retakes Top Spot as Most Attacked Region, Led by Nigeria Surge</p>
+<p>Want more Dark Reading stories in your Google search results?</p>
+<p>Copyright © 2026 TechTarget, Inc. d/b/a Informa TechTarget. This website is owned and operated by Informa TechTarget, part of a global network that informs, influences and connects the world’s technology buyers and sellers. All copyright resides with them. Informa PLC’s registered office is 5 Howick Place, London SW1P 1WG. Registered in England and Wales. TechTarget, Inc.’s registered office is 275 Grove St. Newton, MA 02466.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://quin.fyi/posts/how-winhelp-files-work.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.darkreading.com/cyberattacks-data-breaches/latin-america-cyberattacks-ports-pipelines-manufacturing" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

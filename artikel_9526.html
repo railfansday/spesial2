@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thresholds tuned on PNGs drift after one WebP round trip</title>
+    <title>Lentil Curry</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9526.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,32 +15,18 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Thresholds tuned on PNGs drift after one WebP round trip</h1>
+        <h1>Lentil Curry</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F0pdmuxt1idiqd37v5a20.png" alt="Thresholds tuned on PNGs drift after one WebP round trip" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F0pdmuxt1idiqd37v5a20.png" alt="Thresholds tuned on PNGs drift after one WebP round trip" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            
+            
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>A threshold tuned on lossless PNGs is tuned on a different image than the one most people will feed it. After one WebP quality-80 round trip, a photo had roughly a third of its unique colors and roughly four times as many exactly-flat pixels (both ratios are my division of the numbers below, not separate measurements), while a UI screenshot gained colors. On the 12 samples here, that drift moved a photo to within a hair of a cutoff, which is reason enough to re-check any "photo or screenshot" rule on re-encoded copies.</p>
-<p>All numbers come from one Apple-silicon Mac and a single pass over 12 samples, using Python with Pillow 11.3, NumPy and OpenCV. They describe these samples, not images in general. The photos come from Wikimedia Commons: Bonnie Moreland's "Lake Mountain Landscape", William Stitt's "Face portrait" and "Avions à l'aéroport de Madrid - 2015", all CC0, resized or cropped. The web-page screenshot is by Stefan Kühn (CC0). The remaining screenshots are self-made with invented data.</p>
-<p>Converting WebP to JPG raises a question the encoder cannot answer by itself: which quality number. Photos tolerate a lower one, text and flat UI wants a higher one. One way a converter can handle that is to pick a default from what the image looks like. ImgIng, the converter I use at https://imging.ai/ , shows two things on its page: after an image is dropped in, it displays a detected content type, and the JPG default is 80 for photos, 78 for smooth images, 84 for textured ones and 88 for graphics or text. What it uses to decide was not checked here.</p>
-<p>A cheap way to build such a first-pass sorter is a few pixel statistics. The one used here is the share of pixels whose luminance equals the right and lower neighbours (call it flat), the share within a difference of 2 (near-flat), the hard-edge share, and unique colors per pixel.</p>
-<p>Same image, before and after saving as WebP at quality 80 and decoding again. The snippet is a trimmed rewrite of the feature script that keeps only the two features that moved (it is not the original command from the run log). Its output below was re-run and matches the 12-sample table.</p>
-<p>The photo is the lake landscape, the screenshot is a self-made admin table. Both move toward the middle: the photo gets smoother and poorer in colors, the screenshot gains colors. The photo's colors per pixel went from 0.0711 to 0.0229, and the cutoff in the combined rule is 0.02. A second self-made screenshot with heavy gradients saw its flat share go from 27.0% to 77.4%, which looks like WebP squeezing the gradient into small flat blocks (a reading of the numbers, not checked block by block).</p>
-<p>Here is what did not change. Across the 12 samples, the combined rule (near-flat above 80% with hard edges above 15%, or colors per pixel under 0.02, or flat above 60%) was wrong on exactly one image both before and after the round trip: the web-page screenshot with a photo embedded, which has 325,881 colors and gets called a photo. Edge density alone was the worst single feature, five wrong on either version, including the airport photo, whose railings and aircraft give it a 6.3% edge density against 4.6% for the admin table.</p>
-<p>The measured part stops at one encoder setting. What follows is inference, not something this run tested.</p>
-<p>A photo that already sits close to 0.02 colors per pixel, say a flat-lit product shot, could cross the line after a stronger WebP setting than 80. Whether the 12 samples would behave that way at quality 60 was not measured. The threshold set was also chosen by looking at these same 12 images, with no held-out set, so the right reading is "a starting point that runs", not an accuracy figure.</p>
-<p>Using Pillow's libjpeg-turbo at 4:2:0, with SSIM computed on luminance by a self-written NumPy and OpenCV routine against the lossless original, there is no human rating behind it. Giving a photo the 88 meant for graphics made files 36.3% to 39.2% larger for only 0.0072 to 0.0090 more SSIM. Giving a screenshot the 80 meant for photos made files about a fifth smaller and 0.0010 to 0.0067 SSIM lower, which shows up as a faint ring of speckles around text when you zoom in. Between 78, 80, 84 and 88 there was no obvious knee; the price climbs clearly only above 88.</p>
-<p>The page gave a real case of the same direction. The airport photo, with a big sky in the top half, was shown as "Screenshot/UI detected", so its JPG default was 88 and the output came out at 317,542 bytes, 2.00 times the source WebP. The other two photos got 80 and landed at 1.41 and 1.43 times. This reads as an example of a wrong label turning into a larger file. How the page reaches its labels is not something this run looked at.</p>
-<p>Take the set you tuned on, save each file once through the lossy format your users actually have, decode, and recompute the same features. Whatever moves toward a cutoff is the part to watch, and the colors-per-pixel line is the first place to look.</p>
-<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
-<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
-<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
-<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
+                <p><p>This hearty lentil curry recipe is perfect on a cool day. Featuring tender lentils and plentiful veggies, it&#8217;s nicely spiced with curry powder and cumin. Curious about the spice level? I&#8217;d classify it as mild. The dish is lightly creamy thanks to some coconut milk, but not heavy. Make this curry when you want to&#8230;</p>
+<p>The post <a href="https://cookieandkate.com/lentil-curry/">Lentil Curry</a> appeared first on <a href="https://cookieandkate.com">Cookie and Kate</a>.</p></p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/iterandum/thresholds-tuned-on-pngs-drift-after-one-webp-round-trip-1jml" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://cookieandkate.com/lentil-curry/?adt_ei=*|EMAIL|*" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

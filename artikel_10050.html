@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why the Agent Isn’t the Hard Part: Where Developers Go Wrong With Agentic Workflows</title>
+    <title>Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10050.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,47 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Why the Agent Isn’t the Hard Part: Where Developers Go Wrong With Agentic Workflows</h1>
+        <h1>Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_agent_cover_v2_e402f5655a.png" alt="Why the Agent Isn’t the Hard Part: Where Developers Go Wrong With Agentic Workflows" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_agent_cover_v2_e402f5655a.png" alt="Why the Agent Isn’t the Hard Part: Where Developers Go Wrong With Agentic Workflows" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://www.docker.com/app/uploads/brand/social/docker-og-default.png" alt="Give sandboxed agents live web access with the Firecrawl kit for Docker Sandboxes" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>You can build an AI agent in an afternoon now. Pick a model, write a loop, hand it a few tools and watch it book a meeting or open a pull request. The demo works, and everyone in the room is impressed.</p>
-<p>Then it meets a real system with real permissions and real customers, and things get quiet. Gartner has predicted that over 40% of agentic AI projects will be canceled by the end of 2027, citing rising costs, unclear business value and inadequate risk controls. Its analyst Anushree Verma described most current projects as early-stage experiments that are driven by hype and often misapplied. A forecast is not a measurement, but the pattern it describes matches what many teams report: the agent is rarely what breaks. The workflow around it is.</p>
-<p>This article covers where that workflow tends to fail, with a focus on permissions, tool connections and human approval. It includes a small, runnable policy gate in JavaScript, compares the main safeguards and notes their limits. Standards and guidance change quickly in this area, so check the linked sources for the current versions.</p>
-<p>A year or two ago the model was often the differentiator. Today many teams can reach the same frontier models through the same kinds of APIs, so if the intelligence is similar, the advantage has to come from somewhere else.</p>
-<p>Anthropic’s guide to building effective agents reached a similar conclusion after working with teams building agents. It reports that the most successful implementations were not using complex frameworks or specialized libraries, and were building with simple, composable patterns instead. It also separates workflows, where code paths are predefined, from agents, where the model chooses its own steps, and advises using the simplest approach that works and adding complexity only when measurement shows it helps.</p>
-<p>That should change where developers spend their time. Frameworks matter, but three less glamorous questions matter more: what can the agent touch, when does it stop, and who checks its work?</p>
-<p>The OWASP guidance on Excessive Agency names what goes wrong here. It covers agents that can do more than they need to, and it traces the problem to three root causes: excessive functionality, excessive permissions and excessive autonomy.</p>
-<p>In practice this looks familiar. An agent that only needs to read tickets is given a token that can also close them. A summarization tool connects with an admin account because that was quicker to set up. A generic “run shell command” tool is exposed when the agent only ever needs to write one file.</p>
-<p>The fix is ordinary engineering discipline applied to a new kind of caller. OWASP’s recommendations include giving each tool only the functions and permissions it needs, preferring narrow tools over open-ended ones, running actions under the user’s own scoped identity, requiring human approval for high-impact actions and enforcing authorization in the downstream system rather than letting the model decide. The last point is the important one: a model can be talked out of a rule written in a prompt, but an API that checks scopes cannot.</p>
-<p>Make the risky properties of a tool explicit in its definition so your orchestration layer can act on them:</p>
-<p>Nothing clever is happening there, which is the point. The decision about what needs a human is made by a developer at design time, not by a model at runtime.</p>
-<p>The definitions above only help if something enforces them. The sketch below is a policy gate that sits between the model and your tools. It checks that the tool exists, that the caller was granted the scope, and whether the action is reversible, and it records each decision. It runs on Node.js 18 or later with no dependencies.</p>
-<p>A short test file shows the behavior. Unknown tools and missing scopes are denied, reads run, and the irreversible send waits for a person:</p>
-<p>This is deliberately minimal. A real system would load scopes from the user’s actual session, enforce the same scopes again in the downstream API, and store the audit log somewhere durable. The gate is a second line of defense, not a replacement for authorization in the systems the agent calls.</p>
-<p>The Model Context Protocol has become a common way to connect agents to tools. Anthropic donated MCP to the Agentic AI Foundation, a directed fund under the Linux Foundation, in December 2025. Block contributed goose and OpenAI contributed AGENTS.md as founding projects, which shows how central the ecosystem has become.</p>
-<p>A standard protocol is good news. It also means you can install a tool server in minutes and expose every endpoint of your issue tracker, repository or CRM to your agent, whether it needs them or not. Easy connection quietly pushes more power to the agent.</p>
-<p>The protocol’s own security best practices document covers several relevant risks, including confused deputy problems in proxy servers, token passthrough, local server compromise and scope minimization. For scopes, it recommends starting with a minimal set and elevating only when a privileged operation is first attempted, and it lists wildcard or omnibus scopes as a common mistake.</p>
-<p>A sensible rule is to treat every tool server like a third-party dependency running with production credentials. Review the tools it exposes, switch off the ones the workflow does not use, pin versions and log every call. If you would not let a new contractor do it on day one, the agent should not do it either.</p>
-<p>Human-in-the-loop design is often implemented as “approve everything”. That fails in a predictable way: people click approve forty times a day and stop reading by lunchtime.</p>
-<p>A better rule is to gate on reversibility. Reads run freely, reversible writes run and get logged, and irreversible actions such as sending, paying or deleting wait for a person. Everything leaves a trace that a developer can replay when something looks odd. The gate above implements exactly this split.</p>
-<p>Some teams build these pieces themselves, and others buy them. Elsewhen, a London-based consultancy that works on agentic operations for enterprise teams, describes its own service in similar terms. Its page lists approval gates where people sign off consequential decisions, an audit trail of what each agent read and which systems it touched, and a shared layer of permissions and guardrails that is reused across workflows. Elsewhen also says its Planet Agent report found that agents tend to start at the edges of an organization, where tasks are repeatable and mistakes are cheap, and then move toward the core. Treat that as the vendor’s own finding, and ask for the underlying evidence before relying on it.</p>
-<p>The same logic applies outside engineering. The first question worth asking any AI partner is what they have actually put into production, and developers can ask the same of their own work.</p>
-<p>No single control is enough. The table summarizes what each safeguard does well and where it falls short.</p>
-<p>It is the OWASP term for an agent that can do more than it needs to, caused by excessive functionality, permissions or autonomy.</p>
-<p>A prompt rule can be bypassed or ignored, while a scope check in the downstream API is enforced regardless of what the model says.</p>
-<p>Usually not. Gating on reversibility keeps humans focused on actions such as sending, paying and deleting, and avoids approval fatigue.</p>
-<p>Treat them like any third-party dependency. Review the tools they expose, limit scopes, pin versions and log calls.</p>
-<p>The agentic projects that survive the next two years will probably not be the ones with the most ambitious autonomy. They will be the ones where someone sat down early and decided what the agent could touch, what it had to ask about and how anyone would know what it did.</p>
-<p>That work does not demo well and it will not trend on social media. It is still the part that decides whether your agent becomes infrastructure or ends up among the projects that get cancelled.</p>
-<p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
+                <p>A coding agent in Docker Sandboxes runs inside an isolated VM, the sandbox controls which hosts it can reach, and credentials stay on the host behind a proxy. The same controls keep the agent from opening a docs page, reading a changelog, or looking up an API that shipped after its training cutoff, so it writes code against the version it remembers. The usual fix is to widen the allowlist until the agent can fetch anything, which hands back most of what the sandbox took away.</p>
+<p>The Firecrawl kit gives the agent web search, page scraping, and site crawling through one added host, api.firecrawl.dev, and every page comes back as clean markdown.</p>
+<p>The Firecrawl kit is a mixin (kind: mixin): it extends whichever workload you already run rather than defining a new sandbox. Its descriptor, firecrawl/firecrawl.yaml, declares four typed capabilities:</p>
+<p>The kit adds to the sandbox’s allowlist and does not narrow it, so everything else is set by your global sbx policy. Docker’s balanced preset allows package registries, GitHub, and a curated list of vendor domains, and returns a 403 for general websites, including most documentation sites, so Firecrawl is the agent’s route to those. Under deny-all, it is the agent’s only web host.</p>
+<p>Kits are experimental and in Early Access, so the kit format and sbx commands may change. The steps below are current for October 2026; the repository README carries the latest.</p>
+<p>Kit: docker.io/firecrawl/sbx-kit-firecrawl:1.0.0 on Docker Hub, for linux/amd64 and linux/arm64. Source: github.com/firecrawl/firecrawl-docker-sandbox.</p>
+<p>1. Store the key once on the host. The command prompts for the key. Service secrets are global by default, so every sandbox that requests the firecrawl service can use it once you approve. The kit never sees the value; the proxy injects it at request time.</p>
+<p>2. Start a sandbox with the kit. The kit is an ordinary OCI image with its descriptor in the manifest, so a version tag is all you need. Each --kit adds a mixin to the workload, and the trailing . mounts your project directory.</p>
+<p>On the first run, sbx asks you to approve sending the firecrawl credential to api.firecrawl.dev. Accept the defaults. The credential is required: with no secret stored, sbx refuses to create the sandbox instead of letting the agent hit a 401 mid-task. A detached or CI run cannot answer the approval prompt, so approve interactively once or write the binding to ~/.config/sbx/credentials.yaml first.</p>
+<p>3. Give the agent a task that needs the live web. Documentation sites are blocked under balanced, so this one has to go through Firecrawl.</p>
+<p>The kit’s instructions tell the agent to scrape blocked hosts through Firecrawl, so it calls fc.scrape(...) unprompted. Its response, trimmed:</p>
+<p>4. Verify each layer. In the same session, ! runs shell commands inside the sandbox.</p>
+<p>Expected: FIRECRAWL_API_KEY=proxy-managed. A real fc-... value here means the key came from somewhere other than the kit.</p>
+<p>Expected: the page as markdown, starting with # Changelog and the latest version heading. The same URL returns a 403 to curl from inside the sandbox, so output here proves the SDK, the credential, and the network rule at once.</p>
+<p>The kit also describes itself inside the sandbox. This prints the published descriptor, and the agent instructions sit next to it as firecrawl-context.md:</p>
+<p>Running from source. To review or modify the kit before you run it, clone the repository and point --kit at the firecrawl/ directory; sbx builds source kits on demand:</p>
+<p>With the kit installed, the agent can look things up on the web while it works. The sandbox only needs to talk to one new address, api.firecrawl.dev, and Firecrawl fetches the pages for it. This matters because the default balanced policy blocks most documentation sites. Without the kit, you’d have to allow each site one by one, and every new site you allow makes the sandbox a little less locked down.</p>
+<p>Without the kit, you had a choice to make. The default balanced policy blocks most documentation sites, so you could either leave the agent working from what it remembered, or allow sites one by one and loosen the sandbox a little each time. The kit avoids that choice. Your Firecrawl API key stays on your machine, behind the proxy, and the agent still reads the web as it is today.</p>
+<p>The result is fewer made-up APIs, fewer failed upgrades, and less time spent correcting an agent that was confidently out of date.</p>
+<p>The kit is published under the firecrawl organization on Docker Hub as firecrawl/sbx-kit-firecrawl, with source, changelog, and CI on GitHub under Apache-2.0. The SDK pin is verified against PyPI’s package hashes at install time, and every release passes Docker’s kit-tck conformance suite in CI. Review the descriptor and allowlist before running it, as with any kit.</p>
+<p>Pull the kit from Docker Hub: hub.docker.com/r/firecrawl/sbx-kit-firecrawl. Issues and feature requests go to the GitHub repository.</p>
+<p>Docker launches a new brand built on trust. Learn why Docker is evolving for AI agents, what stays the same, and how to run agents securely with Docker.</p>
+<p>Docker publishes fixed images for both Java4Shell and the NGINX HTTP/2 in the Docker Hardened Images (DHI) catalog.</p>
+<p>Learn how Docker AI Governance secures agentic AI with sandbox policies, MCP tool governance, and audit visibility to support controlled AI agent workflows.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/why-the-agent-isn-t-the-hard-part-where-developers-go-wrong-with-agentic-workflows/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.docker.com/blog/docker-sandboxes-firecrawl-web-access/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

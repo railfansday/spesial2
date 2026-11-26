@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kernel prepatch 7.4-rc4</title>
+    <title>I Built a React Tool to Trace Where a 464 ms Click Spent Its Time</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9705.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,79 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Kernel prepatch 7.4-rc4</h1>
+        <h1>I Built a React Tool to Trace Where a 464 ms Click Spent Its Time</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
         
         <div class="article-body">
+            <img src="https://hackernoon.imgix.net/images/null-frd2bkb.png" alt="I Built a React Tool to Trace Where a 464 ms Click Spent Its Time" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/null-frd2bkb.png" alt="I Built a React Tool to Trace Where a 464 ms Click Spent Its Time" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The 7.4-rc4 kernel is out for testing. Linus
-said: "It's huge. What a surprise. Lots of little fixes all over, with
-drivers being pretty exactly half of it (gpu and networking showing up
-as usual, but there's usb, iio, nvme, sound.. you name it)."</p>
-<p>Copyright © 2026, Eklektix, Inc.
-            
-            Comments and public postings are copyrighted by their creators.
-            Linux  is a registered trademark of Linus Torvalds</p>
+                <p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
+<p>I clicked Log in on a demo page. Chrome measured 464 ms from the click to the next paint. That was the page’s Interaction to Next Paint (INP) at the time. Okay, so the click was slow. I still needed to figure out where the time went.</p>
+<p>So I built react-inp-blame. It lines up the browser’s interaction timings with what React committed. The login report showed 405 ms of processing. It leaned toward the click handler because only two components re-rendered.</p>
+<p>I started it on September 12, 2026. 0.1.0 was on npm five days later and 1.0.0 came out on October 10. No runtime dependencies, MIT license. Everything I show below runs on the live demo, so you can go click the same buttons.</p>
+<p>On most pages, INP is the latency of the longest interaction. On busier pages it drops one high outlier for every 50 interactions. Chrome’s tools and web-vitals break the interaction down into input delay, processing and presentation.</p>
+<p>From the press until the first event handler starts</p>
+<p>Your handler code, and in React, the render it triggers</p>
+<p>From the end of the handlers until the next paint</p>
+<p>Which is useful, up to a point. In a React app "processing" is your onClick plus React's render plus whatever effects ran along the way, all lumped together, and the thing you clicked is a button nested a few components deep. When you actually sit down to fix it you want something smaller and more annoying. Which component? Which handler? How many renders? Was it even React?</p>
+<p>React DevTools can answer some of it, if you had the profiler recording at the moment the slow click happened. Usually you didn't.</p>
+<p>The demo is a fake photo app called Framely with a sign-in page that has a few realistic mistakes baked in. Nothing leaves the page, the sign-in is simulated.</p>
+<p>After the sign-in, a small dark badge in the bottom left corner shows the page's INP so far. It's green at 200 ms or under, amber up to 500 and red above that.</p>
+<p>Click the badge and you get a panel of the recent slow interactions. Click a row and it opens up with the full explanation. My run for this article had 24 interactions in it, 15 key presses in the email field, 8 in the password field, and the one click.</p>
+<p>The typing shows a different problem. Each key press in the email field re-rendered 1,004 components, 1,000 of them PostTile cards inside a FeedPreview that sits next to the form and has nothing to do with the email. The slowest key press took 232 ms and the typical one 160. The password field went the other way. Hardly anything rendered there, the time was in its own onChange handler, and the slowest press was 168 ms.</p>
+<p>Then there's the second half of the login story, and honestly it's the part I care about most. React rendered again 274 ms after the screen had already updated, 256 components this time and most of them PhotoTile. INP doesn't count that render at all, cause it happened after the paint the click was waiting on. Whether it really belongs to the click is a harder question, I'll get to that.</p>
+<p>Funny thing is the browser and React already know all of this between them. They just don't share.</p>
+<p>Event Timing gives me the interaction ID and its timing. The Long Animation Frames API records the scripts in a long frame and their forced style and layout time. For the React side I listen to the same developer tools hook that React DevTools uses. After a commit, the library walks the fiber tree and counts what rendered.</p>
+<p>Matching them up is where it got hard. The library keeps its last eight inputs and uses event timestamps to associate commits with an interaction. A render that lands after the next paint is listed as a follow-up with its own timing. The report leaves its trigger open when the timing is the only evidence.</p>
+<p>None of this is a stable React API, so the library checks what it reads and fails closed. If react-dom is outside 17 to 19, or the fiber tree looks different from what it expects, it switches that part off, warns once, and keeps reporting, just without component names.</p>
+<p>The demo also has an anti-pattern lab. It's eight slow interactions, each one built around one specific mistake, and a fast one as the control. I ran every scenario once on the live site, production build, and wrote down what the library said.</p>
+<p>Every section rebuilt from scratch during render. 251 components inside SlowRender, mostly Section</p>
+<p>Layout effects write a style, then read a size. 881 ms of forced style and layout, PriceTicker ×400</p>
+<p>One class change restyles 30,000 cells. 773 ms updating the screen, browser work, no script</p>
+<p>3,000 rows re-render on each key. 1,441 components inside BigList, mostly Row</p>
+<p>Context value is a new object every render. 801 components, 800 LineItem inside OrderSummary</p>
+<p>Input state lives above a heavy sidebar. 602 components, 600 NavItem inside Sidebar</p>
+<p>The click handler burns 120 ms, nothing renders. The onClick handler, 120 ms</p>
+<p>An effect sets more state after the click commits. A 401-component render 100 ms after the paint</p>
+<p>Nothing, it's the control. No report, nothing stood out</p>
+<p>Same nine interactions in the chart below, split by phase. Six are mostly "working", and that's the phase where a component or handler name is actually useful. Restyle storm is nearly all "updating the screen", where a React name won't help you at all.</p>
+<p>I kept layout thrash in the lab cause it fooled me first. It looks exactly like a React problem. 400 rows, each one sets a style in a layout effect and then reads its own size back, and the browser has to redo layout 400 times inside a single commit. In the Performance panel it's one big purple and yellow block and you'd blame React for it.</p>
+<p>Without the long-frame timing, the report would put roughly 1.1 seconds under processing. With it, I can see how much the browser spent recalculating styles and layout. Here’s what the report said.</p>
+<p>Restyle storm goes one step further, there's basically no script in it. React renders a single component. Then one class change makes the browser restyle 30,000 cells, and that alone is 773 ms of "updating the screen" after the handler is long done (735 ms of it is the browser's own main thread work). No component name helps here. You fix it with fewer cells or CSS containment and React doesn't come into it.</p>
+<p>Handler hog is the boring one and I like it for that. The onClick burns 120 ms, React renders nothing, and the report says so in one line. Nobody goes digging through the component tree for a render that never happened.</p>
+<p>Cascading effect has an INP of 16 ms. Any dashboard would call that a perfect click.</p>
+<p>Here's what's really going on. The click commits a tiny change, an effect picks it up and sets more state, and React renders again, 401 components this time, about 100 ms after the screen already updated. INP stops at the next paint, so it stops right before the expensive bit and never sees it.</p>
+<p>I got the wording of this note wrong at first. Up to 0.25 it said people still wait for that render, which sounds right until you run it on a real app. On hyperdx, one of the two apps it was graded on, the render after a click was more than once a live tail's timer or a route change, nothing to do with the click. So from 0.26.0 the note only says INP doesn't count it and what started it can't be told. You still get the count and the time, it just doesn't pin it on a click it may not belong to.</p>
+<p>One package, and on most apps one line in the build config. Vite:</p>
+<p>Next.js 14.2 or later wraps the config instead:</p>
+<p>Next.js 15.3 to 16.2 want one more export in instrumentation-client.ts. The wrapper keeps printing that line at you until the file has it, which is annoying on purpose. React Router in framework mode, Remix, TanStack Start and Astro all write their own HTML, so each gets its own short setup in the docs.</p>
+<p>Both plugins only run in development unless you say otherwise. With the defaults a production build gets nothing from them (on Next.js 15.3 to 16.2 the extra export stays in, as an empty function).</p>
+<p>CI covers react-dom 17.0.2 up to 19.3.0 plus React canary, Next.js 14.2.35 up to 16.3.5 plus canary, and Vite 6.4, 7.3 and 8.3. It also installs the packed tarball into fresh apps from create-vite, create-react-router, TanStack Start's CLI and create astro, then checks that a slow click there still gets blamed on the right component. That last part caught more bugs than the unit tests did.</p>
+<p>Most teams already ship INP somewhere and I didn't want to replace that. The web-vitals attribution build keeps doing the measuring and this adds the React part on top. The lightest setup doesn't even need the runtime on the page, only the build step that keeps component names around:</p>
+<p>You need web-vitals 5.1 or later for that. If you want the full report, the docs have the attributeINP path, sent on to Sentry or GA4.</p>
+<p>There's also react-inp-blame/otel, still experimental. It adds the blame to the INP event an OpenTelemetry web vitals pipeline already sends, as react_inp_blame.* attributes, so you can group and filter on it in Honeycomb, Elastic, Embrace or Grafana Faro. It doesn't import anything from OpenTelemetry or a vendor SDK. Experimental just means the attribute names could still change in a minor release, cause OpenTelemetry's browser conventions have no field yet for an interaction's target or a component.</p>
+<p>A tool for slow clicks that makes clicks slower would be a bad joke. Every report carries overheadMs, the library's own time for that interaction, so I couldn't really hide from it even if I wanted to.</p>
+<p>The repo's numbers are 30 fresh page loads per scenario on two of the heaviest demo scenarios, a click that re-renders 801 components and a key press that re-renders 1,441:</p>
+<p>In my own sign-in run for this article the 24 reports cost 0.1 to 3.2 ms each. The one outlier was the first key press on the page at 12 ms. Lab scenarios came in at 0.5 to 5.6 ms, one interaction each.</p>
+<p>Size is the other cost if you turn it on in production:</p>
+<p>react-inp-blame/auto, everything that loads with the page</p>
+<p>The badge and panel, loaded only when shown</p>
+<p>react-inp-blame/web-vitals, on top of /auto</p>
+<p>35.8 KB gzip is real weight. That's why production is opt-in with a sampleRate, and why the web-vitals path with no runtime exists at all.</p>
+<p>The demo's header says "It can be wrong". I put that there and I meant it.</p>
+<p>Treat a component name as a lead. In a production React build, the library uses component counts because it lacks render durations. The login report hedged between the handler and the render for that reason. Forced layout attribution also depends on the browser exposing Long Animation Frames.</p>
+<p>Before 1.0 I set a bar for myself, at least 38 right and at most 6 wrong out of 62 verdicts on apps it had never seen. 0.25.0 got graded on two real open-source apps, hyperdx and kaneo. It got 8 right, 35 wrong and 19 misleading. So no, the bar isn't met, and the 1.0.0 changelog says that in plain words. What 1.0 promises is the API and the report shape, the fields keep their meaning through 1.x. Accuracy isn't part of that promise yet.</p>
+<p>The next round is five everyday open-source React apps, Actual, myfin, Kresus, Manage My Damn Life and Reactive Resume. The protocol freezes the test cases before anyone looks at what the library says about them. Their integrations are still being built, so no results yet. If it blames the wrong thing on your app there's an issue form just for that, and honestly those reports help more than anything else.</p>
+<p>Quickest way is the demo at reactinpblame.com. Everything on it is slow on purpose. Click around, read what the badge blames, then open the Performance panel in DevTools and check it, the library draws its own track there next to React's.</p>
+<p>Add the Vite plugin or the Next.js wrapper from above, restart the dev server and click the slowest thing you know about. Code, docs and known limits are on GitHub, and the package is on npm.</p>
+<p>How I Traced a Missing Vercel AI SDK Duration Histogram</p>
+<p>I work on slow clicks and missing browser traces. I'm an OpenTelemetry Browser approver.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://lwn.net/Articles/1108900/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://hackernoon.com/i-built-a-react-tool-to-trace-where-a-464-ms-click-spent-its-time?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
