@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript</title>
+    <title>Running an AI Agent on a Local LLM: What I Measured on One GPU</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10735.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,66 +15,54 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>Running an AI Agent on a Local LLM: What I Measured on One GPU</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_06250594d1.png" alt="From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_2e992995c4.jpg" alt="Running an AI Agent on a Local LLM: What I Measured on One GPU" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_06250594d1.png" alt="From User Feedback to a Better Prompt: 4 Tools Tested in TypeScript" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_cover_2e992995c4.jpg" alt="Running an AI Agent on a Local LLM: What I Measured on One GPU" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>When an LLM app gives a wrong answer, nothing in your logs shows it. The request returns 200, the JSON is valid, and no exception fires. Usually the user is the only one who notices. A thumbs-down button records that moment, on the exact trace that went wrong, while the user still remembers why.</p>
-<p>That button is easy to add. The hard part is what comes after: turning the thumbs-down into a reviewed test case, a judge score, and a better prompt.</p>
-<p>We ran that loop in TypeScript in four tools: LangSmith, Langfuse, Phoenix and AcruxCore. All four handled the first four steps, which are user feedback, reviewer comments, a dataset and an LLM judge. Only AcruxCore rewrote the prompt from TypeScript. On 15 support tickets that no tool had seen, the rewritten prompt routed 13 correctly, against 7 for the original.</p>
-<p>Our test app is a support-ticket router. It reads a ticket and returns JSON with a category (account, billing, bug or feature_request) and a priority (P0, P1 or P2). The first version of the prompt describes only the output format:</p>
-<p>The support team has a policy that this prompt never states. Sign-in problems are always account. A customer who can't use the product at all is P0. Any billing error is P1, even when the customer says there is no rush. Feature requests are P2, however angry the customer sounds.</p>
-<p>Without that policy, the model guesses priority from the customer's tone. Here are three real replies from the first version:</p>
-<p>Every reply is valid JSON, so no schema check catches the mistake. A person has to read the reply and say it is wrong. The loop in this article takes that judgement and turns it into a better prompt.</p>
-<p>All four tools cover evaluation. We compared the self-hosted ones on tracing in Self-Hosted LangSmith Alternatives: 4 Tools Tested on One TypeScript Agent, and on prompt registries in Prompt Management in TypeScript. For a broader comparison of self-hosted options, see this LangSmith alternatives roundup. This article covers the feedback loop only.</p>
-<p>We wrote 30 tickets. Fifteen are the "production traffic" that each tool's app processed. The other 15 are a holdout set. No tool saw them, and we used them only for the final before-and-after check.</p>
-<p>Each tool ran the same sequence from one TypeScript script:</p>
-<p>The reviewer comments follow one template, so the wording is identical in every tool:</p>
-<p>The comments name one rule each. The full policy appears nowhere in the data any tool received.</p>
-<p>The app model isn't fully deterministic at temperature 0. Each tool's run got between 6 and 8 of the 15 traffic tickets right, so the tools received 7 to 9 thumbs-down each. The holdout check below repeats every measurement three times.</p>
-<p>All four tools accept feedback on a trace from TypeScript. They differ in how a second person, the reviewer, adds the correct answer.</p>
-<p>LangSmith stores both as feedback on a run. The thumbs-down runs go into an annotation queue, where a reviewer adds feedback with a comment:</p>
-<p>Langfuse stores both as scores. An annotation queue needs a score config first:</p>
-<p>Phoenix stores both as span annotations. The reviewer's comment goes in explanation:</p>
-<p>Phoenix stores spans asynchronously. Our first run annotated a span before Phoenix had stored it, and the API returned a 404. The script now waits until all 15 spans are visible.</p>
-<p>AcruxCore stores both as feedback rows on the trace. The source field separates the end user from the reviewer:</p>
-<p>This is the first step where the code differs a lot. Each tool can make a dataset, but only one builds it from feedback in one call.</p>
-<p>In LangSmith, a run query finds the thumbs-down runs. Then createExamples copies them into a dataset. You decide where the reviewer's comment goes. We put it in the reference output:</p>
-<p>LangSmith can also do this without code. An automation rule in the UI can add runs that match a filter to a dataset.</p>
-<p>In Langfuse, the scores API finds the thumbs-down traces. Two details cost us a run each. A boolean score is filtered with value: "false", not 0. And the trace ID is returned only when you ask for the subject field group:</p>
-<p>In Phoenix, getSpans can't filter by annotation. So the script lists the app's spans, reads their annotations, and keeps the ones with a thumbs-down. Then createDataset takes the examples. We kept the source span ID in the metadata.</p>
-<p>In AcruxCore, buildFromFeedback takes the reviewer's feedback IDs. Each comment becomes that example's grading criteria, and the input comes from the variables captured on the trace:</p>
-<p>Each tool scored the first version of the prompt on its own dataset. The judge read the reviewer's comment and the router's reply, and returned 1 for a match and 0 for a mismatch.</p>
-<p>LangSmith, Langfuse and Phoenix each have an experiment runner that takes your evaluator function, and we gave all three the same judge prompt. AcruxCore grades with its built-in judge inside the optimize run. All four used the same judge model.</p>
-<p>The first version fails almost every reviewed case. That is expected, because these are the cases users marked wrong. A score of 1 means the app model got that case right on the second call, or the judge accepted a wrong reply. We didn't check which.</p>
-<p>The judge can also run without your code. Besides the in-code evaluator we used, Langfuse has a managed LLM-as-a-judge that runs on production traces and on experiments, with your own judge prompt. LangSmith has online evaluators, which you set up in its UI, for the same job.</p>
-<p>An optimizer reads the failing cases and the reviewer comments, writes new versions of the prompt, and scores each one with the judge. This is the step that turns feedback into a better prompt, and it's where the four tools differ most.</p>
-<p>LangSmith's API reference lists an optimize prompt job (POST /api/v1/repos/optimize-job). It takes a prompt name, a dataset name, evaluator IDs and an algorithm, promptim or demo. No method in the TypeScript SDK wraps it, so we called it with fetch. We gave it a code evaluator that checks the reply against the reviewer's correct answer.</p>
-<p>The job was accepted and reported successful about ten seconds later. It ran no experiment on the dataset. With auto_commit set to true, it added no new commit to the prompt. We found no guide for this endpoint, so we may have configured it wrongly, but the job record and its logs gave no error to act on.</p>
-<p>LangSmith's documented route to prompt optimization is promptim, which its README calls an experimental library. It is a Python package with a CLI, and it can add a human review step through LangSmith annotation queues.</p>
-<p>Langfuse has no optimizer. Its blog shows a workflow with Claude Code agent skills that reads Langfuse data and edits the prompt. That workflow runs in a coding agent, not in your app's code.</p>
-<p>Phoenix's Optimize Prompts Automatically tutorial uses Arize's prompt-learning package, which you clone from GitHub and install with pip. The Phoenix TypeScript client has no optimizer export, and the tutorial runs outside Phoenix. Arize's commercial platform, Arize AX, has prompt optimization built in.</p>
-<p>For Python teams, there are more options: Opik's Agent Optimizer and DSPy both rewrite prompts from a dataset and a metric. This article covers TypeScript.</p>
-<p>Its optimize run takes the dataset and drafts three rewrites of the production prompt. It runs each rewrite and the current production version on every example, and the judge grades all of them:</p>
-<p>The three rewrites tied, so we took candidate A. Its rationale: "Added explicit priority rules for each category and clarified that access-blocking issues are P0, billing errors are P1, and feature requests are P2, overriding tone/urgency." The Improve a prompt from feedback guide covers the dashboard version of this step.</p>
-<p>A rewrite that passes the cases it was built from can still fail on new tickets. So we ran both prompts on the 15 holdout tickets, three times each, outside every tool. The script calls the model directly and checks the category and the priority against the expected answer. No judge is involved.</p>
-<p>Both come from one line in the rewrite: "P1 for bugs without workaround." That rule isn't in the team's policy, and no reviewer wrote it. The optimizer made it up to explain the examples it had. There was also no outage in the traffic set's thumbs-down cases, because the first version routed that one correctly. So no comment ever said that a full outage is P0.</p>
-<p>The optimizer learns only from what users marked wrong. Anything they never marked stays a guess, and the rationale won't tell you which rules are guesses. Read the rewritten prompt before you promote it.</p>
-<p>In LangSmith, Langfuse and Phoenix, shipping a new version is a tag or label move. We showed those calls in the prompt-management article. Here there was no rewrite to ship, so the step didn't apply.</p>
-<p>In AcruxCore, promotion commits the candidate as a new prompt version and moves the production alias to it. Nothing else moves:</p>
-<p>The app renders production on every call, so the next ticket used version 2 without a deploy.</p>
-<p>Use LangSmith if your team already works in it and writes Python. Feedback, queues, datasets and experiments all work from TypeScript, and promptim covers optimization from Python.</p>
-<p>Use Langfuse if you want a managed judge that runs on live traces with your own prompt. Plan to write the dataset glue code and the rewrite step yourself.</p>
-<p>Use Phoenix if you already trace with OpenTelemetry and annotate spans. Plan to move to Python, or to Arize AX, for optimization.</p>
-<p>Use AcruxCore if you want all six steps from TypeScript in one tool, including the rewrite. Keep a human on the promote button.</p>
+<p>Running an AI agent on your own GPU sounds simple: point it at Ollama and stop paying per token. I set up OpenClaw, an open-source AI assistant, with a 9B model in Ollama on one RTX 3090 and connected it to Discord. Then I read the Ollama log for every request.</p>
+<p>The agent worked. The numbers were not what I expected, though. A one-line question turned into a prompt of more than 18,000 tokens, the first reply took over a minute, and the small model sometimes guessed instead of using its tools.</p>
+<p>This article covers what I measured and what each number means if you plan to run an agent on local hardware.</p>
+<p>OpenClaw ran in Docker and reached Ollama on the host at http://host.docker.internal:11434. Discord was the chat interface, and OpenClaw's web panel showed the sessions and context use.</p>
+<p>This article is about the results, not the installation. The full step-by-step setup is in a separate guide to running OpenClaw in Docker with Ollama and Discord. That guide covers the Compose file, the Discord bot and how to keep the ports off your network.</p>
+<p>All timings below come from the Ollama log on the test machine. Ollama loaded the model with a 32,768-token context.</p>
+<p>My first message in Discord was short: "Which model are you running on, and what is 17 * 23?" The bot answered correctly: it ran on ollama/qwen3.5:9b, and 17 × 23 is 391.</p>
+<p>The Ollama log showed what that question cost. The model processed 18,415 prompt tokens and generated 33 tokens.</p>
+<p>The extra tokens come from the agent itself. With every request, OpenClaw sends:</p>
+<p>On the RTX 3090, reading that prompt took 10 seconds at 1,838 tokens per second. A slower GPU, or a CPU, needs much longer to read the same prompt.</p>
+<p>Prompt tokens per model call, from the Ollama log. Only the first message had to process the whole prompt.</p>
+<p>OpenClaw counts tokens with its own estimate, which was higher than the Ollama count. The gateway log estimated the prompt at 24,608 tokens, against a prompt budget of 24,576 tokens for this model. By OpenClaw's own count, the base prompt alone used up the budget before any conversation history.</p>
+<p>The web panel showed a similar figure: 68 to 69 percent of the context window was in use for the Discord sessions after only a few messages.</p>
+<p>The first message arrived while the model was not loaded in GPU memory. That reply took 1 min 10 s:</p>
+<p>Reply times on the test machine. Loading the model took most of the first reply.</p>
+<p>The speed-up comes from prompt caching. The system prompt, tool definitions and workspace files at the start of the prompt stay the same between requests. Ollama kept that part cached and processed only the new tokens. The model wrote at 91 to 96 tokens per second in every test.</p>
+<p>Ollama's documentation says models stay in memory for 5 minutes by default before they are unloaded. After that, the next message pays the load time again. You can change this with the OLLAMA_KEEP_ALIVE environment variable on the Ollama server, or with the keep_alive parameter per request. A negative value, such as -1, keeps the model loaded. I did not change this setting in the test.</p>
+<p>If you run Ollama in Docker, pass the variable with -e OLLAMA_KEEP_ALIVE=-1 or in the environment: section of your Compose file.</p>
+<p>Two things used the GPU besides my chat messages.</p>
+<p>A heartbeat. OpenClaw's web panel listed one scheduled automation, heartbeat-main, which runs every 30 minutes. The agent wakes on that schedule, so the model gets called even when nobody chats. With Ollama's 5-minute default, the model is unloaded between heartbeats unless someone chatted recently, so a heartbeat most likely starts with a model load. I did not measure this.</p>
+<p>An embedding model. During the first message, OpenClaw also called Ollama's /api/embed endpoint twice to index its memory. It used qwen3-embedding:4b, which was already installed on the Ollama server. I did not set OpenClaw to use that model; it picked it on its own.</p>
+<p>The two models took this much GPU memory:</p>
+<p>That is 11.4 GB for the models alone, almost half of the RTX 3090's 24 GB.</p>
+<p>What this means for you: plan GPU memory for the chat model, the embedding model and the context, not the chat model alone. If the GPU also runs other models, the heartbeat can compete with them.</p>
+<p>The first two tests in Discord: a question, then a file written with a tool. The user name is blurred.</p>
+<p>The mistakes showed up when the model had to check something:</p>
+<p>After the restart, the bot claimed it had lost the earlier session. When asked to use its read tool, it read the file correctly.</p>
+<p>The fix for the first problem was simple. When I wrote "use your read tool to open homelab-test.md", the model opened the file and listed all three points correctly. Naming the tool made it check instead of guess.</p>
+<p>The model listed four files and missed the test file and a folder, because it answered from its prompt.</p>
+<p>Based on this test, a local 9B model on one consumer GPU works for:</p>
+<p>If you need better answers, OpenClaw also works with hosted models, but then your prompts leave your machine.</p>
+<p>In this test, qwen3.5:9b used 6.3 GB and the qwen3-embedding:4b memory model used 5.1 GB. Together the two models needed 11.4 GB.</p>
+<p>The model had to load into GPU memory first, which took 59 seconds of the 70-second reply. Ollama keeps a model loaded for 5 minutes by default, and the OLLAMA_KEEP_ALIVE setting changes that.</p>
+<p>Every request includes OpenClaw's system prompt, its tool definitions and its workspace files. A one-line question became an 18,415-token prompt in this test.</p>
+<p>Yes. A heartbeat automation runs every 30 minutes and calls the model even when nobody sends a message.</p>
+<p>It handled questions, arithmetic and file creation correctly in this test. It sometimes answered from its prompt instead of using its tools. When it wrongly said its memory was lost, asking it to use its read tool made it check the file and answer correctly.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/from-user-feedback-to-a-better-prompt-4-tools-tested-in-typescript/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/running-an-ai-agent-on-a-local-llm-what-i-measured-on-one-gpu/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

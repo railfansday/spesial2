@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>‘Enough Phone’ is stuffing a bigger battery, more RAM &amp; storage into its small Android phone at no extra cost</title>
+    <title>How to handle user, connector, and agent auth in Gemini Enterprise with a custom UI</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10174.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,26 +15,37 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>‘Enough Phone’ is stuffing a bigger battery, more RAM &amp; storage into its small Android phone at no extra cost</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>How to handle user, connector, and agent auth in Gemini Enterprise with a custom UI</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://9to5google.com/wp-content/uploads/sites/4/2026/11/enough-phone-1.jpg?quality=82&amp;strip=all&amp;resize=1200,628" alt="‘Enough Phone’ is stuffing a bigger battery, more RAM &amp; storage into its small Android phone at no extra cost" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/meta-image-1600x900.2e16d0ba.fill-1200x600.png" alt="How to handle user, connector, and agent auth in Gemini Enterprise with a custom UI" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://9to5google.com/wp-content/uploads/sites/4/2026/11/enough-phone-1.jpg?quality=82&strip=all&resize=1200,628" alt="‘Enough Phone’ is stuffing a bigger battery, more RAM & storage into its small Android phone at no extra cost" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/meta-image-1600x900.2e16d0ba.fill-1200x600.png" alt="How to handle user, connector, and agent auth in Gemini Enterprise with a custom UI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>The “Enough Phone” is trying to fulfill the small Android phone dream and, now, it’s getting some spec upgrades to the battery, RAM, and storage, all with no added cost.</p>
-<p>Announced earlier this month, the “Enough Phone” is an Android phone set to launch in 2027 at a size about the same as an iPhone 13 Mini.</p>
-<p>Now mostly funded on Kickstarter, “Enough Phone” originally promised to back up its 5.3-inch display with 8GB of RAM, 128GB of storage, and a battery roughly on par with what you’d expect from a tiny phone. We’re now getting some upgrades on those original specs.</p>
-<p>“Enough Phone” is getting more storage and RAM (insert “in this economy” joke here) as well as a confirmed list of cellular bands. Specific upgrades the company confirmed in an email to 9to5Google this week include:</p>
-<p>And that’s coming at no added cost to backers. “Enough Phone” still has early bird slots that get the phone for $449, while the $499 tier is also still available. There’s no word on whether or not the expected $599 retail price is going up, but it’s hard to predict anything given the current market conditions.</p>
-<p>There’s about a week left on the project on Kickstarter, with a release set for around May 2027.</p>
-<p>Follow Ben: Twitter/X, Threads, Bluesky, and Instagram</p>
-<p>FTC: We use income earning auto affiliate links. More.</p>
-<p>Check out 9to5Google on YouTube for more news:</p>
-<p>Find him on Twitter @NexusBen. Send tips to schoon@9to5g.com or encrypted to benschoon@protonmail.com.</p>
+                <p>When using the out-of-the-box Gemini Enterprise web application, identity and access management happen behind the scenes. Employees sign in through Google Identity or Workforce Identity Federation (such as Microsoft Entra ID or Okta), search results automatically respect per-user access controls (ACLs), and third-party login prompts for Federated Connectors or custom agents appear automatically in the chat UI.</p>
+<p>In practice, however, many enterprises build their own Customer UI to embed Gemini Enterprise into an internal portal, intranet, or line-of-business application. To do this, Customer BE calls the Gemini Enterprise StreamAssist API.</p>
+<p>The moment an application builds a custom UI and calls the StreamAssist API directly, the three authentication flows that the built-in web app handled automatically become the responsibility of Customer UI and Customer BE:</p>
+<p>This guide walks through the architecture, component flows, and runnable code for all three layers (Figure 1):</p>
+<p>Depending on whether Customer UI is acting on behalf of an individual employee or running as a shared backend bot, customer architectures follow three keyless authentication patterns:</p>
+<p>Required IAM Role and License: Every principal calling the StreamAssist API must be granted the Discovery Engine User IAM role on the GCP project. For human user patterns (Pattern 1A and Pattern 1B), the user (or Workforce Pool group) must also have an active Gemini Enterprise user license assigned in the Admin Console.</p>
+<p>When employees sign in with Google Workspace or Cloud Identity and the Gemini Enterprise engine is configured for Google Identity, the flow has zero extra hops:</p>
+<p>When employees sign into Customer UI with Microsoft Entra ID or Okta and Gemini Enterprise uses Workforce Identity Federation (WIF), you reuse the same Workforce Pool that is already connected to Gemini Enterprise:</p>
+<p>When a backend service, Slack/Teams webhook, or non-personalized knowledge bot needs to call StreamAssist without any Service Account JSON keys, use a project-scoped Workload Identity Pool:</p>
+<p>When to use Pattern 1C vs. Patterns 1A and 1B: Because Workload Identity Federation authenticates a machine rather than an individual human employee, Gemini Enterprise sees every request as coming from the same workload identity. Use Pattern 1C for non-personalized bots over shared knowledge bases, and use Pattern 1A or Pattern 1B whenever you need per-user document ACLs, user-specific 3LO connectors, or restricted custom agents.</p>
+<p>Once Customer UI and Customer BE are calling StreamAssist as the signed-in employee, users can query native Federated Connectors (such as Google Drive, Microsoft SharePoint Online, Jira, Box, ServiceNow, and Confluence) that search live third-party APIs in real time.</p>
+<p>Because Federated Connectors enforce user-level permissions in the third-party system, each employee authorizes the connector once using 3-Legged OAuth (3LO). Gemini Enterprise stores those per-user refresh tokens inside its own managed Keystore, so Customer BE never has to store third-party credentials in its own database.</p>
+<p>Note for Custom UIs: Enabling Automatic Popup Handoff from GE FE Server: All Gemini Enterprise Federated Connectors use Google's managed /oauth-redirect endpoint on GE FE Server as their fixed callback URL. By default, that page only sends browser postMessage events to the built-in Gemini Enterprise web app origin. When deploying Customer UI on a custom domain, work with your Gemini Enterprise team to enable the custom origin flag so Step 7 automatically posts the callback URL to Customer UI and closes the popup.</p>
+<p>Native Federated Connectors are ideal for federated search and built-in actions. When a workflow requires multi-step reasoning, custom Python logic, or orchestrating across multiple enterprise APIs in a single assistant, teams build a custom ADK agent, deploy it on Vertex AI Agent Engine, and register it in Gemini Enterprise.</p>
+<p>When registering an ADK agent in Gemini Enterprise, attaching static OAuth configurations directly to the root agent registration creates two issues for a custom UI:</p>
+<p>To trigger 3-Legged OAuth on demand per tool and let Gemini Enterprise and Google Cloud manage the per-user Token Vault automatically, follow three simple setup steps:</p>
+<p>We have packaged all three authentication layers, along with interactive web test UIs, CLI scripts, and curl commands into the gemini-enterprise-custom-ui-auth GitHub repository:</p>
+<p>From Files to Cited Answers in One API Call: Managed Ingestion and SearchDocuments in Agent Retrieval</p>
+<p>Agent Anomaly Detection: Safeguarding agents across other clouds</p>
+<p>How to securely connect internal Cloud Run MCP servers to Gemini Enterprise</p>
+<p>Did the user ask for this? Securing AI agents against intent hijacking with Semantic governance policies</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://9to5google.com/2026/11/25/enough-phone-ram-storage-battery-upgrades/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://developers.googleblog.com/how-to-handle-user-connector-and-agent-auth-in-gemini-enterprise-with-a-custom-ui/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

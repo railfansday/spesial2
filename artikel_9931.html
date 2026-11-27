@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</title>
+    <title>Garage v2.6.0 released with web admin, v1.x EoL &amp; other news</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9931.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,51 +15,125 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>Garage v2.6.0 released with web admin, v1.x EoL &amp; other news</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://garagehq.deuxfleurs.fr/images/og-default.png" alt="Garage v2.6.0 released with web admin, v1.x EoL &amp; other news" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://huggingface.co/blog/assets/webgpu-kernels/thumbnail.png" alt="Introducing @huggingface/kernels: 200+ WebGPU Kernels for Local AI" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://garagehq.deuxfleurs.fr/images/og-default.png" alt="Garage v2.6.0 released with web admin, v1.x EoL & other news" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>One of our biggest goals on the WebAI team at Hugging Face is to make browser inference as fast and as user-friendly as possible. Getting there is a multi-layer effort: models need browser-friendly representations, runtimes need to build efficient execution plans, and the individual GPU operations at the bottom of the stack need to make the most of many different devices and browser implementations.</p>
-<p>Today, we are releasing the first layer of that effort: @huggingface/kernels, a minimal library for loading and running optimized WebGPU kernels from the Hugging Face Hub, together with an initial collection of 207 kernels at huggingface.co/webgpu-kernels.</p>
-<p>The collection covers operations used across a wide variety of machine learning architectures and workloads. More importantly, each kernel is published as a complete, versioned package: its interface, shader templates, correctness cases, benchmark cases, and usage instructions all live together on the Hub.</p>
-<p>We are also launching Fleet, an in-browser GPU benchmarking and testing suite that runs and scores the kernels on your hardware. Beyond the results for your own machine, Fleet gives the community a way to contribute performance and correctness evidence from devices we could never cover in a conventional test lab. With your consent, every run adds private evidence that can help us find failures (incorrect results, pathologically slow cases, etc.), improve kernel variants, and make better optimization decisions across real-world hardware.</p>
-<p>A model running in the browser eventually becomes a sequence of GPU operations: matrix multiplications, normalizations, convolutions, attention primitives, quantization operations, data-layout transformations, and many more. WebGPU makes these operations available across modern browsers through a portable API, while WGSL provides a common language for the shaders that execute them.</p>
-<p>Portability, however, does not automatically mean performance. Two shaders can implement the same operation and produce the same output while behaving completely differently across different accelerators. Workgroup sizes, memory access patterns, vectorization, data types, and fusion strategies can all affect performance. The best choice can also change with the input shape, device, browser, and available WebGPU features.</p>
-<p>This is why kernels form a foundational layer of fast browser inference. Higher-level runtimes can only be as efficient as the operations they dispatch. By making those operations individually discoverable, testable, benchmarkable, and versioned, we can improve the foundation independently while keeping a stable contract for the layers above it.</p>
-<p>Each kernel in the collection has its own repository and kernel card. The card documents the operation's semantics, inputs, outputs, attributes, supported data types, source files, and a ready-to-run @huggingface/kernels example.</p>
-<p>For example, ai.onnx.Add implements elementwise addition with multidirectional broadcasting. It is one of the simplest operations in a neural network, used everywhere from residual connections to adding a bias. Its card documents the two inputs, the broadcasted output shape, supported data types, and the variants available for different shapes and devices.</p>
-<p>Behind the card, the repository contains the artifacts needed to understand and evaluate the implementation:</p>
-<p>This structure turns a shader into a reusable software artifact. The interface is inspectable without reading WGSL, correctness and performance cases travel with the implementation, and published versions can be loaded explicitly rather than depending on an unversioned file URL. Our kernels can also serve as reference implementations for developers building custom WebGPU kernels or integrating these operations into their own runtimes.</p>
-<p>Running these kernels requires a browser with WebGPU support. WebGPU availability depends on the browser, operating system, GPU, and driver. You can check for it in JavaScript with "gpu" in navigator.</p>
-<p>@huggingface/kernels provides the bridge between a kernel repository and your application. Call getKernel with a Hub repository ID and a contract version, then invoke the returned function with typed input data and tensor shapes. Here is a small bias-add example:</p>
-<p>The second input is broadcast across the first dimension, producing an output with shape [2, 3]. The loader derives that output shape and logical data type from the manifest contract and the inputs, then allocates c automatically.</p>
-<p>Addition on six floats is deliberately the smallest possible demo. At this size, the GPU round trip costs far more than the math. The point is the call pattern: it stays exactly the same for the heavyweight operations where optimized kernels actually pay off, such as matrix multiplication (ai.onnx.MatMul). Only the repository ID and the inputs change.</p>
-<p>Even this elementary operation illustrates why kernels need variants. Equal-shape addition can use a direct vectorized path, while broadcasted inputs need different indexing logic. The published Add kernel includes variants for equal shapes, vectorized broadcasting, scalar processing, and general broadcasting. The runtime can select an implementation that fits the current call and device without changing the application-facing API.</p>
-<p>The version: 1 option selects version 1 of the published kernel contract. It is separate from an ONNX opset, an operator's since_version, or a model revision. Keeping those concepts separate lets applications depend on a stable JavaScript-facing contract while kernel implementations evolve behind it.</p>
-<p>So, how much of a difference do optimized kernels actually make? We put our collection head-to-head with ORT WebGPU on an Apple M4 GPU, using ONNX Runtime Web 1.30.0-dev.20260826-b1f76d586a. We started with 1,756 test cases across all 207 operations and kept the 809 cases where both sides produced matching outputs and reliable timings.</p>
-<p>Across those comparisons, our kernels were 2.57x faster by geometric mean and 1.90x faster at the median, with 629 wins, 176 losses, and 4 ties. Here is a closer look at four familiar operations:</p>
-<p>Some individual wins were much bigger. A particularly difficult bilinear Einsum case (i,ij,j with size 4096) ran in 0.136 ms with our kernel versus 1,396 ms with ORT WebGPU: more than 10,000x faster. A row-wise CumSum over [256, 4096] was 301x faster, at 0.016 ms versus 4.784 ms. These are unusual cases rather than the speedups you should expect everywhere, but they show how much a specialized kernel can help when a general implementation hits a slow path.</p>
-<p>We timed the work done on the GPU itself, leaving out setup such as loading kernels, creating sessions, uploading inputs, compiling shaders, and reading outputs back. Very short workloads are naturally harder to measure, and small cases can benefit from the GPU cache, so these numbers are best read as a useful comparison rather than a promise for every application.</p>
-<p>They are also results for individual operations, not complete models. Exact performance will change across GPUs and browsers, which is why Fleet is so important for building a broader picture.</p>
-<p>We are also working with the ONNX Runtime team to upstream these improvements so they can benefit the broader ONNX Runtime Web ecosystem.</p>
-<p>WebGPU performance varies across GPUs, browsers, and drivers, so results from one machine only tell part of the story. Fleet lets anyone run correctness and performance checks in the browser and see how the kernels behave on their hardware.</p>
-<p>With consent, each run privately contributes evidence that helps us spot device-specific failures, compare variants, and improve selection rules. The goal is simple: use broad, real-world coverage to make the kernels faster and more reliable for everyone.</p>
-<p>The initial 207 kernels are a starting point, not the end state. Publishing kernels independently on the Hub gives us a common place to inspect contracts, compare implementations, reproduce correctness checks, and improve performance without embedding every shader directly into every runtime.</p>
-<p>The collection is also part of the Hub's broader kernel ecosystem: on the Kernels page, the WebGPU kernels sit alongside kernels for CUDA, ROCm, Metal, and other platforms, and can be filtered, sorted, and explored like any other artifact on the Hub.</p>
-<p>This is the low-level foundation for the next steps in our browser inference stack. We are excited to connect these kernels to higher-level model tooling, continue expanding operation coverage, and make fast local inference easier to use across the WebAI ecosystem.</p>
-<p>Explore the WebGPU kernel collection, try @huggingface/kernels, and join the Fleet to contribute evidence from your device and help us make the kernels better for everyone.</p>
-<p>The Fleet part may matter as much as the kernels. The 809 comparable cases on an M4 are useful, but browser, driver and device variance is where WebGPU tends to get painful. Will Fleet eventually expose per-device distributions, or is the plan to use the runs only for aggregate selection rules?</p>
-<p>In an automated build system, I could see per device kernels, made more interesting by fusion of ops.</p>
-<p>The area that obviously needs more attention are the 947 tests that did not result in reliable output. This could be the test, it could be that the ORT WebGPU is wrong, or the new kernel is wrong, or the test harness had issues, hard to know from the outside. Perhaps the Fleet thing is meant to improve this.</p>
-<p>Very excited to see such attention at making WebGPU first class in ML!</p>
-<p>@sroussey  Agreed—the excluded 947 need a taxonomy before the 2.57× summary can travel. I'd want counts by operation and device for unsupported, ORT mismatch, new-kernel mismatch, and harness/timeout, with raw failing cases downloadable. Then Fleet can optimize only within a proven-correct compatibility envelope; fusion and per-device tuning become much safer.</p>
-<p>Excellent! This will help our WebAI community continue developing highly optimized solutions. Many thanks @Xenova  and @nico-martin  for the great work you have been doing.</p>
+                <p>We are glad to announce the release of Garage v2.6.0 that includes a brand-new
+web administration UI funded by NLnet. We also discuss many other small news:
+Helm chart repository release, Garage v1.x EoL, Garage v3.0.0 beta 1 and an
+outlook on upcoming work on S3 versioning.</p>
+<p>The Garage project has been quite active lately, so we thought it would be a
+good time to write a blog post to present new features and give some
+information on what's coming next.</p>
+<p>This is the culmination of almost two years of work by Tixie
+Salander. We started this collaboration in 2024 when it
+was clear that a user interface was one of the most sorely lacking feature of Garage. We
+are very grateful that NLnet has again engaged with us and provided funding to
+make this a reality.</p>
+<p>Here's a minimal example to test 2.6.0 right away:</p>
+<p>Running 2.6.0 or above, you can access the web interface on the garage admin API port, by default port
+3903, so http://localhost:3903/ if you are running garage on your machine with the example above.</p>
+<p>Logging in requires a garage admin token. The example above prints it on the command line.
+If you have set the admin_token configuration variable
+in your configuration file, you may use that token. Otherwise, you'll need to create a separate token
+from the command line with garage admin-token create.</p>
+<p>One world of caution: administering a remote cluster over plain HTTP is NOT safe, as
+your admin token is transmitted in plain text with each request. You'll need to setup an HTTPS
+reverse proxy in front of your Garage node to encrypt the connection, or/and access your
+node through a VPN such as Wireguard to make sure no one can eavesdrop the credentials.</p>
+<p>Once logged in the cluster, you will be greeted by a cluster overview screen that looks like
+the following (this is a live example from our Deuxfleurs cluster):</p>
+<p>The web interface follows a similar pattern to the CLI: cluster monitoring,
+layout configuration, bucket and access credential management are all available
+as you expect.  Here are example videos (now included in the Quick Start guide
+as well) showing the setting up of a new cluster from scratch:</p>
+<p>From a development standpoint, the web UI currently lives in a separate Git
+repository so please
+report any issues there and not in Garage's main issue tracker. Tixie will
+continue being the maintainer of the UI moving forward.</p>
+<p>This has also been one of the longstanding requests from our Kubernetes users, and it's
+now done! Starting today you can deploy Garage on Kubernetes easily thanks to our
+self-hosted Helm repository. Both "regular" (tgz+index.yml) helm chart repository as well as OCI artefacts
+are available. Instructions in the documentation
+have been updated accordingly.
+Happy Helming!</p>
+<p>Thanks to Boris M. and Maximilien for contributing this improvement to Garage,
+along the many contributors that participated in finding the right way to make this work.</p>
+<p>The Garage helm chart follows its own version scheme, with the current version being 0.10.7.</p>
+<p>The last release of the 1.x branch was v1.3.1 in January 2026, almost a year ago.
+Many significant bug fixes, including security fixes, are currently only present on the v2.x
+branch. At this point, it would be too much work to backport them to 1.x
+and it didn't seem there was any ask to do so from the community either. So we are
+officially deprecating Garage v1.x and urging all users still on this branch to
+update to v2.x as soon as possible. The release note has been updated accordingly.</p>
+<p>We have published a first beta release of Garage v3.0.0. This release does
+not yet include S3 versioning (sorry!). This unfortunately needed to be a major release
+because of a few breaking changes we wanted to release without
+waiting for s3 versioning to come though:</p>
+<p>We are looking for testers for this beta so please give it a try and report any
+findings on our issue tracker!</p>
+<p>This beta release also marks the first step toward having a reliable Fjall metadata engine
+so please report to us not only problems, but also
+cases of successfully running a Garage cluster on Fjall with significant
+activity, so that we can gain confidence that it works well and potentially
+mark it stable soon. This also means we'll take bug report for Fjall issues,
+something that we explicitly disregarded so far for the 2.x experimental implementation.</p>
+<p>As per the release
+notes,
+the most important breaking changes for users to be aware of are:</p>
+<p>To finally align with industry standard, most Prometheus metrics have been slighly renamed, we provide an updated Grafana dashboard</p>
+<p>The Fjall major version update breaks compatibility with the Garage 2.x Fjall as data files from older
+versions are not supported. If you were using Fjall on v2.x, you will need
+to migrate manually: convert your metadata to another format (LMDB or SQlite) with garage node convert-db
+before upgrading. You can convert back to Fjall once you successfully upgraded to v3.</p>
+<p>The complete list of breaking changes can be found in the changelog linked above.
+Happy testing!</p>
+<p>Finally we want to close this post with an update on S3 versionning.</p>
+<p>In 2027 we will start a new collaboration with Armaël to implement what
+is certainly the most requested feature in Garage: S3 object versioning.</p>
+<p>We understand that there has been growing impatience for this feature to be
+implemented in Garage, and rightfully so as it would enable
+new use-cases such as for long-term archiving where compliance is important, or
+as a backup target that cannot be tampered with.</p>
+<p>We thank the community for their patience, and kindly ask them to understand
+why this hasn't been done before: while there have been several attempts by community
+members, this is a deep problem that requires intricate
+understanding of how Garage stores metadata, and implementing it without taking
+this into account leads to code that, while it might appear to work on the
+surface, is in fact incorrect. A correct implementation requires a
+significant rewrite of core parts of Garage, which we believe can currently be
+accomplished only by experienced maintainers. We will also take this rewrite as an
+opportunity to fix some performance problems, such as those arising with
+extremely big objects.</p>
+<p>I would like to make an important note on object locking and WORM: we will
+provide an implementation of locking primitives/WORM per the S3 API
+specification, however note that due to Garage's lack of a consensus algorithm,
+this implementation will not be fully correct. This means that Garage will
+implement best-effort detection of access requests that would violate locks,
+but will not be able to guarantee that it upholds locks in all cases. More
+precisely: using conditional writes (If-Match, If-None-Match) as a
+substitute for a distributed mutex or to discriminate between concurrent write
+requests will obviously not work, but ensuring that a successfully uploaded
+object cannot be overwritten after the fact should work in most cases. We will
+take care of properly documenting what works and what doesn't, but in practice,
+this means that locking and WORM will be gated behind a feature flag (a
+configuration parameter) that requires cluster administrators to acknowledge
+that they might be running unsafe workloads if they don't understand exactly
+what the feature does.</p>
+<p>Thanks for reading, and for your continued support in our journey to a robust
+and resilient distributed storage system.</p>
+<p>Alex, Maximilien and Tixie,
+The Garage (and Garage UI!) Maintainers</p>
+<p>Built with Zola,
+            powered by Garage,
+            hosted by Deuxfleurs</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/webgpu-kernels" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://garagehq.deuxfleurs.fr/blog/2026-11-webadmin-release/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

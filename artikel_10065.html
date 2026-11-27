@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</title>
+    <title>S&amp;amp;P Warns Nvidia&#x27;s Board May Be Compromised</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10065.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,40 +15,78 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>S&amp;amp;P Warns Nvidia&#x27;s Board May Be Compromised</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://a.fsdn.com/sd/topics/business_64.png" alt="S&amp;amp;P Warns Nvidia&#x27;s Board May Be Compromised" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://storage.googleapis.com/gweb-developer-goog-blog-assets/images/Ai-1-meta_4.2e16d0ba.fill-1200x600.png" alt="Multi-Turn Agentic Reinforcement Learning with Tunix and Gemma 4 on Google TPUs" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://a.fsdn.com/sd/topics/business_64.png" alt="S&amp;P Warns Nvidia's Board May Be Compromised" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>In our previous posts - Easy FunctionGemma finetuning with Tunix on Google TPUs and Autonomous LLM post-training with Tunix on TPUs - we showed how Google Tunix streamlines Supervised Fine-Tuning (SFT) and single-turn Group Relative Policy Optimization (GRPO) on Cloud TPUs. Real-world AI agents, however, rarely finish their job in a single turn. They have to reason over partial observations, invoke tools, observe environment feedback, and adapt their strategy across multiple steps. So in this post, we will walk through how to train a multi-turn, tool-using LLM agent using Tunix's agentic reinforcement learning pipeline on Cloud TPU v6e-8. You can find the complete code in this GitHub repository.</p>
-<p>We will revisit the Plane Strike board game from an earlier TensorFlow/JAX reinforcement learning blog, replacing the custom MLP policy with Gemma 4 E2B in thinking mode on a single Cloud TPU v6e-8 host. Plane Strike is played on a 6x6 grid (A1 to F6) where one 8-cell plane is hidden in one of 4 orientations. Each turn, the agent sees the result of its previous strike and the raw visible board (. untried, X hit, O miss), thinks through candidate placements, and calls the strike(cell="...") tool to strike one cell. The game ends when all 8 plane cells are hit, or after 23 strikes.</p>
-<p>Sorry, your browser doesn't support playback for this video</p>
-<p>Although google/gemma-4-E2B-it has decent spatial reasoning and tool calling capabilities, out of the box, it wins only 9.4% of games on held-out boards (averaging 22.44 strikes). After 100 steps of agentic GRPO with Tunix, its win rate reaches 95% while cutting the average game length to ~16 strikes.</p>
-<p>We set up the multi-turn RL pipeline in four modular components:</p>
-<p>Let's look at the key steps for each piece.</p>
-<p>In env.py, we subclass Tunix's BaseTaskEnv to implement PlaneStrikeEnv. Each environment instance receives a task dictionary with a seed that fixes the hidden plane position so all 8 rollouts in a GRPO group play the exact same board:</p>
-<p>On each turn, _step_impl evaluates the struck cell index against the hidden board, updates the visible grid, computes the step reward (summed into the trajectory-level reward over the episode), and returns EnvStepResult(observation, reward, done, info).</p>
-<p>For standard multi-tool agents, tunix.rl.agentic also provides ready-to-use ToolEnvironment, ToolAgent and ToolManager abstractions out of the box so we don't have to write custom message/observation plumbing unless we need custom turn control.</p>
-<p>In Gemma 4, tool schemas are declared in the system prompt inside <|tool>declaration:...<tool|>, and a model turn that calls a tool ends with:</p>
-<p><|tool_response> is one of Gemma 4's native stop tokens: the model pauses there and waits for response:strike{value:<|"|>...<|"|>}<tool_response|>, then continues generating its next thought and tool call within the same assistant turn.</p>
-<p>In strike_tool.py, we define StrikeTool(BaseTool) and subclass Tunix's Gemma4ChatTemplateParser to append the tool declaration to the system prompt and render "tool" messages as in-turn responses:</p>
-<p>In agent.py, PlaneStrikeAgent(ConversationAgentBase) translates between environment observations and model messages.</p>
-<p>When the model finishes a turn, tool_strike ignores everything inside <|channel>thought...<channel|> and parses the final answer after <channel|>; only a final answer with a single valid strike call counts as a valid board coordinate (otherwise INVALID_ACTION is returned). If the model stopped at <|tool_response>, the next board observation is appended with role="tool" so the model continues its turn:</p>
-<p>In train_planestrike.py, we configure Tunix's asynchronous vllm rollout engine, RLEngine, and GRPOLearner:</p>
-<p>Multi-turn agentic RL is often bottlenecked by variable-length rollout generation, so we set rollout_vllm_server_mode to true to enable continuous asynchronous multi-turn rollouts via vllm-tpu and enable_prefix_caching to true to true to cache the growing multi-turn conversation history. Since we are using a v6e-8 single host, the actor model, the reference model, and the rollout workers share the 8 chips.</p>
-<p>We then pass our actor, tokenizer, ClusterConfig, GRPOConfig (loss_algo="gspo-token", advantage_estimator="rloo", exact_token_continuity=True to preserve exact token IDs across multi-turn rollouts without retokenization drift), agent, and environment into RLEngine and PlaneStrikeGRPOLearner:</p>
-<p>All of these enable us to launch the 100-step training job with:</p>
-<p>Over 100 steps (8 boards x 8 games per step), the agent learns both reliable tool calling and spatial deduction:</p>
-<p>With Tunix's tunix.rl.agentic abstractions, vllm-tpu, and GRPOLearner, multi-turn, tool-using agentic RL on Cloud TPUs is easy and efficient. Check out the planestrike-gemma4-rl GitHub repository and read the Tunix documentation to train your own agentic model with Tunix and Google TPUs.</p>
-<p>From Files to Cited Answers in One API Call: Managed Ingestion and SearchDocuments in Agent Retrieval</p>
-<p>Securing Your Agents: A Hands-On Guide to Agent Anomaly Detection</p>
-<p>Did the user ask for this? Securing AI agents against intent hijacking with Semantic governance policies</p>
-<p>Unlocking Stable On-Policy RL on TPU with Bitwise-Zero Train–Inference Mismatch</p>
+                <p>The Fine Print: The following comments are owned by whoever posted them.  We are not responsible for them in any way.</p>
+<p>Because the circular financing of the whole AI industry wasn't enough of a red flag?Investors have been ignoring the alarm bells from the very beginning. Everyone has been looking at the green arrow going up and hoping that when it inevitably turned red, someone else would be holding the hot potato. There have been nothing but warnings about the AI industry, starting from the fact that none of these companies is profitable yet, and that their losses are much bigger than their creative accounting is actually showing.</p>
+<p>Ironically, though, with the way this bubble is bubbling, with hedge funds "investing" with people's retirements, we might be walking into another "Too big to fail" landmine.</p>
+<p>It is circular, but Nvidia is making money hand over fist and is sitting on (relatively speaking) a small amount of debt compared to its EBITDA.  There are a number of other large players in the AI/Datacenter space that are flying much closer to the financial sun and are at significantly more risk if there's a downturn.  Coreweave, Oracle, and a number of others have a lot more debt exposure and downside risk.</p>
+<p>It is circular, but Nvidia is making money hand over fist and is sitting on (relatively speaking) a small amount of debt compared to its EBITDA.As far as I can tell, the "circular financing" way of "making money" is not too different from the way a forger or a con artist "makes" money.</p>
+<p>It is circular, but Nvidia is making money hand over fist and is sitting on (relatively speaking) a small amount of debt compared to its EBITDA.</p>
+<p>As far as I can tell, the "circular financing" way of "making money" is not too different from the way a forger or a con artist "makes" money.</p>
+<p>A bit like credit card companies your payments to them are an asset, but your debt to them (most of which is actually just virtual on a balance sheet) is also a commodity they they can roll into financial instruments and profit from. Basically they "print" most of the money in the economy. It all more or less works, then breaks predictably after a cycle of deregulation, then gets fixed again. Basically it's often very similar to a con game, except it's (supposed to be) transparent and regulated to not go be</p>
+<p>For those who never heard of con artists, "circular financing" is the idea that I give you one dollar, on condition that you give it straight back to me.Not quite. It's more like this, in simple terms. Suppose I'm the "you" mentioned in your illustration.(1) You invest $1 in my company, on condition in (2) below.(2) I use that dollar to buy something from you, as a condition on the investment you gave me in (1) above. Note that I don't just give the dollar back to you: I use it to buy your merch.(3) You remain with $1 invested in my company, and you can claim $1 in revenue from the sale, but you are out $1 worth of inventory. So your effective "net" is $1 i</p>
+<p>For those who never heard of con artists, "circular financing" is the idea that I give you one dollar, on condition that you give it straight back to me.</p>
+<p>Not quite. It's more like this, in simple terms. Suppose I'm the "you" mentioned in your illustration.</p>
+<p>(1) You invest $1 in my company, on condition in (2) below.(2) I use that dollar to buy something from you, as a condition on the investment you gave me in (1) above. Note that I don't just give the dollar back to you: I use it to buy your merch.(3) You remain with $1 invested in my company, and you can claim $1 in revenue from the sale, but you are out $1 worth of inventory. So your effective "net" is $1 i</p>
+<p>Because the circular financing of the whole AI industry wasn't enough of a red flag?Not all players in the industry are the same. To use an old gold rush allegory, you don't want to be the miner, you want to be the guy selling picks, shovels, and pans. NVidia is the latter, the seller of GPUs, not the seller of AI agent subscriptions. OK, they also sell some of the software used for creating those LLMs and Agents, but their sill on the tool selling side.</p>
+<p>Because the circular financing of the whole AI industry wasn't enough of a red flag?</p>
+<p>Not all players in the industry are the same. To use an old gold rush allegory, you don't want to be the miner, you want to be the guy selling picks, shovels, and pans. NVidia is the latter, the seller of GPUs, not the seller of AI agent subscriptions. OK, they also sell some of the software used for creating those LLMs and Agents, but their sill on the tool selling side.</p>
+<p>telling a guy that there's gold in them there hills and selling him a shovel is one thingputting the gold in the hills on the premise that you'll be able to make more on shovels... that's an... interesting move. Wonder how that would work out in the long run.Um, it's called seeding and people actually did it a lot back in the days of the gold rush -- you'd fool a prospective buyer into thinking your plot had gold on it by planting bits of gold here or there and carefully leading the buyer to where you had planted the gold, so they'd end up buying your plot. It was a real concern.</p>
+<p>telling a guy that there's gold in them there hills and selling him a shovel is one thing</p>
+<p>putting the gold in the hills on the premise that you'll be able to make more on shovels... that's an... interesting move. Wonder how that would work out in the long run.</p>
+<p>Um, it's called seeding and people actually did it a lot back in the days of the gold rush -- you'd fool a prospective buyer into thinking your plot had gold on it by planting bits of gold here or there and carefully leading the buyer to where you had planted the gold, so they'd end up buying your plot. It was a real concern.</p>
+<p>Google, SpaceXAI, and Meta are all developing their own AI chips to run their own AI, using capital raised or allocated on the promise of AI. This is expected. Economically, it is similar to Nvidia and Anthropic working together financially, except they have separate stock tickers, balance sheets, and CEOs rather than chip and AI divisions within the same corporation.</p>
+<p>There are legitimate accounting distinctions, but investing in the infrastructure that enables demand for your own products is hardly a novel</p>
+<p>The AI bubble may burst. The demand for AI is not going away.There is the significant problem that there was no demand for AI to begin with. Companies keep stuffing it into their products and foisting it on us, no matter how much we protest. They're certainly desperate to create demand but, it appears they're fostering loathing, instead.</p>
+<p>The AI bubble may burst. The demand for AI is not going away.</p>
+<p>There is the significant problem that there was no demand for AI to begin with. Companies keep stuffing it into their products and foisting it on us, no matter how much we protest. They're certainly desperate to create demand but, it appears they're fostering loathing, instead.</p>
+<p>It's all definitely a red flag but, as others have pointed out, Nvidia is in the enviable position to actually be one of the ones making a real profit out of all of this by selling an actual physical product that people actually pay for. Sure, their stock may drop at the end, but that's hardly the end of the world for the company itself. What their business looks like after that is hard to say. I think it's safe to say that a lot of loyal customers of some of the big computer hardware companies don't want t</p>
+<p>There may certainly be fault to find in the board, but government interference is surely something else to call out.What company board in the US can stand up against the orders of a president?</p>
+<p>If we were still running the sort of country we pretend to be; probably most of them. It's almost like slouching toward empire was a bad idea."Pretend" playing an important role there. The US president acts more like a king than, er, the king. And yes, that is particularly so with the current president, but even speaking more generally, the powers of the president, and the respect he is given is in many ways closer to an old-school king than either the UK PM or the monarch.</p>
+<p>If we were still running the sort of country we pretend to be; probably most of them. It's almost like slouching toward empire was a bad idea.</p>
+<p>"Pretend" playing an important role there. The US president acts more like a king than, er, the king. And yes, that is particularly so with the current president, but even speaking more generally, the powers of the president, and the respect he is given is in many ways closer to an old-school king than either the UK PM or the monarch.</p>
+<p>"What company board in the US can stand up against the orders of a president?"</p>
+<p>All the non-corrupt ones and plenty of the corrupt ones.  Let's pretend there are non-corrupt ones, there could be.</p>
+<p>"What company board in the US can stand up against the orders of a president?"All the non-corrupt ones and plenty of the corrupt ones.  Let's pretend there are non-corrupt ones, there could be.Those non-corrupt ones are seeming pretty few and far between. As far as I can see (at least in the large tech company world) they are quite compliant. A large company has a significant amount to lose by making an enemy of the US president.</p>
+<p>"What company board in the US can stand up against the orders of a president?"</p>
+<p>All the non-corrupt ones and plenty of the corrupt ones.  Let's pretend there are non-corrupt ones, there could be.</p>
+<p>Those non-corrupt ones are seeming pretty few and far between. As far as I can see (at least in the large tech company world) they are quite compliant. A large company has a significant amount to lose by making an enemy of the US president.</p>
+<p>"Reinstate him or you'll be brought up on charges of treason and racketeering", seems reasonable to me, given that's what the board was doing in conjunction with numerous other organizations (largely at the behest of Amodai).</p>
+<p>S&P is about rating shares and the companies they're of, not governments. The board *is* compromised, the cause of that is neither here nor there when ultimately assigning a rating to it.</p>
+<p>S&P is about rating shares and the companies they're of, not governments. The board *is* compromised, the cause of that is neither here nor there when ultimately assigning a rating to it.Fair point. It's not S&P's job to rate the government.I'm unable to see this rating directly without an "S&P Global" account, but I suspect there is some detail published along with the rating itself. I would think that this is were reasons for the rating would be laid out, and if mention of the government came up in this reasoning, it wouldn't surprise me.Perhaps someone with access could post the appropriate (Informative +5) snippet...?</p>
+<p>S&P is about rating shares and the companies they're of, not governments. The board *is* compromised, the cause of that is neither here nor there when ultimately assigning a rating to it.</p>
+<p>Fair point. It's not S&P's job to rate the government.</p>
+<p>I'm unable to see this rating directly without an "S&P Global" account, but I suspect there is some detail published along with the rating itself. I would think that this is were reasons for the rating would be laid out, and if mention of the government came up in this reasoning, it wouldn't surprise me.</p>
+<p>Perhaps someone with access could post the appropriate (Informative +5) snippet...?</p>
+<p>Oh you should have seen their rating for Lehman Brothers back in 2008!</p>
+<p>Speaking of "compromised independence" of the board anyway...</p>
+<p>Though I did look up their Tesla rating and it's BBB already. Could be worse, but they feel like a poster child of the message from S&P here.</p>
+<p>BBB is one notch above "junk bond" status.</p>
+<p>In The Rest is Politics podcast Rory Stewart described the NVIDIA board as being typical of a smallish company that suddenly became big - the board is not as experienced and skilled as you would normally expect from a company this important.</p>
+<p>NVIDIA really needs to delineate which rules apply to which employees at what time.Obviously the HR standards & practices they have is useless.</p>
+<p>HR is about keeping the company from getting sued.</p>
+<p>In this instance they probably were either going to get sued for letting him stay, or get sued for letting him go.  Coin toss.</p>
+<p>In this instance they probably were either going to get sued for letting him stay, or get sued for letting him go.  Coin toss.You can be sued for anything, that doesn't mean you are in any way at risk of being liable. Investors suing NVIDIA after their CEO resigned is not something a company can be held liable for. No CEO has a legal obligation to keep working, no company has a legal requirement to keep a CEO, and corporate governance is on their side.This isn't a both sides argument.</p>
+<p>In this instance they probably were either going to get sued for letting him stay, or get sued for letting him go.  Coin toss.</p>
+<p>You can be sued for anything, that doesn't mean you are in any way at risk of being liable. Investors suing NVIDIA after their CEO resigned is not something a company can be held liable for. No CEO has a legal obligation to keep working, no company has a legal requirement to keep a CEO, and corporate governance is on their side.</p>
+<p>All rules apply to all employees who don't directly contribute to Trump's ballroom.</p>
+<p>Oh, you thought HR's standards and practices applied to the C-suite? At any company? How cute.</p>
+<p>>>Everything Trump touches diesEven xi Jinping knows this, https://youtube.com/shorts/OMh... [youtube.com]</p>
+<p>NV had a CEO commiserating with a suspected CCP spy.  No bond derating.NV had a CEO abusing his position as CEO and carrying on with subordinates in violation of corporate behavioral guidelines and exposing the company to potential liability.  No bond derating.NV removed said CEO over the complaints of thousands of their own employees asking for him to stay/be re-instated.  No bond derating.Doland Tremp suggests they re-instate him (which is exactly what NV's own employees wanted anyway).  Bond derating.</p>
+<p>There may be more comments in this discussion. Without JavaScript enabled, you might want to turn on Classic Discussion System in your preferences instead.</p>
+<p>Suspected Chinese Agents Are Trying to Dupe Americans with Fake Listings on Job Platforms</p>
+<p>Saudi National Charged In OpenAI Bugging To Be Released On $1 Million Bond</p>
+<p>Ya'll hear about the geometer who went to the beach to catch some
+rays and became a tangent ?</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://developers.googleblog.com/multi-turn-agentic-reinforcement-learning-with-tunix-and-gemma-4-on-google-tpus/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://news.slashdot.org/story/26/11/25/2340213/sp-warns-nvidias-board-may-be-compromised?utm_source=rss1.0mainlinkanon&utm_medium=feed" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

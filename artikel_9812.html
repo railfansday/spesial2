@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium.</title>
+    <title>I found 36 of the best Black Friday phone deals on iPhones, Samsung Galaxy, Google Pixel, and more</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9812.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,55 +15,200 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium.</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>I found 36 of the best Black Friday phone deals on iPhones, Samsung Galaxy, Google Pixel, and more</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://cdn-uploads.huggingface.co/production/uploads/6ac67ea29579ea34f1f7e470/hEodPVvQZI24jETLbPooP.png" alt="Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium." style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://helios-i.mashable.com/imagery/articles/01boYFifPN91y2S01qTk9Q7/hero-image.fill.size_1200x675.v1795763816.png" alt="I found 36 of the best Black Friday phone deals on iPhones, Samsung Galaxy, Google Pixel, and more" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://cdn-uploads.huggingface.co/production/uploads/6ac67ea29579ea34f1f7e470/hEodPVvQZI24jETLbPooP.png" alt="Profiling TorchNeuron (Part 1): System-level profiling on AWS Trainium." style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://helios-i.mashable.com/imagery/articles/01boYFifPN91y2S01qTk9Q7/hero-image.fill.size_1200x675.v1795763816.png" alt="I found 36 of the best Black Friday phone deals on iPhones, Samsung Galaxy, Google Pixel, and more" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Many ML practitioners have some intuition about how to make models run fast, but fewer know how to analyze why a model is slow. In Part 1 of this series, you will learn how to systematically analyze inference performance and identify where the time is spent.</p>
-<p>This post starts from scratch and assumes no prior profiling experience. The walkthrough uses AWS Trainium, a purpose-built AI chip for deep learning training and inference workloads, and TorchNeuron, its open source native PyTorch backend. TorchNeuron supports standard PyTorch workflows on Trainium, including eager execution, torch.compile, and standard PyTorch APIs, with minimal code changes. Additionally, TorchNeuron integrates with Neuron Kernel Interface (NKI) to enable custom operators and performance optimization for Trainium hardware. By the end, you should know:</p>
-<p>Before you profile a workload, it helps to understand how Neuron integrates with PyTorch.</p>
-<p>The Neuron backend uses PyTorch's PrivateUse1 extension point. This mechanism lets an accelerator integrate with the framework without adding a dedicated dispatch key such as cuda. The torch_neuronx package works with upstream PyTorch to register Neuron as a native backend for PyTorch code. For details about this extension mechanism, see Facilitating New Backend Integration by PrivateUse1.</p>
-<p>You use two objects to profile a Neuron workload:</p>
-<p>The modes parameter selects the data streams to capture, such as device instructions and runtime traces. The capture_enabled_for_nc parameter selects the NeuronCores to trace. Setting correlate_device_time=True propagates device time from the trace into the key_averages() table, where you can compare CPU and Neuron device time. For the complete parameter reference and available ProfileMode values, see the NeuronConfig Profile Modes documentation.</p>
-<p>Neuron Explorer is a browser-based viewer for the system trace, device timeline, and per-engine breakdown. You can access it through an SSH tunnel or the Visual Studio Code extension. In this post, you use Explorer to confirm what key_averages() reports numerically and inspect what happens between dispatches.</p>
-<p>After profiling, the output directory contains the system trace and, when you capture device data, matched .neff and .ntff files. The Neuron Executable File Format (NEFF) contains the compiled Neuron executable, while the matching NTFF contains its hardware instruction trace. The files share a numeric hash that identifies them as a pair. To open the profile in Neuron Explorer, upload the complete output directory for a system or combined profile. For a device-only profile, upload the matching .neff and .ntff files individually. See Step 5: Upload your profile for the UI and command-line instructions.</p>
-<p>For this first analysis, you profile RMSNorm, a small operation with a clear sequence of arithmetic and reduction operations.</p>
-<p>You profile three implementations of the same operation:</p>
-<p>The scripts use the same inputs, profiler configuration, and schedule so the results are directly comparable.</p>
-<p>All scripts to reproduce this work are available in the torch-neuronx examples directory.</p>
-<p>Start by writing RMSNorm with individual PyTorch operations. Each line maps to one or more ATen operations and can create intermediate tensors.</p>
-<p>Call the profiler with two arguments required for the Neuron backend:</p>
-<p>The schedule uses wait=2, warmup=1, and active=1 across four prof.step() calls. This records one warm iteration without including initial setup overhead.</p>
-<p>Call torch.neuron.synchronize() inside the profiler loop. Without this synchronization, the profiler can export before the device finishes and leave the Neuron time column empty.</p>
-<p>After profiling finishes, inspect the key_averages() table. Sort by self_privateuse1_time_total to place the operations with the highest device cost first. The table shown here is filtered to the RMSNorm operations that report Neuron device time. The full key_averages() output also includes CPU-side events such as allocations and host-to-device transfers.</p>
-<p>The key averages table shows that three aten::mul calls account for the largest share of Neuron device time.</p>
-<p>The table shows which ATen operations ran, how often they ran, and how much time they spent on the CPU and Neuron device. aten::mul has the highest total device time because the function performs three multiplications.</p>
-<p>Each row maps directly to the function. aten::mul runs for x * x, x * rms, and the final multiplication by weight. aten::mean reduces the last dimension. aten::add adds the epsilon value and triggers a host-to-device copy because the scalar starts on the CPU. aten::rsqrt computes the reciprocal square root.</p>
-<p>Neuron Explorer follows an aten::mul operation from framework dispatch through runtime scheduling to execution on the Neuron hardware lanes.</p>
-<p>In Explorer, time flows from left to right and the event lifecycle flows from top to bottom. Each ATen operation follows the same pattern: creation in the framework lane, scheduling in the runtime lane as nrta_execute_schedule, and device execution in the hardware lane as nc_exec_running.</p>
-<p>The system trace view organizes events into lanes. In the Default grouping mode, labels follow the pattern instance/PID/subsystem/identifier:</p>
-<p>In eager mode, each operation runs independently. Use the dependency chain viewer to follow aten::mul.Tensor from the framework layer through runtime scheduling to device execution.</p>
-<p>The dependency chain viewer highlights the lifecycle of one operation across the framework, runtime, and hardware lanes.</p>
-<p>Replace the individual operations with PyTorch's built-in rms_norm function. Neuron lowers the operation to one fused kernel:</p>
-<p>The fused RMSNorm appears as one device operation in the key averages table.</p>
-<p>The fused RMSNorm follows one framework-to-hardware path instead of dispatching each arithmetic operation separately.</p>
-<p>In the naive implementation, each operation crosses the dispatch boundary independently and follows its own framework-to-runtime-to-hardware path. In the fused implementation, one Python call covers the complete computation. The trace contains one dispatch and one hardware event, with no gaps between component operations.</p>
-<p>For the final example, compile the original naive RMSNorm function with torch.compile.</p>
-<p>With @torch.compile(backend="neuron"), TorchDynamo captures the Python bytecode as an FX graph and AOTAutograd lowers it to ATen operations. The Neuron backend receives the complete graph instead of dispatching each operation separately. It fuses the operations, optimizes memory access, and compiles the graph into a single NEFF artifact. The artifact runs as one hardware dispatch.</p>
-<p>The compiled function appears as one Torch-Compiled Region in the key averages table.</p>
-<p>The compiled graph follows one path through runtime scheduling and hardware execution.</p>
-<p>The table shows one device execution, as in Profile 2, but the code takes a different path. Instead of calling a purpose-built fused operation, the compiler discovers the fusion from the original Python function. In this run, the Neuron time is comparable to torch.rms_norm, at 375 μs compared with 403 μs.</p>
-<p>Both torch.rms_norm and torch.compile fuse RMSNorm into one kernel dispatch. In these runs, either approach takes about one-sixth of the naive implementation's device time. Fusion removes the gaps between hardware executions and avoids materializing intermediate values such as x_sq and mean_sq between separately dispatched operations.</p>
-<p>key_averages() shows which operations consume device time, while its full output also reveals CPU-side setup and transfers. Explorer provides the corresponding visual trace. You can follow one operation from framework dispatch through runtime scheduling to hardware execution and see the gaps that fusion removes.</p>
-<p>You can use the same workflow on larger models: find a hotspot in the table, verify it in the trace, and then determine whether a fused operation or torch.compile can reduce its cost.</p>
-<p>In Part 2, we will move into the device-level profile. You open the NEFF, inspect the TensorEngine, VectorEngine, and direct memory access (DMA) breakdown, and place the kernel on the roofline to determine whether it is compute-bound or memory-bound.</p>
-<p>Special thanks to Aritra Roy Gosthipaty for the inspiration to begin this series, and to my peers Pinak Panigrahi, Samir Araujo, Akhil Azhikodan, Esha Lakhotia and the rest for reviewing!</p>
+                <p>This holiday season, the best Black Friday phone deals help offset the price hikes that have affected almost every brand. A new phone is more expensive these days, but it's easy to avoid paying full price if you shop strategically.</p>
+<p>In fact, you might pay as little as $0 by upgrading through your carrier. The only catch is that their deals typically require a trade-in and a lock-in to an extended contract. For a new phone with no strings attached, go the unlocked route instead.</p>
+<p>Retailers like Amazon and Best Buy are currently discounting unlocked smartphones from Apple, Samsung, Google, Motorola, and Nothing during their Black Friday sales. After spending a few hours combing through their deals, I've identified three dozen good ones that can save you up to $600. Whether you want a new phone that takes incredible pictures, offers multi-day battery life, flips, folds, or comes in well under $500, you've got plenty of options.</p>
+<p>The ultra-thin iPhone Air is the best choice "for minimalists and aesthetes who care more about their phone's looks than its performance," to quote my iPhone buying guide. It's not the fastest or longest-lasting iPhone, nor does it have the best cameras, but it is a gorgeous phone. (Mashable's Senior Editor Stan Schroeder called it "the sexiest iPhone I've ever tested.")</p>
+<p>Thanks to Best Buy, the base model now costs $100 less than the standard iPhone 17; it's usually $200 more. Note that the iPhone Air's MagSafe Battery pack is also on sale for 40% off this Black Friday. Read Mashable's full review of the Apple iPhone Air.
+
+Our Best Editor-Vetted Black Friday Deals
+
+
+Apple AirPods Pro 3 Noise Cancelling Heart Rate Wireless Earbuds
+
+                                             —
+                    $149.00
+(List Price $249.00)
+
+
+
+Apple iPad 11" 128GB Wi-Fi Retina Tablet (Blue, 2025 Release)
+
+                                             —
+                    $379.00
+(List Price $449.00)
+
+
+
+Apple Watch Series 12 (GPS, 42mm, S/M Sand Sport Band)
+
+                                             —
+                    $299.00
+(List Price $399.00)
+
+
+
+Samsung Galaxy Tab A11+ 128GB Wi-Fi 11" Tablet (Gray)
+
+                                             —
+                    $199.99
+(List Price $299.99)
+
+
+
+Ring 2K Battery Doorbell (2026 Release, Speckled Gray)
+
+                                             —
+                    $38.99
+(List Price $99.99)
+
+
+
+Blink Outdoor 4 1080p 3-Camera Kit With Sync Module Core + Doorbell
+
+                                             —
+                    $65.99
+(List Price $259.98)
+
+
+
+Amazon Fire TV Stick 4K Plus Streaming Player With Remote (2025 Model)
+
+                                             —
+                    $29.99
+(List Price $69.99)
+
+
+
+Logitech G Pro X2 Superstrike Haptics Wireless Gaming Mouse (Black/White)
+
+                                             —
+                    $149.99
+(List Price $179.99)
+
+
+
+Amazon Alexa Tablet 12 Pro 128GB Nanomatte Tablet (2026 Release, Graphite)
+
+                                             —
+                    $399.99
+(List Price $549.99)
+
+
+
+Apple iPad Mini A20 Pro Chip 128GB Tablet (2026 Release, Midnight)
+
+                                             —
+                    $599.00
+(List Price $699.00)</p>
+<p>Apple AirPods Pro 3 Noise Cancelling Heart Rate Wireless Earbuds
+
+                                             —
+                    $149.00
+(List Price $249.00)</p>
+<p>Apple iPad 11" 128GB Wi-Fi Retina Tablet (Blue, 2025 Release)
+
+                                             —
+                    $379.00
+(List Price $449.00)</p>
+<p>Apple Watch Series 12 (GPS, 42mm, S/M Sand Sport Band)
+
+                                             —
+                    $299.00
+(List Price $399.00)</p>
+<p>Samsung Galaxy Tab A11+ 128GB Wi-Fi 11" Tablet (Gray)
+
+                                             —
+                    $199.99
+(List Price $299.99)</p>
+<p>Ring 2K Battery Doorbell (2026 Release, Speckled Gray)
+
+                                             —
+                    $38.99
+(List Price $99.99)</p>
+<p>Blink Outdoor 4 1080p 3-Camera Kit With Sync Module Core + Doorbell
+
+                                             —
+                    $65.99
+(List Price $259.98)</p>
+<p>Amazon Fire TV Stick 4K Plus Streaming Player With Remote (2025 Model)
+
+                                             —
+                    $29.99
+(List Price $69.99)</p>
+<p>Logitech G Pro X2 Superstrike Haptics Wireless Gaming Mouse (Black/White)
+
+                                             —
+                    $149.99
+(List Price $179.99)</p>
+<p>Amazon Alexa Tablet 12 Pro 128GB Nanomatte Tablet (2026 Release, Graphite)
+
+                                             —
+                    $399.99
+(List Price $549.99)</p>
+<p>Apple iPad Mini A20 Pro Chip 128GB Tablet (2026 Release, Midnight)
+
+                                             —
+                    $599.00
+(List Price $699.00)</p>
+<p>Apple iPhone 17 Pro (256GB) — $999.99 $1,099.99 (save $100)</p>
+<p>Apple iPhone 17 Pro Max (256GB) — $1,099.99 $1,199.99 (save $100)</p>
+<p>The Galaxy Z Fold 8 is our favorite foldable Android phone (and the new iPhone Duo's No. 1 rival). Tech Editor Timothy Beck Werth really liked its thin passport-style design, which features two bright and beautiful AMOLED displays and a near-invisible crease. He was also impressed by its powerful Snapdragon chipset. Its "50MP wide and 50MP ultrawide cameras are fine, but not elite," he noted, but that's frequently the case with foldables. (Creators and mobile photographers should look into the Galaxy S26 Ultra instead — or the Google Pixel 11 Pro, below.)</p>
+<p>Based on my research, Amazon's Black Friday price of $1,549.99 for the base Galaxy Z Fold 8 is an all-time low. Read Mashable's full review of the Samsung Galaxy Z Fold 8.</p>
+<p>Samsung Galaxy A17 5G (128GB) — $229.99 $269.99 (save $40)</p>
+<p>Samsung Galaxy A37 5G (128GB) — $389.99 $489.99 (save $100)</p>
+<p>Samsung Galaxy A57 5G (128GB) — $499.99 $599.99 (save $200)</p>
+<p>Samsung Galaxy S26 FE (128GB) — $499.99 $699.99 (save $200)</p>
+<p>Samsung Galaxy S26 (256GB) — $849.99 $999.99 (save $150)</p>
+<p>Samsung Galaxy S26+ (256GB) — $949.99 $1,199.99 (save $250)</p>
+<p>Samsung Galaxy Z Flip 8 (256GB) — $999.99 $1,199.99 (save $200)</p>
+<p>Samsung Galaxy S26 Ultra (256GB) — $1,049.99 $1,299.99 (save $250)</p>
+<p>Samsung Galaxy Z Fold 8 Ultra (256GB) — $1,749.99 $2,099.99 (save $350)</p>
+<p>We consider the Pixel 11 Pro to be the best Android smartphone for photography. It's equipped with 50MP main, 48MP ultra-wide, and 48MP telephoto lenses; its digital zoom maxes out at an impressive 120x; and its Magic Capture feature does a great job of grabbing still photos from videos. This "combination of hardware and software makes your images consistently look nice, even in challenging lighting conditions," said Tech Reporter Alex Perry.</p>
+<p>The Pixel 11 Pro usually costs $300 more than the vanilla Pixel 11, but when you factor in their Black Friday discounts, it's now just a $60-ish upcharge. Read Mashable's full review of the Google Pixel 11 Pro.</p>
+<p>Google Pixel 10a (128GB) — $549 $599 (save $50)</p>
+<p>Google Pixel 10 (128GB) — $593 $799 (save $206)</p>
+<p>Google Pixel 11 (256GB) — $692 $899 (save $207)</p>
+<p>Google Pixel 11 Pro XL (256GB) — $899 $1,299 (save $400)</p>
+<p>Google Pixel 11 Pro Fold (256GB) — $1,649 $1,899 (save $250)</p>
+<p>Last year's Razr Ultra currently costs $600 less than its successor, which is essentially the same phone with a bigger battery, a slightly brighter, more durable display, and a new main-camera image sensor. (Their processors and overall designs are identical.) If you're looking for a great deal on a premium flip phone with ample storage, this one seems pretty tough to beat.</p>
+<p>Motorola Moto G 2025 (128GB) — $169.99 $199.99 (save $30)</p>
+<p>Motorola Moto G 2026 (128GB) — $229.99 $299.99 (save $70)</p>
+<p>Motorola Moto G Play 2026 (64GB) — $189.99 $249.99 (save $60)</p>
+<p>Motorola Moto G Power 2025 (128GB) — $199.99 $299.99 (save $100)</p>
+<p>Motorola Moto G Stylus 2025 (256GB) — $199.99 $399.99 (save $200)</p>
+<p>Motorola Edge 2025 (256GB) — $299.99 $379.99 (save $80)</p>
+<p>Moto G Stylus 2026 (128GB) — $349.99 $499.99 (save $150)</p>
+<p>Motorola Edge 2026 (128GB) — $399.99 $599.99 (save $200)</p>
+<p>Motorola Razr+ 2025 (256GB) — $499.99 $599.98 (save $99.99)</p>
+<p>Motorola Razr 2025 (256GB) — $549.99 $699.99 (save $150)</p>
+<p>Motorola Razr 2026 (256GB) — $699.99 $799.99 (save $100)</p>
+<p>Motorola Razr+ 2026 (256GB) — $899.99 $1,099.99 (save $300)</p>
+<p>Motorola Razr Ultra 2026 (512GB) — $1,299.99 $1,499.99 (save $200)</p>
+<p>Motorola Razr Fold 2026 (512GB) — $1,499.99 $1,899.99 (save $400)</p>
+<p>In our humble opinion, this retro smartphone from the British tech company Nothing is a better budget choice for Android users than Google's Pixel 10a. It has a bigger, smoother display, an extra telephoto lens, and more RAM. It also just looks cooler. And right now, it's a full $151 cheaper. Read Mashable's full review of the Nothing (4a) Pro.</p>
+<p>Nothing Phone (3) (256GB) — $499 $699 (save $200)</p>
+<p>Topics
+Android
+Black Friday
+Google
+iPhone
+Motorola
+Samsung</p>
+<p>So far, I've encountered three solid Black Friday deals on unlocked iPhones: Last year's iPhone 17 Pro, iPhone 17 Pro Max, and iPhone Air are up to $300 off at Best Buy.</p>
+<p>You can save way more on the latest iPhones through carriers like T-Mobile and AT&T; some you can even get for free. But bear in mind that they require trade-ins and long-term contracts. Check out our dedicated guide to the best Black Friday iPhone deals for more details.</p>
+<p>Black Friday 2026 falls on Friday, Nov. 27, though most retailers have started their holiday sales already.</p>
+<p>Haley Henschel is a Chicago-based Senior Shopping Reporter at Mashable who reviews and finds deals on popular tech, from laptops to gaming consoles and VPNs. She has years of experience covering shopping holidays and can tell you what’s actually worth buying on Black Friday and Amazon Prime Day. Her work has also explored the driving forces behind digital trends within the shopping sphere, from dupes to 12-foot skeletons.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://huggingface.co/blog/amazon/profiling-torchneuron-part-1" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://mashable.com/tech/black-friday-best-unlocked-phone-deals-2026" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

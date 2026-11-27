@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>When Should You Remove NAT from an On-Prem Kubernetes Network?</title>
+    <title>How to Test WCAG 2.2 in CI: What axe-core Misses</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10607.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,41 +15,46 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>When Should You Remove NAT from an On-Prem Kubernetes Network?</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-26</p>
+        <h1>How to Test WCAG 2.2 in CI: What axe-core Misses</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_arkhitektura_kubernetes_e53ce9adda.png" alt="When Should You Remove NAT from an On-Prem Kubernetes Network?" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://uploads.sitepoint.com/wp-content/uploads/medium_How_to_Test_WCAG_2_2_in_CI_What_axe_core_Misses_344b927d5a.png" alt="How to Test WCAG 2.2 in CI: What axe-core Misses" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_arkhitektura_kubernetes_e53ce9adda.png" alt="When Should You Remove NAT from an On-Prem Kubernetes Network?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://uploads.sitepoint.com/wp-content/uploads/medium_How_to_Test_WCAG_2_2_in_CI_What_axe_core_Misses_344b927d5a.png" alt="How to Test WCAG 2.2 in CI: What axe-core Misses" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Stay up to date with AI tools, model releases, and developer workflows that matter.</p>
-<p>In an on-premises Kubernetes environment, removing NAT can make the network simpler to inspect, reduce translation overhead, and let the data center route directly to workloads. But direct routing is not automatically the right choice.</p>
-<p>The decision depends on what the organization controls and what it needs from the network. A team that owns the physical fabric, has enough address space, and is comfortable operating BGP may benefit from making pod networks directly routable. A smaller environment, a team without control of the underlay, or a cluster that benefits from network abstraction may be better served by NAT or an overlay.</p>
-<p>Kubernetes is also changing the ground under these decisions: kube-proxy is set to drop IPVS support starting with version 1.43, with nftables as the replacement. For on-prem teams already reviewing their service data path, it is a good moment to ask whether NAT still belongs in it.</p>
-<p>So the useful question is not how to eliminate NAT, but when the operational benefits of doing so justify the additional routing responsibility.</p>
-<p>NAT solves a real problem. It allows an internal network to use its own address space without requiring the surrounding infrastructure to know how to reach every endpoint inside it. This is especially useful when you don’t control the underlying network.</p>
-<p>However, an on-premises data center is different. When you control both the Kubernetes cluster and the surrounding physical network, you can make Kubernetes networks directly routable.</p>
-<p>In our case, removing NAT had practical and architectural benefits. It improved network performance, reduced CPU load on the nodes, and removed the risk of conntrack tables filling up on Kubernetes hosts. A directly routed L3 model also works well for traffic balancing when a node has two uplinks.</p>
-<p>This does not mean eliminating NAT from the data center entirely. NAT can remain at the boundary of the on-premises network, for example on hardware firewalls. Inside the data center, however, Kubernetes networks can be directly routable, allowing the physical network to reach workloads using the same routing mechanisms it already uses elsewhere.</p>
-<p>In our implementation, BGP connects the Kubernetes network to the data center fabric: BIRD runs on the nodes and advertises pod CIDRs and selected service addresses, while kube-router manages Kubernetes networking. We described this implementation in more detail in our earlier article on building a routable on-prem</p>
-<p>Kubernetes cluster with BGP and ECMP. The important point for this decision is not the particular stack, but the requirement it creates: the surrounding network must be able to accept and route Kubernetes prefixes safely. If the organization cannot or does not want to make the cluster part of its routing domain, keeping NAT or an overlay is usually the simpler choice.</p>
-<p>Removing NAT alone does not make a network resilient. If every node still depends on one switch, one NIC, or one uplink, direct routing simply exposes the same physical single point of failure more clearly.</p>
-<p>The resilience benefit appears when the physical topology supports multiple independent paths. In our setup, nodes connect to independent data center switches and ECMP can use equivalent routes across those paths. If one path disappears, traffic can continue over the other.</p>
-<p>That distinction matters when deciding whether direct routing is worth the effort. Organizations with redundant uplinks and switches can integrate Kubernetes into an already resilient routed fabric. If the underlay itself has no path redundancy, removing NAT should not be presented as a high-availability improvement: the physical failure domain still dominates the design.</p>
-<p>Our stack is one example of how direct routing can be implemented, not a default recommendation for clusters that remove NAT. We chose kube-router because it supports a minimal installation as a binary and systemd service and covers the networking functions we need for this L3 design. BIRD handles route advertisements to the surrounding network.</p>
-<p>Other environments may reasonably choose Calico for conventional L3 routing or Cilium when an eBPF-based dataplane and its additional capabilities are useful. The choice of CNI and routing daemon is secondary to the architectural decision: first decide whether exposing Kubernetes prefixes to the physical network makes operational sense, then choose the implementation that fits the team’s requirements.</p>
-<p>A directly routed Kubernetes network is not automatically better than an overlay or NAT-based architecture. Each model solves a different operational problem.</p>
-<p>NAT is a reasonable choice when the cluster needs to remain isolated from the surrounding address plan, when pod addresses cannot be routed through the data center, or when the infrastructure team does not control the upstream network. It also keeps Kubernetes-specific prefixes out of the physical routing domain, which can be valuable for smaller environments where direct visibility into every pod is not important.</p>
-<p>An overlay is useful when portability and abstraction matter more than exposing the physical packet path. It lets Kubernetes networking remain largely independent of the underlay and can simplify deployment across heterogeneous infrastructure. The tradeoff is another layer to inspect during troubleshooting and, depending on the implementation, encapsulation overhead.</p>
-<p>Direct routing makes the most sense when the organization owns the physical network, has address space available for pod CIDRs, and has operators comfortable with BGP and route filtering. It becomes more attractive when preserving source addresses, using standard network troubleshooting tools, predictable performance, or integrating the cluster with redundant data center paths are important. At a larger scale, those operational benefits can justify the extra coordination between Kubernetes and network teams.</p>
-<p>The broader lesson is not that every Kubernetes cluster needs BGP or that NAT should disappear everywhere. It is that Kubernetes has matured enough that we should stop automatically treating its network as a black box.</p>
-<p>As more production and AI workloads move onto Kubernetes, network architecture becomes part of application reliability. In an on-premises data center, BGP and ECMP give us the option to use the resilience already available in the physical network rather than building another isolated networking layer on top of it.</p>
-<p>Sometimes the best way to make Kubernetes networking more robust is not to add another abstraction, but to remove one. But only when the surrounding infrastructure and the team operating it are ready to take responsibility for the routing that abstraction previously hid.</p>
-<p>If most of those answers are yes, direct routing is worth serious consideration. If not, NAT or an overlay may be the more resilient operational choice—not because it is technically more advanced, but because it better matches the environment.</p>
+<p>Your accessibility check in CI is green. axe-core ran, zero violations, and the badge in the README looks great. Your site can still fail WCAG 2.2.</p>
+<p>That isn't a bug in axe. WCAG 2.2 became a W3C Recommendation in October 2023. It added nine success criteria and dropped one (4.1.1 Parsing), and most of the new ones can't be judged by reading the DOM. Deque said as much when it shipped the first WCAG 2.2 support in axe-core 4.5: the target-size rule would probably be the only new-criterion rule they added, because the others can't be automated without a lot of false positives.</p>
+<p>So the rest is on you. This article covers the one criterion axe can check and three it can't (focus not obscured, dragging movements, accessible authentication), with Playwright tests you can drop into a project. I ran all of them against a small test page that fails every criterion on purpose, and against a fixed version of the same page. If you want a plain-language rundown of every change first, WCAG 2.2 vs 2.1 goes through them. Here I only care about what you can put in a pipeline.</p>
+<p>Level A and AA are what most contracts and laws point at, so those are the ones that matter first. The AAA criteria are still worth knowing about.</p>
+<p>That's four AA criteria with something you can script, one of which axe already handles. The rest of this article goes through those four.</p>
+<p>The AA rule is smaller than most people expect: a pointer target should be at least 24 by 24 CSS pixels, or sit far enough from its neighbours that a 24px circle centred on it wouldn't overlap another target or that target's own circle. There are exceptions, including inline links in a sentence, and targets whose size the browser controls.</p>
+<p>axe-core has a target-size rule for this. One catch: it isn't part of a default run. In my setup (axe-core 4.14.1 through @axe-core/playwright 4.14.0), a plain analyze() on the broken page reported nothing at all. The rule only showed up once I asked for it:</p>
+<p>On the broken page this lists the three 16px toolbar buttons by selector. On the fixed page, with 32px buttons, it passes. If you've been running axe for years and never seen a target-size result, this is why.</p>
+<p>Some context on how common the problem is. In the scan data behind my last SitePoint article, 34.5% of the 1,025 sites had controls below a stricter 44px threshold. That is a tougher standard than the 24px that AA asks for, so don't read it as "a third of sites fail 2.5.8". Plenty of those would pass. But it does show how many production sites ship tiny controls.</p>
+<p>If you'd like a quick look at one page before wiring anything up, browser tools such as axe DevTools, WAVE, or a WCAG checker will show the same thing.</p>
+<p>axe can't test it, because you have to press Tab and look at where the browser scrolled. Two details caught me out building this:</p>
+<p>The check below samples a grid of points inside the visible part of the focused element and asks the browser what's on top at each one. If none of the points land on the element or its children, it's covered.</p>
+<p>On my broken page it reported nine hits: links hidden behind the footer going forward ("Section 4 link", "Section 10 link", "Section 16 link") and the toolbar buttons and a few links hidden behind the header coming back. The output names the element and the key, which is what you want when you're staring at a failed build.</p>
+<p>The fix is one CSS rule, sized to your sticky elements:</p>
+<p>That tells the browser to leave room when it scrolls a focused element into view. With it in place the same test passes.</p>
+<p>Be aware of what this can't see: a modal that opens over the page, or a chat widget that only appears after a delay, will not show up unless your test opens or waits for them. Adrian Roselli's piece on 2.4.11 and adversarial conformance is worth reading for the awkward cases.</p>
+<p>Anything you can do by dragging needs a way to do it with a single click or tap, unless dragging is essential. Sortable lists, sliders, kanban cards, file reorderers: all of them.</p>
+<p>You can't prove a drag alternative works from a script. But you can catch the obvious mistake, which is a draggable item with no button anywhere near it:</p>
+<p>The limit is real. It only recognises the native draggable attribute. Libraries built on pointer events, such as dnd-kit, don't set it, so this test will walk right past them. If you use one of those, replace the selector with whatever your component renders, or add a test per drag component. Treat it as a tripwire for the common case, not a verdict.</p>
+<p>The fix, in the fixed page, is a pair of "Move up" and "Move down" buttons on each item, each with an accessible name that says which item it moves.</p>
+<p>You can't make someone solve a cognitive test to log in (remember a password, transcribe a code) unless there's an alternative or a mechanism that helps. Password managers count as that mechanism, which means the two ways sites break it are blocking paste and omitting the right autocomplete values.</p>
+<p>This dispatches a synthetic paste event and checks whether anything called preventDefault() on it. It catches the old onpaste="return false" trick, and it catches script-based blockers too. It does not tell you whether your login has a CAPTCHA that needs an alternative, or an emailed one-time code you must retype. Those need a person.</p>
+<p>On a pull request, a plain GitHub Actions job is enough:</p>
+<p>Point PAGE_URL at a running preview, and run the tests against the pages that matter most: sign-in, checkout, anything with a sticky element. Don't try to crawl everything on the first pass. A test that fails for reasons nobody owns gets deleted within a month.</p>
+<p>Four things I haven't tried to automate, and wouldn't:</p>
+<p>Automation will keep the regressions out. It won't tell you the work is finished. A green build and a conformant site are different things, and WCAG 2.2 widened the gap between them.</p>
+<p>The tests and both test pages are small enough to read in one sitting. Copy what's useful, change the selectors, and keep the broken page around: it's a handy way to check that a test fails when it should.</p>
+<p>About the author: [name] builds WCAGsafe, an accessibility scanner. The study data above comes from its scans; the code in this article is independent of it and runs against any page.</p>
 <p>Get the freshest news and resources for developers, designers and digital creators in your inbox each week</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.sitepoint.com/when-should-you-remove-nat-from-an-on-prem-kubernetes-network/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://www.sitepoint.com/how-to-test-wcag-2-2-in-ci-what-axe-core-misses/?utm_source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
