@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ServNook</title>
+    <title>Is Your Eval Too Small?</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9721.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,68 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>ServNook</h1>
+        <h1>Is Your Eval Too Small?</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6puwwiudb55vaa4qn5bh.png" alt="Is Your Eval Too Small?" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F6puwwiudb55vaa4qn5bh.png" alt="Is Your Eval Too Small?" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            XAMPP stopped at PHP 8.2. ServNook runs PHP 8.5 on Windows
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/webhut?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1290206?app_id=339">Link</a>
-          </p></p>
+                <p>Posted on Nov 27
+•
+Originally published at 0xadityaa.dev</p>
+<p>Picture this: you spend an afternoon tweaking a prompt, run your 100-example eval suite, and watch accuracy jump from 80% to 83%. Three whole points. You merge the PR.</p>
+<p>The question I wanted to answer: did you improve anything, or did you get lucky?</p>
+<p>To find out, I ran a simulation where System B is 3 points better than System A (true accuracy 83% vs 80%, using seeded NumPy draws across 5,000 runs per sample size, from 25 to 1,000 examples). On a 100-example eval, the truly better system tied or looked worse one run in three. The raw numbers are in output.txt and results.json, and the write-up is the README.</p>
+<p>A 50 to 100 example eval cannot tell a real 3-point gain from noise, and running both systems on the same examples is the cheapest fix available. It doesn't make 100 examples enough, but it stretches each example further.</p>
+<p>Two times out of three, yes. The other third of the time, a bug-free eval with no data leakage shrugs or points the wrong way.</p>
+<p>The confidence interval is worse. Using a standard bootstrap (resample your examples with replacement a thousand times and take the middle 95%), the uncertainty band at 100 examples is 21 points wide. Your "+3% win" is a dot inside a band running from minus 8% to plus 13%.</p>
+<p>Scale up to 500 examples and the band is still 9.6 points wide. At 1,000 examples it's 6.8 points, and you still only call a clear win 40% of the time. Even a 5-point true gain only shows up clearly 13.8% of the time at 
+
+n=100n = 100n=100
+
+. You need a 10-point leap before a small eval is comfortable (49% at 100 examples, 99% at 500).</p>
+<p>In the figure, the true center sits at +3%, but the curve is so wide at 
+
+n=100n = 100n=100
+
+ that over a quarter of its area falls below zero, into the "looks worse" zone.</p>
+<p>Statisticians have been yelling about this for a while. Evan Miller's Anthropic paper Adding error bars to evals (November 2024) makes the same point: an eval set is a small sample from a huge universe of possible user inputs, yet results keep getting reported as bare single numbers. His worked example lands near a thousand questions to catch a 3-point gap (checked 2026-11-14). Our difficulty assumptions differ slightly, so the exact figures shift, but the order of magnitude lines up.</p>
+<p>Before you spend a week hand-labeling 2,000 more test cases, there is a cheap trick that cuts your uncertainty band by roughly 30%: pair your comparison.</p>
+<p>Instead of comparing two separate totals, run both systems on the exact same examples and compare them question by question.</p>
+<p>Think of timing two runners to see who is slightly faster. If Runner A runs on a hilly trail and Runner B runs on a flat track, the hills drown out a small speed difference. Put both on the same course and the hills cancel out. In an eval, most questions are easy for both prompts or hard for both. That shared difficulty is the hill. Once you pair them, the only questions that matter are the ones where the two systems disagree.</p>
+<p>That is all McNemar's test does. Count the cases where A is right and B is wrong (
+
+bbb
+
+), and where B is right and A is wrong (
+
+ccc
+
+), then compute 
+
+(b−c)2b+c\frac{(b - c)^2}{b + c}b+c(b−c)2​
+
+. Quinn McNemar published this in 1947 in a short note on correlated proportions. The trick is nearly eighty years old. At a correlation of 0.5 it halves the examples you need, as the table below shows.</p>
+<p>On the exact same 100-example dataset, analyzing two separate totals called a clear win just 2.2% of the time. Analyzing the exact same data as pairs jumped that to 11.1%. (Paired bootstrap and McNemar agreed within a point or two, so use whichever is simpler in your stack.)</p>
+<p>One catch: to simulate pairing, I had to pick how correlated the two systems are, and I chose 0.5 (the same assumption Miller used). You can compute the real correlation from your own results table, and it matters. At 100 examples, a correlation of 0.3 shrank the interval by 17%, 0.5 by 30%, and 0.7 by 46%. Two tweaks of the same prompt on the same base model usually agree on most questions, so your correlation is probably high and pairing helps more. The raw tables are in the simulation README.</p>
+<p>Probably more than you want to hear. The cheat sheet I keep next to my own evals, from output.txt: the smallest n needed to hit 80% statistical power (catching a real win 80% of the time at a two-sided 5% significance level, starting from 80% baseline accuracy). "Unpaired" is n per system; "Paired" is n shared examples.</p>
+<p>*Two binary systems at 90% and 80% mathematically cannot correlate at 0.7, so the simulation refuses.</p>
+<p>The scaling law in that table: cut the gap you want to detect in half, and you roughly quadruple the examples you need. Catching a 10-point leap takes around 100 paired examples. Catching a 3-point polish takes more than ten times as many. Pairing saves 31% of the examples at correlation 0.3, 50% at 0.5 and 71% at 0.7. I checked the simulation against Miller's normal-approximation formula (section 5), and they matched within 5%.</p>
+<p>Don't do significance tests on day one. Hamel Husain's field guide makes the right call here: early on, reading real failure traces is the highest-return thing you can do. If you have 40 outputs you haven't read yet, running a bootstrap is procrastination. His stopping rule is to keep reading outputs until you stop seeing new failure modes (checked 2026-11-14), not to chase a sample size. My table applies later, when you have two solid candidates and need a number to pick a winner.</p>
+<p>Binary pass/fail only. If you're grading on a 1 to 5 rubric, cosine similarity, or latency, the variance behaves differently and my table doesn't cover it (Miller's paper has formulas for those).</p>
+<p>LLM judges add their own wobble. If your judge model flips its own verdict when you rerun the same answer, that extra variance makes these sample sizes optimistic floors.</p>
+<p>Clustered questions shrink your real sample size. My simulation treated every example as an independent coin flip. Ten questions pulled from the same PDF aren't independent, and Miller found naive standard errors can be 3x too small on clustered datasets like DROP.</p>
+<p>I didn't test real model logs, measured correlations, or non-binary metrics here; treat this as a clean simulation with explicit assumptions.</p>
+<p>When your eval score ticks up by two or three points, check the table above before celebrating. If your test set is much smaller than the row for that gap, don't call it a win. Read the failures instead.</p>
+<p>And whenever you do compare two prompts or models, always run them on the exact same examples and analyze the pairs. At a 0.5 correlation, that habit halved the examples I needed without writing a single extra test case.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/webhut" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/0xadityaa/is-your-eval-too-small-436g" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

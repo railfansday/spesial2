@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Understanding &quot;You are not expected to understand this.&quot;</title>
+    <title>AWS Weekly Roundup: Amazon Polly Generative engine, TorchNeuron for Trainium, and more (October 26, 2026)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_10038.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,165 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Understanding &quot;You are not expected to understand this.&quot;</h1>
+        <h1>AWS Weekly Roundup: Amazon Polly Generative engine, TorchNeuron for Trainium, and more (October 26, 2026)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
+            <img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2023/08/13/AWS-WIR-default.png" alt="AWS Weekly Roundup: Amazon Polly Generative engine, TorchNeuron for Trainium, and more (October 26, 2026)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://d2908q01vomqb2.cloudfront.net/da4b9237bacccdf19c0760cab7aec4a8359010b0/2023/08/13/AWS-WIR-default.png" alt="AWS Weekly Roundup: Amazon Polly Generative engine, TorchNeuron for Trainium, and more (October 26, 2026)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>Many, many, many years ago I ported Unix V6 to the Vax, it ran as
-a virtual machine under VMS in supervisor/user modes (where VMS usually ran
-shells) - the code is AFAIK lost to history, though a DECUS paper survives. Later I ported V7 too.</p>
-<p>During the process I often came to that infamous line "You are not expected to understand this."
-in the context switch code and, I indeed didn't understand it .... then one day I came to that code through
-a different path and it was obvious .... let me explain what's going on, here's a deep dive</p>
-<p>V6 Unix keeps per-process state in 2 places, a small entry in the process table, and the 'udot' a structure
-mapped by the MMU at a well known kernel virtual address referenced as "u." which also contains the kernel stack. This is always
-mapped to the same address in all running processes, setting up this mapping is a core part of each process switch.</p>
-<p>V6 uses a somewhat baroque way to save the state of a running process and restoring it, in V7 they switched to use save()/restore() which works like the more familiar setjmp()/longjmp(). It's deeply beholding to
-details in the V6 PDP-11 calling conventions - savu() saves enough state to return to it saves the
-stack pointer (r6) and frame pointer (r5), it doesn't touch r2-r4</p>
-<p>retu() and aretu() are essentially the same, both restore the current state, leaving the routine that
-called them walking on thin ice as the stack has changed out from under them, so has the frame pointer
-(and as a result any local variables that are stored on the stack) after you call them life gets a little scary, care must be taken, we're on thin ice especially once interrupts are turned on .... retu() differs from aretu() in that retu() also maps the udot into the last page of
-memory - retu is always passed the physical address of the udot, it's slightly magic in that the first 2 words of the
-udot is also u.u_rsav the place that retu() really returns from - here they are slightly unwound:</p>
-<p>There's another bit of magic here: r2-r4 are untouched, more about that later.</p>
-<p>So here's the infamous context switch code (I've left out the bit that chooses a new process to run) - note swtch() as declared doesn't return a value, but at the end of the routine it explicitly returns "1". That's
-not that unusual, C at the time didn't have a void, and had a rudimentary type system, if you didn't declare something it defaulted to "int". Also prior to V7 C wrote things like "a += 1" as "a =+ 1" (which is ambiguous) so you find things like: "rp->p_flag =& ~SSWAP;" in the code, this was normal at the time. It was common at
-the time to tell the compiler which variables you wanted to put in registers rather than on the stack for performance reasons, compilers weren't very smart. Modern compilers complain if you feed them code with the register keyword.</p>
-<p>So what's going on here, let's ignore the if statement after "You are not expected to understand this."
-for the moment, here's how a context switch works:
-
-savu(u.u_rsav); saves the current process's state at the beginning of its udot
-retu(proc[0].p_addr); context switches on to process 0
-.... some code chooses a next process to run and points rp at its entry in the process table
-retu(rp->p_addr); switches the context to a new udot and loads its context from the new udot - at this point we're on the aforementioned "thin ice"
-sureg() sets up the user space MMU mappings for the new process (on thin ice sureg() better be careful ...)
-then we return 1 to all those calls to swtch() that never use it
-
-Now the ice isn't all that thin here, we restored the stack and frame pointers to how they were inside 
-swtch() where we did the savu(u.u_rsav); any interrupts that come along are not going to trash the stack we're 
-using. Also we're pointing at any local variables we were using at the point where we last did a savu()
-Now let's talk about the bit we're not supposed to understand: if for the new process, the process flag SSWAP is set we clear it
-and do an aretu(u.u_ssav); - return to the swap save address and then return 1 .... so where does SSWAP get set? The answer is whenever a process is swapped out because there isn't enough memory, and when it does we've just done a savu(u.u_ssav); saved the current stack state to a special swap save state. Mostly that is the newproc() routine called from fork() - newproc returns 1 for the new process from a fork() and 0 from the old one.
-Here's the relevant code:
-
-newproc()
-{
-	....
-	savu(u.u_rsav);
-	....
-
-	a2 = malloc(coremap, n);
-	/*
-	* If there is not enough core for the
-	* new process, swap out the current process to generate the
-	* copy.
-	*/
-	if(a2 == NULL) {
-		rip-&p_stat = SIDL;
-		rpp-&p_addr = a1;
-		savu(u.u_ssav);
-		xswap(rpp, 0, 0);
-		rpp-&p_flag =| SSWAP;
-		rip-&p_stat = SRUN;
-	} else {
-
-	.....
-
-	return(0);
-}
-
-What happens when we execute the code we're not expected to understand? It only gets triggered by a newly swapped in process with that flag set.  
-
-	 *
-	 * You are not expected to understand this.
-	 */
-	if(rp->p_flag&SSWAP) {
-		rp->p_flag =& ~SSWAP;
-		aretu(u.u_ssav);
-	}
-	return(1);
-
-So we do an aretu(u.u_ssav); that reloads the stack and frame pointers to the  point when savu(u.u_ssav); was executed in newproc() above, the xswap() has written out the udot at that point (shared between the new and old processes) to a swap file, that swap file has been reloaded and now we just switched to that new udot) the aretu() reloads the the stack and frame pointers to where they were in newproc() however the PC is still pointing to code in swtch() and it subsequently does a return(1) - it ends up returning a 1 to whoever called newproc() (which is either fork() or to main() when init is created).
-So after the call to aretu() we're also on thin ice, but because the stack is in a safe state for interrupts
-the whole time as retu(rp->p_addr); (essentially retu(u.u_rsav); matching the savu(u.u_rsav); in newproc()) is not below the spot aretu(u.u_ssav); goes to.
-Finally let's talk about the variable rp in that code we're not expected to understand, it's a local variable accessed after retu() is called, but it's a register variable - there's some magic there, probably in the ordering of the declarations at the beginning of swtch(), my guess is that the compiler puts it in r4 (which is calee save) r2-r4 are not touched by savu and retu/aretu, but r2-r3 are caller save, if they're saved and restored by swtch() they will get junk off the new stack - o r4 contains rp and the rest of the register variables are not live so either they are not save/restored on the calls to retu/aretu or no one cares because they're not used after the first retu() call - I suspect the latter as the compiler was not probably smart enough to do lifetime analysis.
-So there you are, all the gory details, please let me know if you find a mistake here (it was 45 years ago).
-Paul Campbell taniwha@gmail.com 2026</p>
-<p>savu(u.u_rsav); saves the current process's state at the beginning of its udot
-retu(proc[0].p_addr); context switches on to process 0
-.... some code chooses a next process to run and points rp at its entry in the process table
-retu(rp->p_addr); switches the context to a new udot and loads its context from the new udot - at this point we're on the aforementioned "thin ice"
-sureg() sets up the user space MMU mappings for the new process (on thin ice sureg() better be careful ...)
-then we return 1 to all those calls to swtch() that never use it
-
-Now the ice isn't all that thin here, we restored the stack and frame pointers to how they were inside 
-swtch() where we did the savu(u.u_rsav); any interrupts that come along are not going to trash the stack we're 
-using. Also we're pointing at any local variables we were using at the point where we last did a savu()
-Now let's talk about the bit we're not supposed to understand: if for the new process, the process flag SSWAP is set we clear it
-and do an aretu(u.u_ssav); - return to the swap save address and then return 1 .... so where does SSWAP get set? The answer is whenever a process is swapped out because there isn't enough memory, and when it does we've just done a savu(u.u_ssav); saved the current stack state to a special swap save state. Mostly that is the newproc() routine called from fork() - newproc returns 1 for the new process from a fork() and 0 from the old one.
-Here's the relevant code:
-
-newproc()
-{
-	....
-	savu(u.u_rsav);
-	....
-
-	a2 = malloc(coremap, n);
-	/*
-	* If there is not enough core for the
-	* new process, swap out the current process to generate the
-	* copy.
-	*/
-	if(a2 == NULL) {
-		rip-&p_stat = SIDL;
-		rpp-&p_addr = a1;
-		savu(u.u_ssav);
-		xswap(rpp, 0, 0);
-		rpp-&p_flag =| SSWAP;
-		rip-&p_stat = SRUN;
-	} else {
-
-	.....
-
-	return(0);
-}
-
-What happens when we execute the code we're not expected to understand? It only gets triggered by a newly swapped in process with that flag set.  
-
-	 *
-	 * You are not expected to understand this.
-	 */
-	if(rp->p_flag&SSWAP) {
-		rp->p_flag =& ~SSWAP;
-		aretu(u.u_ssav);
-	}
-	return(1);
-
-So we do an aretu(u.u_ssav); that reloads the stack and frame pointers to the  point when savu(u.u_ssav); was executed in newproc() above, the xswap() has written out the udot at that point (shared between the new and old processes) to a swap file, that swap file has been reloaded and now we just switched to that new udot) the aretu() reloads the the stack and frame pointers to where they were in newproc() however the PC is still pointing to code in swtch() and it subsequently does a return(1) - it ends up returning a 1 to whoever called newproc() (which is either fork() or to main() when init is created).
-So after the call to aretu() we're also on thin ice, but because the stack is in a safe state for interrupts
-the whole time as retu(rp->p_addr); (essentially retu(u.u_rsav); matching the savu(u.u_rsav); in newproc()) is not below the spot aretu(u.u_ssav); goes to.
-Finally let's talk about the variable rp in that code we're not expected to understand, it's a local variable accessed after retu() is called, but it's a register variable - there's some magic there, probably in the ordering of the declarations at the beginning of swtch(), my guess is that the compiler puts it in r4 (which is calee save) r2-r4 are not touched by savu and retu/aretu, but r2-r3 are caller save, if they're saved and restored by swtch() they will get junk off the new stack - o r4 contains rp and the rest of the register variables are not live so either they are not save/restored on the calls to retu/aretu or no one cares because they're not used after the first retu() call - I suspect the latter as the compiler was not probably smart enough to do lifetime analysis.
-So there you are, all the gory details, please let me know if you find a mistake here (it was 45 years ago).
-Paul Campbell taniwha@gmail.com 2026</p>
-<p>Now the ice isn't all that thin here, we restored the stack and frame pointers to how they were inside 
-swtch() where we did the savu(u.u_rsav); any interrupts that come along are not going to trash the stack we're 
-using. Also we're pointing at any local variables we were using at the point where we last did a savu()</p>
-<p>Now let's talk about the bit we're not supposed to understand: if for the new process, the process flag SSWAP is set we clear it
-and do an aretu(u.u_ssav); - return to the swap save address and then return 1 .... so where does SSWAP get set? The answer is whenever a process is swapped out because there isn't enough memory, and when it does we've just done a savu(u.u_ssav); saved the current stack state to a special swap save state. Mostly that is the newproc() routine called from fork() - newproc returns 1 for the new process from a fork() and 0 from the old one.</p>
-<p>What happens when we execute the code we're not expected to understand? It only gets triggered by a newly swapped in process with that flag set.</p>
-<p>So we do an aretu(u.u_ssav); that reloads the stack and frame pointers to the  point when savu(u.u_ssav); was executed in newproc() above, the xswap() has written out the udot at that point (shared between the new and old processes) to a swap file, that swap file has been reloaded and now we just switched to that new udot) the aretu() reloads the the stack and frame pointers to where they were in newproc() however the PC is still pointing to code in swtch() and it subsequently does a return(1) - it ends up returning a 1 to whoever called newproc() (which is either fork() or to main() when init is created).</p>
-<p>So after the call to aretu() we're also on thin ice, but because the stack is in a safe state for interrupts
-the whole time as retu(rp->p_addr); (essentially retu(u.u_rsav); matching the savu(u.u_rsav); in newproc()) is not below the spot aretu(u.u_ssav); goes to.</p>
-<p>Finally let's talk about the variable rp in that code we're not expected to understand, it's a local variable accessed after retu() is called, but it's a register variable - there's some magic there, probably in the ordering of the declarations at the beginning of swtch(), my guess is that the compiler puts it in r4 (which is calee save) r2-r4 are not touched by savu and retu/aretu, but r2-r3 are caller save, if they're saved and restored by swtch() they will get junk off the new stack - o r4 contains rp and the rest of the register variables are not live so either they are not save/restored on the calls to retu/aretu or no one cares because they're not used after the first retu() call - I suspect the latter as the compiler was not probably smart enough to do lifetime analysis.</p>
-<p>So there you are, all the gory details, please let me know if you find a mistake here (it was 45 years ago).</p>
+                <p>AWS is the world's most comprehensive cloud, enabling organizations to accelerate innovation, reduce costs, and scale more efficiently</p>
+<p>Migrate to modernize → Modernize to unlock data → unlock data to run AI</p>
+<p>Get started with one of these featured services or browse all</p>
+<p>From startups to enterprises, find AWS solutions scaled to your needs. Access tailored resources, pricing models, and support levels.</p>
+<p>A few weeks ago I presented to a small group of commercial and technology leaders from Brazilian agribusiness at the AWS office in São Paulo. My talk ran through where generative AI fits across the different stages of an agribusiness operation, and the point I kept returning to is that the markets we call traditional are exactly the ones where keeping up with this technology decides who ends up ahead of the curve. Nobody there was arguing about whether AI belongs in agriculture. The questions were about delivery: who receives the output, in which language, on which device, often while driving between farms. That is why a launch I might otherwise have filed under routine leads my list this week. The Amazon Polly Generative engine upgrade added 14 new voices, two of them in Brazilian Portuguese. When your user has both hands on a steering wheel, the interface is a voice.</p>
+<p>Presenting “GenAI no Agronegócio Brasileiro” at the AWS office in São Paulo.</p>
+<p>The rest of the week had a sharper edge. The biggest launch is a security service built on the premise that the gap between a vulnerability being disclosed and a vulnerability being exploited has effectively closed, and AWS published the honeypot evidence for exactly that in the same week. Now, let’s get into this week’s AWS news…</p>
+<p>AWS Continuum for code vulnerabilities is now generally available
+         AWS Continuum reframes vulnerability management as an end-to-end job rather than a scanner that hands you a list. It builds a context graph from your repositories and your AWS environment, assigns each finding an evidence level, and reproduces exploitable findings in an isolated sandbox with proof-of-concept code so you see the issue rather than a severity label. It ranks issues by how close the attack path runs to business-critical systems, then opens the fix as a pull request. The control boundary matters: every remediation currently requires human approval, so you review and merge the pull request, with autonomous classes of fix gated behind confidence thresholds for the future.</p>
+<p>The “why now” came from AWS’s own honeypots in the same week. Amazon Threat Intelligence found a PHP2Shell exploitation attempt in MadPot telemetry dated October 17, four days before CVE-2026-109618 and CVE-2026-109619 were publicly disclosed, and on disclosure day proof-of-concept exploits were circulating around 02:00 UTC, roughly twelve hours before the embargo was due to lift at 14:00 UTC. The practical reading is direct: a patch window measured in days assumes a delay that no longer exists, and an investigation should start from the earliest known exploitation rather than from the disclosure date. AWS also published the AWS WAF mitigations for the same CVEs. Continuum is available in US East (N. Virginia) and US West (Oregon).</p>
+<p>Introducing Amazon ECS Gateway
+         Amazon ECS Gateway splits the work of exposing a service between the people who own the network and the people who own the application. Platform teams define one gateway with the organization’s subnets, security groups, TLS certificates, listener settings, and AWS WAF web ACLs. Application teams opt in by adding a gateway connector to the service definition, and ECS gives them an ACM certificate, a unique DNS hostname, listener rules, a target group, and a security group that admits traffic only from the Application Load Balancer.</p>
+<p>The numbers make the economics clear: up to 25 services share a single ALB, ECS provisions the first ALB on first connect and removes ALBs when they are no longer needed, and a gateway can associate with up to 10,000 clusters, with five gateways per cluster. You can adopt it incrementally with UpdateService while your existing load balancer stays in place. Amazon ECS Gateway is available in all commercial Regions where Amazon ECS is available, at no additional charge.</p>
+<p>Last week’s launches
+         Here are some launches that caught my attention this week.</p>
+<p>Amazon Polly delivers a major upgrade to its Generative engine – The Generative engine now runs a larger, more expressive catalog: 57 generative voices across 11 languages and 25 locales, with 14 new voices across 9 locales and Hindi and Finnish generally available for the first time. Two of the new voices are Brazilian Portuguese, Leo and Carolina. It is a drop-in upgrade, so the voice names, the same SynthesizeSpeech call, and the price all stay the same while the output gets more natural.</p>
+<p>AWS announces TorchNeuron: native PyTorch support for AWS Trainium (public beta) – TorchNeuron is an open source PyTorch backend that lets you run your model on Trainium by switching to .to(‘neuron’), a configuration change instead of a rewrite, with eager execution and torch.compile intact. It integrates with the Neuron Kernel Interface for custom operators, and it works on Trainium2 and Trainium3 instances. If you want the bigger picture on why hardware choice should not lock in your software, the AWS Insights piece on that theme is a good companion read, and the release lands alongside AWS Neuron 2.33.</p>
+<p>New ways to customize models with Amazon SageMaker AI, without managing GPUs – Training sessions are now generally available, giving you control of the post-training loop, including custom loss functions and reward signals, while SageMaker AI handles GPU allocation, distributed execution, fault recovery, and checkpoint storage. You pay for the tokens SageMaker AI processes, and the meter stops while your reward function scores a batch. There is a full technical walkthrough, the training session APIs, and new support for Muse Glimmer, Qwen 3.8, and Ministral 3.</p>
+<p>Structured outputs for Claude models available on Amazon Bedrock – You can now get schema-compliant JSON back from any Anthropic Claude model on Amazon Bedrock, across both the bedrock-runtime and bedrock-mantle endpoints, without custom parsing, retry logic, or post-processing. That makes jobs like pulling every required field from a financial report, parsing clinical notes, or routing support tickets by intent far more reliable to automate.</p>
+<p>Amazon ElastiCache Serverless for Valkey now supports online migration with zero downtime – You can migrate self-managed Valkey or Redis OSS on Amazon EC2 into ElastiCache Serverless with zero downtime, meaning zero errors returned to the client during the move, measured the way the ElastiCache SLA measures availability. You prepare the migration, start the data sync, then choose a manual or automatic cutover, with no third-party replication tools. It is available in all commercial Regions, the China Regions, and the AWS GovCloud (US) Regions.</p>
+<p>Other AWS news
+         Here are some additional projects and posts that you might find interesting.</p>
+<p>Discover tools at runtime with AWS Agent Registry – AWS Agent Registry is a managed catalog for MCP servers, agents, and agent skills, so an orchestrator can search approved capabilities at runtime instead of compiling every tool in at build time. This walkthrough shows the discover, instantiate, and execute loop in a working sample, with search results that return connection metadata but never invocation credentials.</p>
+<p>Tokenomics for coding agents: benchmark cost and quality on your own code – Coding assistants replay a growing transcript on every turn, so their cost math is nothing like ordinary inference. This post gives you open source tooling to measure model, harness, and hosting choices on your own repositories and build a cost-and-quality frontier you own, with sample results where routing came out 44.7 percent cheaper for 4.8 percent lower mean quality.</p>
+<p>How U.S. Bank migrated 119 TB from Oracle Exadata to Amazon RDS for Oracle – U.S. Bank moved four Oracle Exadata databases totaling about 119 TB to Amazon RDS for Oracle using a config-driven pipeline built on Oracle XTTS, AWS DataSync, and Amazon EFS. The initial baseline copy finished in about 7 days with zero data loss and cutovers averaging roughly four hours per database, over a bandwidth-capped Direct Connect link.</p>
+<p>Upcoming AWS events
+         Mark your calendars for these upcoming events.</p>
+<p>AWS re:Invent – AWS re:Invent runs November 30 to December 4 in Las Vegas, with more than 2,200 sessions. The session catalog is live and reserved seating is open, so now is the time to build your schedule.</p>
+<p>AWS Community Days – AWS Community Day Brasil Norte takes place in Belém on October 31, closing out the 2026 Brazilian community season. Check the hub for events near you.</p>
+<p>That’s all for this week. Check back next Monday for another Weekly Roundup!</p>
+<p>This post is part of our Weekly Roundup series. Check back each week for a quick roundup of interesting news and announcements from AWS!</p>
+<p>Daniel Abib is a senior specialist solutions architect at AWS, focused on generative AI and Amazon Bedrock — and passionate about serverless. He helps startups and enterprises build AI-powered applications and modernize with cloud-native architectures. A three-time Ironman finisher and four-time re:Invent speaker, he brings the same endurance mindset to building cloud solutions.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.taniwha.com/~paul/not.html" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://aws.amazon.com/blogs/aws/aws-weekly-roundup-amazon-polly-generative-engine-torchneuron-for-trainium-and-more-october-26-2026/" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

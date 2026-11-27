@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenChat</title>
+    <title>The MP3 Header Said 7:15. The Audio Ran 3:03, and I Bill by the Minute</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9702.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,40 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>OpenChat</h1>
+        <h1>The MP3 Header Said 7:15. The Audio Ran 3:03, and I Bill by the Minute</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fwjs9vuo3la890h1dvek1.png" alt="The MP3 Header Said 7:15. The Audio Ran 3:03, and I Bill by the Minute" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fwjs9vuo3la890h1dvek1.png" alt="The MP3 Header Said 7:15. The Audio Ran 3:03, and I Bill by the Minute" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Open-source live chat in your own Cloudflare account
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/openchat-5?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1330938?app_id=339">Link</a>
-          </p></p>
+                <p>I run a visa agency in Bali, and in the evenings I build data tools on Apify. One of them is MP3 to Text: you give it MP3 links and it returns a transcript with timed passages. Under the hood it is Whisper behind Groq's API. Most of my code is the plumbing around the model: downloading, converting, splitting long files and billing.</p>
+<p>Billing is per started minute of audio, so the most important number in my code isn't the transcript. It's the duration. This post is about one MP3 that reports a duration 2.4 times longer than its real length, and why a transcriber should never trust what a file says about itself.</p>
+<p>I didn't want to guess, so I made the file myself. I took the one-minute test MP3 I use for daily checks (a passage from Pride and Prejudice read aloud), put three copies in a row, and added three seconds of silence at the front. I encoded it as variable bitrate with LAME, then copied the frames into a new file without the Xing header:</p>
+<p>The audio in both files is byte-for-byte the same, and both are 1.74 MB. The only difference is a small frame at the start of the first file that says "this stream has N frames".</p>
+<p>The 7:15 has a simple cause. An MP3 has no length field. A VBR file can carry a Xing (or VBRI) frame that gives the frame count. Without one, the demuxer reads the bitrate of the first frame and divides the file size by it. My file starts with three seconds of silence, and LAME encodes silence at the lowest rate it can, which here is 32 kbps. So:</p>
+<p>The guess from file size is wrong in the other direction because the speech in this file averages about 76 kbps, not 128.</p>
+<p>You might say I built this case on purpose. I did, but the parts are common. Podcasts usually open with a jingle or a pause. Most phone recorders and podcast tools encode VBR. And there are plenty of ways to lose the header, or end up with a stale one: joining MP3s with cat, cutting a file with a tool that copies frames, or a recorder that streams to disk and never goes back to finish the header. A joined file can be even worse, because it keeps the first part's Xing frame and reports the length of that part only.</p>
+<p>With 435 seconds as input, that's 8 minutes. With 183 seconds, it's 4. The same problem hits any other step that uses duration: your cost estimate before sending a batch, the "Max cost per run" check, timeout planning and queue ordering.</p>
+<p>So the Actor never asks the original file how long it is. The first thing it does is decode the file to 16 kHz mono Opus, the format the recognizer gets anyway. Then it measures that file:</p>
+<p>Ogg Opus stores the real sample position in every page, so its duration is counted, not estimated. The billable minutes come from that number.</p>
+<p>I uploaded vbr_noxing.mp3 to a test account and sent it through the Actor with default settings:</p>
+<p>The run log says 4 min billed, 183.0s of audio recognised. The charged events were audio-minute × 4 and file-processed × 1, $0.038 in total, and the run took 6.3 seconds. If I had trusted the header, it would have been 8 minutes and $0.074 for the same 643 words.</p>
+<p>The last segment ends at 182.5 s, and the decoded file is 183.05 s long. That half second at the end is the trailing pause after "It is a truth universally acknowledged." So the duration and the transcript agree with each other. That's the cross-check I use when I don't trust a number.</p>
+<p>The same conversion turned the 1.74 MB MP3 into a 525 KB Ogg file, about 0.17 MB per minute of speech. That matters because Groq refuses uploads over 25 MB. A 128 kbps MP3 reaches that at about 26 minutes, so a normal podcast episode is too big to send as it is. After conversion, more than 100 minutes of speech fit in one upload. Longer files get cut into 100-minute parts, and each part's segment times are shifted by its offset. Then a three-hour episode comes back as one transcript with continuous timings.</p>
+<p>There's one ffmpeg detail I learned the hard way. When you split with -f segment -c copy, you need -reset_timestamps 1. Without it, every part after the first keeps its original timestamps and reports a wrong duration, and the recognizer rejected those parts outright.</p>
+<p>Compare the first segment of the plain one-minute file with the first segment of this one:</p>
+<p>The text is the same, and the second segment is exactly three seconds longer. The model doesn't output an empty segment for the silence. It adds the silence to the first passage, so the passage "starts" at 0 even though the reader starts at 3 s. If you use segment times to cut clips or place a first subtitle, the first timestamp can be early by the length of the intro. Later segments are fine. In this file the next one starts at 7.96, which is right.</p>
+<p>If you estimate cost before sending a batch, decode the file instead of reading its header. It's slower, but it's the real number:</p>
+<p>On my file this returns 183.04. After the run, compare it with durationSeconds on each row. If they differ by more than a second, look at the file before you look at the bill.</p>
+<p>What I'd take away from this: an MP3's reported duration comes from metadata the file may not have. If you price, bill or time out by duration, measure it from the decoded audio.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/openchat-5" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/matveyg/the-mp3-header-said-715-the-audio-ran-303-and-i-bill-by-the-minute-4c1o" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

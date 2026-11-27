@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Back up MongoDB to S3: from mongodump to a verified restore</title>
+    <title>How to Build a B2B Lead List from Google Maps with Emails (No Code, ~$6 per 1,000 Leads)</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9713.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,139 +15,45 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>Back up MongoDB to S3: from mongodump to a verified restore</h1>
+        <h1>How to Build a B2B Lead List from Google Maps with Emails (No Code, ~$6 per 1,000 Leads)</h1>
         <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
         
         <div class="article-body">
-            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fh0nxsipxjtlq3bgcsa07.png" alt="Back up MongoDB to S3: from mongodump to a verified restore" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxs1vs4ijsw6eh9qn3zgl.png" alt="How to Build a B2B Lead List from Google Maps with Emails (No Code, ~$6 per 1,000 Leads)" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fh0nxsipxjtlq3bgcsa07.png" alt="Back up MongoDB to S3: from mongodump to a verified restore" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fxs1vs4ijsw6eh9qn3zgl.png" alt="How to Build a B2B Lead List from Google Maps with Emails (No Code, ~$6 per 1,000 Leads)" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
                 <p>Posted on Nov 27
 •
-Originally published at restoreproof.io</p>
-<p>Most MongoDB backup guides stop at the mongodump command line. That is the
-easy part. What decides whether you get your data back is everything around it:
-what the dump leaves out, which options change what you will be able to restore,
-whether the script really fails when the dump fails, and whether anyone has ever
-replayed the file.</p>
-<p>This guide covers the whole chain. By the end you will know what a mongodump
-holds and what it leaves to the server, when --oplog is worth anything, how to
-write a backup script that cannot report success on an empty file, how to
-restore the archive by hand in a throwaway container, and which questions asked
-in mongosh tell you a restored database actually holds your data.</p>
-<p>Everything here works with mongodump, docker and the AWS CLI, and nothing else.</p>
-<p>mongodump reads documents over the server protocol, like any other client. So
-it backs up data, not a server:</p>
-<p>Indexes, on the other hand, are in the dump — their definition, not their
-content. mongorestore writes the documents first, then rebuilds each index. On
-a large collection that is where most of the restore time goes, and it is the
-reason a restore is almost always slower than the dump that produced it.</p>
-<p>Both are defensible, but they do not give you the same thing.</p>
-<p>A dump is logical: the documents are read back, reinserted, the indexes rebuilt.
-It restores into another version of MongoDB, onto another machine, into a
-different topology — a dump taken on a replica set reloads onto a standalone
-server.</p>
-<p>A copy of the data directory (--dbpath) is physical: these are the storage
-engine's files. It restores much faster on large volumes, but it is only valid
-for the same MongoDB version and the same storage engine, and it cannot be taken
-by copying the files of a running server — you have to stop it, or go through a
-filesystem snapshot that captures the journal along with the data.</p>
-<p>For a database of a few gigabytes, mongodump stays the simple choice: one
-file, readable by any recent MongoDB.</p>
-<p>--archive writes everything into a single stream instead of a tree of BSON
-files. That is one object to upload instead of a directory to synchronise, and
-mongorestore reads it back as is.</p>
-<p>--gzip compresses. With --archive, the compression happens in the stream: no
-intermediate file, and mongorestore --gzip reads it back without decompressing
-first.</p>
-<p>--oplog changes the nature of the backup. Without it, a dump that takes
-several minutes mixes documents read at different moments: an order can appear
-without the billing line written in the same transaction. With it, mongodump
-records the oplog position before starting, then appends the operations that
-happened while reading, and mongorestore --oplogReplay replays them at the
-end: the result is the state of the database at one point in time. Two
-conditions: the oplog only exists on a replica set, and the option only applies
-to a full dump of the instance, not to a --db.</p>
-<p>Finally, the database name is inside the dump. mongodump records each
-collection under its full namespace, shop.orders, and mongorestore
-writes it back under that same name. Renaming the file changes nothing. That is
-what makes the mistake in the restore section so easy to make.</p>
-<p>Without pipefail, a failed dump comes out as a success</p>
-<p>In mongodump | gzip, the shell only looks at the exit code of the last
-link. gzip compresses an empty stream very nicely, so the script returns 0
-and cron is happy. set -o pipefail — included in the set -euo pipefail
-above — makes the whole line fail as soon as mongodump fails. The variant
-without a pipe, --archive=/backups/... --gzip, removes the problem at the
-source: mongodump writes the file itself and its exit code is the
-command's.</p>
-<p>Keep the timestamp in the file name: a file always overwritten under the same
-name leaves no chance of going back to yesterday. For retention, a lifecycle
-rule on the bucket deletes objects older than N days with no script to maintain.</p>
-<p>The account taking the dump needs to read the whole database. A role that is too
-narrow raises no visible error: it produces a dump where the collections it
-cannot see are simply missing.</p>
-<p>That leaves running it every night. A cron is enough, on two conditions: that
-its error output goes somewhere someone reads, and that a run dragging on does
-not overlap with the next one — flock -n on a lock file settles the second
-point in one line.</p>
-<p>A backup is only proven once restored. Do it once, in full, in a throwaway
-container — it is also the procedure you will follow the day it matters.</p>
-<p>--drop removes each collection before rewriting it: without it, a restore into
-a container already used mixes the documents of two attempts. --stopOnError
-stops at the first refused insert, instead of carrying on and handing you a
-half-restored database that looks like it works.</p>
-<p>The database name is the dump's, not the one you want</p>
-<p>If the archive was taken on a database named store, the --nsInclude
-'shop.*' above matches nothing: mongorestore restores no document,
-and exits with success. Nothing in the database warns you, because there is
-no database. To restore under another name, you have to say so:
---nsFrom 'store.*' --nsTo 'shop.*'.</p>
-<p>Use the same major version as your server instead of mongo:7 if it differs: a dump taken on a newer server does not necessarily replay on an older one.</p>
-<p>Note how long it took. That is your real restore duration, the only one worth
-comparing to the delay you promised.</p>
-<p>mongorestore finishing without an error does not mean the data is there. Four
-questions, in this order, from a mongosh opened on the container:</p>
-<p>Then destroy everything: docker rm -f mongo-test.</p>
-<p>It proves that a recent archive restores into a fresh MongoDB and that the
-collections come back with their documents. It does not prove that your
-application works on that database: for that, start it against the restored database and run a few real requests. It says nothing about the users and roles left
-in admin, which are not in a dump of a business database. It says nothing about how old the archive is: a March dump restores perfectly in September. And it says nothing
-about what has been written since the last dump — that gap is your RPO, and it
-is tuned with the backup frequency, not with the checks.</p>
-<p>What has to be backed up besides the business database?</p>
-<p>Users and roles, which live in the admin database and are not in a dump
-limited to your own. Without them, the restore gives you an intact database
-where no application account exists and nobody can connect. The server
-configuration and the replica set membership are not in the dump either, and
-that is as it should be: they belong to the server.</p>
-<p>Is --oplog useful on a standalone server?</p>
-<p>No. The oplog only exists on a replica set. On a standalone instance the option
-has nothing to record, and a dump that takes several minutes stays a mix of
-documents read at different moments.</p>
-<p>Should a mongodump archive be compressed?</p>
-<p>Yes, with --gzip, which compresses inside the stream. A compressed archive
-restores as is: mongorestore --archive=... --gzip reads it back without
-decompressing first, so there is no intermediate file to plan for and no disk
-space to reserve for it.</p>
-<p>Why does a MongoDB restore fail without restoring anything?</p>
-<p>Almost always because of a name. The database name is recorded inside the dump,
-not in the file name: an --nsInclude matching no namespace in the archive
-restores no document and exits with success. You have to read what the archive
-holds before restoring it, or rename with --nsFrom and --nsTo.</p>
-<p>Why is a restore slower than the dump that produced it?</p>
-<p>Because of the indexes. The dump holds their definition, not their content:
-mongorestore writes the documents first, then rebuilds each index, and on a
-large collection that is where most of the time goes. It is also why you check
-they came back: a collection returned without its indexes answers correctly, in
-seconds instead of milliseconds.</p>
-<p>RestoreProof runs this kind of restore test on a schedule, inside your own infrastructure, and signs a report proving the backup restores. Your data never leaves your servers. Free plan, no credit card: https://app.restoreproof.io</p>
+Edited on Nov 27
+•
+Originally published at apify.com 
+•
+
+
+
+
+Fully Autonomous</p>
+<p>If you sell to local businesses, like dentists, restaurants, gyms, law firms or contractors, Google Maps is the best free directory on the planet. Every listing has a name, category, phone number, website, address, rating and number of reviews.</p>
+<p>There's one problem: Google Maps doesn't show emails. So most people end up running two tools. A Maps scraper collects the businesses, and then a second "contact finder" visits every website to look for an email. That means two runs, two bills and an afternoon of VLOOKUPs.</p>
+<p>This guide shows how to get places + emails + social profiles in a single run, export them to a spreadsheet, and keep the cost around $6 per 1,000 enriched leads.</p>
+<p>One row per business, ready for your CRM or a cold-email tool:</p>
+<p>The tool also returns opening hours, price level, all Google categories and a direct Maps link.</p>
+<p>Good lead lists are narrow. Instead of "businesses in Texas", think:</p>
+<p>You can put several keywords in one run (dentist, orthodontist, pediatric dentist). Duplicates are removed automatically by Google place ID, so overlapping searches don't cost you twice.</p>
+<p>A run of a few hundred places usually finishes in minutes.</p>
+<p>When the run finishes, open the Output tab and download Excel or CSV. A few tips:</p>
+<p>The tool uses pay-per-event pricing. You pay for results, not for servers or proxies:</p>
+<p>So 1,000 local businesses with phones, emails and socials cost about $6. You can also set a maximum cost per run, and the scraper stops cleanly when it reaches it.</p>
+<p>The tool collects publicly available business information: what a business chose to publish on Google Maps and on its own website. It doesn't log in anywhere. If you're contacting businesses in the EU, follow GDPR rules for B2B outreach: include who you are, a legitimate reason, and an easy opt-out. In the US, follow CAN-SPAM. Always respect the opt-outs you receive.</p>
+<p>Try it: Google Maps Scraper with Emails on Apify →</p>
+<p>Disclosure: I built this tool. Questions or a feature request? Open an issue on the Actor page. I usually answer within 24 hours.</p>
 <p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
 <p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
 <p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
 <p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://dev.to/benjy33000/back-up-mongodb-to-s3-from-mongodump-to-a-verified-restore-c5h" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/rabah_karaouat_e35d5e348e/how-to-build-a-b2b-lead-list-from-google-maps-with-emails-no-code-6-per-1000-leads-54h3" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
