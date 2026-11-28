@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T5-Small Out-Downloads NLLB 24 to 1: 143 Open-Weight Translation Models Ranked</title>
+    <title>Getting the LiteLLM proxy and MCP gateway running: the steps that work today</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9709.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,25 +15,48 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>T5-Small Out-Downloads NLLB 24 to 1: 143 Open-Weight Translation Models Ranked</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
+        <h1>Getting the LiteLLM proxy and MCP gateway running: the steps that work today</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-28</p>
         
         <div class="article-body">
-            <img src="https://hackernoon.imgix.net/images/QdWX77c6s5Skk99abuNLlG6AEZZ2-fi03ff9.png" alt="T5-Small Out-Downloads NLLB 24 to 1: 143 Open-Weight Translation Models Ranked" style="max-width:100%; height:auto; border-radius:8px;">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4r75bn6lxvu98wun8pby.png" alt="Getting the LiteLLM proxy and MCP gateway running: the steps that work today" style="max-width:100%; height:auto; border-radius:8px;">
             
-            <div style="text-align:center; margin-bottom:20px;"><img src="https://hackernoon.imgix.net/images/QdWX77c6s5Skk99abuNLlG6AEZZ2-fi03ff9.png" alt="T5-Small Out-Downloads NLLB 24 to 1: 143 Open-Weight Translation Models Ranked" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F4r75bn6lxvu98wun8pby.png" alt="Getting the LiteLLM proxy and MCP gateway running: the steps that work today" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p>We publish the best academic papers on rule-based techniques, LLMs, & the generation of text that resembles human text.</p>
-<p>We publish the best academic papers on rule-based techniques, LLMs, & the generation of text that resembles human text.</p>
-<p>We publish the best academic papers on rule-based techniques, LLMs, & the generation of text that resembles human text.</p>
-<p>Google's t5-small was downloaded 17.3M times on Hugging Face in the last 30 days. Meta's 200-language nllb-200-distilled-600M got 709.4K. Below are all 143 translation models in the TextModels directory: open weights ranked by downloads, including 73 Opus-MT language pairs from Helsinki-NLP, plus the historical models that started neural machine translation.</p>
-<p>Downloads and capability tell different stories here. NLLB-200 covers 200 languages, and HackerNoon's look inside the AI that translates 200 languages explains how it lifted quality for low-resource languages. But t5-small is a 60M-parameter multitask model that tutorials and test suites load by default. For production in specific language pairs, teams still reach for dedicated models, as in this production voice stack for Igbo, Yoruba and Hausa that chose NLLB over an LLM.</p>
-<p>Everything comes from the TextModels directory as of November 23, 2026, filtered to translation models (143 entries). Hugging Face download counts are the last 30 days from the Hugging Face API. "Verified" means the directory fetched and confirmed that model's metrics. Hosted models have no public download counts, so they're listed by price or provider, and historical models link to their papers.</p>
-<p>Filter all 3,009 models by task, size, context window, price and license in the TextModels directory.</p>
-<p>BART Still Wins Summarization: 120 Open-Weight Summarizers Ranked by Real Downloads</p>
-<p>We publish the best academic papers on rule-based techniques, LLMs, & the generation of text that resembles human text.</p>
+                <p>I installed LiteLLM 1.110.1 on the day it came out and followed the CLI quickstart and the MCP gateway page exactly as written. The proxy had changed faster than the docs. A master key is now required, a few sample requests predate that, and the example model is gone upstream. I hit nine walls before everything worked.</p>
+<p>This post is the version of the quickstart I wish I'd had. Each step is the one that works today. Where the docs say something different, there's a note on what you'll see if you follow them, so you can recognise the error when you hit it.</p>
+<p>Tested on: LiteLLM 1.110.1 (19 Nov 2026) and again on 1.111.0 (28 Nov 2026). macOS, Python 3.12. Every command below was run on 1.111.0.</p>
+<p>You'll end up with: the LiteLLM proxy on port 4000, a working chat request, and the MCP gateway serving tools from an HTTP server, an SSE server and a stdio server.</p>
+<p>The proxy now refuses to start without one. The CLI quickstart doesn't mention it, so the first command on the page exits with:</p>
+<p>The error itself is good. It tells you exactly what to run.</p>
+<p>Don't use sk-1234. It's the sample key in a lot of older LiteLLM examples, and the proxy rejects it on purpose as "a publicly known default". Generate a real one.</p>
+<p>Or with no API key at all, using a local model through Ollama:</p>
+<p>The quickstart uses huggingface/bigcode/starcoder. Hugging Face's router doesn't serve that model any more, so the request comes back as:</p>
+<p>followed by about 300 lines of HTML. That HTML is the huggingface.co home page. It's labelled as an auth error, so you'll probably start checking your Hugging Face token, like I did. The token is fine. The model is gone.</p>
+<p>(Use "model": "ollama/llama3.2:3b" if you started with Ollama.)</p>
+<p>The curl on the quickstart page has no Authorization header, and the OpenAI Python sample passes api_key="anything". Both were written before the master key was required, and both now return:</p>
+<p>Skip litellm --test. The page tells you to run it in a second shell. Without an argument it crashes with ValueError: Invalid test value. --help says it takes a URL, but litellm --test http://0.0.0.0:4000 gives Unknown command: http://0.0.0.0:4000, because click reads the URL as a command instead of the option's value. The curl above does the same job.</p>
+<p>I used three kinds of MCP server: DeepWiki over streamable HTTP (the one the docs use), the official filesystem server over stdio, and a small SSE server I wrote with the mcp SDK, so I could check the SSE path against something I controlled.</p>
+<p>Without this, stdio servers are disabled. The proxy logs one warning at startup:</p>
+<p>After that, nothing else tells you. The server is missing from the tool list, and GET /v1/mcp/server shows "status": null for it, the same as for the servers that work. The docs say a disabled stdio server is reported as unhealthy. It isn't. If a stdio server's tools are missing, check this flag before you debug the server.</p>
+<p>Two lines in that file are there because of the docs.</p>
+<p>transport: "sse". The Zapier example on the MCP page is a URL ending in /sse, with the comment # SSE Server and no transport key. The same page says transport "defaults to http in config.yaml". Both are true, and together they break. With no transport, the proxy talks HTTP to the SSE server and logs:</p>
+<p>The server's tools never show up, and calling one returns Tool ping not found. Adding transport: "sse" fixes it.</p>
+<p>The alias target. The page's mcp_aliases example maps deepwiki to deepwiki_mcp_server, but the DeepWiki server defined on the same page is called deepwiki_mcp. If you copy both, requests using the alias fail with a 403:</p>
+<p>That reads like a permissions problem, so I went through key settings first. The real problem is that the alias points at a server that doesn't exist, and nothing warns you at startup. If you see this error, put the alias target and the server name side by side.</p>
+<p>With the config above this returns 20 tools: 3 from DeepWiki, 1 from the SSE server and 16 from the filesystem server. The Bearer prefix is optional on this header. Both forms work.</p>
+<p>To get one server's tools over REST, add ?server_id=deepwiki_mcp. The x-mcp-servers header doesn't filter this endpoint. It does filter the MCP endpoint at /mcp, where x-mcp-servers: deepwiki (the alias) returns only DeepWiki's three tools. There the tool names are prefixed with the alias, as in deepwiki-read_wiki_structure.</p>
+<p>This returns the table of contents of LiteLLM's own DeepWiki. server_id takes the server name or the alias, and it's required on this endpoint, even if you use a prefixed tool name.</p>
+<p>I tested the gateway directly, over REST and the /mcp endpoint, because that's where the config and docs problems were. I didn't put a model in the loop with /v1/responses and server_url: "litellm_proxy". Doing that with the Ollama model from step 2 is next.</p>
+<p>Found on 1.110.1 and re-checked on 1.111.0 against the docs as of 28 Nov 2026. Each is a small docs change, and a few have a product fix that would have saved me the most time.</p>
+<p>Already fixed: on 19 Nov, the REST docs said server_id was optional with a prefixed tool name, but the endpoint required it. The REST page now lists server_id as required, so the docs and the endpoint agree.</p>
+<p>Once I got past these, the gateway was solid. Most of the fixes are one line each.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://hackernoon.com/t5-small-out-downloads-nllb-24-to-1-143-open-weight-translation-models-ranked?source=rss" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/parth_dagia/getting-the-litellm-proxy-and-mcp-gateway-running-the-steps-that-work-today-11l2" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>

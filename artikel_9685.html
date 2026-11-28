@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iwantmy.app</title>
+    <title>Docker Image with JDK 8 for Legacy CI Builds</title>
     <link rel="canonical" href="https://railfansday.github.io/spesial2/artikel_9685.html">
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; line-height: 1.6; }
@@ -15,24 +15,58 @@
 <body>
     <div class="container">
         <a href="index.html" class="btn-back">&larr; Kembali ke Daftar Berita</a>
-        <h1>iwantmy.app</h1>
-        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-27</p>
+        <h1>Docker Image with JDK 8 for Legacy CI Builds</h1>
+        <p style="color: #888; font-size: 14px;">Tanggal: 2026-11-28</p>
         
         <div class="article-body">
+            <img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fu1hj66yv1gf72te5zq2c.png" alt="Docker Image with JDK 8 for Legacy CI Builds" style="max-width:100%; height:auto; border-radius:8px;">
             
-            
-            
+            <div style="text-align:center; margin-bottom:20px;"><img src="https://media2.dev.to/dynamic/image/width=1200,height=627,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fu1hj66yv1gf72te5zq2c.png" alt="Docker Image with JDK 8 for Legacy CI Builds" style="max-width:100%; height:auto; border-radius:8px;" loading="lazy"></div>
             <div class="article-body" style="font-size: 16px; line-height: 1.8; color: #333;">
-                <p><p>
-            Describe a mobile app in chat and open it on your phone
-          </p>
-          <p>
-            <a href="https://www.producthunt.com/products/iwantmy-app?utm_campaign=producthunt-atom-posts-feed&amp;utm_medium=rss-feed&amp;utm_source=producthunt-atom-posts-feed">Discussion</a>
-            |
-            <a href="https://www.producthunt.com/r/p/1330892?app_id=339">Link</a>
-          </p></p>
+                <p>Legacy Java 8 services still need to compile and test, but the base images many pipelines inherited are no longer maintained. A Docker image with JDK 8 for a legacy CI build should be small, pinned, and predictable: an explicit JAVA_HOME, a known JDK patch level, a non-root user, and a toolchain you can verify before the build runs.</p>
+<p>This tutorial builds that image from Eclipse Temurin, pins it by digest, adds Maven with a checked download, and verifies java, javac, and the real build command inside the container. It also covers the Jenkins agent detail that trips up many migrations: the agent JVM and the job JDK are not the same thing.</p>
+<p>Start with the image reference, not the build script. If a Dockerfile still says FROM java:8 or FROM openjdk:8, it is building on an unmaintained image line. The Docker Hub page for the openjdk official image marks the image as officially deprecated and explains that only Early Access tags continue to receive updates after July 2022. That is not a safe source of JDK 8 security fixes.</p>
+<p>The second problem is mutability. Even a maintained tag such as 8-jdk-jammy is a moving pointer: the publisher can rebuild the same tag with a different base OS, CA bundle, locale data, or JDK patch release. Docker's build best practices explain that tags are mutable and that a digest pins the exact image content, even if the publisher later moves the tag.</p>
+<p>That difference matters for legacy pipelines. A rebuild six months after the original image was tested can quietly change the compiler patch level or the glibc and certificate stack. The build may fail for reasons unrelated to the application change, and the failure is hard to reproduce because the image reference looks unchanged.</p>
+<p>A maintained and pinned base is the foundation. The rest of this article chooses that base and then hardens the build image around it.</p>
+<p>Eclipse Temurin is the OpenJDK build published by the Eclipse Adoptium project and distributed as a Docker Official Image. The Temurin Docker Hub page documents the supported tags, variants, and platforms.</p>
+<p>Adoptium's own Temurin support roadmap lists Java 8 as available at least through December 2032, with maintenance and security updates following upstream OpenJDK's quarterly cadence. That is a much better support story than an abandoned community image, but it still requires you to pick up releases deliberately.</p>
+<p>A tag such as 8-jdk-jammy carries three pieces of information:</p>
+<p>Floating aliases such as 8-jdk and 8-jdk-jammy are convenient, but they are exactly the moving tags described earlier. A version-specific tag such as 8u<update>-b<build>-jdk-jammy is easier for reviewers to reason about, but the digest is what makes the image reproducible. Even a floating tag plus a digest is pinned; the tag is just a human-readable label.</p>
+<p>For most legacy Maven, Ant, and Gradle builds, the Ubuntu Jammy variant is the safer default. The Temurin page notes that the Alpine variant uses musl libc, which can break tools and native libraries that assume glibc. Alpine's smaller size is attractive, but a surprising native-library failure in a legacy build costs more than the saved megabytes.</p>
+<p>Before adopting any base, check its default user. Some JDK 8 images run as root by default, so plan to add a non-root USER even if you choose a different publisher.</p>
+<p>The Temurin image page lists support for amd64, arm32v7, arm64v8, ppc64le, riscv64, s390x, and windows-amd64. On a normal x86-64 CI runner, use linux/amd64. On Apple silicon or arm64 runners, use linux/arm64.</p>
+<p>If you build for more than one architecture, pin the top-level index digest so Docker can select the matching platform manifest. If you need one specific architecture, pin that platform's manifest digest instead. The command later in this article shows how to inspect both.</p>
+<p>Temurin's JDK 8 Ubuntu Dockerfile sets JAVA_HOME=/opt/java/openjdk, puts $JAVA_HOME/bin first on PATH, and runs java -version and javac -version as part of the image build. We will keep the same JAVA_HOME path and add our own explicit checks so the image fails at build time if the toolchain is broken.</p>
+<p>The Dockerfile below has two stages. The first downloads and verifies Maven. The second copies only the verified Maven directory into the final image, creates a non-root user, and checks the toolchain as that user. Docker's build guidance recommends multi-stage builds for this kind of separation, because build-only artifacts and temporary archives do not belong in the final image.</p>
+<p>If your CI system requires a different UID, override CI_UID and CI_GID at build time and make sure the workspace ownership matches. The next step is to prove the image actually contains the toolchain you expect.</p>
+<p>Build the image and run a short verification script. The script fails on the first mismatch, which makes it suitable for a CI smoke test.</p>
+<p>If the runner's default platform is not the one you want, add --platform linux/amd64 or --platform linux/arm64. The index digest lets Docker select the matching manifest for that platform.</p>
+<p>The output should look like this, with the patch release matching the base image you pinned:</p>
+<p>Now run the command your pipeline actually uses, not just the version checks. For a Maven project:</p>
+<p>On a workstation, the checkout is usually owned by your user, while the container runs as UID 10001. Add --user and mount your Maven cache so the container can write the workspace and reuse dependencies:</p>
+<p>In CI, make the workspace writable by the container UID, or run the container with the CI user's UID. In Kubernetes, an fsGroup can handle group ownership for mounted volumes. If your project uses the Gradle wrapper, run ./gradlew --version and ./gradlew build with the wrapper version the project already pins; changing the wrapper is a separate migration.</p>
+<p>Pinning a digest solves reproducibility, but it also opts you out of automatic base image updates. The maintenance plan has to be explicit.</p>
+<p>First, inspect the current tag and copy the digest you need:</p>
+<p>The output shows a top-level Digest for the multi-platform index and a digest for each platform manifest. Use the index digest when you want one Dockerfile to work on both amd64 and arm64; use a platform manifest digest when you need a strict single-architecture pin.</p>
+<p>Docker's best practices also recommend automating this with Dependabot's Docker ecosystem support. A small configuration file is enough:</p>
+<p>Do not treat docker build --pull as your update mechanism when the base is pinned by digest. --pull refreshes tags, but a digest still resolves to the same content. To pick up a new JDK release, change the digest deliberately, rebuild, and run the same checks.</p>
+<p>When a build fails only in CI, the fastest path is usually to reproduce the toolchain on a workstation. Install Temurin 8 from Adoptium's package repository; the Adoptium Linux installation instructions show the repository setup and the temurin-8-jdk package name.</p>
+<p>On arm64, the directory usually ends in -arm64 rather than -amd64. Confirm the path with readlink -f "$(command -v javac)" before exporting it. For a full walkthrough that covers Windows, macOS, and Linux, including JAVA_HOME configuration and switching between JDK versions, see this guide to installing JDK 8 locally to reproduce the build environment.</p>
+<p>You can also debug against the same container image without copying the toolchain to the host:</p>
+<p>Inside the container, run mvn -version and compare it with the host output. The JDK vendor, version, and Maven version should match. If they do not, fix the image or the local install before debugging the application.</p>
+<p>When behavior still differs, check the environment rather than the compiler. The Temurin image sets LANG and LC_ALL to en_US.UTF-8, so compare locale output if the build is encoding-sensitive. Also compare MAVEN_OPTS, timezone, any mounted settings.xml, and file ownership on the workspace. Those differences are common causes of "works in the container, fails on my laptop" puzzles.</p>
+<p>A JDK 8 build image is not automatically a valid Jenkins agent image. Jenkins' upgrade guide for Java 11 explains that agents must run at least the minimum Java version required by the controller. Jenkins 2.361.1 LTS requires Java 11 or 17 for the controller and agents. Keep the agent process on that supported JVM even when the job compiles with JDK 8.</p>
+<p>The job toolchain is a different setting. Jenkins can launch an agent with Java 11 or 17 while a build step uses JDK 8, as long as the agent process itself stays on the supported JVM. That is the distinction behind most "Jenkins no longer supports JDK 8" migration questions.</p>
+<p>A declarative pipeline can use the pinned image as a stage-level build environment:</p>
+<p>If you use the Docker plugin's "Connect with SSH" mode, the SSH-launched agent process runs with the image's Java unless you override the agent's Java path. A JDK 8-only image will fail to launch that agent on Jenkins 2.361.1 and later. Point the agent template at a JDK 11 or 17 image and run the JDK 8 image as a build container, or keep a separate supported JDK in the image for the agent process. Do not set JAVA_HOME to JDK 8 for the agent itself just to make the job compile; that breaks the remoting layer.</p>
+<p>A Docker image with JDK 8 for a legacy CI build does not have to be an abandoned image. Use Eclipse Temurin 8, pin the base by digest, set JAVA_HOME and PATH explicitly, run the build as a non-root user, and verify java, javac, and the real Maven or Gradle command inside the image. Keep the Jenkins agent JVM on a supported Java version and use the JDK 8 image only as the build environment. Finally, schedule deliberate digest and Maven updates, and reproduce the same toolchain locally when you need to debug. That gives legacy builds the stability they need without relying on stale, mutable tags.</p>
+<p>DEV Community — A space to discuss and keep up software development and manage your software career</p>
+<p>Built on Forem — the open source software that powers DEV and other inclusive communities.</p>
+<p>Made with love and Ruby on Rails. DEV Community © 2016 - 2026.</p>
+<p>We're a place where coders share, stay up-to-date and grow their careers.</p>
                 <p style="margin-top: 25px;">
-                    <a href="https://www.producthunt.com/products/iwantmy-app" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
+                    <a href="https://dev.to/noah_1/docker-image-with-jdk-8-for-legacy-ci-builds-4942" target="_blank" rel="nofollow noopener" style="color: #0d6efd; text-decoration: none; font-weight: bold;">
                         &rarr; Baca artikel asli
                     </a>
                 </p>
